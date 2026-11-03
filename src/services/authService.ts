@@ -1,0 +1,135 @@
+import type { AuthResponse, TeamSession } from '../types';
+
+/**
+ * Authentication Service Boundary for Frost Cartel.
+ *
+ * Implements the conceptual API contract:
+ * POST /api/auth/team-login
+ * Body: { teamName: string, passkey: string }
+ *
+ * Can connect directly to the future PostgreSQL / Supabase / Express backend.
+ */
+class AuthService {
+  private readonly apiUrl: string | undefined = import.meta.env.VITE_API_URL;
+  private currentSession: TeamSession | null = null;
+
+  constructor() {
+    // Check if an active session exists in sessionStorage (never passwords)
+    const stored = sessionStorage.getItem('frost_cartel_session');
+    if (stored) {
+      try {
+        this.currentSession = JSON.parse(stored);
+      } catch {
+        this.currentSession = null;
+      }
+    }
+  }
+
+  /**
+   * Authenticate a two-player squad with organizer-issued credentials.
+   */
+  async loginTeam(teamName: string, passkey: string): Promise<AuthResponse> {
+    const trimmedName = teamName.trim();
+    const trimmedPass = passkey.trim();
+
+    if (!trimmedName || !trimmedPass) {
+      return {
+        success: false,
+        message: 'Both Team Name and Master Passkey are required.',
+      };
+    }
+
+    // If an external backend is configured, send the real HTTP request
+    if (this.apiUrl) {
+      try {
+        const response = await fetch(`${this.apiUrl}/api/auth/team-login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ teamName: trimmedName, passkey: trimmedPass }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          return {
+            success: false,
+            message: errorData.message || 'Authentication failed. Please verify with tournament organizer.',
+          };
+        }
+
+        const data: AuthResponse = await response.json();
+        if (data.success && data.team) {
+          this.setSession(data.team);
+        }
+        return data;
+      } catch {
+        return {
+          success: false,
+          message: 'Unable to reach authentication server. Please alert technical support.',
+        };
+      }
+    }
+
+    // Prototype / Offline Simulation Mode (prior to database deployment)
+    // Simulates server network latency and validates format (fast-path in tests)
+    const delayMs = import.meta.env?.MODE === 'test' ? 10 : 850;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+    // Reject short passwords or invalid dummy attempts
+    if (trimmedPass.length < 4) {
+      return {
+        success: false,
+        message: 'Invalid passkey. Organizer passkeys are at least 4 characters.',
+      };
+    }
+
+    // Build session for authenticated team with cryptographically secure ID
+    const randomSuffix = crypto.randomUUID().replaceAll('-', '').substring(0, 8);
+    const session: TeamSession = {
+      teamId: `fc_${randomSuffix}`,
+      teamName: trimmedName,
+      credits: 0,
+      currentRound: 1,
+      gameStatus: 'waiting', // Round 1 start is controlled by the event admin
+      loginTime: new Date().toISOString(),
+    };
+
+    this.setSession(session);
+
+    return {
+      success: true,
+      team: session,
+      token: `sess_${Date.now()}_${session.teamId}`,
+      message: 'Crypt access granted. Welcome, Operatives.',
+    };
+  }
+
+  getCurrentSession(): TeamSession | null {
+    return this.currentSession;
+  }
+
+  isAuthenticated(): boolean {
+    return this.currentSession !== null;
+  }
+
+  logout(): void {
+    this.currentSession = null;
+    sessionStorage.removeItem('frost_cartel_session');
+  }
+
+  updateSessionCredits(credits: number): void {
+    if (this.currentSession) {
+      this.currentSession.credits = credits;
+      this.setSession(this.currentSession);
+    }
+  }
+
+  private setSession(session: TeamSession): void {
+    this.currentSession = session;
+    // Store only non-sensitive session profile in sessionStorage (no passwords)
+    sessionStorage.setItem('frost_cartel_session', JSON.stringify(session));
+  }
+}
+
+export const authService = new AuthService();

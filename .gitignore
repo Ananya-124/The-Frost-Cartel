@@ -1,0 +1,45 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies and build outputs
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# Environment variables (Never commit real secrets)
+.env
+.env*.local
+!.env.example
+
+# Authoritative Local Database Storage
+database/*.db
+database/*.db-wal
+database/*.db-shm
+*.db
+*.db-wal
+*.db-shm
+
+# Ephemeral test captures and media
+screenshot_*.png
+test_*.png
+thumb_*.jpg
+scratch/
+
+# Editor and OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

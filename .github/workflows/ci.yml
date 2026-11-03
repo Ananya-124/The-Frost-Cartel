@@ -1,0 +1,38 @@
+name: FROST CARTEL CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  audit-and-test:
+    name: Build, Lint, Test & Verify
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Lint Codebase (Oxlint)
+        run: npm run lint
+
+      - name: Run Test Suites (Vitest)
+        run: npm test
+
+      - name: Compile and Bundle Production Artifacts
+        run: npm run build
