@@ -8,13 +8,22 @@ export const round1Router = Router();
 
 // GET /api/round1/state
 round1Router.get('/state', requireTeamAuth, (req: AuthenticatedRequest, res) => {
-  const teamId = req.team!.id;
+  if (!req.team) {
+    res.status(401).json({ success: false, message: 'Squad authentication required.' });
+    return;
+  }
+  const teamId = req.team.id;
 
   const round = db.prepare('SELECT * FROM global_round_state WHERE round_id = 1').get() as {
     is_active: number;
     duration_seconds: number;
     start_time: string;
-  };
+  } | undefined;
+
+  if (!round) {
+    res.status(404).json({ success: false, message: 'Round 1 state not found.' });
+    return;
+  }
 
   const startTime = new Date(round.start_time).getTime();
   const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -33,7 +42,7 @@ round1Router.get('/state', requireTeamAuth, (req: AuthenticatedRequest, res) => 
     round: {
       id: 1,
       name: 'The Graveyard Escape',
-      isActive: Boolean(round.is_active),
+      isActive: round.is_active === 1,
       totalDurationSeconds: round.duration_seconds,
       remainingSeconds,
     },
@@ -41,7 +50,7 @@ round1Router.get('/state', requireTeamAuth, (req: AuthenticatedRequest, res) => 
       score: team.score,
       maxCredits: team.max_credits,
       totalCredits: team.total_credits,
-      isPaused: Boolean(team.is_paused),
+      isPaused: team.is_paused === 1,
     },
     stages,
   });
@@ -49,7 +58,11 @@ round1Router.get('/state', requireTeamAuth, (req: AuthenticatedRequest, res) => 
 
 // POST /api/round1/stage/complete
 round1Router.post('/stage/complete', requireTeamAuth, (req: AuthenticatedRequest, res) => {
-  const teamId = req.team!.id;
+  if (!req.team) {
+    res.status(401).json({ success: false, message: 'Squad authentication required.' });
+    return;
+  }
+  const teamId = req.team.id;
   const { stageId, points, timeSpentSeconds, fragmentUnlocked } = req.body;
 
   if (!stageId || typeof stageId !== 'number') {
@@ -143,3 +156,4 @@ round1Router.post('/stage/complete', requireTeamAuth, (req: AuthenticatedRequest
     fragmentUnlocked: Boolean(fragmentUnlocked),
   });
 });
+

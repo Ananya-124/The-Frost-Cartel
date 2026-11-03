@@ -36,3 +36,4 @@ jobs:
 
       - name: Compile and Bundle Production Artifacts
         run: npm run build
+

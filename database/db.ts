@@ -110,3 +110,4 @@ export function seedBootstrapData(): void {
     console.log(`[DB] Seeded ${defaultTeams.length} initial tournament teams.`);
   }
 }
+

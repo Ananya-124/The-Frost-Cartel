@@ -45,6 +45,7 @@ adminRouter.post('/login', (req, res) => {
   res.cookie('fc_admin_token', token, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 12 * 60 * 60 * 1000,
   });
 
@@ -55,13 +56,18 @@ adminRouter.post('/login', (req, res) => {
       id: admin.id,
       username: admin.username,
       role: admin.role,
-      mustChangePassword: Boolean(admin.mustChangePassword),
+      mustChangePassword: admin.mustChangePassword === 1,
     },
   });
 });
 
 // POST /api/admin/change-password
 adminRouter.post('/change-password', requireAdminAuth, (req: AuthenticatedRequest, res) => {
+  if (!req.admin) {
+    res.status(401).json({ success: false, message: 'Admin authentication required.' });
+    return;
+  }
+
   const { currentPassword, newPassword } = req.body;
 
   if (!newPassword || newPassword.length < 6) {
@@ -69,12 +75,12 @@ adminRouter.post('/change-password', requireAdminAuth, (req: AuthenticatedReques
     return;
   }
 
-  const adminRecord = db.prepare('SELECT password_hash, salt FROM admins WHERE id = ?').get(req.admin!.id) as {
+  const adminRecord = db.prepare('SELECT password_hash, salt FROM admins WHERE id = ?').get(req.admin.id) as {
     password_hash: string;
     salt: string;
-  };
+  } | undefined;
 
-  if (!verifyPassword(currentPassword, adminRecord.password_hash, adminRecord.salt)) {
+  if (!adminRecord || !verifyPassword(currentPassword, adminRecord.password_hash, adminRecord.salt)) {
     res.status(400).json({ success: false, message: 'Current password incorrect.' });
     return;
   }
@@ -84,7 +90,7 @@ adminRouter.post('/change-password', requireAdminAuth, (req: AuthenticatedReques
     UPDATE admins
     SET password_hash = ?, salt = ?, must_change_password = 0, updated_at = ?
     WHERE id = ?
-  `).run(hash, salt, new Date().toISOString(), req.admin!.id);
+  `).run(hash, salt, new Date().toISOString(), req.admin.id);
 
   res.json({ success: true, message: 'Admin password updated successfully.' });
 });
@@ -101,8 +107,8 @@ adminRouter.get('/dashboard', requireAdminAuth, (_req, res) => {
   }>;
 
   const totalTeams = teams.length;
-  const activeTeams = teams.filter(t => !t.is_paused && t.login_count > 0).length;
-  const pausedTeams = teams.filter(t => t.is_paused).length;
+  const activeTeams = teams.filter(t => t.is_paused === 0 && t.login_count > 0).length;
+  const pausedTeams = teams.filter(t => t.is_paused === 1).length;
   const totalScore = teams.reduce((acc, t) => acc + t.score, 0);
   const avgScore = totalTeams > 0 ? Math.round(totalScore / totalTeams) : 0;
 
@@ -128,7 +134,7 @@ adminRouter.get('/dashboard', requireAdminAuth, (_req, res) => {
         activeTeams,
         pausedTeams,
         averageScore: avgScore,
-        round1Active: roundState ? Boolean(roundState.is_active) : true,
+        round1Active: roundState ? roundState.is_active === 1 : true,
       },
       recentLogs,
     },
@@ -156,7 +162,7 @@ adminRouter.get('/teams', requireAdminAuth, (_req, res) => {
       id: t.id,
       teamName: t.team_name,
       password: t.raw_password,
-      isPaused: Boolean(t.is_paused),
+      isPaused: t.is_paused === 1,
       score: t.score,
       maxCredits: t.max_credits,
       totalCredits: t.total_credits,
@@ -185,7 +191,8 @@ adminRouter.post('/teams', requireAdminAuth, (req, res) => {
     return;
   }
 
-  const generatedPassword = password && password.trim() ? password.trim() : 'SQUAD#' + Math.floor(1000 + Math.random() * 9000);
+  // Cryptographically secure password generation avoiding weak PRNG Math.random (SonarQube S2245)
+  const generatedPassword = password && password.trim() ? password.trim() : `SQUAD#${crypto.randomInt(1000, 10000)}`;
   const { hash, salt } = hashPassword(generatedPassword);
   const teamId = 'team-' + crypto.randomUUID();
   const now = new Date().toISOString();
@@ -258,6 +265,12 @@ adminRouter.put('/teams/:id', requireAdminAuth, (req, res) => {
 // DELETE /api/admin/teams/:id
 adminRouter.delete('/teams/:id', requireAdminAuth, (req, res) => {
   const { id } = req.params;
+  const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(id);
+  if (!team) {
+    res.status(404).json({ success: false, message: 'Squad not found.' });
+    return;
+  }
+
   db.prepare('DELETE FROM teams WHERE id = ?').run(id);
   res.json({ success: true, message: 'Squad deleted.' });
 });
@@ -274,15 +287,22 @@ adminRouter.post('/teams/:id/pause', requireAdminAuth, (req, res) => {
   const newStatus = team.is_paused === 1 ? 0 : 1;
   db.prepare('UPDATE teams SET is_paused = ?, updated_at = ? WHERE id = ?').run(newStatus, new Date().toISOString(), id);
 
-  eventBus.broadcastToTeam(id, 'TEAM_UPDATED', { id, isPaused: Boolean(newStatus) });
+  eventBus.broadcastToTeam(id, 'TEAM_UPDATED', { id, isPaused: newStatus === 1 });
 
-  res.json({ success: true, isPaused: Boolean(newStatus) });
+  res.json({ success: true, isPaused: newStatus === 1 });
 });
 
 // POST /api/admin/teams/:id/reset-password
 adminRouter.post('/teams/:id/reset-password', requireAdminAuth, (req, res) => {
   const { id } = req.params;
-  const newPassword = 'RITUAL#' + Math.floor(1000 + Math.random() * 9000);
+  const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(id);
+  if (!team) {
+    res.status(404).json({ success: false, message: 'Squad not found.' });
+    return;
+  }
+
+  // Cryptographically secure password generation avoiding weak PRNG Math.random (SonarQube S2245)
+  const newPassword = `RITUAL#${crypto.randomInt(1000, 10000)}`;
   const { hash, salt } = hashPassword(newPassword);
 
   db.prepare('UPDATE teams SET password_hash = ?, salt = ?, raw_password = ?, updated_at = ? WHERE id = ?')
@@ -297,19 +317,30 @@ adminRouter.get('/rounds/status', requireAdminAuth, (_req, res) => {
     is_active: number;
     duration_seconds: number;
     start_time: string;
-  };
-  res.json({ success: true, round: { isActive: Boolean(round.is_active), durationSeconds: round.duration_seconds, startTime: round.start_time } });
+  } | undefined;
+
+  if (!round) {
+    res.status(404).json({ success: false, message: 'Round 1 state not found.' });
+    return;
+  }
+
+  res.json({ success: true, round: { isActive: round.is_active === 1, durationSeconds: round.duration_seconds, startTime: round.start_time } });
 });
 
 // POST /api/admin/rounds/toggle
 adminRouter.post('/rounds/toggle', requireAdminAuth, (_req, res) => {
-  const round = db.prepare('SELECT is_active FROM global_round_state WHERE round_id = 1').get() as { is_active: number };
+  const round = db.prepare('SELECT is_active FROM global_round_state WHERE round_id = 1').get() as { is_active: number } | undefined;
+  if (!round) {
+    res.status(404).json({ success: false, message: 'Round 1 state not found.' });
+    return;
+  }
+
   const newActive = round.is_active === 1 ? 0 : 1;
   db.prepare('UPDATE global_round_state SET is_active = ?, updated_at = ? WHERE round_id = 1').run(newActive, new Date().toISOString());
 
-  eventBus.broadcastAll('ROUND_STATUS', { roundId: 1, isActive: Boolean(newActive) });
+  eventBus.broadcastAll('ROUND_STATUS', { roundId: 1, isActive: newActive === 1 });
 
-  res.json({ success: true, isActive: Boolean(newActive) });
+  res.json({ success: true, isActive: newActive === 1 });
 });
 
 // GET /api/admin/results (Leaderboard)

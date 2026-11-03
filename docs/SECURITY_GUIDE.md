@@ -67,3 +67,4 @@ If any step fails, the entire transaction rolls back cleanly, preventing partial
 - **React 19 Auto-Escaping**: All dynamic strings rendered in JSX are automatically escaped to prevent XSS.
 - **No `dangerouslySetInnerHTML`**: The entire codebase avoids raw HTML injection.
 - **Form Trimming & Sanitization**: Squad names, passkeys, and search terms are sanitized in `src/utils/validation.utils.ts`.
+

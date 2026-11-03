@@ -74,6 +74,7 @@ authRouter.post('/team-login', (req, res) => {
   res.cookie('fc_team_token', token, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -87,7 +88,7 @@ authRouter.post('/team-login', (req, res) => {
       score: team.score,
       maxCredits: team.maxCredits,
       totalCredits: team.totalCredits,
-      isPaused: Boolean(team.isPaused),
+      isPaused: team.isPaused === 1,
     },
   });
 });

@@ -319,8 +319,8 @@ class AdminService {
             return parsed;
           }
         }
-      } catch {
-        // Fallback to initial seeds
+      } catch (error) {
+        console.warn('Failed to load teams from localStorage:', error);
       }
     }
     return [...INITIAL_TEAMS];
@@ -330,8 +330,8 @@ class AdminService {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         localStorage.setItem(this.storageKey, JSON.stringify(this.teams));
-      } catch {
-        // Fallback
+      } catch (error) {
+        console.warn('Failed to persist teams to localStorage:', error);
       }
     }
   }

@@ -95,3 +95,4 @@ CREATE INDEX IF NOT EXISTS idx_stages_team ON stages_progress(team_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_team ON score_transactions(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_sessions_token ON team_sessions(token);
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(token);
+

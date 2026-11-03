@@ -16,6 +16,9 @@ describe('FROST CARTEL Authoritative Database & API Layer', () => {
       db.prepare('UPDATE teams SET score = 0 WHERE id = ?').run(teamAi.id);
     }
 
+    // Refresh Round 1 start time for authoritative timer test
+    db.prepare('UPDATE global_round_state SET start_time = ? WHERE round_id = 1').run(new Date().toISOString());
+
     await new Promise<void>((resolve) => {
       server = app.listen(0, '127.0.0.1', () => {
         const addr = server.address();

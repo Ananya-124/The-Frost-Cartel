@@ -105,3 +105,4 @@
 - Documented `.env.example`.
 - Automated GitHub Actions CI workflow in `.github/workflows/ci.yml`.
 - Ready for local git commit. **Remote push withheld pending user authorization and repository URL.**
+

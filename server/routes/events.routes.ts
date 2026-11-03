@@ -46,3 +46,4 @@ eventsRouter.get('/stream', (req, res) => {
     eventBus.removeClient(clientId);
   });
 });
+
