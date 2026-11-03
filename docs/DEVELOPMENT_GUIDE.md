@@ -11,8 +11,8 @@
 ## 2. Quickstart Installation
 
 ```bash
-# 1. Clone repository (once remote is provided)
-git clone <repository-url>
+# 1. Clone repository
+git clone https://github.com/Ananya-124/The-Frost-Cartel.git
 cd "winter arc"
 
 # 2. Install dependencies

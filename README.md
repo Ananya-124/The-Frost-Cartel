@@ -2,7 +2,7 @@
 
 > **A cinematic, horror-themed competitive multiplayer gaming platform engineered for high-stakes tournament events.**
 
-[![FROST CARTEL CI](https://github.com/placeholder/frost-cartel/actions/workflows/ci.yml/badge.svg)](https://github.com)
+[![FROST CARTEL CI](https://github.com/Ananya-124/The-Frost-Cartel/actions/workflows/ci.yml/badge.svg)](https://github.com/Ananya-124/The-Frost-Cartel)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20%2F%207.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Express 5](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
@@ -101,7 +101,7 @@ The platform provides a strict separation of concerns between the **Public Playe
 ### 2. Setup
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/Ananya-124/The-Frost-Cartel.git
 cd "winter arc"
 
 # Install dependencies
