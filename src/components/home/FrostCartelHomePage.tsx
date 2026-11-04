@@ -122,8 +122,12 @@ export const FrostCartelHomePage: React.FC = () => {
 
   // If player has entered Round 4 (The Messenger's Letter):
   if (activeChamberRound === 4) {
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const directState = searchParams?.get('introState') as import('../../types/round4.types').Round4IntroState | null;
+
     return (
       <RoundFourIntro
+        initialState={directState || undefined}
         onExit={() => {
           if (window.location.hash === '#/round-4' || window.location.hash === '#/round-04') {
             window.location.hash = '';

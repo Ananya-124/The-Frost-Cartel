@@ -27,6 +27,9 @@ export default {
       fontFamily: {
         gothic: ['"Cinzel Decorative"', 'Cinzel', 'Georgia', 'serif'],
         cinzel: ['Cinzel', 'Georgia', 'serif'],
+        cormorant: ['"Cormorant Garamond"', 'Cinzel', 'Georgia', 'serif'],
+        garamond: ['"EB Garamond"', 'Georgia', 'serif'],
+        manuscript: ['"IM Fell English"', '"EB Garamond"', 'Georgia', 'serif'],
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['"Courier New"', 'Courier', 'monospace']
       },

@@ -24,7 +24,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
   const [doveTransform, setDoveTransform] = useState<DoveTransform>(() => ({
     x: APPROACH_PATH.p0.x,
     y: APPROACH_PATH.p0.y,
-    rotation: 25,
+    pitch: 5,
     bank: 0,
     scale: APPROACH_PATH.startScale,
   }));
@@ -59,11 +59,15 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
         APPROACH_PATH.p3,
         t,
         APPROACH_PATH.startScale,
-        APPROACH_PATH.endScale
+        APPROACH_PATH.endScale,
+        APPROACH_PATH.minPitch,
+        APPROACH_PATH.maxPitch
       );
 
       setDoveTransform(transform);
-      setFlapPhase(elapsed * 0.024); // ~5-6 flaps per second
+      // Gentle wing flapping frequency slows into flare as bird arrives at pedestal
+      const flapRate = 0.02 * (1 - rawT * 0.35);
+      setFlapPhase(elapsed * flapRate);
 
       if (rawT < 1) {
         animFrameRef.current = requestAnimationFrame(animateFlight);
@@ -88,7 +92,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       soundController.playDoveFlutter();
     }
 
-    const duration = 1800; // 1.8s flight to right arch column
+    const duration = 1800; // 1.8s ascent to right arch column
     startTimeRef.current = null;
 
     const animatePerch = (timestamp: number) => {
@@ -106,12 +110,14 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
         PERCH_PATH.p3,
         t,
         PERCH_PATH.startScale,
-        PERCH_PATH.endScale
+        PERCH_PATH.endScale,
+        PERCH_PATH.minPitch,
+        PERCH_PATH.maxPitch
       );
 
       setDoveTransform(transform);
       // Wing flapping gradually slows down as bird prepares to perch
-      const flapFrequency = 0.024 * (1 - rawT * 0.7);
+      const flapFrequency = 0.022 * (1 - rawT * 0.7);
       setFlapPhase(elapsed * flapFrequency);
 
       if (rawT < 1) {
@@ -134,7 +140,6 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
   }
 
   const isFlying = state === 'DOVE_ENTERING' || state === 'DOVE_FLYING' || state === 'DOVE_LANDING';
-  const isCarryingLetter = state === 'DOVE_ENTERING' || state === 'DOVE_FLYING';
   const isPerched =
     state === 'LETTER_AVAILABLE' ||
     state === 'LETTER_OPENING' ||
@@ -143,9 +148,9 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
     state === 'SCENE_CONTRACTING' ||
     state === 'PARTICLES_FORMING';
 
-  // Calculate wing flapping angle oscillation
-  const wingAngle = Math.sin(flapPhase) * 26; // -26 to +26 degrees
-  const wingScaleY = 1 + Math.sin(flapPhase) * 0.18;
+  // Calculate subtle, natural wing flapping oscillation
+  const wingAngle = Math.sin(flapPhase) * 18; // -18 to +18 degrees
+  const wingScaleY = 1 + Math.sin(flapPhase) * 0.12;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden select-none">
@@ -158,19 +163,19 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
             top: `${doveTransform.y}%`,
             transform: `
               translate(-50%, -50%)
-              rotate(${doveTransform.rotation + doveTransform.bank}deg)
+              rotate(${doveTransform.pitch + doveTransform.bank}deg)
               scale(${doveTransform.scale})
             `,
           }}
         >
           {/* Swirling Golden Particle Trail */}
           <div className="absolute -inset-8 flex items-center justify-center pointer-events-none">
-            <div className="w-20 h-20 rounded-full bg-amber-400/25 blur-lg animate-pulse" />
-            <div className="absolute w-10 h-10 rounded-full border border-amber-300/60 animate-ping opacity-40" />
-            <div className="absolute -left-6 top-1/2 w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px] animate-pulse" />
+            <div className="w-16 h-16 rounded-full bg-amber-400/20 blur-md animate-pulse" />
+            <div className="absolute w-8 h-8 rounded-full border border-amber-300/40 animate-ping opacity-30" />
+            <div className="absolute -left-4 top-1/2 w-1.5 h-1.5 rounded-full bg-yellow-200/90 blur-[0.5px] animate-pulse" />
           </div>
 
-          {/* Flying Dove Body with Animated Wing Flap */}
+          {/* Flying Dove Body with Animated Wing Flap (Sprite carries sealed scroll in talons) */}
           <div
             className="relative"
             style={{
@@ -181,23 +186,8 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
             <img
               src="/assets/round-4/white_dove_flying.png"
               alt="White messenger dove in flight"
-              className="w-48 sm:w-56 h-auto drop-shadow-[0_12px_28px_rgba(255,220,110,0.6)] filter brightness-110"
+              className="w-44 sm:w-52 h-auto drop-shadow-[0_10px_24px_rgba(255,220,110,0.5)] filter brightness-110"
             />
-
-            {/* Carried Ancient Sealed Scroll (Visible while in flight prior to release) */}
-            {isCarryingLetter && (
-              <div
-                className="absolute left-1/2 bottom-2 -translate-x-1/2 rotate-12 transition-all"
-                style={{ transformOrigin: 'top center' }}
-              >
-                <div className="w-16 h-8 bg-[#f5ebd2] border border-[#a87d35] rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex items-center justify-center relative">
-                  <div className="w-3.5 h-3.5 rounded-full bg-red-700 border border-amber-400/80 shadow-sm flex items-center justify-center">
-                    <span className="text-[7px] text-white">✦</span>
-                  </div>
-                  <div className="absolute inset-x-2 top-0 h-1 bg-red-800 rounded-full" />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -208,7 +198,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
           className="absolute top-[6%] sm:top-[8%] right-[8%] sm:right-[11%] lg:right-[13%] w-24 sm:w-28 lg:w-32 animate-fadeIn transition-transform duration-700"
           style={{ animationDuration: '0.9s' }}
         >
-          {/* Breathing & Gentle Head Movement Ambient Wrapper */}
+          {/* Breathing & Gentle Ambient Glow */}
           <div className="relative animate-pulse [animation-duration:4.5s] hover:scale-105 transition-transform">
             {/* Soft Sunlit Halo */}
             <div className="absolute -inset-4 rounded-full bg-amber-300/20 blur-lg pointer-events-none" />

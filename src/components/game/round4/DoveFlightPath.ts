@@ -6,7 +6,7 @@ export interface Point2D {
 export interface DoveTransform {
   x: number;
   y: number;
-  rotation: number;
+  pitch: number;
   bank: number;
   scale: number;
 }
@@ -28,7 +28,7 @@ export function evaluateCubicBezier(p0: Point2D, p1: Point2D, p2: Point2D, p3: P
 }
 
 /**
- * Evaluates the first derivative (velocity / tangent vector) of cubic Bezier curve at t.
+ * Evaluates the first derivative (tangent vector) of cubic Bezier curve at t.
  */
 export function evaluateCubicBezierDerivative(p0: Point2D, p1: Point2D, p2: Point2D, p3: Point2D, t: number): Point2D {
   const mt = 1 - t;
@@ -42,7 +42,7 @@ export function evaluateCubicBezierDerivative(p0: Point2D, p1: Point2D, p2: Poin
 }
 
 /**
- * Calculates position, tangent travel angle, bank angle, and perspective scale for the dove in flight.
+ * Calculates natural flight transform with clamped aerodynamic pitch and subtle banking.
  */
 export function getDoveTransform(
   p0: Point2D,
@@ -51,50 +51,59 @@ export function getDoveTransform(
   p3: Point2D,
   t: number,
   startScale: number,
-  endScale: number
+  endScale: number,
+  minPitch: number = -25,
+  maxPitch: number = 20
 ): DoveTransform {
   const pos = evaluateCubicBezier(p0, p1, p2, p3, t);
   const vel = evaluateCubicBezierDerivative(p0, p1, p2, p3, t);
 
-  // Tangent travel angle in degrees
-  const angleRad = Math.atan2(vel.y, vel.x);
-  const rotation = (angleRad * 180) / Math.PI;
+  // Tangent angle in degrees
+  const rawAngleDeg = (Math.atan2(vel.y, vel.x) * 180) / Math.PI;
+
+  // Clamped realistic bird pitch so the dove never flips or points vertically
+  const pitch = Math.max(minPitch, Math.min(maxPitch, rawAngleDeg * 0.65));
 
   // Rate of turn banking: sample slightly ahead to estimate curvature
   const deltaT = 0.04;
   const nextT = Math.min(1, t + deltaT);
   const nextVel = evaluateCubicBezierDerivative(p0, p1, p2, p3, nextT);
-  const nextAngleRad = Math.atan2(nextVel.y, nextVel.x);
-  const angleDiff = ((nextAngleRad - angleRad + Math.PI) % (2 * Math.PI)) - Math.PI;
-  const bank = Math.max(-25, Math.min(25, (angleDiff * 180) / Math.PI * 2.5));
+  const curAngle = Math.atan2(vel.y, vel.x);
+  const nextAngle = Math.atan2(nextVel.y, nextVel.x);
+  const diff = ((nextAngle - curAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
+  const bank = Math.max(-14, Math.min(14, (diff * 180) / Math.PI * 1.5));
 
   const scale = startScale + (endScale - startScale) * t;
 
   return {
     x: pos.x,
     y: pos.y,
-    rotation,
+    pitch,
     bank,
     scale,
   };
 }
 
-// 1. Approach path from distant upper sky to above the stone pedestal
+// 1. Approach path: gracefully gliding from upper-left dawn sky toward courtyard pedestal
 export const APPROACH_PATH = {
-  p0: { x: 8, y: 12 },    // Far upper left dawn sky
-  p1: { x: 34, y: 6 },    // High sweeping arch under stone vault
-  p2: { x: 68, y: 22 },   // Bank downward towards courtyard center
-  p3: { x: 50, y: 52 },   // Centered directly above stone pedestal
-  startScale: 0.38,
-  endScale: 0.88,
+  p0: { x: 6, y: 15 },    // Upper left dawn horizon
+  p1: { x: 20, y: 22 },   // Sweeping glide into the courtyard
+  p2: { x: 36, y: 36 },   // Descending flare
+  p3: { x: 50, y: 50 },   // Directly hovering over stone pedestal
+  startScale: 0.42,
+  endScale: 0.85,
+  minPitch: -8,
+  maxPitch: 16,
 };
 
-// 2. Departure path from release point above pedestal to right arch stone ledge
+// 2. Departure path: soaring upwards from pedestal release to perch on right column ledge
 export const PERCH_PATH = {
-  p0: { x: 50, y: 52 },   // Pedestal drop release point
-  p1: { x: 56, y: 44 },   // Swoop upwards unencumbered
-  p2: { x: 74, y: 20 },   // Arch right column trajectory
-  p3: { x: 84, y: 8 },    // Resting stone ledge on right column
-  startScale: 0.88,
+  p0: { x: 50, y: 50 },   // Above pedestal after letter release
+  p1: { x: 58, y: 38 },   // Ascending bank
+  p2: { x: 72, y: 22 },   // Approaching column capital
+  p3: { x: 84, y: 10 },   // Resting stone ledge on right column
+  startScale: 0.85,
   endScale: 0.52,
+  minPitch: -26,
+  maxPitch: -2,
 };
