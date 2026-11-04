@@ -56,6 +56,17 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
     }
   }, [isCrossfading]);
 
+  // Support ESC key to exit back to Home seamlessly
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onExit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onExit]);
+
   // If already reached college ready without intro, render college directly
   if (isCollegeReady && !isCrossfading) {
     return (
@@ -133,49 +144,7 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
             </div>
           </div>
 
-          {/* 2. Minimal Header (Strictly NO large title, NO statistics, NO avatar) */}
-          <header className="relative z-30 w-full px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-amber-500/15 bg-black/30 backdrop-blur-sm">
-            {/* Top-Left: Skull Emblem • FROST CARTEL • ROUND 04 */}
-            <div className="flex items-center gap-3 select-none">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-amber-400/30 to-amber-900/60 border border-amber-400/50 flex items-center justify-center shadow-[0_0_15px_rgba(245,185,80,0.3)]">
-                <span className="text-base sm:text-lg">💀</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-amber-200">
-                  FROST CARTEL
-                </span>
-                <span className="text-amber-500/60 text-xs">―</span>
-                <span className="font-sans text-[11px] sm:text-xs tracking-widest text-amber-300 font-semibold uppercase">
-                  ROUND 04
-                </span>
-              </div>
-            </div>
-
-            {/* Top-Right: Sound Toggle & Exit */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Sound Toggle */}
-              <button
-                type="button"
-                onClick={handleToggleMute}
-                aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-                className="w-8 h-8 rounded-full bg-black/60 hover:bg-amber-950/60 border border-amber-500/40 text-amber-200 flex items-center justify-center transition-all cursor-pointer"
-              >
-                <span className="text-xs">{isMuted ? '🔇' : '🔊'}</span>
-              </button>
-
-              {/* Exit Control */}
-              <button
-                type="button"
-                onClick={onExit}
-                aria-label="Exit Round 4 and return to Home"
-                className="h-8 px-4 rounded-full bg-black/60 hover:bg-red-950/60 border border-red-500/40 hover:border-red-400 text-red-200 font-cinzel text-[11px] font-bold tracking-wider transition-all cursor-pointer"
-              >
-                EXIT
-              </button>
-            </div>
-          </header>
-
-          {/* 3. The Flying & Perched White Dove Animation (Slow 6.2s total flight, Bezier trajectory) */}
+          {/* 2. The Flying & Perched White Dove Animation (Slow 6.2s total flight, Bezier trajectory) */}
           <DoveFlightAnimation
             state={state}
             onDropComplete={handleLetterDrop}

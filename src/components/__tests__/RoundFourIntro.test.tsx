@@ -10,14 +10,12 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     vi.clearAllMocks();
   });
 
-  it('renders minimal header with branding, sound toggle, and exit, without avatar or banned banners', () => {
+  it('renders clean full-screen cinematic intro without intrusive title bar, banned banners, or player avatars', () => {
     render(<RoundFourIntro onExit={mockExit} onProceedToFloors={mockProceed} />);
 
-    // Header branding
-    expect(screen.getByText('FROST CARTEL')).toBeInTheDocument();
-    expect(screen.getByText('ROUND 04')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mute Audio/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Exit Round 4 and return to Home/i })).toBeInTheDocument();
+    // Verification: title bar removed for full-screen cinematic immersion
+    expect(screen.queryByRole('banner')).toBeNull();
+    expect(screen.queryByText('ROUND 04')).toBeNull();
 
     // Constraint verification: strictly NO "THE RADIANT TREASURE HUNT" banner
     expect(screen.queryByText(/THE RADIANT TREASURE HUNT/i)).toBeNull();
@@ -152,11 +150,10 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     vi.useRealTimers();
   });
 
-  it('calls onExit when exit button is clicked', () => {
+  it('calls onExit when Escape key is pressed', () => {
     render(<RoundFourIntro onExit={mockExit} onProceedToFloors={mockProceed} />);
 
-    const exitBtn = screen.getByRole('button', { name: /Exit Round 4 and return to Home/i });
-    fireEvent.click(exitBtn);
+    fireEvent.keyDown(window, { key: 'Escape' });
 
     expect(mockExit).toHaveBeenCalledTimes(1);
   });
