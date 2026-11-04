@@ -14,11 +14,16 @@ export const CinematicBlurTransition: React.FC<CinematicBlurTransitionProps> = (
   reducedMotion = false,
 }) => {
   if (reducedMotion) {
+    let opacityClass = 'opacity-0';
+    if (isOutgoing) {
+      opacityClass = 'opacity-0 pointer-events-none';
+    } else if (isInitialFocused) {
+      opacityClass = 'opacity-100';
+    }
+
     return (
       <div
-        className={`w-full min-h-screen transition-opacity duration-300 ${
-          isOutgoing ? 'opacity-0 pointer-events-none' : isInitialFocused ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`w-full min-h-screen transition-opacity duration-300 ${opacityClass}`}
       >
         {children}
       </div>
