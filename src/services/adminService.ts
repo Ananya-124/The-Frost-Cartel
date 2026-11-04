@@ -389,6 +389,57 @@ class AdminService {
     return this.round1Status;
   }
 
+  private activateTeamsOnRoundStart(now: string): void {
+    for (const team of this.teams) {
+      if (team.status === 'waiting') {
+        team.status = 'active';
+        team.roundStartTime = team.roundStartTime || now;
+        team.currentStage = 'stage-1';
+        team.stageStartTime = now;
+        team.activityHistory.unshift({
+          id: `act_${crypto.randomUUID().substring(0, 8)}`,
+          teamId: team.id,
+          type: 'round_start',
+          description: 'Round 1 officially commenced by Tournament Administrator',
+          timestamp: now,
+        });
+      } else if (team.status === 'paused') {
+        team.status = 'active';
+      }
+    }
+  }
+
+  private pauseTeamsOnRoundPause(now: string): void {
+    for (const team of this.teams) {
+      if (team.status === 'active') {
+        team.status = 'paused';
+        team.activityHistory.unshift({
+          id: `act_${crypto.randomUUID().substring(0, 8)}`,
+          teamId: team.id,
+          type: 'admin_movement',
+          description: 'Gameplay paused globally by Tournament Administrator',
+          timestamp: now,
+        });
+      }
+    }
+  }
+
+  private concludeTeamsOnRoundEnd(now: string): void {
+    for (const team of this.teams) {
+      if (team.status === 'active' || team.status === 'paused') {
+        team.status = 'completed';
+        team.roundEndTime = team.roundEndTime || now;
+        team.activityHistory.unshift({
+          id: `act_${crypto.randomUUID().substring(0, 8)}`,
+          teamId: team.id,
+          type: 'round_completion',
+          description: 'Round 1 ended globally by Tournament Administrator',
+          timestamp: now,
+        });
+      }
+    }
+  }
+
   /**
    * Admin global round controls (Start, Pause, Resume, End).
    */
@@ -398,53 +449,11 @@ class AdminService {
     const now = new Date().toISOString();
 
     if (newStatus === 'running') {
-      // Transition waiting teams to active with round start timestamp
-      for (const team of this.teams) {
-        if (team.status === 'waiting') {
-          team.status = 'active';
-          team.roundStartTime = team.roundStartTime || now;
-          team.currentStage = 'stage-1';
-          team.stageStartTime = now;
-          team.activityHistory.unshift({
-            id: `act_${crypto.randomUUID().substring(0, 8)}`,
-            teamId: team.id,
-            type: 'round_start',
-            description: 'Round 1 officially commenced by Tournament Administrator',
-            timestamp: now,
-          });
-        } else if (team.status === 'paused') {
-          team.status = 'active';
-        }
-      }
+      this.activateTeamsOnRoundStart(now);
     } else if (newStatus === 'paused') {
-      // Pause all currently active teams
-      for (const team of this.teams) {
-        if (team.status === 'active') {
-          team.status = 'paused';
-          team.activityHistory.unshift({
-            id: `act_${crypto.randomUUID().substring(0, 8)}`,
-            teamId: team.id,
-            type: 'admin_movement',
-            description: 'Gameplay paused globally by Tournament Administrator',
-            timestamp: now,
-          });
-        }
-      }
+      this.pauseTeamsOnRoundPause(now);
     } else if (newStatus === 'completed') {
-      // Conclude round for all active/paused teams
-      for (const team of this.teams) {
-        if (team.status === 'active' || team.status === 'paused') {
-          team.status = 'completed';
-          team.roundEndTime = team.roundEndTime || now;
-          team.activityHistory.unshift({
-            id: `act_${crypto.randomUUID().substring(0, 8)}`,
-            teamId: team.id,
-            type: 'round_completion',
-            description: 'Round 1 ended globally by Tournament Administrator',
-            timestamp: now,
-          });
-        }
-      }
+      this.concludeTeamsOnRoundEnd(now);
     }
 
     this.saveTeams();

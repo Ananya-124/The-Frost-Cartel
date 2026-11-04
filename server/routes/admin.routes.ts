@@ -180,7 +180,7 @@ adminRouter.get('/teams', requireAdminAuth, (_req, res) => {
 adminRouter.post('/teams', requireAdminAuth, (req, res) => {
   const { teamName, password } = req.body;
 
-  if (!teamName || !teamName.trim()) {
+  if (!teamName?.trim()) {
     res.status(400).json({ success: false, message: 'Squad Name is required.' });
     return;
   }
@@ -192,7 +192,7 @@ adminRouter.post('/teams', requireAdminAuth, (req, res) => {
   }
 
   // Cryptographically secure password generation avoiding weak PRNG Math.random (SonarQube S2245)
-  const generatedPassword = password && password.trim() ? password.trim() : `SQUAD#${crypto.randomInt(1000, 10000)}`;
+  const generatedPassword = password?.trim() || `SQUAD#${crypto.randomInt(1000, 10000)}`;
   const { hash, salt } = hashPassword(generatedPassword);
   const teamId = 'team-' + crypto.randomUUID();
   const now = new Date().toISOString();
@@ -242,14 +242,15 @@ adminRouter.put('/teams/:id', requireAdminAuth, (req, res) => {
   const now = new Date().toISOString();
   let updatedPassword = team.raw_password;
 
-  if (password && password.trim() && password !== team.raw_password) {
-    updatedPassword = password.trim();
+  const trimmedPassword = password?.trim();
+  if (trimmedPassword && trimmedPassword !== team.raw_password) {
+    updatedPassword = trimmedPassword;
     const { hash, salt } = hashPassword(updatedPassword);
     db.prepare('UPDATE teams SET password_hash = ?, salt = ?, raw_password = ? WHERE id = ?').run(hash, salt, updatedPassword, id);
   }
 
   const updatedScore = typeof score === 'number' ? score : team.score;
-  const updatedName = teamName ? teamName.trim() : undefined;
+  const updatedName = teamName?.trim();
 
   if (updatedName) {
     db.prepare('UPDATE teams SET team_name = ?, score = ?, updated_at = ? WHERE id = ?').run(updatedName, updatedScore, now, id);
