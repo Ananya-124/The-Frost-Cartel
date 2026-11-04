@@ -226,6 +226,107 @@ class SoundController {
       // AudioContext unavailable
     }
   }
+
+  playDoveFlutter(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      for (let i = 0; i < 4; i++) {
+        const flapTime = now + i * 0.08;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140 + i * 15, flapTime);
+        osc.frequency.exponentialRampToValueAtTime(70, flapTime + 0.06);
+
+        gain.gain.setValueAtTime(0.08, flapTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, flapTime + 0.06);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(flapTime);
+        osc.stop(flapTime + 0.06);
+      }
+    } catch {
+      // AudioContext unavailable
+    }
+  }
+
+  playLetterDrop(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
+
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch {
+      // AudioContext unavailable
+    }
+  }
+
+  playParchmentOpen(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const chord = [392.0, 523.25, 659.25, 783.99]; // G4, C5, E5, G5
+      chord.forEach((freq, idx) => {
+        if (!ctx) return;
+        const t = now + idx * 0.06;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+
+        gain.gain.setValueAtTime(0.09, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.6);
+      });
+    } catch {
+      // AudioContext unavailable
+    }
+  }
+
+  playPortalWhoosh(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 1.2);
+      osc.frequency.exponentialRampToValueAtTime(1760, now + 2.0);
+
+      gain.gain.setValueAtTime(0.02, now);
+      gain.gain.linearRampToValueAtTime(0.22, now + 1.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 2.4);
+    } catch {
+      // AudioContext unavailable
+    }
+  }
 }
 
 export const soundController = new SoundController();

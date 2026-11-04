@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { ROUNDS_DATA } from '../../constants/rounds.constants';
 import { authService } from '../../services/authService';
+import { isRound4Route } from '../../app/routes';
 import { HauntedAtmosphere } from './HauntedAtmosphere';
 import { HauntedHero } from './HauntedHero';
 import { TeamDashboardView } from '../player/TeamDashboardView';
 import { Round1Dashboard } from '../game/Round1Dashboard';
+import { RoundFourIntro } from '../game/round4/RoundFourIntro';
 import { CornerQuickNav } from '../layout/CornerQuickNav';
 import { GothicLeaderboardModal } from '../leaderboard/GothicLeaderboardModal';
 
@@ -49,12 +51,34 @@ export const FrostCartelHomePage: React.FC = () => {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [activeChamberRound, setActiveChamberRound] = useState<number | null>(() => {
     if (typeof window !== 'undefined') {
+      if (isRound4Route(window.location.hash, window.location.search)) return 4;
       const params = new URLSearchParams(window.location.search);
       if (params.get('round') === '1') return 1;
     }
     return null;
   });
   const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleRouteSync = () => {
+      if (isRound4Route(window.location.hash, window.location.search)) {
+        setActiveChamberRound(4);
+      } else {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('round') === '1') {
+          setActiveChamberRound(1);
+        } else if (activeChamberRound === 4) {
+          setActiveChamberRound(null);
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleRouteSync);
+    window.addEventListener('popstate', handleRouteSync);
+    return () => {
+      window.removeEventListener('hashchange', handleRouteSync);
+      window.removeEventListener('popstate', handleRouteSync);
+    };
+  }, [activeChamberRound]);
 
   const handleLoginSuccess = (newSession: TeamSession) => {
     setSession(newSession);
@@ -89,6 +113,27 @@ export const FrostCartelHomePage: React.FC = () => {
     setIsDashboardOpen(false);
     setActiveChamberRound(1);
   };
+
+  // If player has entered Round 4 (The Messenger's Letter):
+  if (activeChamberRound === 4) {
+    return (
+      <RoundFourIntro
+        onExit={() => {
+          if (window.location.hash === '#/round-4' || window.location.hash === '#/round-04') {
+            window.location.hash = '';
+          }
+          if (typeof window !== 'undefined' && window.location.search) {
+            const url = new URL(window.location.href);
+            if (url.searchParams.get('round') === '4' || url.searchParams.get('round') === '04') {
+              url.searchParams.delete('round');
+              window.history.pushState(null, '', url.pathname + url.search + url.hash);
+            }
+          }
+          setActiveChamberRound(null);
+        }}
+      />
+    );
+  }
 
   // If player has entered Round 1:
   if (activeChamberRound === 1 && session) {
@@ -125,11 +170,12 @@ export const FrostCartelHomePage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans selection:bg-cartel-pumpkin selection:text-black overflow-x-hidden">
-      {/* Discreet Floating Corner Navigation Dock (Leaderboard, Squad Console, Admin Vault) */}
+      {/* Discreet Floating Corner Navigation Dock (Leaderboard, Squad Console, Admin Vault, Round 4) */}
       <CornerQuickNav
         session={session}
         onOpenDashboard={() => setIsDashboardOpen(true)}
         onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
+        onNavigateRound4={() => setActiveChamberRound(4)}
       />
 
       {/* 1. Full-Screen Cinematic Haunted Environment (Castle, Moon, Bats, Ghost, Mist, Pumpkins) */}

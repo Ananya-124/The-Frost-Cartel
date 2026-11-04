@@ -21,3 +21,4 @@ export * from './game/haunted/FloatingGhost';
 export * from './game/haunted/HauntedGraveyardAtmosphere';
 export * from './game/haunted/GothicRound1HUD';
 export * from './game/haunted/HauntedPortalCard';
+export * from './game/round4/RoundFourIntro';
