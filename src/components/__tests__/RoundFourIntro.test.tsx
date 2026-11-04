@@ -27,6 +27,37 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     expect(screen.queryByAltText(/hooded player/i)).toBeNull();
   });
 
+  it('orchestrates the blur-to-clear initial reveal and waits before launching dove flight', () => {
+    vi.useFakeTimers();
+
+    render(
+      <RoundFourIntro
+        onExit={mockExit}
+        onProceedToFloors={mockProceed}
+        initialState="INITIAL_REVEAL"
+      />
+    );
+
+    // Initial state: dove is NOT flying yet while screen is blurred
+    expect(screen.queryByAltText(/White messenger dove in flight/i)).toBeNull();
+
+    // Fast forward 500ms (still during reveal): dove should NOT be flying
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(screen.queryByAltText(/White messenger dove in flight/i)).toBeNull();
+
+    // Fast forward reveal completion (1000ms) + pause (400ms) = 1400ms total
+    act(() => {
+      vi.advanceTimersByTime(950);
+    });
+
+    // Dove flight animation should now be active
+    expect(screen.getByAltText(/White messenger dove in flight/i)).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
   it('displays the perched white dove, sealed ancient letter on pedestal, and "OPEN THE ANCIENT LETTER" prompt', () => {
     render(
       <RoundFourIntro
@@ -60,9 +91,9 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     const letterButton = screen.getByRole('button', { name: /OPEN THE ANCIENT LETTER/i });
     fireEvent.click(letterButton);
 
-    // Fast-forward open letter transition (450ms)
+    // Fast-forward open letter transition (380ms)
     act(() => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(400);
     });
 
     // Dialog title
@@ -88,7 +119,7 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     vi.useRealTimers();
   });
 
-  it('navigates through the golden portal sequence into the college destination screen', () => {
+  it('crossfades smoothly via blur-to-clear transition into the college destination screen without particle explosions', () => {
     vi.useFakeTimers();
 
     render(
@@ -103,15 +134,15 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     const beginButton = screen.getByRole('button', { name: /Begin the hunt through time and space/i });
     fireEvent.click(beginButton);
 
-    // Advance cascading portal states:
-    // PORTAL_IGNITION (900ms) -> SCENE_CONTRACTING (1100ms) -> PARTICLES_FORMING (1100ms) -> WHITE_TUNNEL (1400ms) -> COLLEGE_REVEAL (900ms)
-    act(() => { vi.advanceTimersByTime(1000); });
-    act(() => { vi.advanceTimersByTime(1200); });
-    act(() => { vi.advanceTimersByTime(1200); });
-    act(() => { vi.advanceTimersByTime(1500); });
-    act(() => { vi.advanceTimersByTime(1000); });
+    // Banned visual effects check: NO screen-shrinking tunnel or particle explosion
+    expect(screen.queryByText(/streak-/i)).toBeNull();
 
-    // College destination should now be rendered
+    // Advance blur crossfade transition (1400ms)
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    // College destination should now be rendered and fully interactive
     expect(screen.getByText('THE COLLEGE OF OCCULT SCIENCES')).toBeInTheDocument();
     expect(screen.getByText('Grand Foyer & Marble Colonnade')).toBeInTheDocument();
     expect(screen.getByText('The Antiquities & Map Archives')).toBeInTheDocument();

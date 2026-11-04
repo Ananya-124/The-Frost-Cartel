@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Round4IntroState } from '../../../types/round4.types';
-import { soundController } from '../../../utils/soundController';
+import { useRoundFourIntro } from './useRoundFourIntro';
+import { CinematicBlurTransition } from './CinematicBlurTransition';
 import { DoveFlightAnimation } from './DoveFlightAnimation';
 import { AncientLetter } from './AncientLetter';
 import { LetterRevealDialog } from './LetterRevealDialog';
-import { GoldenPortalTransition } from './GoldenPortalTransition';
 import { CollegeBuildingView } from './CollegeBuildingView';
 
 interface RoundFourIntroProps {
@@ -16,73 +16,48 @@ interface RoundFourIntroProps {
 export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
   onExit,
   onProceedToFloors,
-  initialState = 'ENVIRONMENT_IDLE',
+  initialState = 'INITIAL_REVEAL',
 }) => {
-  const [state, setState] = useState<Round4IntroState>(initialState);
-  const [isMuted, setIsMuted] = useState(() => soundController.isMuted());
-  const [isCollegeRevealed, setIsCollegeRevealed] = useState(
-    () => initialState === 'COLLEGE_REVEAL'
+  const {
+    state,
+    isMuted,
+    handleToggleMute,
+    initialFocused,
+    reducedMotion,
+    handleLetterDrop,
+    handleDropFinished,
+    handleDovePerched,
+    handleOpenLetter,
+    handleBeginHunt,
+    handleReplayIntro,
+  } = useRoundFourIntro({ initialState, onExit, onProceedToFloors });
+
+  const isCrossfading =
+    state === 'HUNT_REQUESTED' ||
+    state === 'OUTGOING_BLUR' ||
+    state === 'INCOMING_COLLEGE_REVEAL' ||
+    state === 'PORTAL_IGNITION' ||
+    state === 'SCENE_CONTRACTING' ||
+    state === 'PARTICLES_FORMING' ||
+    state === 'WHITE_TUNNEL';
+
+  const isCollegeReady = state === 'COLLEGE_READY' || state === 'COLLEGE_REVEAL';
+
+  const [incomingFocused, setIncomingFocused] = useState(
+    () => isCollegeReady
   );
 
-  // Phase 1: Environment Idle -> Dove Enters & Flies (After short cinematic pause)
   useEffect(() => {
-    if (state !== 'ENVIRONMENT_IDLE') return;
+    if (isCrossfading) {
+      const frameId = requestAnimationFrame(() => {
+        setIncomingFocused(true);
+      });
+      return () => cancelAnimationFrame(frameId);
+    }
+  }, [isCrossfading]);
 
-    const timer = setTimeout(() => {
-      setState('DOVE_FLYING');
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [state]);
-
-  const handleToggleMute = () => {
-    const nextMuted = soundController.toggleMute();
-    setIsMuted(nextMuted);
-  };
-
-  // Called when dove reaches pedestal release point
-  const handleLetterDrop = () => {
-    setState('LETTER_DROPPING');
-  };
-
-  // Called when letter hits pedestal and settles
-  const handleDropFinished = () => {
-    setState('DOVE_LANDING');
-  };
-
-  // Called when dove finishes landing on right column
-  const handleDovePerched = () => {
-    setState('LETTER_AVAILABLE');
-  };
-
-  // Called when player clicks the sealed letter
-  const handleOpenLetter = () => {
-    setState('LETTER_OPENING');
-    setTimeout(() => {
-      setState('LETTER_REVEALED');
-    }, 450);
-  };
-
-  // Called when player clicks 'BEGIN THE HUNT'
-  const handleBeginHunt = () => {
-    setState('PORTAL_IGNITION');
-  };
-
-  const handlePortalAdvance = (nextState: Round4IntroState) => {
-    setState(nextState);
-  };
-
-  const handlePortalComplete = () => {
-    setIsCollegeRevealed(true);
-  };
-
-  const handleReplayIntro = () => {
-    setIsCollegeRevealed(false);
-    setState('ENVIRONMENT_IDLE');
-  };
-
-  // If time-portal sequence has concluded: show the College Building Destination Screen
-  if (isCollegeRevealed) {
+  // If already reached college ready without intro, render college directly
+  if (isCollegeReady && !isCrossfading) {
     return (
       <CollegeBuildingView
         onExit={onExit}
@@ -94,112 +69,136 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
     );
   }
 
-  // Visual contraction effect when scene is collapsing into portal singularity
-  const isContracting = state === 'SCENE_CONTRACTING';
+  // Incoming College Screen style during crossfade
+  const incomingStyle: React.CSSProperties = reducedMotion
+    ? {
+        opacity: incomingFocused ? 1 : 0,
+        transition: 'opacity 500ms ease',
+      }
+    : {
+        filter: incomingFocused ? 'blur(0px)' : 'blur(14px)',
+        opacity: incomingFocused ? 1 : 0,
+        transform: incomingFocused ? 'scale(1)' : 'scale(1.025)',
+        transition:
+          'filter 1400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1400ms cubic-bezier(0.4, 0, 0.2, 1), transform 1400ms cubic-bezier(0.4, 0, 0.2, 1)',
+        willChange: 'filter, opacity, transform',
+      };
 
   return (
-    <div
-      className={`relative min-h-screen w-full bg-[#0a0c10] text-[#f4ecd8] flex flex-col font-sans overflow-hidden select-none transition-all duration-1000 ${
-        isContracting
-          ? 'scale-[0.25] filter brightness-150 blur-sm pointer-events-none'
-          : 'scale-100 filter-none'
-      }`}
-    >
-      {/* 1. Full-Screen Cinematic Dawn Stone Archway Backdrop */}
-      <div className="fixed inset-0 z-0">
-        <img
-          src="/assets/round-4/round4_arch_dawn_bg.jpg"
-          alt="Ancient Stone Archway overlooking Neoclassical College at Dawn"
-          className="w-full h-full object-cover object-center filter brightness-[0.92] contrast-105"
-        />
-
-        {/* Golden Sunbeams & Morning Mist Atmosphere */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/35 pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,120,0.18)_0%,transparent_65%)] pointer-events-none" />
-
-        {/* Ambient Floating Golden Dust Particles & Wind Leaves */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <div className="absolute top-[28%] left-[22%] w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[0.5px] animate-pulse [animation-duration:2.8s]" />
-          <div className="absolute top-[45%] left-[38%] w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px] animate-pulse [animation-duration:3.6s] [animation-delay:1.2s]" />
-          <div className="absolute top-[35%] right-[25%] w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[0.5px] animate-pulse [animation-duration:2.2s] [animation-delay:0.8s]" />
-          <div className="absolute top-[52%] right-[35%] w-2.5 h-2.5 rounded-full bg-amber-400/60 blur-[1px] animate-pulse [animation-duration:4s] [animation-delay:1.8s]" />
-          {/* Subtle floating leaves */}
-          <div className="absolute top-[30%] left-[15%] text-xs text-amber-500/40 animate-spin [animation-duration:14s]">🍃</div>
-          <div className="absolute top-[40%] right-[18%] text-xs text-amber-400/40 animate-spin [animation-duration:18s]">🍂</div>
+    <div className="relative min-h-screen w-full bg-[#0a0c10] text-[#f4ecd8] font-sans overflow-hidden select-none">
+      {/* Layer 1 (Underneath): Incoming College Destination Screen mounted during crossfade */}
+      {isCrossfading && (
+        <div
+          className="absolute inset-0 z-0 origin-center pointer-events-auto"
+          style={incomingStyle}
+        >
+          <CollegeBuildingView
+            onExit={onExit}
+            onReplayIntro={handleReplayIntro}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
+            onProceedToFloors={onProceedToFloors}
+          />
         </div>
-      </div>
+      )}
 
-      {/* 2. Minimal Header (Strictly NO large title, NO statistics, NO avatar) */}
-      <header className="relative z-30 w-full px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-amber-500/15 bg-black/30 backdrop-blur-sm">
-        {/* Top-Left: Skull Emblem • FROST CARTEL • ROUND 04 */}
-        <div className="flex items-center gap-3 select-none">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-amber-400/30 to-amber-900/60 border border-amber-400/50 flex items-center justify-center shadow-[0_0_15px_rgba(245,185,80,0.3)]">
-            <span className="text-base sm:text-lg">💀</span>
+      {/* Layer 2 (Foreground): Outgoing / Initial Intro Scene with Blur-to-Clear Lens focus */}
+      <CinematicBlurTransition
+        isInitialFocused={initialFocused}
+        isOutgoing={isCrossfading}
+        reducedMotion={reducedMotion}
+      >
+        <div className="relative min-h-screen w-full flex flex-col justify-between">
+          {/* 1. Full-Screen Cinematic Dawn Stone Archway Backdrop */}
+          <div className="fixed inset-0 z-0">
+            <img
+              src="/assets/round-4/round4_arch_dawn_bg.jpg"
+              alt="Ancient Stone Archway overlooking Neoclassical College at Dawn"
+              className="w-full h-full object-cover object-center filter brightness-[0.92] contrast-105"
+            />
+
+            {/* Golden Sunbeams & Morning Mist Atmosphere */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/35 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,120,0.18)_0%,transparent_65%)] pointer-events-none" />
+
+            {/* Ambient Floating Golden Dust Particles & Wind Leaves */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+              <div className="absolute top-[28%] left-[22%] w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[0.5px] animate-pulse [animation-duration:2.8s]" />
+              <div className="absolute top-[45%] left-[38%] w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px] animate-pulse [animation-duration:3.6s] [animation-delay:1.2s]" />
+              <div className="absolute top-[35%] right-[25%] w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[0.5px] animate-pulse [animation-duration:2.2s] [animation-delay:0.8s]" />
+              <div className="absolute top-[52%] right-[35%] w-2.5 h-2.5 rounded-full bg-amber-400/60 blur-[1px] animate-pulse [animation-duration:4s] [animation-delay:1.8s]" />
+              {/* Subtle floating leaves */}
+              <div className="absolute top-[30%] left-[15%] text-xs text-amber-500/40 animate-spin [animation-duration:14s]">🍃</div>
+              <div className="absolute top-[40%] right-[18%] text-xs text-amber-400/40 animate-spin [animation-duration:18s]">🍂</div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-amber-200">
-              FROST CARTEL
-            </span>
-            <span className="text-amber-500/60 text-xs">―</span>
-            <span className="font-sans text-[11px] sm:text-xs tracking-widest text-amber-300 font-semibold uppercase">
-              ROUND 04
-            </span>
-          </div>
+
+          {/* 2. Minimal Header (Strictly NO large title, NO statistics, NO avatar) */}
+          <header className="relative z-30 w-full px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-amber-500/15 bg-black/30 backdrop-blur-sm">
+            {/* Top-Left: Skull Emblem • FROST CARTEL • ROUND 04 */}
+            <div className="flex items-center gap-3 select-none">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-amber-400/30 to-amber-900/60 border border-amber-400/50 flex items-center justify-center shadow-[0_0_15px_rgba(245,185,80,0.3)]">
+                <span className="text-base sm:text-lg">💀</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-amber-200">
+                  FROST CARTEL
+                </span>
+                <span className="text-amber-500/60 text-xs">―</span>
+                <span className="font-sans text-[11px] sm:text-xs tracking-widest text-amber-300 font-semibold uppercase">
+                  ROUND 04
+                </span>
+              </div>
+            </div>
+
+            {/* Top-Right: Sound Toggle & Exit */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Sound Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleMute}
+                aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+                className="w-8 h-8 rounded-full bg-black/60 hover:bg-amber-950/60 border border-amber-500/40 text-amber-200 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <span className="text-xs">{isMuted ? '🔇' : '🔊'}</span>
+              </button>
+
+              {/* Exit Control */}
+              <button
+                type="button"
+                onClick={onExit}
+                aria-label="Exit Round 4 and return to Home"
+                className="h-8 px-4 rounded-full bg-black/60 hover:bg-red-950/60 border border-red-500/40 hover:border-red-400 text-red-200 font-cinzel text-[11px] font-bold tracking-wider transition-all cursor-pointer"
+              >
+                EXIT
+              </button>
+            </div>
+          </header>
+
+          {/* 3. The Flying & Perched White Dove Animation (Slow 6.2s total flight, Bezier trajectory) */}
+          <DoveFlightAnimation
+            state={state}
+            onDropComplete={handleLetterDrop}
+            onDovePerched={handleDovePerched}
+            isMuted={isMuted}
+          />
+
+          {/* 4. Interactive Sealed Ancient Letter on Pedestal (Drop physics, impact sparks, hover glow) */}
+          <AncientLetter
+            state={state}
+            onOpenLetter={handleOpenLetter}
+            onDropFinished={handleDropFinished}
+            isMuted={isMuted}
+          />
+
+          {/* 5. Opened Ancient Parchment Dialog Modal (Parchment scroll, exact text, BEGIN THE HUNT) */}
+          <LetterRevealDialog
+            state={state}
+            onBeginHunt={handleBeginHunt}
+            isMuted={isMuted}
+          />
         </div>
-
-        {/* Top-Right: Sound Toggle & Exit */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Sound Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleMute}
-            aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-            className="w-8 h-8 rounded-full bg-black/60 hover:bg-amber-950/60 border border-amber-500/40 text-amber-200 flex items-center justify-center transition-all cursor-pointer"
-          >
-            <span className="text-xs">{isMuted ? '🔇' : '🔊'}</span>
-          </button>
-
-          {/* Exit Control */}
-          <button
-            type="button"
-            onClick={onExit}
-            aria-label="Exit Round 4 and return to Home"
-            className="h-8 px-4 rounded-full bg-black/60 hover:bg-red-950/60 border border-red-500/40 hover:border-red-400 text-red-200 font-cinzel text-[11px] font-bold tracking-wider transition-all cursor-pointer"
-          >
-            EXIT
-          </button>
-        </div>
-      </header>
-
-      {/* 3. The Flying & Perched White Dove Animation (Bezier flight path, wing flapping, banking) */}
-      <DoveFlightAnimation
-        state={state}
-        onDropComplete={handleLetterDrop}
-        onDovePerched={handleDovePerched}
-        isMuted={isMuted}
-      />
-
-      {/* 4. Interactive Sealed Ancient Letter on Pedestal (Drop physics, impact particles, hover glow) */}
-      <AncientLetter
-        state={state}
-        onOpenLetter={handleOpenLetter}
-        onDropFinished={handleDropFinished}
-        isMuted={isMuted}
-      />
-
-      {/* 5. Opened Ancient Parchment Dialog Modal (Clean scroll asset, exact text, BEGIN THE HUNT) */}
-      <LetterRevealDialog
-        state={state}
-        onBeginHunt={handleBeginHunt}
-        isMuted={isMuted}
-      />
-
-      {/* 6. Multi-Stage Time-Travel Portal Transition (Ignition, Contraction, Fragmentation, Tunnel) */}
-      <GoldenPortalTransition
-        state={state}
-        onAdvanceState={handlePortalAdvance}
-        onComplete={handlePortalComplete}
-      />
+      </CinematicBlurTransition>
     </div>
   );
 };

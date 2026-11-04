@@ -33,15 +33,21 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
   const animFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  // Approach Flight (DOVE_ENTERING & DOVE_FLYING)
+  // Approach Flight: Slow, elegant 3.8s flight (DOVE_ENTERING / DOVE_FLYING / DOVE_APPROACHING)
   useEffect(() => {
-    if (state !== 'DOVE_ENTERING' && state !== 'DOVE_FLYING') return;
+    if (
+      state !== 'DOVE_ENTERING' &&
+      state !== 'DOVE_FLYING' &&
+      state !== 'DOVE_APPROACHING'
+    ) {
+      return;
+    }
 
     if (!isMuted) {
       soundController.playDoveFlutter();
     }
 
-    const duration = 2800; // 2.8s smooth curved flight
+    const duration = 3800; // 3.8s majestic curved approach
     startTimeRef.current = null;
 
     const animateFlight = (timestamp: number) => {
@@ -49,7 +55,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       const elapsed = timestamp - startTimeRef.current;
       const rawT = Math.min(1, elapsed / duration);
 
-      // Smooth ease-in-out progress
+      // Smooth ease-in-out progress for slow, natural acceleration and deceleration
       const t = rawT < 0.5 ? 2 * rawT * rawT : -1 + (4 - 2 * rawT) * rawT;
 
       const transform = getDoveTransform(
@@ -65,14 +71,14 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       );
 
       setDoveTransform(transform);
-      // Gentle wing flapping frequency slows into flare as bird arrives at pedestal
-      const flapRate = 0.02 * (1 - rawT * 0.35);
+      // Gentle, majestic wing flapping frequency slows into a flare as bird arrives at pedestal
+      const flapRate = 0.014 * (1 - rawT * 0.45);
       setFlapPhase(elapsed * flapRate);
 
       if (rawT < 1) {
         animFrameRef.current = requestAnimationFrame(animateFlight);
       } else {
-        // Reached pedestal release point
+        // Arrived directly at pedestal release point
         onLetterDrop();
       }
     };
@@ -84,7 +90,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
     };
   }, [state, onLetterDrop, isMuted]);
 
-  // Departure & Perch Flight (DOVE_LANDING)
+  // Departure & Perch Flight: Smooth 2.4s ascent (DOVE_LANDING)
   useEffect(() => {
     if (state !== 'DOVE_LANDING') return;
 
@@ -92,7 +98,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       soundController.playDoveFlutter();
     }
 
-    const duration = 1800; // 1.8s ascent to right arch column
+    const duration = 2400; // 2.4s graceful ascent to right arch column
     startTimeRef.current = null;
 
     const animatePerch = (timestamp: number) => {
@@ -101,7 +107,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       const rawT = Math.min(1, elapsed / duration);
 
       // Smooth deceleration ease-out
-      const t = 1 - Math.pow(1 - rawT, 2.5);
+      const t = 1 - Math.pow(1 - rawT, 2.2);
 
       const transform = getDoveTransform(
         PERCH_PATH.p0,
@@ -116,8 +122,8 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       );
 
       setDoveTransform(transform);
-      // Wing flapping gradually slows down as bird prepares to perch
-      const flapFrequency = 0.022 * (1 - rawT * 0.7);
+      // Wing flapping gradually slows down as bird settles
+      const flapFrequency = 0.016 * (1 - rawT * 0.75);
       setFlapPhase(elapsed * flapFrequency);
 
       if (rawT < 1) {
@@ -134,23 +140,36 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
     };
   }, [state, onDovePerched, isMuted]);
 
-  // If in initial idle state, bird is not yet visible in courtyard
-  if (state === 'ENVIRONMENT_IDLE') {
+  // If in initial reveal or idle states, bird is not yet visible
+  if (
+    state === 'INITIAL_REVEAL' ||
+    state === 'ENVIRONMENT_IDLE' ||
+    state === 'INTRO_VISIBLE'
+  ) {
     return null;
   }
 
-  const isFlying = state === 'DOVE_ENTERING' || state === 'DOVE_FLYING' || state === 'DOVE_LANDING';
+  const isFlying =
+    state === 'DOVE_ENTERING' ||
+    state === 'DOVE_FLYING' ||
+    state === 'DOVE_APPROACHING' ||
+    state === 'DOVE_LANDING';
+
   const isPerched =
     state === 'LETTER_AVAILABLE' ||
     state === 'LETTER_OPENING' ||
     state === 'LETTER_REVEALED' ||
+    state === 'LETTER_OPENED' ||
+    state === 'HUNT_REQUESTED' ||
+    state === 'OUTGOING_BLUR' ||
+    state === 'INCOMING_COLLEGE_REVEAL' ||
     state === 'PORTAL_IGNITION' ||
     state === 'SCENE_CONTRACTING' ||
     state === 'PARTICLES_FORMING';
 
-  // Calculate subtle, natural wing flapping oscillation
-  const wingAngle = Math.sin(flapPhase) * 18; // -18 to +18 degrees
-  const wingScaleY = 1 + Math.sin(flapPhase) * 0.12;
+  // Subtle wing flapping oscillation
+  const wingAngle = Math.sin(flapPhase) * 16; // -16 to +16 degrees
+  const wingScaleY = 1 + Math.sin(flapPhase) * 0.1;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden select-none">
@@ -175,7 +194,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
             <div className="absolute -left-4 top-1/2 w-1.5 h-1.5 rounded-full bg-yellow-200/90 blur-[0.5px] animate-pulse" />
           </div>
 
-          {/* Flying Dove Body with Animated Wing Flap (Sprite carries sealed scroll in talons) */}
+          {/* Flying Dove Body with Animated Wing Flap */}
           <div
             className="relative"
             style={{

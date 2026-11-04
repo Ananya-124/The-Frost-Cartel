@@ -64,10 +64,17 @@ export const AncientLetter: React.FC<AncientLetterProps> = ({
   // Don't render if before the dove drops it
   const isVisible =
     state === 'LETTER_DROPPING' ||
+    state === 'LETTER_DROPPED' ||
     state === 'DOVE_LANDING' ||
     state === 'LETTER_AVAILABLE' ||
     state === 'LETTER_OPENING' ||
-    state === 'LETTER_REVEALED';
+    state === 'LETTER_REVEALED' ||
+    state === 'LETTER_OPENED' ||
+    state === 'HUNT_REQUESTED' ||
+    state === 'OUTGOING_BLUR' ||
+    state === 'PORTAL_IGNITION' ||
+    state === 'SCENE_CONTRACTING' ||
+    state === 'PARTICLES_FORMING';
 
   if (!isVisible) {
     return null;

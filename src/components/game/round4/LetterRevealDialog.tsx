@@ -16,13 +16,17 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isOpening = state === 'LETTER_OPENING';
-  const isRevealed = state === 'LETTER_REVEALED';
+  const isRevealed = state === 'LETTER_REVEALED' || state === 'LETTER_OPENED';
   const isTransitioning =
+    state === 'HUNT_REQUESTED' ||
+    state === 'OUTGOING_BLUR' ||
+    state === 'INCOMING_COLLEGE_REVEAL' ||
+    state === 'COLLEGE_REVEAL' ||
+    state === 'COLLEGE_READY' ||
     state === 'PORTAL_IGNITION' ||
     state === 'SCENE_CONTRACTING' ||
     state === 'PARTICLES_FORMING' ||
-    state === 'WHITE_TUNNEL' ||
-    state === 'COLLEGE_REVEAL';
+    state === 'WHITE_TUNNEL';
 
   if (!isOpening && !isRevealed && !isTransitioning) {
     return null;
