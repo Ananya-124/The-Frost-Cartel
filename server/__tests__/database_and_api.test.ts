@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Server } from 'node:http';
 import { app } from '../index.ts';
