@@ -1,31 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Round4IntroState } from '../../../types/round4.types';
 import { soundController } from '../../../utils/soundController';
 
 interface AncientLetterProps {
   state: Round4IntroState;
   onOpenLetter: () => void;
+  onDropFinished: () => void;
   isMuted: boolean;
 }
 
 export const AncientLetter: React.FC<AncientLetterProps> = ({
   state,
   onOpenLetter,
+  onDropFinished,
   isMuted,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [dropProgress, setDropProgress] = useState(0); // 0 = at release point, 1 = landed on pedestal
 
-  // Render only after the dove has arrived and dropped the letter
+  // Handle letter drop fall animation when in LETTER_DROPPING
+  useEffect(() => {
+    if (state !== 'LETTER_DROPPING') return;
+
+    if (!isMuted) {
+      soundController.playLetterDrop();
+    }
+
+    const duration = 850; // 850ms natural drop with bounce
+    const startTime = performance.now();
+
+    const animateDrop = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+
+      // Bounce-out easing for realistic soft landing
+      const easeBounce = (x: number): number => {
+        const n1 = 7.5625;
+        const d1 = 2.75;
+        if (x < 1 / d1) {
+          return n1 * x * x;
+        } else if (x < 2 / d1) {
+          return n1 * (x -= 1.5 / d1) * x + 0.75;
+        } else if (x < 2.5 / d1) {
+          return n1 * (x -= 2.25 / d1) * x + 0.9375;
+        } else {
+          return n1 * (x -= 2.625 / d1) * x + 0.984375;
+        }
+      };
+
+      setDropProgress(easeBounce(t));
+
+      if (t < 1) {
+        requestAnimationFrame(animateDrop);
+      } else {
+        onDropFinished();
+      }
+    };
+
+    const frameId = requestAnimationFrame(animateDrop);
+    return () => cancelAnimationFrame(frameId);
+  }, [state, onDropFinished, isMuted]);
+
+  // Don't render if before the dove drops it
   const isVisible =
-    state === 'LETTER_DROPPED' ||
+    state === 'LETTER_DROPPING' ||
+    state === 'DOVE_LANDING' ||
+    state === 'LETTER_AVAILABLE' ||
     state === 'LETTER_OPENING' ||
     state === 'LETTER_REVEALED';
 
-  if (!isVisible && state !== 'DOVE_ARRIVING') {
+  if (!isVisible) {
     return null;
   }
 
-  const isClickable = state === 'LETTER_DROPPED';
+  const isClickable = state === 'LETTER_AVAILABLE';
 
   const handleClick = () => {
     if (!isClickable) return;
@@ -43,15 +91,22 @@ export const AncientLetter: React.FC<AncientLetterProps> = ({
     }
   };
 
+  // Interpolate falling height & rotation
+  const isDropping = state === 'LETTER_DROPPING';
+  const currentY = isDropping ? 52 + dropProgress * 16 : 68; // falls from 52% to 68%
+  const currentRotation = isDropping ? (1 - dropProgress) * 12 : 0;
+  const currentScale = isDropping ? 0.75 + dropProgress * 0.25 : isHovered ? 1.05 : 1.0;
+
   return (
     <div
-      className={`absolute bottom-[16%] sm:bottom-[18%] lg:bottom-[20%] left-1/2 -translate-x-1/2 z-25 flex flex-col items-center select-none transition-all duration-700 ${
-        state === 'DOVE_ARRIVING'
-          ? 'opacity-0 scale-75 translate-y-8'
-          : 'opacity-100 scale-100 translate-y-0'
-      }`}
+      className="absolute left-1/2 -translate-x-1/2 z-25 flex flex-col items-center select-none"
+      style={{
+        top: `${currentY}%`,
+        transform: `translate(-50%, -50%) rotate(${currentRotation}deg) scale(${currentScale})`,
+        transition: isDropping ? 'none' : 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      }}
     >
-      {/* 1. Luminous Runic Compass Ring on Stone Pedestal Floor */}
+      {/* 1. Luminous Runic Floor Compass on Pedestal Surface */}
       <div className="relative w-64 sm:w-80 lg:w-96 h-28 sm:h-36 flex items-center justify-center pointer-events-none">
         {/* Soft Radial Golden Floor Glow */}
         <div className="absolute inset-x-8 inset-y-4 rounded-full bg-amber-400/25 blur-2xl animate-pulse [animation-duration:3s]" />
@@ -74,9 +129,14 @@ export const AncientLetter: React.FC<AncientLetterProps> = ({
           <polygon points="257,60 266,63 275,60 266,57" fill="rgba(255,215,80,0.85)" />
         </svg>
 
-        {/* Floating Sparkle Particles */}
-        <div className="absolute top-2 left-10 w-1.5 h-1.5 rounded-full bg-amber-200/80 animate-ping [animation-duration:2.5s]" />
-        <div className="absolute top-8 right-12 w-2 h-2 rounded-full bg-amber-300/80 animate-ping [animation-duration:3.2s] [animation-delay:1s]" />
+        {/* Impact Golden Spark Particles upon Landing */}
+        {isDropping && dropProgress > 0.8 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-16 h-16 rounded-full bg-amber-300/60 animate-ping" />
+            <div className="absolute -top-4 -left-6 w-2 h-2 rounded-full bg-yellow-200 animate-ping [animation-duration:0.6s]" />
+            <div className="absolute -bottom-3 -right-6 w-2 h-2 rounded-full bg-yellow-100 animate-ping [animation-duration:0.8s]" />
+          </div>
+        )}
       </div>
 
       {/* 2. Interactive Sealed Ancient Letter Prop */}
@@ -87,17 +147,19 @@ export const AncientLetter: React.FC<AncientLetterProps> = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         disabled={!isClickable}
-        aria-label="Inspect and unseal ancient letter"
-        className={`relative -mt-24 sm:-mt-28 lg:-mt-32 group cursor-pointer focus:outline-none transition-transform duration-300 ${
-          isClickable ? 'hover:-translate-y-2 focus:-translate-y-2' : 'cursor-default'
-        } ${isHovered ? 'scale-105' : 'scale-100'}`}
+        aria-label="OPEN THE ANCIENT LETTER"
+        className={`relative -mt-24 sm:-mt-28 lg:-mt-32 group focus:outline-none transition-transform duration-300 ${
+          isClickable ? 'hover:-translate-y-2 focus:-translate-y-2 cursor-pointer' : 'cursor-default'
+        }`}
       >
-        {/* Golden Outline Glow on Hover */}
+        {/* Golden Outline Radiance on Hover */}
         <div
           className={`absolute -inset-4 rounded-xl transition-opacity duration-300 blur-lg pointer-events-none ${
-            isHovered
-              ? 'bg-amber-400/40 opacity-100'
-              : 'bg-amber-400/20 opacity-70 group-hover:opacity-100'
+            isHovered && isClickable
+              ? 'bg-amber-400/50 opacity-100'
+              : isClickable
+              ? 'bg-amber-400/25 opacity-70 group-hover:opacity-100'
+              : 'opacity-0'
           }`}
         />
 
@@ -120,7 +182,7 @@ export const AncientLetter: React.FC<AncientLetterProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-amber-400 text-xs animate-pulse">◆</span>
             <span className="font-cinzel text-xs sm:text-sm tracking-[0.25em] text-amber-200 font-bold uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              A LETTER AWAITS...
+              OPEN THE ANCIENT LETTER
             </span>
             <span className="text-amber-400 text-xs animate-pulse">◆</span>
           </div>

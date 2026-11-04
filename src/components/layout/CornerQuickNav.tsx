@@ -6,7 +6,6 @@ interface CornerQuickNavProps {
   onOpenDashboard: () => void;
   onOpenLeaderboard: () => void;
   onNavigateHome?: () => void;
-  onNavigateRound4?: () => void;
 }
 
 export const CornerQuickNav: React.FC<CornerQuickNavProps> = ({
@@ -14,7 +13,6 @@ export const CornerQuickNav: React.FC<CornerQuickNavProps> = ({
   onOpenDashboard,
   onOpenLeaderboard,
   onNavigateHome,
-  onNavigateRound4,
 }) => {
   return (
     <nav
@@ -35,19 +33,7 @@ export const CornerQuickNav: React.FC<CornerQuickNavProps> = ({
         </button>
       )}
 
-      {/* 2. Round 04: The Messenger's Letter */}
-      <button
-        type="button"
-        onClick={onNavigateRound4 ?? (() => { window.location.hash = '#/round-4'; })}
-        title="Round 04: The Messenger's Letter"
-        aria-label="Round 04: The Messenger's Letter"
-        className="h-8 px-3 rounded-full bg-black/75 hover:bg-amber-950/70 border border-amber-400/50 hover:border-amber-300 text-amber-200 hover:text-amber-100 font-cinzel text-[11px] font-bold tracking-wider backdrop-blur-md transition-all shadow-lg flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-      >
-        <span aria-hidden="true">🕊️</span>
-        <span className="hidden sm:inline">Round 04</span>
-      </button>
-
-      {/* 3. Live Leaderboard Button */}
+      {/* 2. Live Leaderboard Button */}
       <button
         type="button"
         onClick={onOpenLeaderboard}

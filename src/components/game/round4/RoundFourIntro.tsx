@@ -16,7 +16,7 @@ interface RoundFourIntroProps {
 export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
   onExit,
   onProceedToFloors,
-  initialState = 'DOVE_ARRIVING',
+  initialState = 'ENVIRONMENT_IDLE',
 }) => {
   const [state, setState] = useState<Round4IntroState>(initialState);
   const [isMuted, setIsMuted] = useState(() => soundController.isMuted());
@@ -24,12 +24,13 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
     () => initialState === 'COLLEGE_REVEAL'
   );
 
-  // Initial cinematic pause if starting from ENVIRONMENT_LOADING
+  // Phase 1: Environment Idle -> Dove Enters & Flies (After short cinematic pause)
   useEffect(() => {
-    if (state !== 'ENVIRONMENT_LOADING') return;
+    if (state !== 'ENVIRONMENT_IDLE') return;
+
     const timer = setTimeout(() => {
-      setState('DOVE_ARRIVING');
-    }, 700);
+      setState('DOVE_FLYING');
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [state]);
@@ -39,17 +40,30 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
     setIsMuted(nextMuted);
   };
 
-  const handleDropComplete = () => {
-    setState('LETTER_DROPPED');
+  // Called when dove reaches pedestal release point
+  const handleLetterDrop = () => {
+    setState('LETTER_DROPPING');
   };
 
+  // Called when letter hits pedestal and settles
+  const handleDropFinished = () => {
+    setState('DOVE_LANDING');
+  };
+
+  // Called when dove finishes landing on right column
+  const handleDovePerched = () => {
+    setState('LETTER_AVAILABLE');
+  };
+
+  // Called when player clicks the sealed letter
   const handleOpenLetter = () => {
     setState('LETTER_OPENING');
     setTimeout(() => {
       setState('LETTER_REVEALED');
-    }, 400);
+    }, 450);
   };
 
+  // Called when player clicks 'BEGIN THE HUNT'
   const handleBeginHunt = () => {
     setState('PORTAL_IGNITION');
   };
@@ -64,10 +78,7 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
 
   const handleReplayIntro = () => {
     setIsCollegeRevealed(false);
-    setState('ENVIRONMENT_LOADING');
-    setTimeout(() => {
-      setState('DOVE_ARRIVING');
-    }, 400);
+    setState('ENVIRONMENT_IDLE');
   };
 
   // If time-portal sequence has concluded: show the College Building Destination Screen
@@ -83,8 +94,17 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
     );
   }
 
+  // Visual contraction effect when scene is collapsing into portal singularity
+  const isContracting = state === 'SCENE_CONTRACTING';
+
   return (
-    <div className="relative min-h-screen w-full bg-[#0a0c10] text-[#f4ecd8] flex flex-col font-sans overflow-hidden select-none">
+    <div
+      className={`relative min-h-screen w-full bg-[#0a0c10] text-[#f4ecd8] flex flex-col font-sans overflow-hidden select-none transition-all duration-1000 ${
+        isContracting
+          ? 'scale-[0.25] filter brightness-150 blur-sm pointer-events-none'
+          : 'scale-100 filter-none'
+      }`}
+    >
       {/* 1. Full-Screen Cinematic Dawn Stone Archway Backdrop */}
       <div className="fixed inset-0 z-0">
         <img
@@ -97,12 +117,15 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/35 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,120,0.18)_0%,transparent_65%)] pointer-events-none" />
 
-        {/* Ambient Floating Golden Dust Particles */}
+        {/* Ambient Floating Golden Dust Particles & Wind Leaves */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
           <div className="absolute top-[28%] left-[22%] w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[0.5px] animate-pulse [animation-duration:2.8s]" />
           <div className="absolute top-[45%] left-[38%] w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px] animate-pulse [animation-duration:3.6s] [animation-delay:1.2s]" />
           <div className="absolute top-[35%] right-[25%] w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[0.5px] animate-pulse [animation-duration:2.2s] [animation-delay:0.8s]" />
           <div className="absolute top-[52%] right-[35%] w-2.5 h-2.5 rounded-full bg-amber-400/60 blur-[1px] animate-pulse [animation-duration:4s] [animation-delay:1.8s]" />
+          {/* Subtle floating leaves */}
+          <div className="absolute top-[30%] left-[15%] text-xs text-amber-500/40 animate-spin [animation-duration:14s]">🍃</div>
+          <div className="absolute top-[40%] right-[18%] text-xs text-amber-400/40 animate-spin [animation-duration:18s]">🍂</div>
         </div>
       </div>
 
@@ -148,28 +171,30 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
         </div>
       </header>
 
-      {/* 3. The Flying & Perched White Dove Animation */}
+      {/* 3. The Flying & Perched White Dove Animation (Bezier flight path, wing flapping, banking) */}
       <DoveFlightAnimation
         state={state}
-        onDropComplete={handleDropComplete}
+        onDropComplete={handleLetterDrop}
+        onDovePerched={handleDovePerched}
         isMuted={isMuted}
       />
 
-      {/* 4. Interactive Sealed Ancient Letter on Pedestal */}
+      {/* 4. Interactive Sealed Ancient Letter on Pedestal (Drop physics, impact particles, hover glow) */}
       <AncientLetter
         state={state}
         onOpenLetter={handleOpenLetter}
+        onDropFinished={handleDropFinished}
         isMuted={isMuted}
       />
 
-      {/* 5. Opened Ancient Parchment Dialog Modal */}
+      {/* 5. Opened Ancient Parchment Dialog Modal (Clean scroll asset, exact text, BEGIN THE HUNT) */}
       <LetterRevealDialog
         state={state}
         onBeginHunt={handleBeginHunt}
         isMuted={isMuted}
       />
 
-      {/* 6. Multi-Stage Time-Travel Portal Transition */}
+      {/* 6. Multi-Stage Time-Travel Portal Transition (Ignition, Contraction, Fragmentation, Tunnel) */}
       <GoldenPortalTransition
         state={state}
         onAdvanceState={handlePortalAdvance}

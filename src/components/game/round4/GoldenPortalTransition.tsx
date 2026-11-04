@@ -27,13 +27,13 @@ export const GoldenPortalTransition: React.FC<GoldenPortalTransitionProps> = ({
     return () => mediaQuery.removeEventListener?.('change', handleChange);
   }, []);
 
-  // Sequence orchestrator
+  // Sequence orchestrator for the 5 transition stages
   useEffect(() => {
     // Reduced motion fast-path
     if (reducedMotion && state === 'PORTAL_IGNITION') {
       const timer = setTimeout(() => {
         onComplete();
-      }, 1200);
+      }, 1000);
       return () => clearTimeout(timer);
     }
 
@@ -42,32 +42,26 @@ export const GoldenPortalTransition: React.FC<GoldenPortalTransitionProps> = ({
     switch (state) {
       case 'PORTAL_IGNITION':
         timer = setTimeout(() => {
-          onAdvanceState('SCREEN_CONTRACTION');
+          onAdvanceState('SCENE_CONTRACTING');
         }, 900);
         break;
 
-      case 'SCREEN_CONTRACTION':
+      case 'SCENE_CONTRACTING':
         timer = setTimeout(() => {
-          onAdvanceState('PARTICLE_FRAGMENTATION');
+          onAdvanceState('PARTICLES_FORMING');
         }, 1100);
         break;
 
-      case 'PARTICLE_FRAGMENTATION':
+      case 'PARTICLES_FORMING':
         timer = setTimeout(() => {
-          onAdvanceState('WHITE_PORTAL');
-        }, 900);
+          onAdvanceState('WHITE_TUNNEL');
+        }, 1100);
         break;
 
-      case 'WHITE_PORTAL':
-        timer = setTimeout(() => {
-          onAdvanceState('TUNNEL_TRAVEL');
-        }, 1000);
-        break;
-
-      case 'TUNNEL_TRAVEL':
+      case 'WHITE_TUNNEL':
         timer = setTimeout(() => {
           onAdvanceState('COLLEGE_REVEAL');
-        }, 1300);
+        }, 1400);
         break;
 
       case 'COLLEGE_REVEAL':
@@ -87,20 +81,19 @@ export const GoldenPortalTransition: React.FC<GoldenPortalTransitionProps> = ({
 
   const isTransitionActive =
     state === 'PORTAL_IGNITION' ||
-    state === 'SCREEN_CONTRACTION' ||
-    state === 'PARTICLE_FRAGMENTATION' ||
-    state === 'WHITE_PORTAL' ||
-    state === 'TUNNEL_TRAVEL' ||
+    state === 'SCENE_CONTRACTING' ||
+    state === 'PARTICLES_FORMING' ||
+    state === 'WHITE_TUNNEL' ||
     state === 'COLLEGE_REVEAL';
 
   if (!isTransitionActive) {
     return null;
   }
 
-  // Reduced motion: Clean fade
+  // Reduced motion: Clean accessible fade
   if (reducedMotion) {
     return (
-      <div className="fixed inset-0 z-50 bg-amber-100/90 transition-opacity duration-1000 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-amber-100/95 transition-opacity duration-1000 flex items-center justify-center">
         <div className="w-16 h-16 rounded-full border-4 border-amber-500 border-t-transparent animate-spin" />
       </div>
     );
@@ -117,22 +110,18 @@ export const GoldenPortalTransition: React.FC<GoldenPortalTransitionProps> = ({
         </div>
       )}
 
-      {/* 2. Stage B: Screen Contraction (Inward Gravitational Collapse Toward Singularity) */}
-      {state === 'SCREEN_CONTRACTION' && (
+      {/* 2. Stage B: Full-Screen Contraction (Scene shrinks into central singularity) */}
+      {state === 'SCENE_CONTRACTING' && (
         <div className="absolute inset-0 flex items-center justify-center">
-          {/* Dark Contracting Vignette Boundary */}
           <div className="absolute inset-0 bg-black/40 animate-fadeIn" />
           <div className="w-full h-full border-[60px] sm:border-[120px] border-black/80 rounded-[50%] transition-transform duration-1000 scale-50 opacity-90 filter blur-md" />
-
-          {/* Central Bright Vortex Pull */}
           <div className="relative w-80 h-80 rounded-full bg-gradient-to-tr from-amber-400 via-white to-yellow-200 animate-spin [animation-duration:1.5s] shadow-[0_0_120px_rgba(255,255,255,1)]" />
         </div>
       )}
 
       {/* 3. Stage C: Particle Fragmentation (Screen Breaks Into Converging Golden Shards) */}
-      {state === 'PARTICLE_FRAGMENTATION' && (
+      {state === 'PARTICLES_FORMING' && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          {/* Radial Convergence Lines */}
           <svg className="w-full h-full absolute inset-0 animate-spin [animation-duration:4s]" viewBox="0 0 800 800">
             {Array.from({ length: 24 }).map((_, i) => {
               const angle = (i * 360) / 24;
@@ -153,29 +142,19 @@ export const GoldenPortalTransition: React.FC<GoldenPortalTransitionProps> = ({
               );
             })}
           </svg>
-
-          {/* Intense Expanding White Core Burst */}
           <div className="w-48 h-48 rounded-full bg-white shadow-[0_0_160px_rgba(255,255,255,1)] scale-150 transition-transform duration-700 animate-pulse" />
         </div>
       )}
 
-      {/* 4. Stage D: White Portal (Luminous White-Gold Dimension & Concentric Runic Rings) */}
-      {state === 'WHITE_PORTAL' && (
+      {/* 4. Stage D: White Tunnel (Luminous forward warp tunnel with geometric patterns) */}
+      {state === 'WHITE_TUNNEL' && (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-amber-100/95 via-white to-amber-50/90 transition-opacity duration-500">
-          {/* Glowing 3D Perspective Rings */}
           <div className="relative w-[600px] h-[600px] flex items-center justify-center" style={{ perspective: '900px' }}>
             <div className="w-[500px] h-[500px] rounded-full border-4 border-amber-400/70 animate-spin [animation-duration:6s] shadow-[0_0_50px_rgba(245,190,80,0.7)]" />
             <div className="absolute w-[360px] h-[360px] rounded-full border-2 border-dashed border-amber-600/60 animate-spin [animation-duration:4s] [animation-direction:reverse]" />
             <div className="absolute w-[220px] h-[220px] rounded-full border-4 border-amber-300 animate-ping [animation-duration:1.5s]" />
             <div className="absolute w-24 h-24 rounded-full bg-white shadow-[0_0_80px_rgba(255,255,255,1)]" />
           </div>
-        </div>
-      )}
-
-      {/* 5. Stage E: Tunnel Travel (Warp-Speed Forward Flight Toward The Light) */}
-      {state === 'TUNNEL_TRAVEL' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white transition-opacity duration-700">
-          {/* High-speed perspective zoom streaks */}
           <svg className="w-full h-full absolute inset-0 animate-spin [animation-duration:2s]" viewBox="0 0 1000 1000">
             {Array.from({ length: 32 }).map((_, i) => {
               const angle = (i * 360) / 32;
@@ -196,13 +175,10 @@ export const GoldenPortalTransition: React.FC<GoldenPortalTransitionProps> = ({
               );
             })}
           </svg>
-
-          {/* Central blinding white gateway */}
-          <div className="w-96 h-96 rounded-full bg-white shadow-[0_0_200px_rgba(255,255,255,1)] scale-[2.5] transition-transform duration-1000" />
         </div>
       )}
 
-      {/* 6. Stage F: College Reveal (Smooth Light Dissolve into Destination) */}
+      {/* 5. Stage E: College Reveal (Smooth Light Dissolve into Destination) */}
       {state === 'COLLEGE_REVEAL' && (
         <div className="absolute inset-0 bg-white transition-opacity duration-1000 opacity-0 pointer-events-none" />
       )}

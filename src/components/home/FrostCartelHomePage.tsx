@@ -93,6 +93,12 @@ export const FrostCartelHomePage: React.FC = () => {
   };
 
   const handleSelectRound = (round: RoundConfig) => {
+    if (round.id === 'round-04' || round.number === '04') {
+      setIsDashboardOpen(false);
+      window.location.hash = '#/round-4';
+      setActiveChamberRound(4);
+      return;
+    }
     if (round.isAccessible) {
       if (session) {
         setIsDashboardOpen(false);
@@ -170,12 +176,11 @@ export const FrostCartelHomePage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans selection:bg-cartel-pumpkin selection:text-black overflow-x-hidden">
-      {/* Discreet Floating Corner Navigation Dock (Leaderboard, Squad Console, Admin Vault, Round 4) */}
+      {/* Discreet Floating Corner Navigation Dock (Leaderboard, Squad Console, Admin Vault) */}
       <CornerQuickNav
         session={session}
         onOpenDashboard={() => setIsDashboardOpen(true)}
         onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
-        onNavigateRound4={() => setActiveChamberRound(4)}
       />
 
       {/* 1. Full-Screen Cinematic Haunted Environment (Castle, Moon, Bats, Ghost, Mist, Pumpkins) */}

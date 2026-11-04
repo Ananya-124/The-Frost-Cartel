@@ -60,7 +60,7 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
           </p>
         </div>
 
-        {/* 2. The Three Circular Magical Portals (Horizontal on desktop, no box cards) */}
+        {/* 2. The Four Circular Magical Portals (Horizontal on desktop, no box cards) */}
         <div className="w-full mb-6 sm:mb-8 lg:mb-10">
           <RoundPortalSection
             rounds={rounds}

@@ -47,6 +47,12 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     expect(screen.getByText('COMING SOON • SEALED')).toBeInTheDocument();
     const round3Btn = screen.getByRole('button', { name: /CLASSIFIED PROTOCOL/i });
     expect(round3Btn).toBeDisabled();
+
+    // Round 4
+    expect(screen.getByText('THE RADIANT TREASURE HUNT')).toBeInTheDocument();
+    expect(screen.getByText('ROUND 04 ACTIVE • READY')).toBeInTheDocument();
+    const round4Btn = screen.getByRole('button', { name: /ENTER ROUND 04/i });
+    expect(round4Btn).toBeEnabled();
   });
 
   it('validates required fields on team login submission', async () => {

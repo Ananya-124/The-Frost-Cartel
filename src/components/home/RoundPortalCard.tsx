@@ -12,6 +12,8 @@ function getPortalGlowClass(roundNumber: string): string {
       return 'from-cartel-pumpkin/30 via-cartel-amber/15 to-transparent border-cartel-pumpkin shadow-pumpkinGlow portal-glow-pumpkin';
     case '02':
       return 'from-cartel-amber/25 via-amber-700/15 to-transparent border-cartel-amber/70 shadow-[0_0_25px_rgba(246,166,58,0.35)]';
+    case '04':
+      return 'from-amber-300/35 via-yellow-400/20 to-transparent border-amber-300 shadow-[0_0_30px_rgba(251,191,36,0.6)]';
     default:
       return 'from-cartel-cyan/25 via-teal-900/15 to-transparent border-cartel-cyan/70 shadow-frostGlow portal-glow-cyan';
   }
@@ -23,6 +25,8 @@ function getMedallionClass(roundNumber: string): string {
       return 'border-cartel-pumpkin text-cartel-amber shadow-pumpkinGlow bg-cartel-void';
     case '02':
       return 'border-cartel-amber text-cartel-amber shadow-[0_0_12px_rgba(246,166,58,0.3)] bg-cartel-void';
+    case '04':
+      return 'border-amber-300 text-amber-200 shadow-[0_0_14px_rgba(251,191,36,0.7)] bg-[#120e06]';
     default:
       return 'border-cartel-cyan text-cartel-cyan shadow-frostGlow bg-cartel-void';
   }
@@ -32,12 +36,18 @@ function getOuterRunicClass(roundNumber: string): string {
   if (roundNumber === '03') {
     return 'border-cartel-cyan/40 animate-spin-slow';
   }
+  if (roundNumber === '04') {
+    return 'border-amber-300/60 animate-spin-slow';
+  }
   return 'border-cartel-amber/40 animate-spin-slow';
 }
 
 function getInnerRunicClass(roundNumber: string): string {
   if (roundNumber === '03') {
     return 'border-cartel-cyan/25 animate-spin-slow-reverse';
+  }
+  if (roundNumber === '04') {
+    return 'border-yellow-200/50 animate-spin-slow-reverse';
   }
   return 'border-cartel-pumpkin/35 animate-spin-slow-reverse';
 }
@@ -134,7 +144,11 @@ export const RoundPortalCard: React.FC<RoundPortalCardProps> = ({
       {isAccessible ? (
         <button
           onClick={() => onSelectRound(round)}
-          className="w-full max-w-[200px] py-1.5 px-4 rounded-md bg-gradient-to-r from-cartel-pumpkin via-cartel-amber to-cartel-pumpkin text-cartel-void font-cinzel font-black text-[10px] sm:text-[11px] uppercase tracking-widest shadow-pumpkinGlow hover:opacity-95 hover:scale-[1.03] active:scale-[0.98] transition-all cursor-pointer border border-cartel-amber/40"
+          className={`w-full max-w-[200px] py-1.5 px-4 rounded-md font-cinzel font-black text-[10px] sm:text-[11px] uppercase tracking-widest hover:opacity-95 hover:scale-[1.03] active:scale-[0.98] transition-all cursor-pointer border ${
+            round.number === '04'
+              ? 'bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 text-black border-amber-200 shadow-[0_0_20px_rgba(245,185,80,0.6)] hover:shadow-[0_0_30px_rgba(245,185,80,0.9)]'
+              : 'bg-gradient-to-r from-cartel-pumpkin via-cartel-amber to-cartel-pumpkin text-cartel-void shadow-pumpkinGlow border-cartel-amber/40'
+          }`}
         >
           {round.actionText}
         </button>

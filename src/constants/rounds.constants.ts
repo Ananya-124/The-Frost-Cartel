@@ -74,5 +74,20 @@ export const ROUNDS_DATA: RoundConfig[] = [
     actionText: 'CLASSIFIED PROTOCOL',
     isAccessible: false,
   },
+  {
+    id: 'round-04',
+    number: '04',
+    title: 'THE RADIANT TREASURE HUNT',
+    tagline: 'FROM DARKNESS TO DISCOVERY.',
+    statusText: 'ROUND 04 ACTIVE • READY',
+    statusBadge: 'active',
+    duration: '20–25 Mins',
+    bounty: 'The Golden Relic',
+    teamFormat: '2 Players / Team',
+    description: 'Beyond the graveyard, follow the white messenger dove through the sunlit archway into the forgotten college treasure.',
+    imageSrc: '/assets/round4_radiant.jpg',
+    actionText: 'ENTER ROUND 04',
+    isAccessible: true,
+  },
 ];
 

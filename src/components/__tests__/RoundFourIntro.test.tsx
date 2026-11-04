@@ -27,12 +27,12 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     expect(screen.queryByAltText(/hooded player/i)).toBeNull();
   });
 
-  it('displays the white dove, sealed ancient letter on pedestal, and "A LETTER AWAITS..." prompt', () => {
+  it('displays the perched white dove, sealed ancient letter on pedestal, and "OPEN THE ANCIENT LETTER" prompt', () => {
     render(
       <RoundFourIntro
         onExit={mockExit}
         onProceedToFloors={mockProceed}
-        initialState="LETTER_DROPPED"
+        initialState="LETTER_AVAILABLE"
       />
     );
 
@@ -42,25 +42,27 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     // Letter on stone pedestal
     expect(screen.getByAltText(/Sealed ancient letter on stone pedestal/i)).toBeInTheDocument();
 
-    // "A LETTER AWAITS..." callout
-    expect(screen.getByText('A LETTER AWAITS...')).toBeInTheDocument();
+    // "OPEN THE ANCIENT LETTER" callout and button
+    expect(screen.getAllByText('OPEN THE ANCIENT LETTER').length).toBeGreaterThanOrEqual(1);
   });
 
   it('opens the ancient parchment modal upon clicking the sealed letter and displays exact storyline', () => {
+    vi.useFakeTimers();
+
     render(
       <RoundFourIntro
         onExit={mockExit}
         onProceedToFloors={mockProceed}
-        initialState="LETTER_DROPPED"
+        initialState="LETTER_AVAILABLE"
       />
     );
 
-    const letterButton = screen.getByRole('button', { name: /Inspect and unseal ancient letter/i });
+    const letterButton = screen.getByRole('button', { name: /OPEN THE ANCIENT LETTER/i });
     fireEvent.click(letterButton);
 
-    // Fast-forward open letter transition (400ms)
+    // Fast-forward open letter transition (450ms)
     act(() => {
-      // Advance to LETTER_REVEALED
+      vi.advanceTimersByTime(500);
     });
 
     // Dialog title
@@ -82,6 +84,8 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
 
     // Button to begin the hunt
     expect(screen.getByRole('button', { name: /Begin the hunt through time and space/i })).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 
   it('navigates through the golden portal sequence into the college destination screen', () => {
@@ -100,12 +104,11 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
     fireEvent.click(beginButton);
 
     // Advance cascading portal states:
-    // PORTAL_IGNITION (900ms) -> SCREEN_CONTRACTION (1100ms) -> PARTICLE_FRAGMENTATION (900ms) -> WHITE_PORTAL (1000ms) -> TUNNEL_TRAVEL (1300ms) -> COLLEGE_REVEAL (900ms)
+    // PORTAL_IGNITION (900ms) -> SCENE_CONTRACTING (1100ms) -> PARTICLES_FORMING (1100ms) -> WHITE_TUNNEL (1400ms) -> COLLEGE_REVEAL (900ms)
     act(() => { vi.advanceTimersByTime(1000); });
     act(() => { vi.advanceTimersByTime(1200); });
-    act(() => { vi.advanceTimersByTime(1000); });
-    act(() => { vi.advanceTimersByTime(1100); });
-    act(() => { vi.advanceTimersByTime(1400); });
+    act(() => { vi.advanceTimersByTime(1200); });
+    act(() => { vi.advanceTimersByTime(1500); });
     act(() => { vi.advanceTimersByTime(1000); });
 
     // College destination should now be rendered
