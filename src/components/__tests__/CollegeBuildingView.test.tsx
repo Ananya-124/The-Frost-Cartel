@@ -1,0 +1,104 @@
+import '@testing-library/jest-dom/vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { CollegeBuildingView } from '../game/round4/CollegeBuildingView';
+import { COLLEGE_FLOORS } from '../game/round4/FloorConfiguration';
+
+describe('Round 04 College Building View & Drone Window Entry', () => {
+  const mockExit = vi.fn();
+  const mockReplay = vi.fn();
+  const mockToggleMute = vi.fn();
+  const mockProceedToFloors = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders the original college photograph, minimal HUD, and mandatory vertical relic instruction', () => {
+    render(
+      <CollegeBuildingView
+        onExit={mockExit}
+        onReplayIntro={mockReplay}
+        isMuted={false}
+        onToggleMute={mockToggleMute}
+        onProceedToFloors={mockProceedToFloors}
+      />
+    );
+
+    // Minimal HUD Verification
+    expect(screen.getByText('FROST CARTEL')).toBeInTheDocument();
+    expect(screen.getByText(/ROUND 04 — THE RADIANT TREASURE HUNT/i)).toBeInTheDocument();
+    expect(screen.getByText('B. S. NARAYAN PLATINUM JUBILEE ACADEMIC BLOCK')).toBeInTheDocument();
+
+    // Mandatory Relic Instruction Banner (Phase 2 Requirement)
+    expect(screen.getByText('PLEASE SELECT YOUR FLOOR')).toBeInTheDocument();
+
+    // Original College Building Artwork
+    const buildingImg = screen.getByAltText(/B\. S\. Narayan Platinum Jubilee Academic Block/i);
+    expect(buildingImg).toBeInTheDocument();
+    expect(buildingImg).toHaveAttribute('src', '/assets/round-04/college_building_base.png');
+
+    // Interactive Floor Overlays (all 8 floors present)
+    expect(COLLEGE_FLOORS.length).toBe(8);
+    for (const floor of COLLEGE_FLOORS) {
+      expect(screen.getByRole('button', { name: new RegExp(floor.label, 'i') })).toBeInTheDocument();
+    }
+  });
+
+  it('orchestrates drone camera zoom, window focus, window opening, and reveals interior ancient map', () => {
+    vi.useFakeTimers();
+
+    render(
+      <CollegeBuildingView
+        onExit={mockExit}
+        onReplayIntro={mockReplay}
+        isMuted={false}
+        onToggleMute={mockToggleMute}
+        onProceedToFloors={mockProceedToFloors}
+      />
+    );
+
+    // Click Seventh Floor
+    const seventhFloorBtn = screen.getByRole('button', { name: /Seventh Floor/i });
+    fireEvent.click(seventhFloorBtn);
+
+    // Stage B: Drone Camera Approach (1800ms)
+    act(() => {
+      vi.advanceTimersByTime(1850);
+    });
+
+    // Stage C: Window Targeting & Opening (600ms)
+    act(() => {
+      vi.advanceTimersByTime(650);
+    });
+
+    // Stage D: Window Entry Push-Through (850ms)
+    act(() => {
+      vi.advanceTimersByTime(900);
+    });
+
+    // Stage E: Interior Reveal (650ms)
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    // Interior view should now be displayed
+    expect(screen.getByText('SEVENTH FLOOR — THE CELESTIAL ARCHIVES & OBSERVATORY')).toBeInTheDocument();
+    expect(screen.getByText('ANCIENT MAP — CONTENT AWAITS')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Return to Exterior/i })).toBeInTheDocument();
+
+    // Verify proceed callback was fired with floor id
+    expect(mockProceedToFloors).toHaveBeenCalledWith('floor-7');
+
+    // Test Returning to Exterior
+    const returnBtn = screen.getByRole('button', { name: /Return to Exterior/i });
+    fireEvent.click(returnBtn);
+
+    // Exterior building and instruction banner should be back
+    expect(screen.getByText('PLEASE SELECT YOUR FLOOR')).toBeInTheDocument();
+    expect(screen.getByAltText(/B\. S\. Narayan Platinum Jubilee Academic Block/i)).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+});
+

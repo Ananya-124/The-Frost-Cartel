@@ -141,12 +141,12 @@ describe('Round 04 Introduction: The Messenger\'s Letter', () => {
       vi.advanceTimersByTime(1500);
     });
 
-    // College destination should now be rendered and fully interactive
-    expect(screen.getByText('THE COLLEGE OF OCCULT SCIENCES')).toBeInTheDocument();
-    expect(screen.getByText('Grand Foyer & Marble Colonnade')).toBeInTheDocument();
-    expect(screen.getByText('The Antiquities & Map Archives')).toBeInTheDocument();
-    expect(screen.getByText('The Alchemical Laboratories')).toBeInTheDocument();
-    expect(screen.getByText('The Astronomer’s Cupola & Observatory')).toBeInTheDocument();
+    // College destination should now be rendered and fully interactive with real photograph and floor selection
+    expect(screen.getByText('B. S. NARAYAN PLATINUM JUBILEE ACADEMIC BLOCK')).toBeInTheDocument();
+    expect(screen.getByText('PLEASE SELECT YOUR FLOOR')).toBeInTheDocument();
+    expect(screen.getByAltText(/B\. S\. Narayan Platinum Jubilee Academic Block/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Seventh Floor/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ground Floor/i })).toBeInTheDocument();
 
     vi.useRealTimers();
   });
