@@ -65,3 +65,4 @@ export type RiddlePanelState =
   | 'INCORRECT_ANSWER'
   | 'CORRECT_ANSWER'
   | 'ROUTE_COMPLETED';
+

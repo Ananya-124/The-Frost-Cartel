@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { COLLEGE_FLOORS, type FloorDefinition } from './FloorConfiguration';
 import { CollegeBuildingScene } from './CollegeBuildingScene';
 import { FloorInteriorView } from './FloorInteriorView';
@@ -40,7 +40,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
   const [selectedFloor, setSelectedFloor] = useState<FloorDefinition | null>(null);
   const [cameraPhase, setCameraPhase] = useState<CameraAnimationPhase>('IDLE');
   const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number } | null>(null);
-  const [, startTransition] = useTransition();
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Support developer calibration tool via URL or shortcut
   const [isCalibrating, setIsCalibrating] = useState<boolean>(() => {
@@ -50,17 +50,22 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
         setIsCalibrating((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const activeTimers = timersRef.current;
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      activeTimers.forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   const hoveredFloor = COLLEGE_FLOORS.find((f) => f.id === hoveredFloorId) || null;
   const activeFloor = selectedFloor || hoveredFloor || COLLEGE_FLOORS[2]; // Default to Floor 5 when idle
+  const activeFloorLabel = activeFloor ? activeFloor.label.toUpperCase() : 'FIFTH FLOOR';
 
   // Floor Hover Handler
   const handleHoverFloor = useCallback(
@@ -104,11 +109,9 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
           });
           onProceedToFloors?.(floor.id);
         }, 420);
-
-        return () => clearTimeout(t2);
+        timersRef.current.push(t2);
       }, 1050);
-
-      return () => clearTimeout(t1);
+      timersRef.current.push(t1);
     },
     [viewState, isMuted, onProceedToFloors]
   );
@@ -127,11 +130,13 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
   const handleBackClick = useCallback(() => {
     if (onBack) {
       onBack();
-    } else if (onReplayIntro) {
-      onReplayIntro();
-    } else {
-      onExit();
+      return;
     }
+    if (onReplayIntro) {
+      onReplayIntro();
+      return;
+    }
+    onExit();
   }, [onBack, onReplayIntro, onExit]);
 
   // If inside floor interior, render full interior view
@@ -196,26 +201,31 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-b from-[#e3cfb0]/15 via-transparent to-[#d8c29e]/25" />
       </div>
 
+      {/* Shared Gradient Defs for Minimal Floating HUD Controls */}
+      <svg className="sr-only" aria-hidden="true" width="0" height="0">
+        <defs>
+          <radialGradient id="ctrlBtnGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#2c1f12" stopOpacity="0.94" />
+            <stop offset="100%" stopColor="#120c06" stopOpacity="0.98" />
+          </radialGradient>
+          <linearGradient id="ctrlGoldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffd866" />
+            <stop offset="50%" stopColor="#d4af37" />
+            <stop offset="100%" stopColor="#9a761c" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       {/* 1. Floating Elegant Minimalist Top Controls (Directly Over Scene - Requirement 4) */}
       {/* Top-Left: Floating Circular Gold Back Medallion */}
       <button
+        type="button"
         onClick={handleBackClick}
         aria-label="Back to Previous Stage"
         className="absolute top-4 sm:top-6 left-4 sm:left-6 lg:left-8 z-40 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(70,45,15,0.4)] cursor-pointer"
         title="Go Back"
       >
         <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
-          <defs>
-            <radialGradient id="ctrlBtnGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#2c1f12" stopOpacity="0.94" />
-              <stop offset="100%" stopColor="#120c06" stopOpacity="0.98" />
-            </radialGradient>
-            <linearGradient id="ctrlGoldRing" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ffd866" />
-              <stop offset="50%" stopColor="#d4af37" />
-              <stop offset="100%" stopColor="#9a761c" />
-            </linearGradient>
-          </defs>
           {/* Circular Glass Disc */}
           <circle cx="22" cy="22" r="19" fill="url(#ctrlBtnGrad)" />
           {/* Outer Beveled Gold Ring */}
@@ -241,6 +251,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
       <div className="absolute top-4 sm:top-6 right-4 sm:right-6 lg:right-8 z-40 flex items-center gap-3 sm:gap-4 select-none">
         {/* Floating Circular Sound Medallion */}
         <button
+          type="button"
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(70,45,15,0.4)] cursor-pointer"
@@ -278,6 +289,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         {/* Minimal Gold Letter Button */}
         {onReplayIntro && (
           <button
+            type="button"
             onClick={onReplayIntro}
             className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-[#4b3317] hover:text-[#7d561a] hover:bg-[#d4af37]/20 px-3 py-1 rounded-sm border border-[#b8974a]/50 bg-[#f4ebd5]/80 backdrop-blur-sm transition-all duration-200 cursor-pointer shadow-[0_2px_8px_rgba(70,45,15,0.15)] uppercase"
             title="Read Letter"
@@ -291,6 +303,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
 
         {/* Minimal Gold Exit Button */}
         <button
+          type="button"
           onClick={onExit}
           className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-[#7a2214] hover:text-red-700 hover:bg-red-900/15 px-3 py-1 rounded-sm border border-red-700/40 bg-[#f4ebd5]/80 backdrop-blur-sm transition-all duration-200 cursor-pointer shadow-[0_2px_8px_rgba(70,45,15,0.15)] uppercase"
           title="Exit Round 04"
@@ -316,7 +329,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
           {/* Dynamic Active Floor Cartouche Plaque Text */}
           <div className="absolute left-[13%] right-[13%] top-[65.2%] h-[10.5%] flex items-center justify-center pointer-events-none select-none">
             <span className="font-cinzel text-xs sm:text-[13px] md:text-sm font-bold tracking-[0.18em] text-[#ffd866] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] truncate px-2 text-center">
-              {activeFloor ? activeFloor.label.toUpperCase() : 'FIFTH FLOOR'}
+              {activeFloorLabel}
             </span>
           </div>
         </div>

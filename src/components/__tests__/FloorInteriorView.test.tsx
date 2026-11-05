@@ -59,7 +59,7 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
     expect(input).toBeDisabled();
   });
 
-  it('unlocks the field riddle and enables the answer input when the map explorer touches the target point', async () => {
+  it('unlocks the field riddle and enables the answer input when the map explorer touches the target point', () => {
     render(
       <FloorInteriorView
         floor={testFloor}
@@ -126,7 +126,7 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
     expect(screen.getByText('1 / 5 SOLVED')).toBeInTheDocument();
   });
 
-  it('completes the entire route when all 5 clues are verified and unlocks the next route', async () => {
+  it('completes the entire route when all 5 clues are verified and unlocks the next route', () => {
     render(
       <FloorInteriorView
         floor={testFloor}
@@ -146,7 +146,7 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
         round4Service.markTargetDiscovered(teamId);
       });
       const validCode = route1.steps[i].acceptedCodes[0];
-      await act(async () => {
+      act(() => {
         round4Service.submitAnswer(teamId, validCode);
       });
     }

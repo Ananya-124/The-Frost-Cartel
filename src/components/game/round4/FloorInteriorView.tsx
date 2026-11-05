@@ -55,10 +55,10 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
 
   // Player 1 submits answer code received from Field Partner
   const handleSubmitAnswer = useCallback(
-    async (answer: string): Promise<{ success: boolean; message: string }> => {
+    (answer: string): Promise<{ success: boolean; message: string }> => {
       const result = round4Service.submitAnswer(teamId, answer);
       setProgress({ ...result.progress });
-      return { success: result.success, message: result.message };
+      return Promise.resolve({ success: result.success, message: result.message });
     },
     [teamId]
   );

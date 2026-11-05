@@ -85,13 +85,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
         <defs>
           {/* Subtle Warm Golden Ambient Glow for Hovered Floors */}
           <filter id="relicGoldGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur2" />
-            <feMerge>
-              <feMergeNode in="blur2" />
-              <feMergeNode in="blur1" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#ffd700" floodOpacity="0.85" />
           </filter>
 
           {/* Badge Drop Shadow */}
@@ -107,20 +101,6 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             <stop offset="75%" stopColor="#ffd866" />
             <stop offset="100%" stopColor="#d4af37" />
           </linearGradient>
-
-          {/* Architectural White Layer Outline Gradient (Matches User White Drawing) */}
-          <linearGradient id="architecturalWhiteStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.65)" />
-            <stop offset="20%" stopColor="rgba(255, 255, 255, 0.88)" />
-            <stop offset="50%" stopColor="rgba(255, 255, 255, 0.98)" />
-            <stop offset="80%" stopColor="rgba(255, 255, 255, 0.88)" />
-            <stop offset="100%" stopColor="rgba(255, 255, 255, 0.65)" />
-          </linearGradient>
-
-          {/* Architectural White Subtle Shadow Filter for High Legibility */}
-          <filter id="whiteLayerGlow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.5" />
-          </filter>
 
           {/* Selected Locked Gold Linear Gradient */}
           <linearGradient id="selectedGoldStroke" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -143,27 +123,6 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             <stop offset="50%" stopColor="#2c170b" />
             <stop offset="100%" stopColor="#1e1108" />
           </linearGradient>
-
-          {/* Hardware-accelerated floor illumination transition */}
-          <style>{`
-            .floor-group {
-              transition: all 250ms ease-out;
-            }
-            .floor-group:hover .floor-glow-path,
-            .floor-group.is-active .floor-glow-path {
-              opacity: 0.85 !important;
-            }
-            .floor-group:hover .floor-fill-path,
-            .floor-group.is-active .floor-fill-path {
-              fill: url(#sunlightFloorFill) !important;
-            }
-            .floor-group:hover .floor-contour-path,
-            .floor-group.is-active .floor-contour-path {
-              stroke: url(#antiqueGoldStroke) !important;
-              stroke-width: 3.5px !important;
-              filter: none !important;
-            }
-          `}</style>
         </defs>
 
         {/* Render All Traced Curved Architectural Floor Regions */}
