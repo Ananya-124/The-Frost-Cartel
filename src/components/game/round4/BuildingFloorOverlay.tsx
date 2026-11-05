@@ -12,6 +12,59 @@ interface BuildingFloorOverlayProps {
   highlightWindowTarget?: boolean;
 }
 
+function getGlowBorderOpacity(isSelected: boolean, isActive: boolean): number {
+  if (isSelected) {
+    return 0.95;
+  }
+  if (isActive) {
+    return 0.8;
+  }
+  return 0;
+}
+
+function getContourStroke(isSelected: boolean, isActive: boolean): string {
+  if (isSelected) {
+    return 'url(#selectedGoldStroke)';
+  }
+  if (isActive) {
+    return 'url(#antiqueGoldStroke)';
+  }
+  return 'rgba(255, 215, 0, 0.12)';
+}
+
+function getContourStrokeWidth(isSelected: boolean, isActive: boolean): string {
+  if (isSelected) {
+    return '3';
+  }
+  if (isActive) {
+    return '2.5';
+  }
+  return '0.8';
+}
+
+function getContourDashArray(isSelected: boolean, isActive: boolean): string {
+  if (isActive && !isSelected) {
+    return '6 2';
+  }
+  return 'none';
+}
+
+function getBeaconOpacity(isSelected: boolean, isHovered: boolean): number {
+  if (isSelected) {
+    return 1;
+  }
+  if (isHovered) {
+    return 0.9;
+  }
+  return 0.4;
+}
+
+function getGroupClassName(isActive: boolean, disabled: boolean): string {
+  const activeClass = isActive ? 'is-active' : '';
+  const cursorClass = disabled ? 'cursor-default pointer-events-none' : 'cursor-pointer';
+  return `floor-group ${activeClass} ${cursorClass}`.trim();
+}
+
 export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
   floors,
   hoveredFloorId,
@@ -114,11 +167,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             key={floor.id}
             id={`svg-${floor.id}`}
             data-floor-id={floor.id}
-            className={`floor-group ${isActive ? 'is-active' : ''} ${
-              disabled ? 'cursor-default pointer-events-none' : 'cursor-pointer'
-            }`}
-            onPointerEnter={() => !disabled && onHoverFloor(floor.id)}
-            onPointerLeave={() => !disabled && onHoverFloor(null)}
+            className={getGroupClassName(isActive, disabled)}
             onMouseEnter={() => !disabled && onHoverFloor(floor.id)}
             onMouseLeave={() => !disabled && onHoverFloor(null)}
             onClick={() => !disabled && onSelectFloor(floor)}
@@ -135,8 +184,8 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             style={{ pointerEvents: disabled ? 'none' : 'auto' }}
           >
             {/* Visual Floor Highlight Layer (Illuminates ALL architectural paths together) */}
-            {floor.outlinePaths.map((pathD, idx) => (
-              <React.Fragment key={`visual-path-${floor.id}-${idx}`}>
+            {floor.outlinePaths.map((pathD) => (
+              <React.Fragment key={`visual-path-${floor.id}-${pathD.slice(0, 20)}`}>
                 {/* 1. Translucent Golden Sunlight Fill */}
                 <path
                   d={pathD}
@@ -153,7 +202,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   filter="url(#relicGoldGlow)"
-                  opacity={isSelected ? 0.95 : isActive ? 0.8 : 0}
+                  opacity={getGlowBorderOpacity(isSelected, isActive)}
                   className="floor-glow-path transition-opacity duration-250 pointer-events-none"
                 />
 
@@ -161,15 +210,9 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
                 <path
                   d={pathD}
                   fill="none"
-                  stroke={
-                    isSelected
-                      ? 'url(#selectedGoldStroke)'
-                      : isActive
-                      ? 'url(#antiqueGoldStroke)'
-                      : 'rgba(255, 215, 0, 0.12)'
-                  }
-                  strokeWidth={isSelected ? '3' : isActive ? '2.5' : '0.8'}
-                  strokeDasharray={isSelected ? 'none' : isActive ? '6 2' : 'none'}
+                  stroke={getContourStroke(isSelected, isActive)}
+                  strokeWidth={getContourStrokeWidth(isSelected, isActive)}
+                  strokeDasharray={getContourDashArray(isSelected, isActive)}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="floor-contour-path transition-all duration-250 pointer-events-none"
@@ -178,17 +221,14 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             ))}
 
             {/* Generous Hit Detection Layer (Always active and clickable across entire floor) */}
-            {floor.hitAreaPaths.map((hitD, idx) => (
+            {floor.hitAreaPaths.map((hitD) => (
               <path
-                key={`hit-path-${floor.id}-${idx}`}
+                key={`hit-path-${floor.id}-${hitD.slice(0, 20)}`}
                 d={hitD}
                 fill="rgba(255, 215, 0, 0.001)"
                 stroke="transparent"
                 strokeWidth="12"
-                style={{ pointerEvents: 'all', cursor: disabled ? 'default' : 'pointer' }}
-                onClick={() => !disabled && onSelectFloor(floor)}
-                onMouseEnter={() => !disabled && onHoverFloor(floor.id)}
-                onMouseLeave={() => !disabled && onHoverFloor(null)}
+                style={{ pointerEvents: 'all' }}
               />
             ))}
 
@@ -196,7 +236,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             {(isActive || highlightWindowTarget) && (
               <g
                 className="transition-opacity duration-300 pointer-events-none"
-                opacity={isSelected ? 1 : isHovered ? 0.9 : 0.4}
+                opacity={getBeaconOpacity(isSelected, isHovered)}
               >
                 {/* Outer Window Glow */}
                 <rect

@@ -39,7 +39,12 @@ export const WindowRevealAnimation: React.FC<WindowRevealAnimationProps> = ({
         transition: 'transform 850ms cubic-bezier(0.2, 0.9, 0.3, 1)',
       };
 
-  const lightBeamOpacity = isOpen ? 0.95 : isOpening ? 0.75 : 0;
+  let lightBeamOpacity = 0;
+  if (isOpen) {
+    lightBeamOpacity = 0.95;
+  } else if (isOpening) {
+    lightBeamOpacity = 0.75;
+  }
 
   return (
     <div

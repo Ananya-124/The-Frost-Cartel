@@ -198,3 +198,4 @@ with open('src/components/game/round4/FloorConfiguration.ts', 'w', encoding='utf
     f.write(out)
 
 print('Generated FloorConfiguration.ts successfully!')
+

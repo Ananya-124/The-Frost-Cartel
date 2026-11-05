@@ -25,7 +25,9 @@ export const FloorCalibrationTool: React.FC<FloorCalibrationToolProps> = ({
 
   const handleCopyJSON = () => {
     const jsonStr = JSON.stringify(currentFloor, null, 2);
-    navigator.clipboard?.writeText(jsonStr);
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(jsonStr).catch(() => {});
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
