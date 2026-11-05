@@ -33,10 +33,12 @@ async def run():
         await page.mouse.move(10, 10)
         await page.wait_for_timeout(600)
 
-        # Capture 0: Resting state showing all 8 white architectural contour layers across the building
+        # Capture 0: Resting state showing clean pristine building without any white debug overlays
         p_resting = 'public/assets/round-04/verify_resting_white_layers.png'
+        p_final_idle = 'public/assets/round-04/verify_final_redesign_idle.png'
         await page.screenshot(path=p_resting)
-        print(f"Captured {p_resting}")
+        await page.screenshot(path=p_final_idle)
+        print(f"Captured {p_resting} and {p_final_idle}")
 
         # Capture 1: Floor 7 hovered state
         floor7 = page.locator('g[data-floor-id="floor-7"]')
@@ -114,7 +116,7 @@ async def run():
             await ctx.close()
             
         # Copy all captures to artifact dir
-        all_imgs = [p_resting, p_f7, p_f5, p_f3, p_fg, p_click] + resp_paths
+        all_imgs = [p_resting, p_final_idle, p_f7, p_f5, p_f3, p_fg, p_click] + resp_paths
         for img in all_imgs:
             fname = os.path.basename(img)
             shutil.copy(img, os.path.join(ARTIFACT_DIR, fname))

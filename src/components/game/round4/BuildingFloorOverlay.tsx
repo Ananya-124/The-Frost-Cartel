@@ -28,17 +28,17 @@ function getContourStroke(isSelected: boolean, isActive: boolean): string {
   if (isActive) {
     return 'url(#antiqueGoldStroke)';
   }
-  return 'url(#architecturalWhiteStroke)';
+  return 'transparent';
 }
 
 function getContourStrokeWidth(isSelected: boolean, isActive: boolean): string {
   if (isSelected) {
-    return '3.5';
+    return '4.0';
   }
   if (isActive) {
-    return '3.0';
+    return '3.2';
   }
-  return '1.8';
+  return '0';
 }
 
 function getContourDashArray(isSelected: boolean, isActive: boolean): string {
@@ -196,14 +196,14 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
               {/* Visual Floor Highlight Layer (Illuminates calibrated curved architectural band) */}
               {floor.outlinePaths.map((pathD) => (
                 <React.Fragment key={`visual-path-${floor.id}-${pathD.slice(0, 20)}`}>
-                  {/* 1. Translucent Golden Sunlight Fill / Resting Frosted Tint */}
+                  {/* 1. Translucent Golden Sunlight Fill on Active Floor */}
                   <path
                     d={pathD}
-                    fill={isActive ? 'url(#sunlightFloorFill)' : 'rgba(255, 255, 255, 0.035)'}
+                    fill={isActive ? 'url(#sunlightFloorFill)' : 'transparent'}
                     className="floor-fill-path transition-colors duration-250 pointer-events-none"
                   />
 
-                  {/* 2. Soft Outer Glowing Architectural Border */}
+                  {/* 2. Soft Outer Glowing Architectural Border on Active Floor */}
                   <path
                     d={pathD}
                     fill="none"
@@ -216,7 +216,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
                     className="floor-glow-path transition-opacity duration-250 pointer-events-none"
                   />
 
-                  {/* 3. Architectural Contour Line (White in resting state, radiant gold when active) */}
+                  {/* 3. Radiant Antique Gold Architectural Contour on Active Floor */}
                   <path
                     d={pathD}
                     fill="none"
@@ -225,7 +225,6 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
                     strokeDasharray={getContourDashArray(isSelected, isActive)}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    filter={isActive ? undefined : 'url(#whiteLayerGlow)'}
                     className="floor-contour-path transition-all duration-250 pointer-events-none"
                   />
                 </React.Fragment>

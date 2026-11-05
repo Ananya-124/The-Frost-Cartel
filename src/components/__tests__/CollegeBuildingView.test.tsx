@@ -25,13 +25,17 @@ describe('Round 04 College Building View & Drone Window Entry', () => {
       />
     );
 
-    // Minimal HUD Verification
-    expect(screen.getByText('FROST CARTEL')).toBeInTheDocument();
-    expect(screen.getByText(/ROUND 04 — THE RADIANT TREASURE HUNT/i)).toBeInTheDocument();
-    expect(screen.getByText('B. S. NARAYAN PLATINUM JUBILEE ACADEMIC BLOCK')).toBeInTheDocument();
+    // Header Removal Verification (Requirement 3: Large black title bar & FROST CARTEL removed)
+    expect(screen.queryByText('FROST CARTEL')).not.toBeInTheDocument();
 
-    // Mandatory Relic Instruction Banner (Phase 2 Requirement)
-    expect(screen.getByText('PLEASE SELECT YOUR FLOOR')).toBeInTheDocument();
+    // Floating Minimal Top Controls Verification (Requirement 4)
+    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /mute/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /letter/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /exit/i })).toBeInTheDocument();
+
+    // Mandatory Relic Instruction Banner (Requirement 2)
+    expect(screen.getByAltText(/Ancient Relic Floor Selector/i)).toBeInTheDocument();
 
     // Original College Building Artwork
     const buildingImg = screen.getByAltText(/B\. S\. Narayan Platinum Jubilee Academic Block/i);

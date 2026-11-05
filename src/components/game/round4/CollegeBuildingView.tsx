@@ -20,6 +20,7 @@ export type FloorViewState =
 
 interface CollegeBuildingViewProps {
   onExit: () => void;
+  onBack?: () => void;
   onReplayIntro?: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -28,6 +29,7 @@ interface CollegeBuildingViewProps {
 
 export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
   onExit,
+  onBack,
   onReplayIntro,
   isMuted,
   onToggleMute,
@@ -131,6 +133,17 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
     });
   }, []);
 
+  // Back Button Click Handler (Returns to previous stage or letter)
+  const handleBackClick = useCallback(() => {
+    if (onBack) {
+      onBack();
+    } else if (onReplayIntro) {
+      onReplayIntro();
+    } else {
+      onExit();
+    }
+  }, [onBack, onReplayIntro, onExit]);
+
   // If inside floor interior, render full interior view
   if ((viewState === 'FLOOR_INTERIOR_REVEAL' || viewState === 'FLOOR_READY') && selectedFloor) {
     return (
@@ -145,177 +158,156 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
   }
 
   return (
-    <div className="relative h-screen w-full bg-[#080a0e] text-[#f4ecd8] flex flex-col font-sans overflow-hidden selection:bg-amber-500 selection:text-black">
-      {/* 1. Atmospheric Ambient Daylight Background */}
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#181d26] via-[#0d1017] to-[#050608]">
-        {/* Soft Golden Morning Sunbeams */}
-        <div className="absolute -top-40 right-1/4 w-[750px] h-[750px] rounded-full bg-gradient-to-br from-amber-400/15 via-amber-600/5 to-transparent blur-3xl pointer-events-none" />
+    <div className="relative h-screen w-full bg-[#080a0e] text-[#f4ecd8] font-sans overflow-hidden selection:bg-amber-500 selection:text-black select-none">
+      {/* Screen-reader accessible heading & landmarks (Visually hidden - Requirement 3) */}
+      <div className="sr-only">
+        <h1>B. S. NARAYAN PLATINUM JUBILEE ACADEMIC BLOCK</h1>
+        <h2>PLEASE SELECT YOUR FLOOR</h2>
       </div>
 
-      {/* 2. Sleek Minimalist Frost Cartel Header (Reference Design) */}
-      <header className="relative z-30 w-full px-4 sm:px-8 py-2.5 flex items-center justify-between border-b border-amber-500/15 bg-black/70 backdrop-blur-md select-none shrink-0">
-        {/* Top-Left: Frost Cartel Skull Emblem & Subtle Line */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-950/70 border border-amber-400/40 flex items-center justify-center shadow-[0_0_12px_rgba(245,185,80,0.25)]">
-            <span className="text-sm">💀</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.25em] text-amber-100">
-              FROST CARTEL
-            </span>
-            <div className="hidden sm:block h-[1px] w-24 bg-gradient-to-r from-amber-500/40 to-transparent" />
-            <span className="sr-only">ROUND 04 — THE RADIANT TREASURE HUNT</span>
-            <span className="sr-only">B. S. NARAYAN PLATINUM JUBILEE ACADEMIC BLOCK</span>
-          </div>
-        </div>
+      {/* 1. Floating Elegant Minimalist Top Controls (Directly Over Scene - Requirement 4) */}
+      {/* Top-Left: Floating Circular Gold Back Medallion */}
+      <button
+        onClick={handleBackClick}
+        aria-label="Back to Previous Stage"
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 lg:left-8 z-40 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(0,0,0,0.8)] cursor-pointer"
+        title="Go Back"
+      >
+        <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
+          <defs>
+            <radialGradient id="ctrlBtnGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#1e1408" stopOpacity="0.88" />
+              <stop offset="100%" stopColor="#080604" stopOpacity="0.95" />
+            </radialGradient>
+            <linearGradient id="ctrlGoldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ffd866" />
+              <stop offset="50%" stopColor="#d4af37" />
+              <stop offset="100%" stopColor="#9a761c" />
+            </linearGradient>
+          </defs>
+          {/* Circular Glass Disc */}
+          <circle cx="22" cy="22" r="19" fill="url(#ctrlBtnGrad)" />
+          {/* Outer Beveled Gold Ring */}
+          <circle cx="22" cy="22" r="19" fill="none" stroke="url(#ctrlGoldRing)" strokeWidth="1.8" />
+          {/* Inset Gold Detail Ring */}
+          <circle cx="22" cy="22" r="16.5" fill="none" stroke="#d4af37" strokeWidth="0.6" strokeDasharray="1.5 1.5" opacity="0.65" />
+          {/* Cardinal Compass Notches */}
+          <path d="M 22,1 L 23.5,3.5 L 20.5,3.5 Z M 22,43 L 23.5,40.5 L 20.5,40.5 Z M 1,22 L 3.5,20.5 L 3.5,23.5 Z M 43,22 L 40.5,20.5 L 40.5,23.5 Z" fill="url(#ctrlGoldRing)" />
+          {/* Gold Left Arrow */}
+          <path
+            d="M 26,22 L 16,22 M 20.5,16.5 L 15,22 L 20.5,27.5"
+            fill="none"
+            stroke="#ffd866"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="group-hover:stroke-white transition-colors"
+          />
+        </svg>
+      </button>
 
-        {/* Top-Center: Oval Round 04 Badge */}
-        <div className="flex items-center">
-          <div className="px-4 py-0.5 rounded-full border border-amber-500/40 bg-amber-950/60 font-cinzel text-[11px] font-bold tracking-[0.25em] text-amber-300 shadow-[0_0_12px_rgba(245,185,80,0.2)]">
-            ✦ ROUND 04 ✦
-          </div>
-        </div>
-
-        {/* Top-Right: Sound & Exit Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={onToggleMute}
-            className="w-8 h-8 rounded-full border border-amber-500/30 bg-black/50 hover:bg-amber-950/40 text-amber-300 flex items-center justify-center text-xs transition-all hover:border-amber-400"
-            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-          >
-            {isMuted ? '🔇' : '🔊'}
-          </button>
-
-          {onReplayIntro && (
-            <button
-              onClick={onReplayIntro}
-              className="px-2.5 py-1 rounded border border-amber-500/30 bg-black/40 hover:bg-amber-950/40 text-amber-300 font-cinzel text-[11px] tracking-wider uppercase transition-all"
-              title="Replay Letter"
-            >
-              Letter
-            </button>
-          )}
-
-          <button
-            onClick={onExit}
-            className="px-3.5 py-1 rounded border border-amber-500/30 bg-black/40 hover:bg-red-950/40 text-amber-200 hover:text-red-200 hover:border-red-500/40 font-cinzel text-xs tracking-wider uppercase transition-all"
-          >
-            EXIT
-          </button>
-        </div>
-      </header>
-
-      {/* 3. Main Stage: Edge-to-Edge Cinematic Building with Floating Ancient Relic Selector */}
-      <main className="relative z-10 flex-1 w-full h-[calc(100vh-50px)] flex items-center justify-center overflow-hidden p-0 m-0">
-        {/* Floating Ancient Relic Vertical Banner (Requirement 4 & Reference Design) */}
-        <aside
-          aria-label="Floor Selection Guidance"
-          className="absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 select-none flex flex-col items-center pointer-events-none drop-shadow-[0_15px_35px_rgba(0,0,0,0.9)]"
+      {/* Top-Right: Sound, Letter, Exit Controls */}
+      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 lg:right-8 z-40 flex items-center gap-3 sm:gap-4 select-none">
+        {/* Floating Circular Sound Medallion */}
+        <button
+          onClick={onToggleMute}
+          aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(0,0,0,0.8)] cursor-pointer"
+          title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
         >
-          {/* Top Ornate Gold Crown Finial SVG */}
-          <div className="w-28 sm:w-32 -mb-2 z-10 flex justify-center">
-            <svg viewBox="0 0 140 45" className="w-full drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)] overflow-visible">
-              <defs>
-                <linearGradient id="finialGold" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ffd866" />
-                  <stop offset="50%" stopColor="#d4af37" />
-                  <stop offset="100%" stopColor="#9a761c" />
-                </linearGradient>
-              </defs>
-              {/* Central Spire */}
-              <path d="M 70,0 L 75,15 L 70,18 L 65,15 Z" fill="url(#finialGold)" />
-              {/* Acanthus / Fleur Crest */}
+          <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
+            <circle cx="22" cy="22" r="19" fill="url(#ctrlBtnGrad)" />
+            <circle cx="22" cy="22" r="19" fill="none" stroke="url(#ctrlGoldRing)" strokeWidth="1.8" />
+            <circle cx="22" cy="22" r="16.5" fill="none" stroke="#d4af37" strokeWidth="0.6" strokeDasharray="1.5 1.5" opacity="0.65" />
+            <path d="M 22,1 L 23.5,3.5 L 20.5,3.5 Z M 22,43 L 23.5,40.5 L 20.5,40.5 Z M 1,22 L 3.5,20.5 L 3.5,23.5 Z M 43,22 L 40.5,20.5 L 40.5,23.5 Z" fill="url(#ctrlGoldRing)" />
+            {/* Speaker Horn */}
+            <path
+              d="M 17,17 L 14,17 L 14,27 L 17,27 L 22,31 L 22,13 Z"
+              fill="#ffd866"
+              className="group-hover:fill-white transition-colors"
+            />
+            {isMuted ? (
+              <path d="M 26,17 L 32,27 M 32,17 L 26,27" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+            ) : (
               <path
-                d="M 70,14 C 85,12 110,6 125,24 C 115,24 100,20 85,26 C 95,30 115,35 130,30 C 115,38 95,38 70,35 C 45,38 25,38 10,30 C 25,35 45,30 55,26 C 40,20 25,24 15,24 C 30,6 55,12 70,14 Z"
-                fill="url(#finialGold)"
-                stroke="#644911"
-                strokeWidth="0.8"
+                d="M 25,18 C 27,20 27,24 25,26 M 28,15 C 31,18 31,26 28,29"
+                fill="none"
+                stroke="#ffd866"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="group-hover:stroke-white transition-colors"
               />
-              <circle cx="70" cy="24" r="4" fill="#ffffff" stroke="#9a761c" strokeWidth="1" />
-            </svg>
+            )}
+          </svg>
+        </button>
+
+        {/* Minimal Gold Divider */}
+        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#d4af37]/70 to-transparent" />
+
+        {/* Minimal Gold Letter Button */}
+        {onReplayIntro && (
+          <button
+            onClick={onReplayIntro}
+            className="font-cinzel text-xs sm:text-sm font-semibold tracking-[0.2em] text-[#f5d77f] hover:text-[#fff2a8] hover:drop-shadow-[0_0_8px_rgba(255,215,0,0.7)] uppercase transition-all duration-200 cursor-pointer"
+            title="Read Letter"
+          >
+            LETTER
+          </button>
+        )}
+
+        {/* Minimal Gold Divider */}
+        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#d4af37]/70 to-transparent" />
+
+        {/* Minimal Gold Exit Button */}
+        <button
+          onClick={onExit}
+          className="font-cinzel text-xs sm:text-sm font-semibold tracking-[0.2em] text-[#f5d77f] hover:text-red-300 hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] uppercase transition-all duration-200 cursor-pointer"
+          title="Exit Round 04"
+        >
+          EXIT
+        </button>
+      </div>
+
+      {/* 2. Left Section (~25% of viewport width): Grand Ancient Relic Floor Selector */}
+      <aside
+        aria-label="Floor Selection Guidance"
+        className="absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 select-none pointer-events-none w-[28%] max-w-[320px] min-w-[210px]"
+      >
+        <div className="relative w-full aspect-[255/505] flex items-center justify-center drop-shadow-[0_20px_45px_rgba(0,0,0,0.92)]">
+          {/* Authentic Ancient Parchment Relic Artwork */}
+          <img
+            src="/assets/round-04/ancient-relic-parchment.png"
+            alt="Ancient Relic Floor Selector - Please Select Your Floor"
+            className="w-full h-full object-contain pointer-events-none select-none"
+            draggable={false}
+          />
+
+          {/* Dynamic Active Floor Cartouche Plaque Text */}
+          <div className="absolute left-[13%] right-[13%] top-[65.2%] h-[10.5%] flex items-center justify-center pointer-events-none select-none">
+            <span className="font-cinzel text-xs sm:text-[13px] md:text-sm font-bold tracking-[0.18em] text-[#ffd866] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] truncate px-2 text-center">
+              {activeFloor ? activeFloor.label.toUpperCase() : 'FIFTH FLOOR'}
+            </span>
           </div>
+        </div>
+      </aside>
 
-          {/* Aged Parchment Banner Scroll Body */}
-          <div className="relative w-28 sm:w-32 py-4 px-2 rounded-sm bg-gradient-to-b from-[#e8d7be] via-[#dfcbb0] to-[#cca97f] border-2 border-[#caa552] shadow-[inset_0_0_18px_rgba(140,85,20,0.35),0_10px_25px_rgba(0,0,0,0.85)] flex flex-col items-center">
-            {/* Corner Filigree Accents */}
-            <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-[#875c1c]" />
-            <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-[#875c1c]" />
-            <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#875c1c]" />
-            <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#875c1c]" />
-
-            {/* Top Compass Rose Emblem */}
-            <div className="w-7 h-7 my-1 text-[#64441b] flex items-center justify-center">
-              <svg viewBox="0 0 32 32" className="w-full h-full fill-current">
-                <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
-                <path d="M 16,3 L 18.5,13.5 L 29,16 L 18.5,18.5 L 16,29 L 13.5,18.5 L 3,16 L 13.5,13.5 Z" />
-                <circle cx="16" cy="16" r="2.5" fill="#caa552" />
-              </svg>
-            </div>
-
-            {/* Centered Instruction Text: PLEASE SELECT YOUR FLOOR */}
-            <div className="text-center font-cinzel font-bold text-[#352112] text-[11px] sm:text-xs tracking-[0.22em] leading-relaxed my-2 select-none">
-              <span className="sr-only">PLEASE SELECT YOUR FLOOR</span>
-              <div aria-hidden="true" className="space-y-0.5">
-                <div>PLEASE</div>
-                <div>SELECT</div>
-                <div>YOUR</div>
-                <div>FLOOR</div>
-              </div>
-            </div>
-
-            {/* Ornate Divider with Diamond */}
-            <div className="w-16 flex items-center justify-center gap-1 my-1.5 opacity-70">
-              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#64441b]" />
-              <div className="w-1.5 h-1.5 rotate-45 bg-[#64441b]" />
-              <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#64441b]" />
-            </div>
-
-            {/* Dark Mahogany Cartouche Plaque Displaying Active Floor */}
-            <div className="w-full mt-1.5 p-1.5 rounded-sm bg-gradient-to-r from-[#221008] via-[#35180c] to-[#221008] border border-amber-500/60 shadow-[inset_0_0_8px_rgba(0,0,0,0.8),0_2px_6px_rgba(0,0,0,0.6)] text-center">
-              <div className="font-cinzel text-[10px] sm:text-[11px] font-bold text-amber-200 tracking-wider truncate">
-                {activeFloor ? activeFloor.label.toUpperCase() : 'SELECT LEVEL'}
-              </div>
-            </div>
-
-            {/* Bottom Compass Rose Emblem */}
-            <div className="w-6 h-6 mt-2 text-[#64441b] flex items-center justify-center opacity-85">
-              <svg viewBox="0 0 32 32" className="w-full h-full fill-current">
-                <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
-                <path d="M 16,5 L 18,14 L 27,16 L 18,18 L 16,27 L 14,18 L 5,16 L 14,14 Z" />
-                <circle cx="16" cy="16" r="2" fill="#caa552" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Bottom Ornate Spearhead / Finial SVG */}
-          <div className="w-16 sm:w-20 -mt-1 z-10 flex justify-center">
-            <svg viewBox="0 0 80 40" className="w-full drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] overflow-visible">
-              <path
-                d="M 20,0 L 60,0 C 55,10 50,18 40,38 C 30,18 25,10 20,0 Z"
-                fill="url(#finialGold)"
-                stroke="#644911"
-                strokeWidth="0.8"
-              />
-              <circle cx="40" cy="12" r="3" fill="#ffffff" stroke="#9a761c" strokeWidth="1" />
-            </svg>
-          </div>
-        </aside>
-
-        {/* Center: Real College Building Scene with Edge-to-Edge Composition */}
+      {/* 3. Main Stage: College Building Artwork & Interactive SVG Floors (~75% Visual Composition) */}
+      <main className="relative z-10 w-full h-full flex items-center justify-center overflow-hidden">
         <section
           aria-label="College Building Façade Map"
-          className="relative w-full h-full flex items-center justify-center p-0 m-0"
+          className="relative w-full h-full flex items-center justify-center overflow-hidden"
         >
-          <CollegeBuildingScene
-            floors={COLLEGE_FLOORS}
-            hoveredFloorId={hoveredFloorId}
-            selectedFloor={selectedFloor}
-            onHoverFloor={handleHoverFloor}
-            onSelectFloor={handleSelectFloor}
-            cameraPhase={cameraPhase}
-            onMouseMoveCoords={isCalibrating ? setMouseCoords : undefined}
-          />
+          <div className="relative h-full aspect-[1629/965] max-w-none flex items-center justify-center translate-x-[2%] sm:translate-x-[4%] lg:translate-x-[5%]">
+            <CollegeBuildingScene
+              floors={COLLEGE_FLOORS}
+              hoveredFloorId={hoveredFloorId}
+              selectedFloor={selectedFloor}
+              onHoverFloor={handleHoverFloor}
+              onSelectFloor={handleSelectFloor}
+              cameraPhase={cameraPhase}
+              onMouseMoveCoords={isCalibrating ? setMouseCoords : undefined}
+            />
+          </div>
         </section>
       </main>
 
