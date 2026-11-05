@@ -2,18 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { TeamSession } from '../../../types/team.types';
 import { round2Service, type R2View } from '../../../services/round2Service';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
+import { AuctionCard, AuctionCardDefs } from './AuctionCard';
 
 interface Round2AuctionProps {
   session: TeamSession;
   onReturnHome: () => void;
 }
-
-const STATUS_STYLE: Record<string, string> = {
-  pending: 'border-white/15 text-cartel-silver/70',
-  live: 'border-cartel-pumpkin text-cartel-amber shadow-pumpkinGlow',
-  sold: 'border-cartel-cyan/60 text-cartel-cyan',
-  unsold: 'border-white/10 text-cartel-silver/40',
-};
 
 export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnHome }) => {
   const team = session.teamName;
@@ -94,6 +88,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   return (
     <div className="relative min-h-screen bg-cartel-void text-cartel-bone font-sans">
       <HauntedGraveyardAtmosphere />
+      <AuctionCardDefs />
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-5">
         <header className="flex items-center justify-between gap-3 mb-5">
           <button onClick={onReturnHome} className="font-cinzel text-xs tracking-widest text-cartel-silver/70 hover:text-white cursor-pointer">← RETURN</button>
@@ -110,19 +105,24 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
           <section className="stone-panel rounded-xl p-5 lg:col-span-2">
             {live && card ? (
               <>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-5xl">{card.icon}</div>
-                    <h2 className="font-gothic text-3xl text-cartel-amber mt-1">{card.name}</h2>
-                    <p className="font-garamond text-cartel-silver/80">{card.description}</p>
-                    <p className="font-cinzel text-xs tracking-widest text-cartel-silver/60 mt-1">BASE PRICE {live.base} CR</p>
+                <div className="flex items-start gap-5">
+                  <div className="w-36 shrink-0 sm:w-44">
+                    <AuctionCard card={card} lot={card.id} base={live.base} live />
                   </div>
-                  {secs !== null && <div className={`font-cinzel text-6xl font-bold tabular-nums ${timerClass}`}>{secs}</div>}
-                </div>
-                <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-4">
-                  <div className="font-cinzel text-[10px] tracking-widest text-cartel-silver/60">CURRENT HIGH BID</div>
-                  <div className="font-cinzel text-4xl text-white">{live.highBidder ? live.highBid : '—'}</div>
-                  <div className="text-sm text-cartel-silver/70">{live.highBidder ? `by ${live.highBidder}` : 'no bids yet'}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="font-gothic text-3xl text-cartel-amber">{card.name}</h2>
+                        <p className="font-garamond text-cartel-silver/80">{card.description}</p>
+                      </div>
+                      {secs !== null && <div className={`font-cinzel text-6xl font-bold tabular-nums ${timerClass}`}>{secs}</div>}
+                    </div>
+                    <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-4">
+                      <div className="font-cinzel text-[10px] tracking-widest text-cartel-silver/60">CURRENT HIGH BID</div>
+                      <div className="font-cinzel text-4xl text-white">{live.highBidder ? live.highBid : '—'}</div>
+                      <div className="text-sm text-cartel-silver/70">{live.highBidder ? `by ${live.highBidder}` : 'no bids yet'}</div>
+                    </div>
+                  </div>
                 </div>
                 {leading && <div className="mt-3 text-center rounded-lg border border-emerald-500/60 bg-emerald-950/60 text-emerald-400 font-cinzel tracking-widest py-2">YOU ARE LEADING</div>}
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -170,13 +170,9 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
           </aside>
         </div>
 
-        <section className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-4">
-          {view?.cards.map((c) => (
-            <div key={c.id} className={`stone-panel rounded-xl p-4 border ${STATUS_STYLE[c.status]}`}>
-              <div className="text-3xl">{c.icon}</div>
-              <div className="font-cinzel mt-1">{c.name}</div>
-              <div className="font-cinzel text-[10px] tracking-widest uppercase mt-1">{c.status}{c.winner ? ` → ${c.winner} @ ${c.price}` : ''}</div>
-            </div>
+        <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {view?.cards.map((c, i) => (
+            <AuctionCard key={c.id} card={c} lot={i + 1} />
           ))}
         </section>
       </div>
