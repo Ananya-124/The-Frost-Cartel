@@ -49,10 +49,7 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative w-full max-w-[1200px] aspect-[1629/965] rounded-xl shadow-[0_20px_70px_rgba(0,0,0,0.85)] border border-amber-500/30 overflow-hidden bg-black select-none"
-      style={{
-        boxShadow: '0 0 50px rgba(245, 185, 80, 0.15), 0 25px 60px rgba(0, 0, 0, 0.9)',
-      }}
+      className="relative w-full h-full max-h-[calc(100vh-60px)] aspect-[1629/965] overflow-hidden select-none flex items-center justify-center"
     >
       {/* Camera Drone-Style Zoom and Pan Transition Wrapper */}
       <FloorCameraTransition
@@ -74,9 +71,9 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
           </picture>
 
           {/* 2. Soft Warm Atmospheric Sunlight Vignette Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-amber-950/15 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-amber-950/10 pointer-events-none" />
 
-          {/* 3. Interactive SVG Architectural Floor Contour Overlay */}
+          {/* 3. Interactive SVG Architectural Floor Contour Overlay with Curved Geometry */}
           <BuildingFloorOverlay
             floors={floors}
             hoveredFloorId={hoveredFloorId}
@@ -84,7 +81,6 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
             onHoverFloor={onHoverFloor}
             onSelectFloor={onSelectFloor}
             disabled={cameraPhase !== 'IDLE'}
-            highlightWindowTarget={cameraPhase === 'WINDOW_FOCUSED'}
           />
 
           {/* 4. Active Target Window Opening Overlay (Triggered During Drone Approach) */}
@@ -98,14 +94,6 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
           )}
         </div>
       </FloorCameraTransition>
-
-      {/* 5. Floating Sunlight Motes & Atmospheric Dust (Cinematic Depth) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-        <div className="absolute top-1/4 left-1/3 w-1.5 h-1.5 rounded-full bg-amber-300/60 shadow-[0_0_8px_rgba(255,215,0,0.8)] animate-pulse" />
-        <div className="absolute top-1/2 left-2/3 w-1 h-1 rounded-full bg-amber-200/50 shadow-[0_0_6px_rgba(255,215,0,0.8)] animate-pulse delay-700" />
-        <div className="absolute top-2/3 left-1/4 w-2 h-2 rounded-full bg-amber-400/40 shadow-[0_0_10px_rgba(255,215,0,0.6)] animate-pulse delay-1000" />
-      </div>
     </div>
   );
 };
-
