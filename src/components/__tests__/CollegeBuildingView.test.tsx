@@ -76,10 +76,12 @@ describe('Round 04 College Building View & Drone Window Entry', () => {
       vi.advanceTimersByTime(450);
     });
 
-    // Interior view should now be displayed directly without artificial pauses or swinging sashes
-    expect(screen.getByText('SEVENTH FLOOR — THE CELESTIAL ARCHIVES & OBSERVATORY')).toBeInTheDocument();
-    expect(screen.getByText('ANCIENT MAP — CONTENT AWAITS')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Return to Exterior/i })).toBeInTheDocument();
+    // Interior view should now be displayed directly with Campus Floor Map, Routes, and Field Riddle
+    expect(screen.getByText(/ROUND 04 • SEVENTH FLOOR/i)).toBeInTheDocument();
+    expect(screen.getByText(/CAMPUS FLOOR MAP/i)).toBeInTheDocument();
+    expect(screen.getByText(/FIELD RIDDLE/i)).toBeInTheDocument();
+    expect(screen.getByText(/PARTNER HANDOFF/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Return/i })).toBeInTheDocument();
 
     // Verify proceed callback was fired with floor id
     expect(mockProceedToFloors).toHaveBeenCalledWith('floor-7');

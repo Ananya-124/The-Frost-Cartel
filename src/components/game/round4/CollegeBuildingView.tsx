@@ -169,25 +169,28 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         />
 
         {/* Layer C: Delicate Antique-Gold Cartographic Corner Accents */}
-        <svg className="absolute inset-0 w-full h-full opacity-35 overflow-visible" xmlns="http://www.w3.org/2000/svg">
+        <div className="absolute inset-0 pointer-events-none opacity-35" aria-hidden="true">
           {/* Top-Left Filigree */}
-          <g transform="translate(18, 18)">
+          <svg className="absolute top-4 left-4 w-10 h-10 overflow-visible" viewBox="0 0 40 40">
             <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
             <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
-          </g>
+          </svg>
           {/* Top-Right Filigree */}
-          <g transform="translate(-18, 18)">
-            <path d="M 100%,36 L 100%,8 C 100%,3.6 calc(100% - 3.6),0 calc(100% - 8),0 L calc(100% - 36),0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
-          </g>
+          <svg className="absolute top-4 right-4 w-10 h-10 overflow-visible -scale-x-100" viewBox="0 0 40 40">
+            <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+            <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
+          </svg>
           {/* Bottom-Left Filigree */}
-          <g transform="translate(18, -18)">
-            <path d="M 0,calc(100% - 36) L 0,calc(100% - 8) C 0,calc(100% - 3.6) 3.6,100% 8,100% L 36,100%" fill="none" stroke="#b8974a" strokeWidth="1.2" />
-          </g>
+          <svg className="absolute bottom-4 left-4 w-10 h-10 overflow-visible -scale-y-100" viewBox="0 0 40 40">
+            <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+            <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
+          </svg>
           {/* Bottom-Right Filigree */}
-          <g transform="translate(-18, -18)">
-            <path d="M 100%,calc(100% - 36) L 100%,calc(100% - 8) C 100%,calc(100% - 3.6) calc(100% - 3.6),100% calc(100% - 8),100% L calc(100% - 36),100%" fill="none" stroke="#b8974a" strokeWidth="1.2" />
-          </g>
-        </svg>
+          <svg className="absolute bottom-4 right-4 w-10 h-10 overflow-visible -scale-x-100 -scale-y-100" viewBox="0 0 40 40">
+            <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+            <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
+          </svg>
+        </div>
 
         {/* Layer D: Soft Ambient Vignette */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#e3cfb0]/15 via-transparent to-[#d8c29e]/25" />
