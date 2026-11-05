@@ -5,12 +5,13 @@ import { AdminDashboardTab } from './dashboard/AdminDashboardTab';
 import { AdminTeamsTab } from './teams/AdminTeamsTab';
 import { AdminRoundControlTab } from './rounds/AdminRoundControlTab';
 import { AdminResultsTab } from './results/AdminResultsTab';
+import { AdminAuctionTab } from './auction/AdminAuctionTab';
 
 interface AdminPortalProps {
   onNavigatePublic: () => void;
 }
 
-type TabKey = 'dashboard' | 'teams' | 'rounds' | 'results';
+type TabKey = 'dashboard' | 'teams' | 'rounds' | 'auction' | 'results';
 
 interface TabDefinition {
   key: TabKey;
@@ -22,6 +23,7 @@ const TABS: TabDefinition[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'teams', label: 'Teams', getLabel: (count) => `Teams (${count})` },
   { key: 'rounds', label: 'Round Control' },
+  { key: 'auction', label: 'Auction' },
   { key: 'results', label: 'Results' },
 ];
 
@@ -29,6 +31,7 @@ function getInitialTab(): TabKey {
   const hash = window.location.hash;
   if (hash.includes('/teams')) return 'teams';
   if (hash.includes('/rounds')) return 'rounds';
+  if (hash.includes('/auction')) return 'auction';
   if (hash.includes('/results')) return 'results';
   return 'dashboard';
 }
@@ -177,6 +180,8 @@ const AdminTabContent: React.FC<AdminTabContentProps> = ({
           onRefresh={onRefreshMetrics}
         />
       );
+    case 'auction':
+      return <AdminAuctionTab />;
     case 'results':
       return <AdminResultsTab />;
     default:
