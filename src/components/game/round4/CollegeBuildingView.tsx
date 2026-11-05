@@ -75,7 +75,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
     [viewState, isMuted]
   );
 
-  // Floor Click & Selection Sequence (Drone Approach -> Window -> Interior)
+  // Floor Click & Selection Sequence: Continuous Drone Upward Flight -> Direct Window Entry -> Interior
   const handleSelectFloor = useCallback(
     (floor: FloorDefinition) => {
       if (viewState !== 'FLOOR_SELECTION_READY' && viewState !== 'FLOOR_HOVERED') return;
@@ -88,35 +88,25 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         soundController.playClick();
       }
 
-      // Stage B: Drone Camera Approach (1800ms)
+      // Stage B & C: Continuous upward drone flight approaching the selected open window (1050ms)
       const t1 = setTimeout(() => {
-        setViewState('WINDOW_FOCUSED');
-        setCameraPhase('WINDOW_FOCUSED');
+        setViewState('WINDOW_ENTRY');
+        setCameraPhase('WINDOW_ENTERING');
         if (!isMuted) {
           soundController.playChime();
         }
 
-        // Stage C: Window Targeting & Opening (600ms)
-        setTimeout(() => {
-          setViewState('WINDOW_OPENING');
-          setCameraPhase('WINDOW_OPENING');
+        // Stage D & E: Uninterrupted forward pass-through open window aperture directly into Interior (420ms)
+        const t2 = setTimeout(() => {
+          startTransition(() => {
+            setViewState('FLOOR_INTERIOR_REVEAL');
+            setCameraPhase('COMPLETED');
+          });
+          onProceedToFloors?.(floor.id);
+        }, 420);
 
-          // Stage D: Window Entry push-through (850ms)
-          setTimeout(() => {
-            setViewState('WINDOW_ENTRY');
-            setCameraPhase('WINDOW_ENTERING');
-
-            // Stage E: Interior Reveal (650ms)
-            setTimeout(() => {
-              startTransition(() => {
-                setViewState('FLOOR_INTERIOR_REVEAL');
-                setCameraPhase('COMPLETED');
-              });
-              onProceedToFloors?.(floor.id);
-            }, 650);
-          }, 850);
-        }, 600);
-      }, 1800);
+        return () => clearTimeout(t2);
+      }, 1050);
 
       return () => clearTimeout(t1);
     },
@@ -158,11 +148,49 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
   }
 
   return (
-    <div className="relative h-screen w-full bg-[#080a0e] text-[#f4ecd8] font-sans overflow-hidden selection:bg-amber-500 selection:text-black select-none">
+    <div className="relative h-screen w-full bg-[#fbf6ec] text-[#3d2a14] font-sans overflow-hidden selection:bg-amber-500 selection:text-black select-none">
       {/* Screen-reader accessible heading & landmarks (Visually hidden - Requirement 3) */}
       <div className="sr-only">
         <h1>B. S. NARAYAN PLATINUM JUBILEE ACADEMIC BLOCK</h1>
         <h2>PLEASE SELECT YOUR FLOOR</h2>
+      </div>
+
+      {/* 0. Ancient Treasure-Hunt Manuscript Environment (Warm Ivory & Light Aged Parchment Canvas) */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+        {/* Layer A: Radial Ivory to Soft Champagne Parchment Gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,_#fffef9_0%,_#fbf5e6_35%,_#f4ebd5_70%,_#ebdcc4_100%)]" />
+
+        {/* Layer B: Ultra-Subtle Natural Antique Paper Grain Texture */}
+        <div
+          className="absolute inset-0 opacity-[0.038] mix-blend-multiply"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paperGrain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paperGrain)'/%3E%3C/svg%3E")`,
+          }}
+        />
+
+        {/* Layer C: Delicate Antique-Gold Cartographic Corner Accents */}
+        <svg className="absolute inset-0 w-full h-full opacity-35 overflow-visible" xmlns="http://www.w3.org/2000/svg">
+          {/* Top-Left Filigree */}
+          <g transform="translate(18, 18)">
+            <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+            <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
+          </g>
+          {/* Top-Right Filigree */}
+          <g transform="translate(-18, 18)">
+            <path d="M 100%,36 L 100%,8 C 100%,3.6 calc(100% - 3.6),0 calc(100% - 8),0 L calc(100% - 36),0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+          </g>
+          {/* Bottom-Left Filigree */}
+          <g transform="translate(18, -18)">
+            <path d="M 0,calc(100% - 36) L 0,calc(100% - 8) C 0,calc(100% - 3.6) 3.6,100% 8,100% L 36,100%" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+          </g>
+          {/* Bottom-Right Filigree */}
+          <g transform="translate(-18, -18)">
+            <path d="M 100%,calc(100% - 36) L 100%,calc(100% - 8) C 100%,calc(100% - 3.6) calc(100% - 3.6),100% calc(100% - 8),100% L calc(100% - 36),100%" fill="none" stroke="#b8974a" strokeWidth="1.2" />
+          </g>
+        </svg>
+
+        {/* Layer D: Soft Ambient Vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#e3cfb0]/15 via-transparent to-[#d8c29e]/25" />
       </div>
 
       {/* 1. Floating Elegant Minimalist Top Controls (Directly Over Scene - Requirement 4) */}
@@ -170,14 +198,14 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
       <button
         onClick={handleBackClick}
         aria-label="Back to Previous Stage"
-        className="absolute top-4 sm:top-6 left-4 sm:left-6 lg:left-8 z-40 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(0,0,0,0.8)] cursor-pointer"
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 lg:left-8 z-40 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(70,45,15,0.4)] cursor-pointer"
         title="Go Back"
       >
         <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
           <defs>
             <radialGradient id="ctrlBtnGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#1e1408" stopOpacity="0.88" />
-              <stop offset="100%" stopColor="#080604" stopOpacity="0.95" />
+              <stop offset="0%" stopColor="#2c1f12" stopOpacity="0.94" />
+              <stop offset="100%" stopColor="#120c06" stopOpacity="0.98" />
             </radialGradient>
             <linearGradient id="ctrlGoldRing" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#ffd866" />
@@ -212,7 +240,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         <button
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(0,0,0,0.8)] cursor-pointer"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(70,45,15,0.4)] cursor-pointer"
           title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
         >
           <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
@@ -242,13 +270,13 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         </button>
 
         {/* Minimal Gold Divider */}
-        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#d4af37]/70 to-transparent" />
+        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#b8974a]/60 to-transparent" />
 
         {/* Minimal Gold Letter Button */}
         {onReplayIntro && (
           <button
             onClick={onReplayIntro}
-            className="font-cinzel text-xs sm:text-sm font-semibold tracking-[0.2em] text-[#f5d77f] hover:text-[#fff2a8] hover:drop-shadow-[0_0_8px_rgba(255,215,0,0.7)] uppercase transition-all duration-200 cursor-pointer"
+            className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-[#4b3317] hover:text-[#7d561a] hover:bg-[#d4af37]/20 px-3 py-1 rounded-sm border border-[#b8974a]/50 bg-[#f4ebd5]/80 backdrop-blur-sm transition-all duration-200 cursor-pointer shadow-[0_2px_8px_rgba(70,45,15,0.15)] uppercase"
             title="Read Letter"
           >
             LETTER
@@ -256,12 +284,12 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         )}
 
         {/* Minimal Gold Divider */}
-        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#d4af37]/70 to-transparent" />
+        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#b8974a]/60 to-transparent" />
 
         {/* Minimal Gold Exit Button */}
         <button
           onClick={onExit}
-          className="font-cinzel text-xs sm:text-sm font-semibold tracking-[0.2em] text-[#f5d77f] hover:text-red-300 hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] uppercase transition-all duration-200 cursor-pointer"
+          className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-[#7a2214] hover:text-red-700 hover:bg-red-900/15 px-3 py-1 rounded-sm border border-red-700/40 bg-[#f4ebd5]/80 backdrop-blur-sm transition-all duration-200 cursor-pointer shadow-[0_2px_8px_rgba(70,45,15,0.15)] uppercase"
           title="Exit Round 04"
         >
           EXIT
@@ -273,7 +301,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         aria-label="Floor Selection Guidance"
         className="absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 select-none pointer-events-none w-[28%] max-w-[320px] min-w-[210px]"
       >
-        <div className="relative w-full aspect-[255/505] flex items-center justify-center drop-shadow-[0_20px_45px_rgba(0,0,0,0.92)]">
+        <div className="relative w-full aspect-[255/505] flex items-center justify-center drop-shadow-[0_16px_36px_rgba(70,45,15,0.28)]">
           {/* Authentic Ancient Parchment Relic Artwork */}
           <img
             src="/assets/round-04/ancient-relic-parchment.png"
@@ -297,7 +325,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
           aria-label="College Building Façade Map"
           className="relative w-full h-full flex items-center justify-center overflow-hidden"
         >
-          <div className="relative h-full aspect-[1629/965] max-w-none flex items-center justify-center translate-x-[2%] sm:translate-x-[4%] lg:translate-x-[5%]">
+          <div className="relative h-full aspect-[1629/965] max-w-none flex items-center justify-center translate-x-[2%] sm:translate-x-[4%] lg:translate-x-[5%] filter drop-shadow-[0_12px_36px_rgba(95,70,35,0.22)]">
             <CollegeBuildingScene
               floors={COLLEGE_FLOORS}
               hoveredFloorId={hoveredFloorId}

@@ -16,6 +16,12 @@ interface FloorCameraTransitionProps {
   reducedMotion?: boolean;
 }
 
+/**
+ * Continuous Cinematic Drone-Style Camera Flight & Direct Window Entry
+ * - Stage A -> B -> C: Smooth upward ascent towards the selected floor's open window
+ * - Stage D: Direct push straight through the already-open window aperture into the room without stopping
+ * - Total duration: ~1.5 seconds with continuous forward velocity
+ */
 export const FloorCameraTransition: React.FC<FloorCameraTransitionProps> = ({
   children,
   selectedFloor,
@@ -33,7 +39,7 @@ export const FloorCameraTransition: React.FC<FloorCameraTransitionProps> = ({
     );
   }
 
-  // Calculate transform origin based on the target window center in 1629x965 viewBox space
+  // Calculate transform origin based on the target open window center in 1629x965 viewBox space
   const originXPercent =
     ((selectedFloor.windowTarget.x + selectedFloor.windowTarget.width / 2) / BUILDING_VIEWBOX.width) * 100;
   const originYPercent =
@@ -41,19 +47,22 @@ export const FloorCameraTransition: React.FC<FloorCameraTransitionProps> = ({
 
   let currentScale = 1;
   let transitionDuration: string;
-  let easing = 'cubic-bezier(0.22, 1, 0.36, 1)'; // Smooth drone deceleration curve
+  let easing = 'cubic-bezier(0.22, 1, 0.36, 1)'; // Drone ascent deceleration curve
 
-  if (phase === 'APPROACHING') {
+  if (phase === 'APPROACHING' || phase === 'WINDOW_FOCUSED') {
+    // Stage B & C: Upward drone approach towards the open window (1050ms continuous movement)
     currentScale = selectedFloor.cameraTarget.scale;
-    transitionDuration = '1800ms';
-  } else if (phase === 'WINDOW_FOCUSED' || phase === 'WINDOW_OPENING') {
-    currentScale = selectedFloor.cameraTarget.scale;
-    transitionDuration = '600ms';
-  } else {
-    // phase === 'WINDOW_ENTERING' || phase === 'COMPLETED'
-    currentScale = selectedFloor.cameraTarget.scale * 1.45; // Camera pushes through window
-    transitionDuration = '900ms';
+    transitionDuration = '1050ms';
+  } else if (phase === 'WINDOW_ENTERING' || phase === 'WINDOW_OPENING') {
+    // Stage D: Continuous forward push straight through the open window aperture into the interior (420ms)
+    currentScale = selectedFloor.cameraTarget.scale * 1.85;
+    transitionDuration = '420ms';
     easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+  } else {
+    // phase === 'COMPLETED'
+    currentScale = selectedFloor.cameraTarget.scale * 2.1;
+    transitionDuration = '300ms';
+    easing = 'ease-out';
   }
 
   const transformStyle: React.CSSProperties = reducedMotion
@@ -75,4 +84,5 @@ export const FloorCameraTransition: React.FC<FloorCameraTransitionProps> = ({
     </div>
   );
 };
+
 

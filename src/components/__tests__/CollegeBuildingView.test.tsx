@@ -49,7 +49,7 @@ describe('Round 04 College Building View & Drone Window Entry', () => {
     }
   });
 
-  it('orchestrates drone camera zoom, window focus, window opening, and reveals interior ancient map', () => {
+  it('orchestrates continuous drone camera upward flight and direct window entry into interior ancient map', () => {
     vi.useFakeTimers();
 
     render(
@@ -66,27 +66,17 @@ describe('Round 04 College Building View & Drone Window Entry', () => {
     const seventhFloorBtn = screen.getByRole('button', { name: /Seventh Floor/i });
     fireEvent.click(seventhFloorBtn);
 
-    // Stage B: Drone Camera Approach (1800ms)
+    // Stage B & C: Continuous upward drone flight towards Seventh Floor open window (1050ms)
     act(() => {
-      vi.advanceTimersByTime(1850);
+      vi.advanceTimersByTime(1100);
     });
 
-    // Stage C: Window Targeting & Opening (600ms)
+    // Stage D & E: Direct forward entry through the open window into the Interior (~420ms)
     act(() => {
-      vi.advanceTimersByTime(650);
+      vi.advanceTimersByTime(450);
     });
 
-    // Stage D: Window Entry Push-Through (850ms)
-    act(() => {
-      vi.advanceTimersByTime(900);
-    });
-
-    // Stage E: Interior Reveal (650ms)
-    act(() => {
-      vi.advanceTimersByTime(700);
-    });
-
-    // Interior view should now be displayed
+    // Interior view should now be displayed directly without artificial pauses or swinging sashes
     expect(screen.getByText('SEVENTH FLOOR — THE CELESTIAL ARCHIVES & OBSERVATORY')).toBeInTheDocument();
     expect(screen.getByText('ANCIENT MAP — CONTENT AWAITS')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Return to Exterior/i })).toBeInTheDocument();

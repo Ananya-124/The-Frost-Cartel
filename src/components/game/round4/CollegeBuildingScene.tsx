@@ -41,8 +41,7 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
     }
   };
 
-  const isWindowOpening = cameraPhase === 'WINDOW_OPENING';
-  const isWindowOpen = cameraPhase === 'WINDOW_ENTERING' || cameraPhase === 'COMPLETED';
+  const isWindowEntering = cameraPhase === 'WINDOW_ENTERING' || cameraPhase === 'WINDOW_OPENING';
 
   return (
     <div
@@ -71,7 +70,7 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
           </picture>
 
           {/* 2. Soft Warm Atmospheric Sunlight Vignette Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-amber-950/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-amber-950/10 pointer-events-none" />
 
           {/* 3. Interactive SVG Architectural Floor Contour Overlay with Curved Geometry */}
           <BuildingFloorOverlay
@@ -83,12 +82,12 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
             disabled={cameraPhase !== 'IDLE'}
           />
 
-          {/* 4. Active Target Window Opening Overlay (Triggered During Drone Approach) */}
-          {selectedFloor && (cameraPhase === 'WINDOW_FOCUSED' || cameraPhase === 'WINDOW_OPENING' || cameraPhase === 'WINDOW_ENTERING') && (
+          {/* 4. Active Target Open-Window Direct Entry Aperture Illumination */}
+          {selectedFloor && isWindowEntering && (
             <WindowRevealAnimation
               windowTarget={selectedFloor.windowTarget}
-              isOpen={isWindowOpen}
-              isOpening={isWindowOpening}
+              isOpen={true}
+              isOpening={false}
               reducedMotion={reducedMotion}
             />
           )}
