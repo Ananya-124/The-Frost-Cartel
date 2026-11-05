@@ -29,7 +29,24 @@ async def run():
         await page.click('button[aria-label="Begin the hunt through time and space"]')
         await page.wait_for_timeout(3600) # wait for blur crossfade into college
         
-        # Capture 1: Fifth Floor hovered state showing the exact curved floor region highlight
+        # Move mouse out of building area to ensure resting state
+        await page.mouse.move(10, 10)
+        await page.wait_for_timeout(600)
+
+        # Capture 0: Resting state showing all 8 white architectural contour layers across the building
+        p_resting = 'public/assets/round-04/verify_resting_white_layers.png'
+        await page.screenshot(path=p_resting)
+        print(f"Captured {p_resting}")
+
+        # Capture 1: Floor 7 hovered state
+        floor7 = page.locator('g[data-floor-id="floor-7"]')
+        await floor7.hover()
+        await page.wait_for_timeout(500)
+        p_f7 = 'public/assets/round-04/verify_floor7_hovered.png'
+        await page.screenshot(path=p_f7)
+        print(f"Captured {p_f7}")
+
+        # Capture 2: Fifth Floor hovered state showing the exact curved floor region highlight
         floor5 = page.locator('g[data-floor-id="floor-5"]')
         await floor5.hover()
         await page.wait_for_timeout(500)
@@ -97,7 +114,7 @@ async def run():
             await ctx.close()
             
         # Copy all captures to artifact dir
-        all_imgs = [p_f5, p_f3, p_fg, p_click] + resp_paths
+        all_imgs = [p_resting, p_f7, p_f5, p_f3, p_fg, p_click] + resp_paths
         for img in all_imgs:
             fname = os.path.basename(img)
             shutil.copy(img, os.path.join(ARTIFACT_DIR, fname))
@@ -107,3 +124,4 @@ async def run():
 
 if __name__ == '__main__':
     asyncio.run(run())
+

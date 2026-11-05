@@ -28,7 +28,7 @@ function getContourStroke(isSelected: boolean, isActive: boolean): string {
   if (isActive) {
     return 'url(#antiqueGoldStroke)';
   }
-  return 'rgba(255, 215, 0, 0.12)';
+  return 'url(#architecturalWhiteStroke)';
 }
 
 function getContourStrokeWidth(isSelected: boolean, isActive: boolean): string {
@@ -36,9 +36,9 @@ function getContourStrokeWidth(isSelected: boolean, isActive: boolean): string {
     return '3.5';
   }
   if (isActive) {
-    return '2.5';
+    return '3.0';
   }
-  return '0.8';
+  return '1.8';
 }
 
 function getContourDashArray(isSelected: boolean, isActive: boolean): string {
@@ -108,6 +108,20 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             <stop offset="100%" stopColor="#d4af37" />
           </linearGradient>
 
+          {/* Architectural White Layer Outline Gradient (Matches User White Drawing) */}
+          <linearGradient id="architecturalWhiteStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.65)" />
+            <stop offset="20%" stopColor="rgba(255, 255, 255, 0.88)" />
+            <stop offset="50%" stopColor="rgba(255, 255, 255, 0.98)" />
+            <stop offset="80%" stopColor="rgba(255, 255, 255, 0.88)" />
+            <stop offset="100%" stopColor="rgba(255, 255, 255, 0.65)" />
+          </linearGradient>
+
+          {/* Architectural White Subtle Shadow Filter for High Legibility */}
+          <filter id="whiteLayerGlow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.5" />
+          </filter>
+
           {/* Selected Locked Gold Linear Gradient */}
           <linearGradient id="selectedGoldStroke" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" />
@@ -147,6 +161,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
             .floor-group.is-active .floor-contour-path {
               stroke: url(#antiqueGoldStroke) !important;
               stroke-width: 3.5px !important;
+              filter: none !important;
             }
           `}</style>
         </defs>
@@ -181,10 +196,10 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
               {/* Visual Floor Highlight Layer (Illuminates calibrated curved architectural band) */}
               {floor.outlinePaths.map((pathD) => (
                 <React.Fragment key={`visual-path-${floor.id}-${pathD.slice(0, 20)}`}>
-                  {/* 1. Translucent Golden Sunlight Fill */}
+                  {/* 1. Translucent Golden Sunlight Fill / Resting Frosted Tint */}
                   <path
                     d={pathD}
-                    fill={isActive ? 'url(#sunlightFloorFill)' : 'transparent'}
+                    fill={isActive ? 'url(#sunlightFloorFill)' : 'rgba(255, 255, 255, 0.035)'}
                     className="floor-fill-path transition-colors duration-250 pointer-events-none"
                   />
 
@@ -201,7 +216,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
                     className="floor-glow-path transition-opacity duration-250 pointer-events-none"
                   />
 
-                  {/* 3. Crisp Inner Architectural Contour Line */}
+                  {/* 3. Architectural Contour Line (White in resting state, radiant gold when active) */}
                   <path
                     d={pathD}
                     fill="none"
@@ -210,6 +225,7 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
                     strokeDasharray={getContourDashArray(isSelected, isActive)}
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    filter={isActive ? undefined : 'url(#whiteLayerGlow)'}
                     className="floor-contour-path transition-all duration-250 pointer-events-none"
                   />
                 </React.Fragment>
