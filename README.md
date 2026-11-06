@@ -8,7 +8,7 @@
 [![Express 5](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Tests Passing](https://img.shields.io/badge/Tests-43%2F43%20Passing-brightgreen)](https://vitest.dev/)
+[![Tests Passing](https://img.shields.io/badge/Tests-81%2F81%20Passing-brightgreen)](https://vitest.dev/)
 [![Oxlint Clean](https://img.shields.io/badge/Oxlint-0%20Warnings-brightgreen)](https://oxc.rs/)
 
 ---
@@ -133,6 +133,41 @@ Open `http://127.0.0.1:5173/#/admin` and choose the **Auction** tab:
 
 ---
 
+## ⏳ Tournament Gameplay (Round 3)
+
+**Round 03: Paradox Hunt** — a synchronized dual-timeline investigation engine where players navigate past and future facility states simultaneously to uncover temporal anomalies.
+
+### Key Capabilities
+- **Split-Screen Canvas Engine**: Dual rendered viewports (Past / Future) with responsive canvas rendering, lighting effects, and collision boundaries.
+- **Cooperative Hunts**:
+  - *Hunt 1 (Temporal Stabilization)*: Investigate 5 spatial sectors, disable security overrides, unlock containment chambers.
+  - *Hunt 2 (The Anomaly Core)*: Multi-stage logic puzzles with penalty deductions and durable server state.
+- **Card Tray Integration**: Seamlessly carries over power cards earned in Round 2 auction (Vampire Shield, Witch Hex, Ghost Pass, Zombie Revive, Pumpkin Bomb, Reaper Strike).
+- **Backend Services**: `server/routes/round3.routes.ts`, `server/services/round3.service.ts`, `round3-hunt1.service.ts`, `round3-hunt2.service.ts`.
+
+---
+
+## 🏛 Tournament Gameplay (Round 4)
+
+**Round 04: The Radiant Treasure Hunt (The Campus Expedition)** — an elite 7-team competitive cooperative treasure hunt set within the Ghibli-inspired B. S. Narayan Academic Block.
+
+### Cinematic Arrival & Open-Window Entry
+1. **Messenger's Letter**: A white dove swoops through the ancient stone balustrade and descends to hover directly above the stone pedestal, dropping a wax-sealed envelope before perching atop the column capital.
+2. **Ancient Parchment**: Unsealing the letter reveals the dawn storyline and summons the expedition.
+3. **Continuous Drone Camera Traversal**: Selecting any of the 8 floors triggers an upward drone camera flight directly through an already open window into the interior floor map without stopping.
+
+### 7-Team Competitive Cooperative Architecture
+- **Strict Route Isolation**: Exactly 7 qualified squads are assigned unique routes (`Route I` through `Route VII`).
+- **5 Sequential Riddles per Route**: Each route features 4 route-specific intermediate clues followed by a 5th clue.
+- **Common Final Room Convergence**: All 7 routes converge at the **Celestial Archives & Grand Observatory (Room 701, Floor 7)** for the 5th riddle.
+- **First-Correct-Answer Wins (Atomic Race)**: The first qualified squad to reach the common final room and submit the correct final answer is atomically crowned Champion; subsequent attempts are locked out.
+- **Admin Master Suite (`/#/admin` -> Round 04 Expedition)**:
+  - *Live Monitoring*: Real-time progress table tracking squad locations, clue steps, target discoveries, and winner status.
+  - *7-Team Qualification & Routes*: Organizer dropdown interface to qualify squads and assign routes.
+  - *Visual Clue Editor (35 Steps)*: Interactive floor plan canvas with click-to-place golden target beacon, riddle texts, field hints, and comma-separated answer keys.
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
@@ -210,10 +245,11 @@ npm run build
 ```
 
 ### Verification Matrix
-- ✅ **Linter**: 0 warnings, 0 errors across 93 files
-- ✅ **Tests**: 43 / 43 tests passing (100% green)
-- ✅ **Build**: Minified production build completed in 1.58s
-- ✅ **Responsiveness**: Certified at 1280x720, 1366x768, 1440x900, 1536x864, 1920x1080, and 390x844 mobile.
+- ✅ **Linter**: 0 warnings, 0 errors across 228 files (`oxlint`)
+- ✅ **TypeScript**: 0 type errors (`tsc -b`)
+- ✅ **Tests**: 81 / 81 tests passing across 18 test suites (100% green)
+- ✅ **Build**: Minified production build completed cleanly in `dist/`
+- ✅ **Responsiveness**: Certified at 1280x720, 1366x768, 1440x900, 1536x864, 1920x1080, and mobile viewports.
 
 ---
 

@@ -104,46 +104,35 @@ export const FrostCartelHomePage: React.FC = () => {
     setActiveChamberRound(null);
   };
 
+  const navigateToChamber = (roundNum: number, hash: string) => {
+    setIsDashboardOpen(false);
+    window.location.hash = hash;
+    setActiveChamberRound(roundNum);
+  };
+
   const handleSelectRound = (round: RoundConfig) => {
-    if (round.number === '02' && round.isAccessible) {
-      if (!session) {
-        document.getElementById('login-section')?.scrollIntoView({ behavior: 'smooth' });
-        return;
-      }
-      setIsDashboardOpen(false);
-      window.location.hash = '#/round-2';
-      setActiveChamberRound(2);
-      return;
-    }
-    if (round.number === '03' && round.isAccessible) {
-      if (!session) {
-        document.getElementById('login-section')?.scrollIntoView({ behavior: 'smooth' });
-        return;
-      }
-      setIsDashboardOpen(false);
-      window.location.hash = '#/round-3';
-      setActiveChamberRound(3);
-      return;
-    }
     if (round.id === 'round-04' || round.number === '04') {
-      setIsDashboardOpen(false);
-      window.location.hash = '#/round-4';
-      setActiveChamberRound(4);
+      navigateToChamber(4, '#/round-4');
       return;
     }
-    if (round.isAccessible) {
-      if (session) {
-        setIsDashboardOpen(false);
-        setActiveChamberRound(1);
-      } else {
-        const el = document.getElementById('login-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    } else {
+
+    if (!round.isAccessible) {
       setNotice(`${round.title} is sealed until prior stages conclude.`);
       setTimeout(() => setNotice(null), 3500);
+      return;
+    }
+
+    if (!session) {
+      document.getElementById('login-section')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    if (round.number === '02') {
+      navigateToChamber(2, '#/round-2');
+    } else if (round.number === '03') {
+      navigateToChamber(3, '#/round-3');
+    } else {
+      navigateToChamber(1, '#/round-1');
     }
   };
 

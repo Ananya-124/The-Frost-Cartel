@@ -31,6 +31,9 @@ jobs:
       - name: Lint Codebase (Oxlint)
         run: npm run lint
 
+      - name: TypeScript Validation
+        run: npx tsc -b
+
       - name: Run Test Suites (Vitest)
         run: npm test
 

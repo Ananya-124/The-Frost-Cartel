@@ -444,6 +444,7 @@ export const AdminRound4Tab: React.FC = () => {
 
                   <select
                     value={currentAssign?.teamId || ''}
+                    aria-label={`Assign squad to Route ${route.roman_numeral}`}
                     onChange={(e) => {
                       const newTeamId = e.target.value;
                       const updated = assignments.filter((a) => a.routeId !== route.id && a.teamId !== newTeamId);
@@ -489,6 +490,7 @@ export const AdminRound4Tab: React.FC = () => {
             <div className="flex items-center gap-2">
               <select
                 value={selectedRouteId}
+                aria-label="Select Expedition Route"
                 onChange={(e) => handleSelectRouteOrClue(e.target.value, selectedClueIndex)}
                 className="p-1.5 rounded bg-black border border-white/20 text-xs text-amber-300 font-cinzel"
               >
@@ -501,6 +503,7 @@ export const AdminRound4Tab: React.FC = () => {
 
               <select
                 value={selectedClueIndex}
+                aria-label="Select Clue Step"
                 onChange={(e) => handleSelectRouteOrClue(selectedRouteId, Number(e.target.value))}
                 className="p-1.5 rounded bg-black border border-white/20 text-xs text-white font-cinzel"
               >
@@ -516,7 +519,9 @@ export const AdminRound4Tab: React.FC = () => {
             <div className="relative rounded-lg overflow-hidden border border-amber-500/40 bg-black cursor-crosshair">
               <img
                 src={mapConfig.mapImage}
-                alt="Floor Plan"
+                alt="Floor Plan Canvas - Click to set clue target"
+                role="button"
+                tabIndex={0}
                 className="w-full h-auto block select-none"
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -528,6 +533,11 @@ export const AdminRound4Tab: React.FC = () => {
                   const newY = Math.round(clickY * scaleY);
                   setEditingStep((prev) => ({ ...prev, targetX: newX, targetY: newY }));
                   setNotice(`Target placed at X:${newX}, Y:${newY}`);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                  }
                 }}
               />
 
@@ -550,10 +560,11 @@ export const AdminRound4Tab: React.FC = () => {
           {/* Right Column: Step Fields */}
           <div className="space-y-3">
             <div>
-              <label className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
+              <label htmlFor="round4-editor-floor" className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
                 Floor Plan & Map Asset
               </label>
               <select
+                id="round4-editor-floor"
                 value={editingStep.floorId}
                 onChange={(e) => setEditingStep((prev) => ({ ...prev, floorId: e.target.value }))}
                 className="w-full p-2 rounded bg-black/80 border border-white/20 text-xs text-white"
@@ -569,10 +580,11 @@ export const AdminRound4Tab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
+              <label htmlFor="round4-editor-location" className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
                 Location Name
               </label>
               <input
+                id="round4-editor-location"
                 type="text"
                 value={editingStep.locationName}
                 onChange={(e) => setEditingStep((prev) => ({ ...prev, locationName: e.target.value }))}
@@ -581,10 +593,11 @@ export const AdminRound4Tab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
+              <label htmlFor="round4-editor-riddle" className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
                 Riddle Text (Unlocked upon arrival)
               </label>
               <textarea
+                id="round4-editor-riddle"
                 rows={3}
                 value={editingStep.riddleText}
                 onChange={(e) => setEditingStep((prev) => ({ ...prev, riddleText: e.target.value }))}
@@ -593,10 +606,11 @@ export const AdminRound4Tab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
+              <label htmlFor="round4-editor-hint" className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
                 Field Location Hint (For Field Partner)
               </label>
               <input
+                id="round4-editor-hint"
                 type="text"
                 value={editingStep.fieldLocationHint}
                 onChange={(e) => setEditingStep((prev) => ({ ...prev, fieldLocationHint: e.target.value }))}
@@ -605,10 +619,11 @@ export const AdminRound4Tab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
+              <label htmlFor="round4-editor-answers" className="block text-[11px] font-cinzel text-cartel-amber uppercase mb-1">
                 Accepted Answers (Comma-separated, case-insensitive)
               </label>
               <input
+                id="round4-editor-answers"
                 type="text"
                 value={editingStep.acceptedAnswers}
                 onChange={(e) => setEditingStep((prev) => ({ ...prev, acceptedAnswers: e.target.value }))}

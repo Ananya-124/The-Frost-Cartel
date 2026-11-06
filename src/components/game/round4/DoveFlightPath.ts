@@ -41,20 +41,22 @@ export function evaluateCubicBezierDerivative(p0: Point2D, p1: Point2D, p2: Poin
   };
 }
 
+export interface DoveFlightPathConfig {
+  p0: Point2D;
+  p1: Point2D;
+  p2: Point2D;
+  p3: Point2D;
+  startScale: number;
+  endScale: number;
+  minPitch?: number;
+  maxPitch?: number;
+}
+
 /**
  * Calculates natural flight transform with clamped aerodynamic pitch and subtle banking.
  */
-export function getDoveTransform(
-  p0: Point2D,
-  p1: Point2D,
-  p2: Point2D,
-  p3: Point2D,
-  t: number,
-  startScale: number,
-  endScale: number,
-  minPitch: number = -25,
-  maxPitch: number = 20
-): DoveTransform {
+export function getDoveTransform(path: DoveFlightPathConfig, t: number): DoveTransform {
+  const { p0, p1, p2, p3, startScale, endScale, minPitch = -25, maxPitch = 20 } = path;
   const pos = evaluateCubicBezier(p0, p1, p2, p3, t);
   const vel = evaluateCubicBezierDerivative(p0, p1, p2, p3, t);
 

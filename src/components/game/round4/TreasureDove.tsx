@@ -74,17 +74,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       // Smooth ease-in-out progress for slow, natural acceleration and deceleration
       const t = rawT < 0.5 ? 2 * rawT * rawT : -1 + (4 - 2 * rawT) * rawT;
 
-      const transform = getDoveTransform(
-        APPROACH_PATH.p0,
-        APPROACH_PATH.p1,
-        APPROACH_PATH.p2,
-        APPROACH_PATH.p3,
-        t,
-        APPROACH_PATH.startScale,
-        APPROACH_PATH.endScale,
-        APPROACH_PATH.minPitch,
-        APPROACH_PATH.maxPitch
-      );
+      const transform = getDoveTransform(APPROACH_PATH, t);
 
       setDoveTransform(transform);
       // Gentle, majestic wing flapping frequency slows into a flare as bird arrives at pedestal
@@ -125,17 +115,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
       // Smooth deceleration ease-out
       const t = 1 - Math.pow(1 - rawT, 2.2);
 
-      const transform = getDoveTransform(
-        PERCH_PATH.p0,
-        PERCH_PATH.p1,
-        PERCH_PATH.p2,
-        PERCH_PATH.p3,
-        t,
-        PERCH_PATH.startScale,
-        PERCH_PATH.endScale,
-        PERCH_PATH.minPitch,
-        PERCH_PATH.maxPitch
-      );
+      const transform = getDoveTransform(PERCH_PATH, t);
 
       setDoveTransform(transform);
       // Wing flapping gradually slows down as bird settles
@@ -242,8 +222,10 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
               /* High-Fidelity SVG Dove Fallback */
               <svg
                 viewBox="0 0 160 120"
+                role="img"
                 className="w-44 sm:w-52 h-auto drop-shadow-[0_10px_24px_rgba(255,220,110,0.7)]"
               >
+                <title>Flying White Dove with Scroll</title>
                 <defs>
                   <linearGradient id="doveWing" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#ffffff" />
@@ -304,7 +286,12 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
                 className="w-full h-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)] filter brightness-105"
               />
             ) : (
-              <svg viewBox="0 0 100 90" className="w-full h-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]">
+              <svg
+                viewBox="0 0 100 90"
+                role="img"
+                className="w-full h-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+              >
+                <title>Perched White Dove</title>
                 <defs>
                   <linearGradient id="perchedBody" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#ffffff" />
