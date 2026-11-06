@@ -32,6 +32,7 @@ screenshot_*.png
 test_*.png
 thumb_*.jpg
 scratch/
+*.zip
 
 # Editor and OS
 .vscode/*
