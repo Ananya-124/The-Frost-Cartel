@@ -41,9 +41,8 @@ export const RouteNavigation: React.FC<RouteNavigationProps> = ({
         {EXPEDITION_ROUTES.map((route) => {
           const isActive = progress.activeRouteId === route.routeId;
           const isCompleted = progress.completedRouteIds.includes(route.routeId);
-          // Route 1 is always unlocked; subsequent routes unlock when previous route completes
-          const prevRoute = EXPEDITION_ROUTES[route.routeNumber - 2];
-          const isUnlocked = route.routeNumber === 1 || (prevRoute && progress.completedRouteIds.includes(prevRoute.routeId));
+          // Phase 2 Strict Route Isolation: Only the squad's assigned route is playable
+          const isUnlocked = isActive;
 
           return (
             <div

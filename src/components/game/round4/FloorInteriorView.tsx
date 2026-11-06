@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { FloorDefinition } from './FloorConfiguration';
-import type { ExpeditionProgress } from '../../../types/round4Expedition.types';
+import type { ExpeditionProgress, WinnerRecord } from '../../../types/round4Expedition.types';
 import { round4Service } from '../../../services/round4Service';
 import { authService } from '../../../services/authService';
 import { getExpeditionRoute } from './ExpeditionRouteConfiguration';
@@ -8,6 +8,8 @@ import { getFloorMapConfig } from './FloorMapConfiguration';
 import { RouteNavigation } from './RouteNavigation';
 import { CampusFloorMap } from './CampusFloorMap';
 import { FieldRiddlePanel } from './FieldRiddlePanel';
+import { WinnerCelebrationModal } from './WinnerCelebrationModal';
+import { NonWinnerModal } from './NonWinnerModal';
 import { soundController } from '../../../utils/soundController';
 
 interface FloorInteriorViewProps {
@@ -31,13 +33,39 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   const [progress, setProgress] = useState<ExpeditionProgress>(() =>
     round4Service.getProgress(teamId)
   );
+  const [winner, setWinner] = useState<WinnerRecord | null>(() => round4Service.getWinner());
+  const [isAccessDenied, setIsAccessDenied] = useState<boolean>(false);
 
-  // Subscribe to service progress updates
+  // Authoritative server route & qualification check on mount
   useEffect(() => {
-    const unsubscribe = round4Service.subscribe((updated) => {
+    let isMounted = true;
+    round4Service.fetchMyRouteState(teamId).then((res) => {
+      if (!isMounted) return;
+      if (res && res.qualified === false) {
+        setIsAccessDenied(true);
+      }
+      if (res && res.winner) {
+        setWinner(res.winner);
+      }
+    }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [teamId]);
+
+  // Subscribe to service progress updates and winner events
+  useEffect(() => {
+    const unsubProgress = round4Service.subscribe((updated) => {
       setProgress({ ...updated });
     });
-    return unsubscribe;
+    const unsubWinner = round4Service.subscribeWinner((win) => {
+      setWinner(win);
+    });
+    return () => {
+      unsubProgress();
+      unsubWinner();
+    };
   }, []);
 
   const currentRoute = getExpeditionRoute(progress.activeRouteId);
@@ -58,6 +86,11 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     (answer: string): Promise<{ success: boolean; message: string }> => {
       const result = round4Service.submitAnswer(teamId, answer);
       setProgress({ ...result.progress });
+      if (result.isWinner && result.winner) {
+        setWinner(result.winner);
+      } else if (result.raceClosed && result.winner) {
+        setWinner(result.winner);
+      }
       return Promise.resolve({ success: result.success, message: result.message });
     },
     [teamId]
@@ -80,6 +113,29 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     }
     onReturnToExterior();
   };
+
+  if (isAccessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[#140e08] text-[#f4ecd8] font-cinzel">
+        <div className="max-w-md p-8 rounded-2xl bg-[#241a0d] border border-amber-500/50 text-center shadow-2xl">
+          <span className="text-4xl mb-4 block" aria-hidden="true">🔒</span>
+          <h2 className="text-xl font-black text-amber-300 uppercase tracking-wider mb-2">
+            ACCESS RESTRICTED
+          </h2>
+          <p className="text-xs text-[#d4c6a0] font-sans mb-6 leading-relaxed">
+            Round 04 (The Campus Expedition) is available strictly to the seven qualified squads from Round 03.
+          </p>
+          <button
+            type="button"
+            onClick={handleReturn}
+            className="px-5 py-2 rounded bg-amber-600 hover:bg-amber-500 text-black font-bold text-xs uppercase cursor-pointer transition-colors"
+          >
+            Return to Exterior
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-[#faf5ea] text-[#3d2a14] font-sans flex flex-col justify-between overflow-x-hidden selection:bg-amber-500 selection:text-black select-none">
@@ -248,6 +304,24 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
         </section>
 
       </main>
+
+      {/* 3. Championship Winner & Non-Winner Result Overlays */}
+      {winner && winner.teamId === teamId && (
+        <WinnerCelebrationModal
+          winner={winner}
+          routeRomanNumeral={currentRoute.romanNumeral}
+          onExit={onExit}
+        />
+      )}
+
+      {winner && winner.teamId !== teamId && (
+        <NonWinnerModal
+          winner={winner}
+          mySolvedCount={progress.solvedStepIds.length}
+          myRouteRomanNumeral={currentRoute.romanNumeral}
+          onExit={handleReturn}
+        />
+      )}
     </div>
   );
 };

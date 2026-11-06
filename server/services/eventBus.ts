@@ -40,6 +40,10 @@ class EventBus {
       }
     }
   }
+
+  public emitEvent(event: string, data: unknown): void {
+    this.broadcastAll(event, data);
+  }
 }
 
 export const eventBus = new EventBus();

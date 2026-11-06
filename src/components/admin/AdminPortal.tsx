@@ -5,12 +5,13 @@ import { AdminDashboardTab } from './dashboard/AdminDashboardTab';
 import { AdminTeamsTab } from './teams/AdminTeamsTab';
 import { AdminRoundControlTab } from './rounds/AdminRoundControlTab';
 import { AdminResultsTab } from './results/AdminResultsTab';
+import { AdminRound4Tab } from './round4/AdminRound4Tab';
 
 interface AdminPortalProps {
   onNavigatePublic: () => void;
 }
 
-type TabKey = 'dashboard' | 'teams' | 'rounds' | 'results';
+type TabKey = 'dashboard' | 'teams' | 'rounds' | 'results' | 'round4';
 
 interface TabDefinition {
   key: TabKey;
@@ -23,6 +24,7 @@ const TABS: TabDefinition[] = [
   { key: 'teams', label: 'Teams', getLabel: (count) => `Teams (${count})` },
   { key: 'rounds', label: 'Round Control' },
   { key: 'results', label: 'Results' },
+  { key: 'round4', label: 'Round 04 Expedition' },
 ];
 
 function getInitialTab(): TabKey {
@@ -30,6 +32,7 @@ function getInitialTab(): TabKey {
   if (hash.includes('/teams')) return 'teams';
   if (hash.includes('/rounds')) return 'rounds';
   if (hash.includes('/results')) return 'results';
+  if (hash.includes('/round4')) return 'round4';
   return 'dashboard';
 }
 
@@ -179,6 +182,8 @@ const AdminTabContent: React.FC<AdminTabContentProps> = ({
       );
     case 'results':
       return <AdminResultsTab />;
+    case 'round4':
+      return <AdminRound4Tab />;
     default:
       return null;
   }

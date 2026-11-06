@@ -66,3 +66,72 @@ export type RiddlePanelState =
   | 'CORRECT_ANSWER'
   | 'ROUTE_COMPLETED';
 
+export interface WinnerRecord {
+  teamId: string;
+  teamName: string;
+  routeId: string;
+  solvedAt: string;
+}
+
+export interface QualifiedTeamAssignment {
+  qualId: string;
+  teamId: string;
+  teamName: string;
+  routeId: string;
+  romanNumeral: string;
+  routeName: string;
+  currentStepIndex: number;
+  targetDiscovered: number;
+  commonRoomArrived: number;
+  isFinished: number;
+  finishedAt: string | null;
+  totalSteps: number;
+}
+
+export interface Round4Settings {
+  id: string;
+  is_released: number;
+  common_final_location_id: string;
+  common_final_floor_id: string;
+  common_final_room_name: string;
+  common_final_x: number;
+  common_final_y: number;
+  common_final_radius: number;
+  physical_entry_instructions: string;
+}
+
+export interface Round4AdminOverview {
+  settings: Round4Settings;
+  routes: Array<{
+    id: string;
+    route_number: number;
+    roman_numeral: string;
+    route_name: string;
+    route_subtitle: string;
+  }>;
+  qualifiedTeams: QualifiedTeamAssignment[];
+  availableTeams: Array<{
+    id: string;
+    teamName: string;
+    score: number;
+    totalCredits: number;
+  }>;
+  steps: Array<{
+    id: string;
+    routeId: string;
+    clueIndex: number;
+    floorId: string;
+    locationName: string;
+    targetX: number;
+    targetY: number;
+    triggerRadius: number;
+    riddleText: string;
+    fieldLocationHint: string;
+    acceptedAnswersJson: string;
+    isCaseSensitive: number;
+    isCommonFinal: number;
+  }>;
+  winner: WinnerRecord | null;
+}
+
+

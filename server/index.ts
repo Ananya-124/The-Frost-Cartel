@@ -6,6 +6,7 @@ import { initDatabase } from '../database/db.ts';
 import { authRouter } from './routes/auth.routes.ts';
 import { adminRouter } from './routes/admin.routes.ts';
 import { round1Router } from './routes/round1.routes.ts';
+import { round4Router } from './routes/round4.routes.ts';
 import { eventsRouter } from './routes/events.routes.ts';
 
 dotenv.config();
@@ -57,6 +58,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/round1', round1Router);
+app.use('/api/round4', round4Router);
 app.use('/api/events', eventsRouter);
 
 // Database initialization
