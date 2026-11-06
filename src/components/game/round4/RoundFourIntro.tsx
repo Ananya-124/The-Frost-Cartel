@@ -72,6 +72,7 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
     return (
       <CollegeBuildingView
         onExit={onExit}
+        onBack={handleReplayIntro}
         onReplayIntro={handleReplayIntro}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
@@ -105,6 +106,7 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
         >
           <CollegeBuildingView
             onExit={onExit}
+            onBack={handleReplayIntro}
             onReplayIntro={handleReplayIntro}
             isMuted={isMuted}
             onToggleMute={handleToggleMute}

@@ -1,13 +1,19 @@
 import '@testing-library/jest-dom/vitest';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { FrostCartelHomePage } from '../home/FrostCartelHomePage';
 import { authService } from '../../services/authService';
 import { adminService } from '../../services/adminService';
 
+vi.mock('../game/round3/runtime/components/screens/GameScreen', () => ({
+  default: ({ teamName }: { teamName: string }) => <div data-testid="round3-game">PARADOX GAME · {teamName}</div>,
+}));
+
 describe('FROST CARTEL Homepage & Team Authentication', () => {
   beforeEach(() => {
     authService.logout();
+    window.location.hash = '';
+    vi.unstubAllGlobals();
     window.scrollTo = () => {};
     Element.prototype.scrollIntoView = () => {};
   });
@@ -44,16 +50,38 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     expect(round2Btn).toBeEnabled();
 
     // Round 3
-    expect(screen.getByText('CLASSIFIED')).toBeInTheDocument();
-    expect(screen.getByText('COMING SOON • SEALED')).toBeInTheDocument();
-    const round3Btn = screen.getByRole('button', { name: /CLASSIFIED PROTOCOL/i });
-    expect(round3Btn).toBeDisabled();
+    expect(screen.getByText('PARADOX HUNT')).toBeInTheDocument();
+    expect(screen.getByText('ROUND 03 FOUNDATION • READY')).toBeInTheDocument();
+    const round3Btn = screen.getByRole('button', { name: /ENTER ROUND 03/i });
+    expect(round3Btn).toBeEnabled();
 
     // Round 4
     expect(screen.getByText('THE RADIANT TREASURE HUNT')).toBeInTheDocument();
     expect(screen.getByText('ROUND 04 ACTIVE • READY')).toBeInTheDocument();
     const round4Btn = screen.getByRole('button', { name: /ENTER ROUND 04/i });
     expect(round4Btn).toBeEnabled();
+  });
+
+  it('opens the Round 3 foundation from the player portal', async () => {
+    await authService.loginTeam('Paradox Test Team', 'paradox-key');
+    const state = {
+      success: true,
+      session: {
+        teamId: 'paradox-test', teamName: 'Paradox Test Team', currentHunt: 'paradox-hunt',
+        playerProgress: {}, timelines: { past: {}, future: {} }, activeTimeline: 'past',
+        evidenceDiscoveries: [], cardUsage: [], score: 0, completed: false, completedAt: null, updatedAt: new Date().toISOString(),
+      },
+      inventory: [], cards: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<FrostCartelHomePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /ENTER ROUND 03/i }));
+
+    expect(await screen.findByText('PARADOX GAME · Paradox Test Team')).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/round3/session'), expect.objectContaining({ method: 'POST' })));
+    vi.unstubAllGlobals();
   });
 
   it('validates required fields on team login submission', async () => {

@@ -1,0 +1,360 @@
+.game {
+  display: flex;
+  height: calc(100% - 34px);
+}
+
+.hidden {
+  display: none;
+}
+
+.half {
+  position: relative;
+  flex: 1 1 50%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.half + .half {
+  border-left: 2px solid #000;
+}
+
+.half::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 140px #000c;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.panel {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 3;
+  pointer-events: none;
+  text-shadow: 0 1px 3px #000;
+}
+
+.role {
+  font-size: 16px;
+  letter-spacing: 0.1em;
+}
+
+.role b {
+  color: var(--gold-bright);
+}
+
+.pastRole {
+  color: var(--past-amber);
+}
+
+.futureRole {
+  color: var(--future-teal);
+}
+
+.room {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.objective {
+  font-size: 13px;
+  max-width: 420px;
+  margin-top: 4px;
+}
+
+.armed {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+.prompt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  text-align: center;
+  z-index: 3;
+  pointer-events: none;
+  font-size: 15px;
+  color: var(--gold-bright);
+  text-shadow: 0 0 8px #000, 0 1px 3px #000;
+}
+
+.message {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 4;
+  max-width: 88%;
+  padding: 8px 14px;
+  background: #000c;
+  border: 1px solid var(--border-soft);
+  border-radius: 5px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.journal {
+  position: absolute;
+  top: 70px;
+  right: 8px;
+  width: min(360px, 90%);
+  max-height: 60%;
+  overflow: auto;
+  z-index: 6;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.journal h3 {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.entry {
+  padding: 5px 0;
+  border-top: 1px solid #3a2f1e;
+}
+
+.entry b {
+  color: var(--gold-bright);
+}
+
+.entry small {
+  display: block;
+  opacity: 0.6;
+}
+
+.puzzle {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: min(340px, 90%);
+  padding: 12px 16px;
+  background: #0b0906f2;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.puzzle h3 {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-weight: 400;
+}
+
+.puzzle button {
+  margin: 3px;
+}
+
+.option {
+  margin: 4px 0;
+}
+
+.hud {
+  position: fixed;
+  top: 8px;
+  left: 170px;
+  right: calc(50% + 8px);
+  z-index: 8;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.hudBox {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  overflow: hidden;
+  background: #090b0ddd;
+  border: 1px solid #80683fbb;
+  border-radius: 7px;
+  box-shadow: 0 4px 14px #0008, inset 0 1px #fff1;
+  backdrop-filter: blur(5px);
+  font: 10px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.teamStatus {
+  flex: 0 1 auto;
+}
+
+.huntStatus {
+  flex: 1 1 auto;
+}
+
+.readiness {
+  flex: 0 0 auto;
+  border-color: #427477aa;
+}
+
+.runTimer {
+  position: fixed;
+  top: 8px;
+  left: calc(50% + 8px);
+  right: 8px;
+  flex: 0 0 auto;
+  border-color: #a64f46aa;
+  justify-content: center;
+}
+
+.runTime {
+  color: #f3d7a3;
+  font: 700 14px/1 ui-monospace, monospace;
+  letter-spacing: 0.05em;
+}
+
+.runToggle {
+  pointer-events: auto;
+  padding: 3px 5px;
+  border: 1px solid #8a7050;
+  border-radius: 4px;
+  background: #211a12;
+  color: #ddc392;
+  font: 700 8px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.runToggle:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.hudLabel {
+  flex: 0 0 auto;
+  color: #b6a47e;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.teamName,
+.huntTitle {
+  overflow: hidden;
+  color: #f0dfb8;
+  font: 600 11px/1.2 Georgia, serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamName {
+  max-width: 130px;
+}
+
+.huntTitle {
+  min-width: 0;
+  color: #e6d09e;
+}
+
+.hudBox b {
+  color: var(--gold-bright);
+  font: 700 14px/1 system-ui, sans-serif;
+}
+
+.dots span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 2px;
+  border: 1px solid #a48d62;
+  border-radius: 50%;
+  background: #5a5142;
+  opacity: 0.65;
+}
+
+.dots .on {
+  opacity: 1;
+  border-color: #9de7ba;
+  background: #77dba1;
+  box-shadow: 0 0 7px #77dba199;
+}
+
+@media (max-width: 1100px) {
+  .hud {
+    top: 52px;
+    left: 8px;
+    right: calc(50% + 8px);
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .hudBox {
+    gap: 5px;
+    padding: 5px 6px;
+  }
+
+  .runTimer {
+    top: 52px;
+    left: calc(50% + 8px);
+    right: 8px;
+  }
+
+  .teamName {
+    max-width: 72px;
+  }
+
+  .hudLabel {
+    font-size: 7px;
+  }
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px;
+  background: #050403;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.bar kbd {
+  background: #2a2218;
+  border: 1px solid var(--border);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.cards {
+  display: flex;
+  gap: 6px;
+}
+
+.cards button {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.cards button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

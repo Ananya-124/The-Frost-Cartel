@@ -5,12 +5,12 @@ import type { AuthResponse, TeamSession } from '../types';
  *
  * Implements the conceptual API contract:
  * POST /api/auth/team-login
- * Body: { teamName: string, passkey: string }
+ * Body: { teamName: string, password: string }
  *
  * Can connect directly to the future PostgreSQL / Supabase / Express backend.
  */
 class AuthService {
-  private readonly apiUrl: string | undefined = import.meta.env.VITE_API_URL;
+  private readonly apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
   private currentSession: TeamSession | null = null;
 
   constructor() {
@@ -39,15 +39,17 @@ class AuthService {
       };
     }
 
-    // If an external backend is configured, send the real HTTP request
-    if (this.apiUrl) {
+    // App runs through its same-origin /api proxy by default. Keep the offline
+    // simulation strictly in Vitest; it cannot authenticate Round 3 requests.
+    if (import.meta.env.MODE !== 'test') {
       try {
         const response = await fetch(`${this.apiUrl}/api/auth/team-login`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ teamName: trimmedName, passkey: trimmedPass }),
+          body: JSON.stringify({ teamName: trimmedName, password: trimmedPass }),
         });
 
         if (!response.ok) {
@@ -58,11 +60,27 @@ class AuthService {
           };
         }
 
-        const data: AuthResponse = await response.json();
+        const data = await response.json() as {
+          success: boolean;
+          message?: string;
+          token?: string;
+          playerNumber?: 1 | 2;
+          team?: { id: string; teamName: string; score: number; isPaused: boolean };
+        };
         if (data.success && data.team) {
-          this.setSession(data.team);
+          const session: TeamSession = {
+            teamId: data.team.id,
+            teamName: data.team.teamName,
+            playerNumber: data.playerNumber,
+            credits: data.team.score,
+            currentRound: 1,
+            gameStatus: data.team.isPaused ? 'paused' : 'active',
+            loginTime: new Date().toISOString(),
+          };
+          this.setSession(session);
+          return { success: true, team: session, token: data.token, message: data.message };
         }
-        return data;
+        return { success: false, message: data.message || 'Authentication failed. Please verify with tournament organizer.' };
       } catch {
         return {
           success: false,
@@ -107,6 +125,15 @@ class AuthService {
 
   getCurrentSession(): TeamSession | null {
     return this.currentSession;
+  }
+
+  async getPlayerNumber(): Promise<1 | 2> {
+    const response = await fetch(`${this.apiUrl}/api/auth/session`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Could not identify the authenticated investigator. Reconnect before starting Hunt I.');
+    const data = await response.json() as { playerNumber?: number };
+    if (data.playerNumber !== 1 && data.playerNumber !== 2) throw new Error('The authenticated investigator role is missing. Reconnect before starting Hunt I.');
+    if (this.currentSession) this.setSession({ ...this.currentSession, playerNumber: data.playerNumber });
+    return data.playerNumber;
   }
 
   isAuthenticated(): boolean {
