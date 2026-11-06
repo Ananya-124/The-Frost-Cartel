@@ -81,7 +81,9 @@ export const BuildingFloorOverlay: React.FC<BuildingFloorOverlayProps> = ({
         className="w-full h-full pointer-events-auto select-none overflow-visible"
         viewBox={`0 0 ${BUILDING_VIEWBOX.width} ${BUILDING_VIEWBOX.height}`}
         preserveAspectRatio="xMidYMid meet"
+        role="img"
       >
+        <title>Interactive College Building Floor Selection Map</title>
         <defs>
           {/* Subtle Warm Golden Ambient Glow for Hovered Floors */}
           <filter id="relicGoldGlow" x="-20%" y="-20%" width="140%" height="140%">

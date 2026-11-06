@@ -106,3 +106,4 @@ Production Build:      dist/ minified and bundled cleanly
 ## 7. Outstanding Blockers
 
 **None.** The application compiles, passes all lint and type checks, passes all 81 tests, and is running live on `http://127.0.0.1:5173` (Frontend) and `http://127.0.0.1:3001` (Backend).
+

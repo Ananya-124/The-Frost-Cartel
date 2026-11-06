@@ -109,6 +109,7 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
     fireEvent.change(input, { target: { value: 'WRONGCODE99' } });
     await act(async () => {
       fireEvent.click(submitBtn);
+      await Promise.resolve();
     });
 
     // Shows error feedback and keeps Clue 1
@@ -119,6 +120,7 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
     fireEvent.change(input, { target: { value: 'RIVET7' } });
     await act(async () => {
       fireEvent.click(submitBtn);
+      await Promise.resolve();
     });
 
     // Should advance to Clue 2 of 5

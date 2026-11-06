@@ -1,0 +1,13 @@
+# Global Codeowners for FROST CARTEL
+* @pratham250206
+
+# Frontend & Game Experience
+/src/ @pratham250206
+/public/ @pratham250206
+
+# Backend & Authoritative Database API
+/server/ @pratham250206
+/database/ @pratham250206
+
+# CI/CD and DevOps Architecture
+/.github/ @pratham250206

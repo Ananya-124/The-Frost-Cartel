@@ -71,3 +71,4 @@ All user-facing views were tested and verified at standard desktop and mobile vi
 - **Removed `round2.patch`**: Obsolete 681-line temporary patch from Round 2 development (all changes already applied and verified in source).
 - **Removed `frost.zip`**: Redundant 30 MB binary archive accidentally committed in remote PR #3 (history retained in Git objects).
 - **Protected Artefacts**: Updated `.gitignore` to block `.zip`, ephemeral test captures, local SQLite database files, and build artefacts.
+

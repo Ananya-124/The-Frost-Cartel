@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import type { Round4AdminOverview } from '../../../types/round4Expedition.types';
+import type { Round4AdminOverview, QualifiedTeamAssignment } from '../../../types/round4Expedition.types';
 import { adminService } from '../../../services/adminService';
 import { getFloorMapConfig } from '../../game/round4/FloorMapConfiguration';
+
+function renderSquadStatusBadge(team: QualifiedTeamAssignment, winnerTeamId?: string): React.JSX.Element {
+  if (team.isFinished !== 1) {
+    return <span className="text-amber-400">In Progress</span>;
+  }
+  if (winnerTeamId === team.teamId) {
+    return (
+      <span className="px-2 py-0.5 rounded bg-amber-400 text-black font-cinzel font-black">
+        👑 CHAMPION
+      </span>
+    );
+  }
+  return <span className="text-cartel-silver">Completed</span>;
+}
 
 export const AdminRound4Tab: React.FC = () => {
   const [overview, setOverview] = useState<Round4AdminOverview | null>(null);
@@ -130,7 +144,7 @@ export const AdminRound4Tab: React.FC = () => {
     setSelectedRouteId(newRouteId);
     setSelectedClueIndex(newClueIndex);
 
-    if (!overview || !overview.steps) return;
+    if (!overview?.steps) return;
     const found = overview.steps.find(
       (s) => s.routeId === newRouteId && s.clueIndex === newClueIndex
     );
@@ -403,17 +417,7 @@ export const AdminRound4Tab: React.FC = () => {
                     )}
                   </td>
                   <td className="py-2.5 px-3">
-                    {team.isFinished === 1 ? (
-                      overview.winner?.teamId === team.teamId ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-400 text-black font-cinzel font-black">
-                          👑 CHAMPION
-                        </span>
-                      ) : (
-                        <span className="text-cartel-silver">Completed</span>
-                      )
-                    ) : (
-                      <span className="text-amber-400">In Progress</span>
-                    )}
+                    {renderSquadStatusBadge(team, overview.winner?.teamId)}
                   </td>
                 </tr>
               ))}
@@ -517,13 +521,13 @@ export const AdminRound4Tab: React.FC = () => {
 
             {/* Click-to-Place Target Map Area */}
             <div className="relative rounded-lg overflow-hidden border border-amber-500/40 bg-black cursor-crosshair">
-              <img
+              <input
+                type="image"
                 src={mapConfig.mapImage}
                 alt="Floor Plan Canvas - Click to set clue target"
-                role="button"
-                tabIndex={0}
-                className="w-full h-auto block select-none"
+                className="w-full h-auto block select-none cursor-crosshair"
                 onClick={(e) => {
+                  e.preventDefault();
                   const rect = e.currentTarget.getBoundingClientRect();
                   const clickX = e.clientX - rect.left;
                   const clickY = e.clientY - rect.top;
@@ -533,11 +537,6 @@ export const AdminRound4Tab: React.FC = () => {
                   const newY = Math.round(clickY * scaleY);
                   setEditingStep((prev) => ({ ...prev, targetX: newX, targetY: newY }));
                   setNotice(`Target placed at X:${newX}, Y:${newY}`);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                  }
                 }}
               />
 

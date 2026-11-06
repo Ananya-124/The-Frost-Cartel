@@ -176,22 +176,22 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         {/* Layer C: Delicate Antique-Gold Cartographic Corner Accents */}
         <div className="absolute inset-0 pointer-events-none opacity-35" aria-hidden="true">
           {/* Top-Left Filigree */}
-          <svg className="absolute top-4 left-4 w-10 h-10 overflow-visible" viewBox="0 0 40 40">
+          <svg className="absolute top-4 left-4 w-10 h-10 overflow-visible" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
             <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
             <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
           </svg>
           {/* Top-Right Filigree */}
-          <svg className="absolute top-4 right-4 w-10 h-10 overflow-visible -scale-x-100" viewBox="0 0 40 40">
+          <svg className="absolute top-4 right-4 w-10 h-10 overflow-visible -scale-x-100" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
             <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
             <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
           </svg>
           {/* Bottom-Left Filigree */}
-          <svg className="absolute bottom-4 left-4 w-10 h-10 overflow-visible -scale-y-100" viewBox="0 0 40 40">
+          <svg className="absolute bottom-4 left-4 w-10 h-10 overflow-visible -scale-y-100" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
             <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
             <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
           </svg>
           {/* Bottom-Right Filigree */}
-          <svg className="absolute bottom-4 right-4 w-10 h-10 overflow-visible -scale-x-100 -scale-y-100" viewBox="0 0 40 40">
+          <svg className="absolute bottom-4 right-4 w-10 h-10 overflow-visible -scale-x-100 -scale-y-100" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
             <path d="M 0,36 L 0,8 C 0,3.6 3.6,0 8,0 L 36,0" fill="none" stroke="#b8974a" strokeWidth="1.2" />
             <circle cx="8" cy="8" r="2.2" fill="#b8974a" />
           </svg>
@@ -202,7 +202,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
       </div>
 
       {/* Shared Gradient Defs for Minimal Floating HUD Controls */}
-      <svg className="sr-only" aria-hidden="true" width="0" height="0">
+      <svg className="sr-only" aria-hidden="true" width="0" height="0" focusable="false">
         <defs>
           <radialGradient id="ctrlBtnGrad" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#2c1f12" stopOpacity="0.94" />
@@ -225,7 +225,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
         className="absolute top-4 sm:top-6 left-4 sm:left-6 lg:left-8 z-40 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(70,45,15,0.4)] cursor-pointer"
         title="Go Back"
       >
-        <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
+        <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible" aria-hidden="true" focusable="false">
           {/* Circular Glass Disc */}
           <circle cx="22" cy="22" r="19" fill="url(#ctrlBtnGrad)" />
           {/* Outer Beveled Gold Ring */}
@@ -257,7 +257,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 group shadow-[0_4px_16px_rgba(70,45,15,0.4)] cursor-pointer"
           title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
         >
-          <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible">
+          <svg viewBox="0 0 44 44" className="w-full h-full pointer-events-none overflow-visible" aria-hidden="true" focusable="false">
             <circle cx="22" cy="22" r="19" fill="url(#ctrlBtnGrad)" />
             <circle cx="22" cy="22" r="19" fill="none" stroke="url(#ctrlGoldRing)" strokeWidth="1.8" />
             <circle cx="22" cy="22" r="16.5" fill="none" stroke="#d4af37" strokeWidth="0.6" strokeDasharray="1.5 1.5" opacity="0.65" />
