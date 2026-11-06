@@ -9,7 +9,7 @@
     "start": "node --experimental-strip-types server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "vitest run",
+    "test": "vitest run --fileParallelism=false",
     "preview": "vite preview"
   },
   "dependencies": {

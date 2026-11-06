@@ -13,9 +13,13 @@ const DB_PATH = process.env.SQLITE_DB_PATH || path.join(DB_DIR, 'frost_cartel.db
 export const db = new DatabaseSync(DB_PATH);
 
 // Execute pragmas for optimal SQLite durability and concurrent read performance
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
-db.exec('PRAGMA busy_timeout = 5000;');
+try {
+  db.exec('PRAGMA busy_timeout = 10000;');
+  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA foreign_keys = ON;');
+} catch (err) {
+  console.warn('[DB] SQLite PRAGMA configuration notice:', err);
+}
 
 export function hashPassword(password: string, existingSalt?: string): { hash: string; salt: string } {
   const salt = existingSalt || crypto.randomBytes(16).toString('hex');
