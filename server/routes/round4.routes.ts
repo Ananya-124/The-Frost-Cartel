@@ -750,3 +750,4 @@ round4Router.post('/admin/reset-tournament', requireAdminAuth, (_req, res) => {
     res.status(500).json({ success: false, message: 'Failed to reset tournament state.' });
   }
 });
+

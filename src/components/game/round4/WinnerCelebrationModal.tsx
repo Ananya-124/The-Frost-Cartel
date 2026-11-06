@@ -126,3 +126,4 @@ export const WinnerCelebrationModal: React.FC<WinnerCelebrationModalProps> = ({
     </div>
   );
 };
+

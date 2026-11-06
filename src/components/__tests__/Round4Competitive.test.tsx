@@ -80,3 +80,4 @@ describe('Round 04 Competitive Modals: Winner Celebration & Non-Winner Summary',
     expect(mockExit).toHaveBeenCalledTimes(1);
   });
 });
+

@@ -41,10 +41,10 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     let isMounted = true;
     round4Service.fetchMyRouteState(teamId).then((res) => {
       if (!isMounted) return;
-      if (res && res.qualified === false) {
+      if (res?.qualified === false) {
         setIsAccessDenied(true);
       }
-      if (res && res.winner) {
+      if (res?.winner) {
         setWinner(res.winner);
       }
     }).catch(() => {});
@@ -86,9 +86,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     (answer: string): Promise<{ success: boolean; message: string }> => {
       const result = round4Service.submitAnswer(teamId, answer);
       setProgress({ ...result.progress });
-      if (result.isWinner && result.winner) {
-        setWinner(result.winner);
-      } else if (result.raceClosed && result.winner) {
+      if ((result.isWinner || result.raceClosed) && result.winner) {
         setWinner(result.winner);
       }
       return Promise.resolve({ success: result.success, message: result.message });
@@ -306,21 +304,21 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
       </main>
 
       {/* 3. Championship Winner & Non-Winner Result Overlays */}
-      {winner && winner.teamId === teamId && (
-        <WinnerCelebrationModal
-          winner={winner}
-          routeRomanNumeral={currentRoute.romanNumeral}
-          onExit={onExit}
-        />
-      )}
-
-      {winner && winner.teamId !== teamId && (
-        <NonWinnerModal
-          winner={winner}
-          mySolvedCount={progress.solvedStepIds.length}
-          myRouteRomanNumeral={currentRoute.romanNumeral}
-          onExit={handleReturn}
-        />
+      {winner && (
+        winner.teamId === teamId ? (
+          <WinnerCelebrationModal
+            winner={winner}
+            routeRomanNumeral={currentRoute.romanNumeral}
+            onExit={onExit}
+          />
+        ) : (
+          <NonWinnerModal
+            winner={winner}
+            mySolvedCount={progress.solvedStepIds.length}
+            myRouteRomanNumeral={currentRoute.romanNumeral}
+            onExit={handleReturn}
+          />
+        )
       )}
     </div>
   );

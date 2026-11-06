@@ -41,8 +41,8 @@ export interface AuthoritativeRouteState {
 }
 
 class Round4Service {
-  private listeners: Set<(progress: ExpeditionProgress) => void> = new Set();
-  private winnerListeners: Set<(winner: WinnerRecord | null) => void> = new Set();
+  private readonly listeners: Set<(progress: ExpeditionProgress) => void> = new Set();
+  private readonly winnerListeners: Set<(winner: WinnerRecord | null) => void> = new Set();
   private currentWinner: WinnerRecord | null = null;
   private sseSource: EventSource | null = null;
 
