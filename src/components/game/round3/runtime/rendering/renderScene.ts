@@ -1,5 +1,5 @@
 import { GLOW_RADIUS } from '../config/constants';
-import { getInteractableForState, HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, INTERACTABLES } from '../config/interactables';
+import { getInteractableForState, HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES } from '../config/interactables';
 import { ROOMS, ROOM_BY_ID } from '../config/rooms';
 import { isDoorOpen } from '../engine/world/doors';
 import { DOORS } from '../engine/world/geometry';
@@ -318,15 +318,19 @@ export function renderScene(p: SceneParams): void {
       } else drawProp(ctx, object, i === 1);
     }
   }
+  if (state.huntIndex === 2) for (const object of INTERACTABLES) {
+    if (HUNT3_INTERACTABLE_IDS.has(object.id) && object.timeline === (i ? 'future' : 'past')) drawProp(ctx, object, i === 1);
+  }
   drawDoors(ctx, state, i);
 
   // Glints on nearby props.
   for (const o of INTERACTABLES) {
     const huntOwnedVisible = (state.huntIndex === 0 && HUNT1_INTERACTABLE_IDS.has(o.id))
-      || (state.huntIndex === 1 && HUNT2_INTERACTABLE_IDS.has(o.id));
+      || (state.huntIndex === 1 && HUNT2_INTERACTABLE_IDS.has(o.id))
+      || (state.huntIndex === 2 && HUNT3_INTERACTABLE_IDS.has(o.id));
     const temporarilyHidden = (state.hunt2HiddenInteractablesUntil?.[o.id] ?? 0) > state.time;
     const hunt2Hidden = state.hunt2ObjectStates?.[o.id] === 'hidden' || (o.id === 'trueMemoryAnchor' && !state.hunt2Subtasks?.trueAnchorActivated);
-    if (!temporarilyHidden && !hunt2Hidden && (!HUNT1_INTERACTABLE_IDS.has(o.id) && !HUNT2_INTERACTABLE_IDS.has(o.id) || huntOwnedVisible)
+    if (!temporarilyHidden && !hunt2Hidden && (!HUNT1_INTERACTABLE_IDS.has(o.id) && !HUNT2_INTERACTABLE_IDS.has(o.id) && !HUNT3_INTERACTABLE_IDS.has(o.id) || huntOwnedVisible)
       && o.timeline === (i ? 'future' : 'past') && player && dist(o, player) < GLOW_RADIUS) {
       ctx.globalAlpha = 0.4 + 0.3 * Math.sin(t * 4 + o.x);
       ctx.fillStyle = i ? '#8f7cff' : '#ffd27a';

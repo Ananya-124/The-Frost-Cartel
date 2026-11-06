@@ -2,6 +2,15 @@ import type { Round3CardDefinition, Round3CardId } from '../constants/round3.car
 
 export type Round3Timeline = 'past' | 'future';
 export type Round3InventorySource = 'auction' | 'development';
+export type Round3RunStatus = 'not_started' | 'running' | 'paused' | 'completed' | 'expired';
+
+export interface Round3RunState {
+  status: Round3RunStatus;
+  remainingMs: number;
+  remainingSeconds: number;
+  startedAt: string | null;
+  updatedAt: string;
+}
 
 export interface Round3InventoryItem {
   cardId: Round3CardId;

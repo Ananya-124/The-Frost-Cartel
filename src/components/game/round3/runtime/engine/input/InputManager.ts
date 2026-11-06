@@ -14,6 +14,8 @@ export class InputManager {
     return this.down.has(code);
   }
 
+  clearHeldKeys(): void { this.down.clear(); }
+
   dispose(): void {
     window.removeEventListener('keydown', this.handleDown);
     window.removeEventListener('keyup', this.handleUp);

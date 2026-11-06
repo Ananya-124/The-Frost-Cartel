@@ -40,8 +40,12 @@ export function validateConfig(): string[] {
       }
     }
 
-    if (!granted.has('tape')) problems.push(`${hunt.title}: no clue grants the tape`);
-    if (!granted.has('anchor')) problems.push(`${hunt.title}: no clue grants the anchor`);
+    // Hunt I is driven by the server-authoritative incident evidence model; its
+    // interactables do not grant the legacy tape/anchor progression flags.
+    if (hunt.index !== 0) {
+      if (!granted.has('tape')) problems.push(`${hunt.title}: no clue grants the tape`);
+      if (!granted.has('anchor')) problems.push(`${hunt.title}: no clue grants the anchor`);
+    }
 
     for (const timeline of ['past', 'future'] as const) {
       const q = hunt.verification[timeline].question;

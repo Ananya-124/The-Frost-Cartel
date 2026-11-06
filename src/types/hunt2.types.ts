@@ -1,6 +1,6 @@
 export type Hunt2Actor = 'archivist' | 'tracker';
 export type Hunt2Challenge = 1 | 2 | 3 | 4 | 5;
-export type Hunt2Input = 'door' | 'characteristic' | 'manifestation' | 'arrangement' | 'anchor-pattern' | 'anchor' | 'final-sequence';
+export type Hunt2Input = 'identity-historical' | 'identity-physical' | 'manifestation-history' | 'manifestation-physical' | 'door' | 'characteristic' | 'manifestation' | 'arrangement' | 'anchor-pattern' | 'anchor' | 'final-sequence' | 'memory-historical' | 'memory-physical' | 'weakness-history' | 'weakness-conclusion' | 'weakness-frequency' | 'weakness-light' | 'weakness-temperature' | 'broken-historical' | 'broken-structure' | 'anchor-history-config' | 'anchor-physical-config';
 export type Hunt2Observation = {
   id: string;
   title: string;
@@ -21,7 +21,15 @@ export type Hunt2State = {
   hintUses: Record<string, number>;
   score: number;
   penalties: number;
-  scoreBreakdown: { exit: number; identity: number; reconstruction: number; anchor: number; final: number; optional: number; penalties: number };
+  scoreBreakdown: { identities: number; falseManifestation: number; exit: number; identity: number; memoryFragments: number; hiddenWeakness: number; brokenMemory: number; reconstruction: number; anchor: number; final: number; optional: number; penalties: number };
+  identityReconstruction: { historical: string[] | null; historicalValid: boolean; physical: string[] | null; physicalValid: boolean };
+  inspectedIdentityTraces: string[];
+  falseManifestation: { historicalClassification: string[] | null; historicalValid: boolean; physicalClassification: string[] | null; physicalValid: boolean };
+  inspectedFalseManifestations: string[];
+  memoryFragments: { archivistEvidence: string[]; trackerEvidence: string[]; historical: string[] | null; historicalValid: boolean; physical: string[] | null; physicalValid: boolean };
+  hiddenWeakness: { archiveEvidence: string[]; experiments: { variable: string; setting: string; result: string }[]; resourcesRemaining: number; instability: number; stationReady: string | null; historicalConclusion: string | null; historicalValid: boolean; experimentalConclusion: string | null; experimentalValid: boolean; trackerActivatedAt: number | null; syncDeadline: number | null };
+  brokenMemory: { archivistEvidence: string[]; trackerEvidence: string[]; historical: string[] | null; historicalValid: boolean; structure: string[] | null; structureValid: boolean; archivistSyncAt: number | null; syncDeadline: number | null; corruption: number };
+  memoryAnchor: { archivistEvidence: string[]; trackerEvidence: string[]; nodeStates: Record<'A' | 'B' | 'C' | 'D', 'unknown' | 'stable' | 'unstable' | 'reversed' | 'disconnected'>; historicalConfiguration: string[] | null; historicalValid: boolean; physicalConfiguration: string[] | null; physicalValid: boolean; attemptsRemaining: number; instability: number; archivistSyncAt: number | null; syncDeadline: number | null; finalSequenceIndex: number; finalSequenceDeadline: number | null };
   doorAnswer: number | null;
   characteristic: string | null;
   inspectedManifestations: string[];

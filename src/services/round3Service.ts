@@ -1,7 +1,8 @@
 import type { Round3CardId } from '../constants/round3.cards';
-import type { Round3StateResponse, Round3Timeline } from '../types/round3.types';
+import type { Round3RunState, Round3StateResponse, Round3Timeline } from '../types/round3.types';
 import type { Hunt1ActionResult } from '../types/hunt1.types';
 import type { Hunt2ActionResult } from '../types/hunt2.types';
+import type { Hunt3ActionResult, Hunt3Actor, Hunt3State } from '../types/hunt3.types';
 
 const API = `${import.meta.env.VITE_API_URL ?? ''}/api/round3`;
 
@@ -18,6 +19,10 @@ async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T>
 }
 
 export const round3Service = {
+  getRun: () => call<{ success: boolean; run: Round3RunState }>('/run'),
+  startRun: () => call<{ success: boolean; run: Round3RunState }>('/run/start', 'POST', {}),
+  pauseRun: () => call<{ success: boolean; run: Round3RunState | null }>('/run/pause', 'POST', {}),
+  resumeRun: () => call<{ success: boolean; run: Round3RunState | null }>('/run/resume', 'POST', {}),
   openSession: () => call<Round3StateResponse>('/session', 'POST', {}),
   getState: () => call<Round3StateResponse>('/state'),
   setTimeline: (activeTimeline: Round3Timeline) => call<Round3StateResponse>('/progress', 'PATCH', { activeTimeline }),
@@ -47,4 +52,8 @@ export const round3Service = {
   getHunt2State: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/state'),
   hunt2Action: (action: { type: string; actor: string; objectId?: string; value?: unknown }) =>
     call<Hunt2ActionResult>('/hunt2/action', 'POST', action),
+  openHunt3Session: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/session', 'POST', {}),
+  getHunt3State: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/state'),
+  hunt3Action: (actor: Hunt3Actor, action: { type: string; id: string; value?: unknown }) =>
+    call<Hunt3ActionResult>('/hunt3/action', 'POST', { ...action, actor }),
 };

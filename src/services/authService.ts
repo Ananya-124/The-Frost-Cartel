@@ -64,12 +64,14 @@ class AuthService {
           success: boolean;
           message?: string;
           token?: string;
+          playerNumber?: 1 | 2;
           team?: { id: string; teamName: string; score: number; isPaused: boolean };
         };
         if (data.success && data.team) {
           const session: TeamSession = {
             teamId: data.team.id,
             teamName: data.team.teamName,
+            playerNumber: data.playerNumber,
             credits: data.team.score,
             currentRound: 1,
             gameStatus: data.team.isPaused ? 'paused' : 'active',
@@ -123,6 +125,15 @@ class AuthService {
 
   getCurrentSession(): TeamSession | null {
     return this.currentSession;
+  }
+
+  async getPlayerNumber(): Promise<1 | 2> {
+    const response = await fetch(`${this.apiUrl}/api/auth/session`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Could not identify the authenticated investigator. Reconnect before starting Hunt I.');
+    const data = await response.json() as { playerNumber?: number };
+    if (data.playerNumber !== 1 && data.playerNumber !== 2) throw new Error('The authenticated investigator role is missing. Reconnect before starting Hunt I.');
+    if (this.currentSession) this.setSession({ ...this.currentSession, playerNumber: data.playerNumber });
+    return data.playerNumber;
   }
 
   isAuthenticated(): boolean {

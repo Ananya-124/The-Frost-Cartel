@@ -1,5 +1,5 @@
 import { RUNES, WORLD_HEIGHT, WORLD_WIDTH } from '../config/constants';
-import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, INTERACTABLES } from '../config/interactables';
+import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES } from '../config/interactables';
 import { ROOMS } from '../config/rooms';
 import { DOORS, WALKABLE_RECTS } from '../engine/world/geometry';
 import type { InteractableObject, PlayerIndex, Room } from '../types';
@@ -452,7 +452,7 @@ function buildWorld(timeline: PlayerIndex, wallPattern: CanvasPattern | null): H
   for (const r of WALKABLE_RECTS) c.fillRect(r.x, r.y, r.w, r.h);
   for (const r of ROOMS) drawRoom(c, r, f);
   for (const o of INTERACTABLES) {
-    if (o.timeline === (f ? 'future' : 'past') && !HUNT1_INTERACTABLE_IDS.has(o.id) && !HUNT2_INTERACTABLE_IDS.has(o.id)) drawProp(c, o, f);
+    if (o.timeline === (f ? 'future' : 'past') && !HUNT1_INTERACTABLE_IDS.has(o.id) && !HUNT2_INTERACTABLE_IDS.has(o.id) && !HUNT3_INTERACTABLE_IDS.has(o.id)) drawProp(c, o, f);
   }
 
   for (const d of DOORS) {

@@ -7,7 +7,7 @@ const ROOM_DEFINITIONS: ReadonlyArray<readonly [RoomId, string, number, number]>
   ['dir', "Director's Office", 2, 0],
   ['obs', 'Observation Chamber', 3, 0],
   ['lab', 'Research Laboratory', 0, 1],
-  ['sec', 'Security Control Room', 1, 1],
+  ['sec', 'Security & Communications Room', 1, 1],
   ['hall', 'Main Hall', 2, 1],
   ['exp', 'Main Experiment Chamber', 3, 1],
   ['rec', 'Entrance & Reception', 0, 2],

@@ -3,11 +3,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 const previousDbPath = process.env.SQLITE_DB_PATH;
 const testDbPath = path.join(process.cwd(), 'database', `round3_test_${process.pid}_${Date.now()}.db`);
 process.env.SQLITE_DB_PATH = testDbPath;
-const [{ app }, { db, hashPassword, initDatabase }, { awardRound3Score }] = await Promise.all([
+const [{ app }, { db, hashPassword, initDatabase }, { awardRound3CooperationEvent }] = await Promise.all([
   import('../index.ts'),
   import('../../database/db.ts'),
   import('../services/round3.service.ts'),
@@ -69,6 +70,17 @@ describe('Round 3 isolated team sessions and persistence', () => {
     expect((await fetch(`${baseUrl}/api/round3/session`, { method: 'POST', headers: headersA, body: '{}' })).status).toBe(200);
     expect((await fetch(`${baseUrl}/api/round3/session`, { method: 'POST', headers: headersB, body: '{}' })).status).toBe(200);
 
+    const initialRunRes = await fetch(`${baseUrl}/api/round3/run`, { headers: headersA });
+    expect((await initialRunRes.json()).run.remainingMs).toBe(25 * 60 * 1000);
+    expect((await fetch(`${baseUrl}/api/round3/run/start`, { method: 'POST', headers: headersA, body: '{}' })).status).toBe(200);
+    await fetch(`${baseUrl}/api/round3/run/pause`, { method: 'POST', headers: headersA, body: '{}' });
+    const pausedRun = (await (await fetch(`${baseUrl}/api/round3/run`, { headers: headersA })).json()).run;
+    expect(pausedRun.status).toBe('paused');
+    const restartDb = new DatabaseSync(testDbPath);
+    expect((restartDb.prepare('SELECT status, remaining_ms FROM round3_runs WHERE team_id=?').get(teams[0].id) as {status:string;remaining_ms:number})).toEqual({ status: 'paused', remaining_ms: pausedRun.remainingMs });
+    restartDb.close();
+    await fetch(`${baseUrl}/api/round3/run/resume`, { method: 'POST', headers: headersA, body: '{}' });
+
     const progress = await fetch(`${baseUrl}/api/round3/progress`, {
       method: 'PATCH', headers: headersA,
       body: JSON.stringify({
@@ -78,13 +90,18 @@ describe('Round 3 isolated team sessions and persistence', () => {
       }),
     });
     expect(progress.status).toBe(200);
+    const forged = await fetch(`${baseUrl}/api/round3/state`, { headers: headersA });
+    expect((await forged.json()).session.score).toBe(0);
 
     const evidence = await fetch(`${baseUrl}/api/round3/evidence/clock-fragment/discover`, { method: 'POST', headers: headersA, body: '{}' });
     expect((await evidence.json()).evidenceDiscoveries).toEqual(['h2-future-clock-fragment', 'clock-fragment']);
 
     db.prepare(`INSERT INTO round3_inventory (team_id, card_id, source, quantity) VALUES (?, 'emergency-power-cell', 'development', 2)`).run(teams[0].id);
     db.prepare(`INSERT INTO round3_inventory (team_id, card_id, source, quantity) VALUES (?, 'emergency-power-cell', 'auction', 3)`).run(teams[0].id);
-    expect(awardRound3Score(teams[0].id, 35)).toBe(true);
+    expect(awardRound3CooperationEvent(teams[0].id, `coop-${suffix}`, 120)).toBe(true);
+    expect(awardRound3CooperationEvent(teams[0].id, `coop-${suffix}`, 1)).toBe(false);
+    expect(awardRound3CooperationEvent(teams[0].id, `coop-over-${suffix}`, 120)).toBe(true);
+    expect(awardRound3CooperationEvent(teams[0].id, `coop-cap-${suffix}`, 1)).toBe(false);
 
     const otherTeamState = await fetch(`${baseUrl}/api/round3/state`, { headers: { Authorization: `Bearer ${tokens[1]}` } });
     const otherData = await otherTeamState.json();
@@ -105,7 +122,8 @@ describe('Round 3 isolated team sessions and persistence', () => {
     expect(data.session.timelines.future).toEqual({ clue: 'signal' });
     expect(data.session.evidenceDiscoveries).toEqual(['h2-future-clock-fragment', 'clock-fragment']);
     expect(data.session.playerProgress.engine.huntIndex).toBe(2);
-    expect(data.session.score).toBe(35);
+    expect(data.session.score).toBe(200);
+    expect(data.session.playerProgress.engine.score).toBe(200);
     expect(data.session.completed).toBe(true);
     expect(data.session.currentHunt).toBe('paradox-hunt-3');
     expect(data.inventory).toEqual([
@@ -113,5 +131,12 @@ describe('Round 3 isolated team sessions and persistence', () => {
       { cardId: 'emergency-power-cell', quantity: 1, source: 'development' },
     ]);
     expect(data.session.cardUsage).toHaveLength(1);
+
+    await fetch(`${baseUrl}/api/round3/run/start`, { method: 'POST', headers: headersB, body: '{}' });
+    db.prepare("UPDATE round3_runs SET started_at=? WHERE team_id=?").run(new Date(Date.now() - 26 * 60 * 1000).toISOString(), teams[1].id);
+    const expired = await fetch(`${baseUrl}/api/round3/run`, { headers: headersB });
+    expect((await expired.json()).run.status).toBe('expired');
+    const rejectedAction = await fetch(`${baseUrl}/api/round3/hunt1/action`, { method: 'POST', headers: headersB, body: JSON.stringify({ type: 'hint', actor: 'archivist' }) });
+    expect(rejectedAction.status).toBe(409);
   });
 });

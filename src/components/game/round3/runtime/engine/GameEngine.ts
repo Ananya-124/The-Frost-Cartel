@@ -7,9 +7,9 @@ import { randomInt } from '../utils/math';
 import { installParadoxApi } from './cards/cardApi';
 import { activateCardEffect, createCardEffects } from './cards/cardEffects';
 import { type GameContext, Scheduler } from './context';
-import { advanceHunt, startHunt } from './hunts/huntManager';
+import { advanceHunt, endGame, startHunt } from './hunts/huntManager';
 import { InputManager } from './input/InputManager';
-import { handleActionKey, type Hunt1InteractionHandler, type Hunt2InteractionHandler } from './input/playerControls';
+import { handleActionKey, type Hunt1InteractionHandler, type Hunt2InteractionHandler, type Hunt3InteractionHandler } from './input/playerControls';
 import { pressPuzzleKey } from './puzzles/puzzleManager';
 import { createInitialState } from './state/createInitialState';
 import type { GameStore } from './state/store';
@@ -42,6 +42,7 @@ export class GameEngine {
   private frame = 0;
   private lastTime = 0;
   private running = false;
+  private gameplayEnabled = true;
 
   constructor(
     store: GameStore,
@@ -50,6 +51,7 @@ export class GameEngine {
     initialState = createInitialState(),
     hunt1InteractionHandler?: Hunt1InteractionHandler,
     hunt2InteractionHandler?: Hunt2InteractionHandler,
+    hunt3InteractionHandler?: Hunt3InteractionHandler,
   ) {
     this.store = store;
     this.els = els;
@@ -62,7 +64,9 @@ export class GameEngine {
       cardEffects: createCardEffects(),
     };
     this.renderer = new Renderer(els.menuCanvas, els.canvases);
-    this.input = new InputManager((e) => handleActionKey(this.ctx, e, (slot) => this.requestCardUse(slot), hunt1InteractionHandler, hunt2InteractionHandler));
+    this.input = new InputManager((e) => {
+      if (this.gameplayEnabled) handleActionKey(this.ctx, e, (slot) => this.requestCardUse(slot), hunt1InteractionHandler, hunt2InteractionHandler, hunt3InteractionHandler);
+    });
   }
 
   /** Starts the render loop and size tracking. */
@@ -107,6 +111,20 @@ export class GameEngine {
     this.store.emit();
   }
 
+  setGameplayEnabled(enabled: boolean): void {
+    this.gameplayEnabled = enabled;
+    if (!enabled) this.input.clearHeldKeys();
+  }
+
+  /** Ends an expired run using the latest total returned by the server. */
+  endWithServerScore(score: number): void {
+    if (!Number.isSafeInteger(score) || score < 0) return;
+    this.ctx.state.score = score;
+    if (this.ctx.state.phase !== 'ended') endGame(this.ctx);
+    if (this.ctx.state.summary) this.ctx.state.summary.totalScore = score;
+    this.store.emit();
+  }
+
   /** Back to the menu after the end screen. */
   newSession(): void {
     this.ctx.scheduler.clear();
@@ -114,6 +132,7 @@ export class GameEngine {
   }
 
   pressPuzzle(index: PlayerIndex, key: number): void {
+    if (!this.gameplayEnabled) return;
     pressPuzzleKey(this.ctx.state, index, key);
     this.flush();
   }
@@ -124,6 +143,7 @@ export class GameEngine {
   }
 
   useCardSlot(slot: number): void {
+    if (!this.gameplayEnabled) return;
     this.requestCardUse(slot);
   }
 
@@ -164,9 +184,9 @@ export class GameEngine {
     const state = this.ctx.state;
     const dt = Math.min(MAX_FRAME_DT, (timestamp - this.lastTime) / 1000 || 0);
     this.lastTime = timestamp;
-    state.time += dt;
+    if (this.gameplayEnabled) state.time += dt;
 
-    if (state.phase === 'playing') {
+    if (state.phase === 'playing' && this.gameplayEnabled) {
       updateGame(this.ctx, this.input, dt);
       for (const i of [0, 1] as const) {
         this.renderer.drawTimeline(state, i);

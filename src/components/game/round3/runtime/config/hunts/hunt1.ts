@@ -1,51 +1,21 @@
-import { defineClue } from '../clues';
-import { MISSIONS } from '../missions';
 import type { Hunt } from '../../types';
 
 export const HUNT_1: Hunt = {
   index: 0,
-  title: 'The Hollow Witness',
+  title: 'The Forgotten Incident',
   numeral: 'I',
-  premise: 'The resonance transmitter is still active, feeding the entity through the facility wiring. Recover the shutdown procedure across the Past and Future, then disable the machine together.',
+  premise: 'Rebuild the final experiment from the Past records and Future damage. Each timeline holds only half the incident; together, uncover what caused the entity to manifest.',
   verification: {
-    past: {
-      kind: 'verification',
-      timeline: 'past',
-      question: {
-        prompt: 'Which breaker was already dead in the future?',
-        options: ['BLUE', 'RED', 'GREEN'],
-        correctIndex: 1,
-      },
-    },
-    future: {
-      kind: 'verification',
-      timeline: 'future',
-      question: {
-        prompt: 'How must the burnt runes be read?',
-        options: ['Left to right', 'Right to left', 'Top to bottom'],
-        correctIndex: 1,
-      },
-    },
+    past: { kind: 'verification', timeline: 'past', question: { prompt: 'Which record sequence best fits the recovered Past evidence?', options: ['Use the server-verified incident board', 'Guess from the damaged room', 'Skip the archive'], correctIndex: 0 } },
+    future: { kind: 'verification', timeline: 'future', question: { prompt: 'Which physical trace agrees with the incident reconstruction?', options: ['Use the server-verified evidence board', 'Ignore the Future damage', 'Assume the report is complete'], correctIndex: 0 } },
   },
   sequence: {
-    past: { kind: 'sequence', timeline: 'past', steps: [1, 0, 3], reversedWhenFlag: null },
+    past: { kind: 'sequence', timeline: 'past', steps: [0, 1, 2], reversedWhenFlag: null },
     future: { kind: 'sequence', timeline: 'future', steps: [2, 1, 0], reversedWhenFlag: null },
   },
-  missions: MISSIONS,
-  clues: [
-    defineClue('past', 'desk', null, 'Brass key', 'Tagged ARCHIVE. Scribbled: "Hollow things fear current, not light."', 'key'),
-    defineClue('past', 'shelf', null, 'Spare fuse', 'A 40A fuse for the old generator. Still warm.', 'fuse'),
-    defineClue('past', 'gen', 'fuse', 'Generator', 'The engine shudders awake. Far away, lamps hum.', 'power'),
-    defineClue('past', 'exam', null, 'Photograph', 'Runes on the wall: ◇ Δ ○. Caption: "read right to left". A drawer key is taped behind it.', 'drawer'),
-    defineClue('past', 'cab', 'drawer', 'Report, part A', '"Subject unravels under three pulses of current. Pulse one is cold. Amber is never last."', 'arch'),
-    defineClue('past', 'dir', null, 'Badge and memo', '"Subject circles the lab at night, leaving wet prints. Powered tape records it."', 'badge'),
-    defineClue('past', 'book', null, 'Hidden lever', 'The bookcase groans aside. A sealed way to Observation opens.', 'shelf'),
-    defineClue('past', 'rec', 'power', 'Damaged tape', 'Static, then: "...the third pulse is never red..."', 'tape'),
-    defineClue('past', 'wall', 'anchor', 'Hidden writing', 'Glowing letters: "It waits where the footprints end."'),
-    defineClue('future', 'prints', null, 'Footprints', 'Wet prints loop twice. Some wanderers leave none.'),
-    defineClue('future', 'cwall', 'drawer', 'Wall compartment', 'Runes burnt left to right: ◇ Δ ○. Nothing says how to read them.'),
-    defineClue('future', 'panel', null, 'Breaker panel', 'RED is burnt black. It never carried current.'),
-    defineClue('future', 'mon', 'power', 'Security monitor', 'Flickers: the entity lingers near the Experiment Chamber.'),
-    defineClue('future', 'anch', null, 'Temporal anchor', 'You turn the dial. Something in the past answers.', 'anchor'),
-  ],
+  missions: {
+    past: { timeline: 'past', steps: [{ objective: 'Inspect the original records in reception, archive, generator, observation, and communications.', completedWhen: 'key' }], finalObjective: 'Use the Past records to reconstruct the incident board.' },
+    future: { timeline: 'future', steps: [{ objective: 'Examine the tracks, fragments, damaged circuits, camera, and cable route.', completedWhen: 'arch' }], finalObjective: 'Use the Future evidence to confirm the cause chain.' },
+  },
+  clues: [],
 };

@@ -1,6 +1,6 @@
 import { createRef, type RefObject, useEffect, useState } from 'react';
 import { GameEngine, type CardUseHandler } from '../engine/GameEngine';
-import type { Hunt1InteractionHandler, Hunt2InteractionHandler } from '../engine/input/playerControls';
+import type { Hunt1InteractionHandler, Hunt2InteractionHandler, Hunt3InteractionHandler } from '../engine/input/playerControls';
 import type { GameStore } from '../engine/state/store';
 import type { GameState } from '../types';
 
@@ -25,7 +25,7 @@ export const createEngineRefs = (): EngineRefs => ({
  * Creates the engine once the canvases exist and disposes it on unmount.
  * The engine is not re-created on renders; only when the store or refs change.
  */
-export function useGameEngine(store: GameStore, refs: EngineRefs, cardUseHandler?: CardUseHandler, initialState?: GameState, hunt1InteractionHandler?: Hunt1InteractionHandler, hunt2InteractionHandler?: Hunt2InteractionHandler): GameEngine | null {
+export function useGameEngine(store: GameStore, refs: EngineRefs, cardUseHandler?: CardUseHandler, initialState?: GameState, hunt1InteractionHandler?: Hunt1InteractionHandler, hunt2InteractionHandler?: Hunt2InteractionHandler, hunt3InteractionHandler?: Hunt3InteractionHandler): GameEngine | null {
   const [engine, setEngine] = useState<GameEngine | null>(null);
 
   useEffect(() => {
@@ -40,14 +40,14 @@ export function useGameEngine(store: GameStore, refs: EngineRefs, cardUseHandler
       menuCanvas,
       canvases: [pastCanvas, futureCanvas],
       halves: [pastHalf, futureHalf],
-    }, cardUseHandler, initialState, hunt1InteractionHandler, hunt2InteractionHandler);
+    }, cardUseHandler, initialState, hunt1InteractionHandler, hunt2InteractionHandler, hunt3InteractionHandler);
     created.start();
     const stateFrame = requestAnimationFrame(() => setEngine(created));
     return () => {
       cancelAnimationFrame(stateFrame);
       created.dispose();
     };
-  }, [store, refs, cardUseHandler, initialState, hunt1InteractionHandler, hunt2InteractionHandler]);
+  }, [store, refs, cardUseHandler, initialState, hunt1InteractionHandler, hunt2InteractionHandler, hunt3InteractionHandler]);
 
   return engine;
 }

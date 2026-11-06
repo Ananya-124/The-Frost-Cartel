@@ -19,10 +19,15 @@ const state: Round3StateResponse = {
   },
   inventory: [], cards: ROUND3_CARD_CATALOG,
 };
+const initialRun = { status: 'not_started' as const, remainingMs: 25 * 60 * 1000, remainingSeconds: 1500, startedAt: null, updatedAt: new Date().toISOString() };
 
 describe('Paradox Hunt foundation', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => state }));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (input: RequestInfo | URL) => ({
+      ok: true,
+      json: async () => String(input).endsWith('/run') ? { success: true, run: initialRun }
+        : String(input).endsWith('/auth/session') ? { success: true, playerNumber: 1 } : state,
+    })));
   });
 
   it('opens the game runtime only after the authenticated team session loads', async () => {
@@ -30,5 +35,6 @@ describe('Paradox Hunt foundation', () => {
     render(<ParadoxHunt session={teamSession} onReturnHome={() => {}} />);
     expect(await screen.findByTestId('paradox-game')).toHaveTextContent('Paradox Team');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/session'), expect.objectContaining({ method: 'POST' })));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/run'), expect.objectContaining({ method: 'GET' }));
   });
 });

@@ -6,6 +6,7 @@ export type TeamStatus = 'waiting' | 'active' | 'paused' | 'completed';
 export interface TeamSession {
   teamId: string;
   teamName: string;
+  playerNumber?: 1 | 2;
   player1Name?: string;
   player2Name?: string;
   credits: number;

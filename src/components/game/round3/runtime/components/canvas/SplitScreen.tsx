@@ -1,5 +1,6 @@
 import type { EngineRefs } from '../../hooks/useGameEngine';
 import type { UiSnapshot } from '../../engine/state/snapshot';
+import type { Round3RunStatus } from '../../../../../../types/round3.types';
 import CardTray from '../hud/CardTray';
 import TeamHud from '../hud/TeamHud';
 import styles from './Game.module.css';
@@ -10,10 +11,15 @@ interface SplitScreenProps {
   refs: EngineRefs;
   onPuzzleKey: (playerIndex: 0 | 1, key: number) => void;
   onUseCard: (slot: number) => void;
+  remainingSeconds: number;
+  runStatus: Round3RunStatus;
+  runBusy: boolean;
+  canToggleRun: boolean;
+  onToggleRun: () => void;
 }
 
 /** Split-screen layout: Archivist (Past) on the left, Tracker (Future) on the right. */
-export default function SplitScreen({ snapshot, refs, onPuzzleKey, onUseCard }: SplitScreenProps) {
+export default function SplitScreen({ snapshot, refs, onPuzzleKey, onUseCard, remainingSeconds, runStatus, runBusy, canToggleRun, onToggleRun }: SplitScreenProps) {
   const playing = snapshot.phase === 'playing';
   return (
     <>
@@ -35,7 +41,7 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onUseCard }: 
           hideObjective={snapshot.huntNumber === 1 || snapshot.huntNumber === 2}
         />
       </div>
-      {playing && <TeamHud snapshot={snapshot} />}
+      {playing && <TeamHud snapshot={snapshot} remainingSeconds={remainingSeconds} runStatus={runStatus} runBusy={runBusy || !canToggleRun} onToggleRun={onToggleRun} />}
       {playing && <CardTray cards={snapshot.cards} onUse={onUseCard} />}
     </>
   );

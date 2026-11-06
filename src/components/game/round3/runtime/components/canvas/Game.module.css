@@ -171,39 +171,153 @@
 .hud {
   position: fixed;
   top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 170px;
+  right: calc(50% + 8px);
   z-index: 8;
   display: flex;
-  gap: 10px;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
   pointer-events: none;
 }
 
 .hudBox {
-  background: var(--panel);
-  border: 1px solid var(--border-soft);
-  border-radius: 5px;
-  padding: 4px 12px;
-  text-align: center;
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  overflow: hidden;
+  background: #090b0ddd;
+  border: 1px solid #80683fbb;
+  border-radius: 7px;
+  box-shadow: 0 4px 14px #0008, inset 0 1px #fff1;
+  backdrop-filter: blur(5px);
+  font: 10px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.teamStatus {
+  flex: 0 1 auto;
+}
+
+.huntStatus {
+  flex: 1 1 auto;
+}
+
+.readiness {
+  flex: 0 0 auto;
+  border-color: #427477aa;
+}
+
+.runTimer {
+  position: fixed;
+  top: 8px;
+  left: calc(50% + 8px);
+  right: 8px;
+  flex: 0 0 auto;
+  border-color: #a64f46aa;
+  justify-content: center;
+}
+
+.runTime {
+  color: #f3d7a3;
+  font: 700 14px/1 ui-monospace, monospace;
+  letter-spacing: 0.05em;
+}
+
+.runToggle {
+  pointer-events: auto;
+  padding: 3px 5px;
+  border: 1px solid #8a7050;
+  border-radius: 4px;
+  background: #211a12;
+  color: #ddc392;
+  font: 700 8px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.runToggle:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.hudLabel {
+  flex: 0 0 auto;
+  color: #b6a47e;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.teamName,
+.huntTitle {
+  overflow: hidden;
+  color: #f0dfb8;
+  font: 600 11px/1.2 Georgia, serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamName {
+  max-width: 130px;
+}
+
+.huntTitle {
+  min-width: 0;
+  color: #e6d09e;
 }
 
 .hudBox b {
   color: var(--gold-bright);
-  font-size: 18px;
-  display: block;
+  font: 700 14px/1 system-ui, sans-serif;
 }
 
 .dots span {
   display: inline-block;
-  margin: 0 4px;
-  opacity: 0.45;
+  width: 7px;
+  height: 7px;
+  margin: 0 2px;
+  border: 1px solid #a48d62;
+  border-radius: 50%;
+  background: #5a5142;
+  opacity: 0.65;
 }
 
 .dots .on {
   opacity: 1;
-  color: var(--ok);
+  border-color: #9de7ba;
+  background: #77dba1;
+  box-shadow: 0 0 7px #77dba199;
+}
+
+@media (max-width: 1100px) {
+  .hud {
+    top: 52px;
+    left: 8px;
+    right: calc(50% + 8px);
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .hudBox {
+    gap: 5px;
+    padding: 5px 6px;
+  }
+
+  .runTimer {
+    top: 52px;
+    left: calc(50% + 8px);
+    right: 8px;
+  }
+
+  .teamName {
+    max-width: 72px;
+  }
+
+  .hudLabel {
+    font-size: 7px;
+  }
 }
 
 .bar {

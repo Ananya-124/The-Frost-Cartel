@@ -54,6 +54,8 @@ export interface GameState {
   hunt2ObjectStates?: Record<string, string>;
   hunt2Subtasks?: Record<string, boolean>;
   hunt2OpenedInteractables?: string[];
+  hunt1Challenge?: number;
+  hunt1AvailableInteractables?: string[];
   hudTimer: number;
   footstepTimer: number;
   teamName: string;

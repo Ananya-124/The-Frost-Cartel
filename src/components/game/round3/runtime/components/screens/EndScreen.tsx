@@ -5,12 +5,13 @@ import styles from '../overlays/Overlays.module.css';
 interface EndScreenProps {
   summary: EndSummary;
   onNewSession: () => void;
+  expired?: boolean;
 }
 
-export default function EndScreen({ summary, onNewSession }: EndScreenProps) {
+export default function EndScreen({ summary, onNewSession, expired = false }: EndScreenProps) {
   return (
     <div className={styles.end}>
-      <h1>THE PARADOX IS BOUND</h1>
+      <h1>{expired ? 'TIME EXPIRED · SCORE PRESERVED' : 'THE PARADOX IS BOUND'}</h1>
       <div>Team {summary.teamName}</div>
       <div className={styles.big}>{summary.totalScore}</div>
       <div className={styles.stats}>

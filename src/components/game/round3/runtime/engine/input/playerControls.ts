@@ -9,6 +9,7 @@ import { closePuzzles, pressPuzzleKey } from '../puzzles/puzzleManager';
 
 export type Hunt1InteractionHandler = (player: PlayerIndex, object: InteractableObject) => void;
 export type Hunt2InteractionHandler = (player: PlayerIndex, object: InteractableObject) => void;
+export type Hunt3InteractionHandler = (player: PlayerIndex, object: InteractableObject) => void;
 
 /** Handles one-shot key presses (search, journal, panel buttons, cards, Escape). */
 export function handleActionKey(
@@ -17,6 +18,7 @@ export function handleActionKey(
   onUseCard: (slot: number) => void = (slot) => activateCardEffect(ctx, slot),
   onHunt1Interaction?: Hunt1InteractionHandler,
   onHunt2Interaction?: Hunt2InteractionHandler,
+  onHunt3Interaction?: Hunt3InteractionHandler,
 ): void {
   const { state } = ctx;
   if (state.phase !== 'playing') return;
@@ -39,6 +41,9 @@ export function handleActionKey(
       } else if (state.huntIndex === 1 && onHunt2Interaction) {
         const target = findNearTarget(state, index);
         if (target?.kind === 'object') onHunt2Interaction(index, target.object);
+      } else if (state.huntIndex === 2 && onHunt3Interaction) {
+        const target = findNearTarget(state, index);
+        if (target?.kind === 'object') onHunt3Interaction(index, target.object);
       } else performAction(ctx, index);
     }
     if (event.code === keys.journal) toggleJournal(ctx, index);
