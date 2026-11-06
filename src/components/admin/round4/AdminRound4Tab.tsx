@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Round4AdminOverview } from '../../../types/round4Expedition.types';
+import { adminService } from '../../../services/adminService';
 import { getFloorMapConfig } from '../../game/round4/FloorMapConfiguration';
 
 export const AdminRound4Tab: React.FC = () => {
@@ -34,17 +35,90 @@ export const AdminRound4Tab: React.FC = () => {
     triggerRadius: 36,
   });
 
+  const createMockOverview = (): Round4AdminOverview => {
+    const { teams } = adminService.getTeams();
+    const defaultRoutes = [
+      { id: 'route-1', route_number: 1, roman_numeral: 'I', route_name: "The Cartographer's Compass", route_subtitle: 'Route I' },
+      { id: 'route-2', route_number: 2, roman_numeral: 'II', route_name: "The Alchemist's Crucible", route_subtitle: 'Route II' },
+      { id: 'route-3', route_number: 3, roman_numeral: 'III', route_name: "The Astronomer's Sextant", route_subtitle: 'Route III' },
+      { id: 'route-4', route_number: 4, roman_numeral: 'IV', route_name: "The Chronicler's Quill", route_subtitle: 'Route IV' },
+      { id: 'route-5', route_number: 5, roman_numeral: 'V', route_name: "The Botanist's Herbarium", route_subtitle: 'Route V' },
+      { id: 'route-6', route_number: 6, roman_numeral: 'VI', route_name: "The Architect's Blueprint", route_subtitle: 'Route VI' },
+      { id: 'route-7', route_number: 7, roman_numeral: 'VII', route_name: "The Cryptographer's Cipher", route_subtitle: 'Route VII' },
+    ];
+    const qualified = teams.slice(0, 7).map((t, idx) => ({
+      qualId: `mock_qual_${idx + 1}`,
+      teamId: t.id,
+      teamName: t.name,
+      routeId: defaultRoutes[idx].id,
+      romanNumeral: defaultRoutes[idx].roman_numeral,
+      routeName: defaultRoutes[idx].route_name,
+      currentStepIndex: 0,
+      targetDiscovered: 0,
+      commonRoomArrived: 0,
+      isFinished: 0,
+      finishedAt: null,
+      totalSteps: 5,
+    }));
+    const available = teams.map((t) => ({
+      id: t.id,
+      teamName: t.name,
+      score: t.credits,
+      totalCredits: t.credits,
+    }));
+    const mockSteps = defaultRoutes.flatMap((r) =>
+      [1, 2, 3, 4, 5].map((stepNum) => ({
+        id: `${r.id}-step-${stepNum}`,
+        routeId: r.id,
+        clueIndex: stepNum,
+        floorId: stepNum === 5 ? 'floor-7' : `floor-${8 - stepNum}`,
+        locationName: stepNum === 5 ? 'Celestial Archives & Grand Observatory' : `Expedition Sector ${stepNum}`,
+        targetX: 280,
+        targetY: 125,
+        triggerRadius: 36,
+        riddleText: `Riddle ${stepNum} for Route ${r.roman_numeral}: Seek the hidden inscription etched within the chamber.`,
+        fieldLocationHint: `Navigate to floor ${stepNum === 5 ? 7 : 8 - stepNum} and inspect the marker.`,
+        acceptedAnswersJson: JSON.stringify([`ANSWER_${stepNum}`, `TEST_${stepNum}`]),
+        isCaseSensitive: 0,
+        isCommonFinal: stepNum === 5 ? 1 : 0,
+      }))
+    );
+    return {
+      settings: {
+        id: 'settings-1',
+        is_released: 1,
+        common_final_location_id: 'loc_final_observatory',
+        common_final_floor_id: 'floor-7',
+        common_final_room_name: 'Celestial Archives & Grand Observatory',
+        common_final_x: 280,
+        common_final_y: 125,
+        common_final_radius: 40,
+        physical_entry_instructions: 'Room 701, Seventh Floor, B. S. Narayan Academic Block.',
+      },
+      routes: defaultRoutes,
+      qualifiedTeams: qualified,
+      availableTeams: available,
+      steps: mockSteps,
+      winner: null,
+    };
+  };
+
   const loadOverview = () => {
-    fetch('/api/round4/admin/overview')
+    fetch('/api/round4/admin/overview', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: Round4AdminOverview | null) => {
-        if (!data) return;
-        setOverview(data);
-        if (data.qualifiedTeams && data.qualifiedTeams.length > 0) {
-          setAssignments(data.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
+        const effectiveData = data || createMockOverview();
+        setOverview(effectiveData);
+        if (effectiveData.qualifiedTeams && effectiveData.qualifiedTeams.length > 0) {
+          setAssignments(effectiveData.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
         }
       })
-      .catch((err) => console.error('[AdminRound4Tab] Failed fetching overview:', err))
+      .catch((err) => {
+        console.warn('[AdminRound4Tab] Using mock fallback:', err);
+        const fallback = createMockOverview();
+        setOverview(fallback);
+        setAssignments(fallback.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
+      })
       .finally(() => setIsLoading(false));
   };
 

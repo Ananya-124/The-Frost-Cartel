@@ -31,6 +31,8 @@ database/*.db-shm
 screenshot_*.png
 test_*.png
 thumb_*.jpg
+verify_*.png
+public/assets/round-4/verify_*.png
 scratch/
 *.zip
 
