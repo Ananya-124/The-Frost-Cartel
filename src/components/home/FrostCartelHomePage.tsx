@@ -3,13 +3,14 @@ import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { ROUNDS_DATA } from '../../constants/rounds.constants';
 import { authService } from '../../services/authService';
-import { isRound2Route, isRound4Route } from '../../app/routes';
+import { isRound2Route, isRound3Route, isRound4Route } from '../../app/routes';
 import { HauntedAtmosphere } from './HauntedAtmosphere';
 import { HauntedHero } from './HauntedHero';
 import { TeamDashboardView } from '../player/TeamDashboardView';
 import { Round1Dashboard } from '../game/Round1Dashboard';
 import { RoundFourIntro } from '../game/round4/RoundFourIntro';
 import { Round2Auction } from '../game/round2/Round2Auction';
+import { ParadoxHunt } from '../game/round3/ParadoxHunt';
 import { CornerQuickNav } from '../layout/CornerQuickNav';
 import { GothicLeaderboardModal } from '../leaderboard/GothicLeaderboardModal';
 
@@ -53,6 +54,7 @@ export const FrostCartelHomePage: React.FC = () => {
   const [activeChamberRound, setActiveChamberRound] = useState<number | null>(() => {
     if (typeof window !== 'undefined') {
       if (isRound2Route(window.location.hash)) return 2;
+      if (isRound3Route(window.location.hash, window.location.search)) return 3;
       if (isRound4Route(window.location.hash, window.location.search)) return 4;
       const params = new URLSearchParams(window.location.search);
       if (params.get('round') === '1') return 1;
@@ -67,13 +69,17 @@ export const FrostCartelHomePage: React.FC = () => {
         setActiveChamberRound(2);
         return;
       }
+      if (isRound3Route(window.location.hash, window.location.search)) {
+        setActiveChamberRound(3);
+        return;
+      }
       if (isRound4Route(window.location.hash, window.location.search)) {
         setActiveChamberRound(4);
       } else {
         const params = new URLSearchParams(window.location.search);
         if (params.get('round') === '1') {
           setActiveChamberRound(1);
-        } else if (activeChamberRound === 4 || activeChamberRound === 2) {
+        } else if (activeChamberRound === 4 || activeChamberRound === 3 || activeChamberRound === 2) {
           setActiveChamberRound(null);
         }
       }
@@ -107,6 +113,16 @@ export const FrostCartelHomePage: React.FC = () => {
       setIsDashboardOpen(false);
       window.location.hash = '#/round-2';
       setActiveChamberRound(2);
+      return;
+    }
+    if (round.number === '03' && round.isAccessible) {
+      if (!session) {
+        document.getElementById('login-section')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      setIsDashboardOpen(false);
+      window.location.hash = '#/round-3';
+      setActiveChamberRound(3);
       return;
     }
     if (round.id === 'round-04' || round.number === '04') {
@@ -149,6 +165,9 @@ export const FrostCartelHomePage: React.FC = () => {
     );
   }
 
+  if (activeChamberRound === 3 && session) {
+    return <ParadoxHunt session={session} onReturnHome={() => { window.location.hash = ''; setActiveChamberRound(null); }} />;
+  }
   // If player has entered Round 4 (The Messenger's Letter):
   if (activeChamberRound === 4) {
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
