@@ -18,6 +18,7 @@
 - [Overview](#-overview)
 - [Architecture & Key Features](#-architecture--key-features)
 - [Tournament Gameplay (Round 1)](#-tournament-gameplay-round-1)
+- [Tournament Gameplay (Round 2)](#-tournament-gameplay-round-2)
 - [Quick Start](#-quick-start)
 - [Credentials Roster](#-credentials-roster)
 - [Security Posture](#-security-posture)
@@ -89,6 +90,46 @@ The platform provides a strict separation of concerns between the **Public Playe
 | **01** | **The Unknown Challenge** | `100 CR` | *Not Configured* (Reserved for custom organizer challenge) |
 | **02** | **The Haunted Image Hunt** | `150 CR` | Scattered detective evidence desk with 8 photographs, zoomable inspection, 12 cursed relics, and -15 CR hint penalties. |
 | **03** | **The Forgotten Graveyard** | `250 CR` | Atmospheric cemetery with three interactive open coffins (Grave I: Marked Remains, Grave II: Buried Diary, Grave III: Final Testament), runestone decoding, and a full-throttle horror jump scare upon final answer submission. |
+
+---
+
+## 🕸 Tournament Gameplay (Round 2)
+
+**Round 02: The Haunted Auction** — squads spend the credits they earned in Round 1 to bid on **6 power cards** that are used in Round 3.
+
+### How a squad plays
+1. Open the **Round 02** portal on the home page (the screen shows *Waiting for the next card...* until the organizer starts one).
+2. When a card goes live, place a bid. The first bid must meet the organizer's base price; every later bid must beat the current high bid by at least `10 CR`. Quick-bid buttons add `+10`, `+20` or `+50`.
+3. The countdown turns yellow at 15 seconds and red at 5 seconds. A bid placed in the last 10 seconds resets the clock to 10 seconds (anti-sniping).
+4. When bidding ends, the highest bidder wins the card and pays the winning bid. A squad cannot bid more than its credits or outbid itself. Cards nobody bid on are marked *unsold* and can be auctioned again.
+
+### How the organizer runs it
+Open `http://127.0.0.1:5173/#/admin` and choose the **Auction** tab:
+- Enter the auction key once per browser session (default `frost-r2-admin`, set with `ROUND2_ADMIN_KEY` in `.env`).
+- Choose **any** card, enter its **base price** (defaults to the card's own price) and the **bidding time** in seconds (`0` = no timer, end it manually), then press **START BIDDING**.
+- Press **END BIDDING** to close the card early. Only one card is live at a time.
+- The Teams table shows every squad's starting credits, spend, remaining credits and cards. **Remove** lets a squad rejoin with fresh credits (only if it has won nothing); **Reset Auction** clears everything.
+
+### Connecting the rounds
+| Direction | How it works |
+| :--- | :--- |
+| **Round 1 → Round 2** | Credits are read automatically from the browser's `localStorage` (`frost_cartel_round1_sessions`) when a squad opens Round 2. A squad's credits are **locked on its first join**, so squads should open Round 2 only after finishing Round 1. |
+| **Round 2 → Round 3** | Cards won and credits left are mirrored to `localStorage` (`frost_cartel_round2_inventory`). Round 3 reads them with `round2Service.getInventory()`, which returns `{ teamName, remainingCredits, cards }`. |
+
+### Technical notes
+- Backend: `server/routes/round2.routes.ts` (mounted at `/api/round2`). Auction state lives in memory and is mirrored to one row in the `round2_state` SQLite table, so a server restart does not lose the auction.
+- Frontend: `src/components/game/round2/Round2Auction.tsx` (squad screen), `src/components/admin/auction/AdminAuctionTab.tsx` (organizer tab), `src/services/round2Service.ts` (API + storage helpers).
+- The squad screen polls `GET /api/round2/state` roughly every 0.8 seconds rather than using the SSE stream.
+- To rename the 6 cards or change their descriptions and default prices, edit the `CARDS` list at the top of `server/routes/round2.routes.ts`. The minimum increment and anti-sniping window are in `CONFIG` just above it.
+
+| Endpoint | Auth | Purpose |
+| :--- | :--- | :--- |
+| `GET /api/round2/state?team=NAME` | none | Cards, live auction and the squad's own balance |
+| `POST /api/round2/join` | none | Register a squad with its Round 1 credits (locked on first call) |
+| `POST /api/round2/bid` | none | Place a bid |
+| `GET /api/round2/admin/overview` | `x-round2-key` | Full state including all squads |
+| `POST /api/round2/admin/start` · `/end` · `/reset` | `x-round2-key` | Start a card (`cardId`, `basePrice`, `durationSeconds`), end it, reset everything |
+| `DELETE /api/round2/admin/team/:name` | `x-round2-key` | Remove a squad that has won nothing |
 
 ---
 

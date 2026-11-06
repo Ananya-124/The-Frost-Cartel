@@ -6,6 +6,7 @@ export const ROUTES = {
   ADMIN_TEAMS: '#/admin/teams',
   ADMIN_ROUNDS: '#/admin/rounds',
   ADMIN_RESULTS: '#/admin/results',
+  ROUND_2: '#/round-2',
   ROUND_4: '#/round-4',
 } as const;
 
@@ -14,6 +15,10 @@ export function isAdminRoute(
   pathname: string = window.location.pathname
 ): boolean {
   return hash.startsWith('#/admin') || pathname === '/admin' || pathname.startsWith('/admin/');
+}
+
+export function isRound2Route(hash: string = window.location.hash): boolean {
+  return hash === '#/round-2' || hash === '#/round-02';
 }
 
 export function isRound4Route(

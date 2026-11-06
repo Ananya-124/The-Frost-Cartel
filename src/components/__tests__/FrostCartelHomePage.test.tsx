@@ -39,9 +39,9 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
 
     // Round 2
     expect(screen.getByText('THE HAUNTED AUCTION')).toBeInTheDocument();
-    expect(screen.getByText('UPCOMING • LOCKED')).toBeInTheDocument();
-    const round2Btn = screen.getByRole('button', { name: /LOCKED UNTIL ROUND 1/i });
-    expect(round2Btn).toBeDisabled();
+    expect(screen.getByText('ROUND 02 ACTIVE • READY')).toBeInTheDocument();
+    const round2Btn = screen.getByRole('button', { name: /ENTER ROUND 02/i });
+    expect(round2Btn).toBeEnabled();
 
     // Round 3
     expect(screen.getByText('CLASSIFIED')).toBeInTheDocument();
