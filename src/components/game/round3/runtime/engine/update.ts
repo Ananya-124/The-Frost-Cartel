@@ -54,4 +54,3 @@ export function updateGame(ctx: GameContext, input: InputManager, dt: number): v
     state.dirty = true;
   }
 }
-
