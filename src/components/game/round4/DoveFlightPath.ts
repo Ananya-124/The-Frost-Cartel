@@ -87,23 +87,23 @@ export function getDoveTransform(
 // 1. Approach path: gracefully gliding from upper-left dawn sky toward courtyard pedestal
 export const APPROACH_PATH = {
   p0: { x: 6, y: 15 },    // Upper left dawn horizon
-  p1: { x: 20, y: 22 },   // Sweeping glide into the courtyard
-  p2: { x: 36, y: 36 },   // Descending flare
-  p3: { x: 50, y: 50 },   // Directly hovering over stone pedestal
-  startScale: 0.42,
-  endScale: 0.85,
+  p1: { x: 20, y: 28 },   // Sweeping glide into the courtyard
+  p2: { x: 38, y: 52 },   // Descending flare towards pedestal
+  p3: { x: 50, y: 68 },   // Directly hovering right above the stone pedestal
+  startScale: 0.45,
+  endScale: 0.95,
   minPitch: -8,
   maxPitch: 16,
 };
 
 // 2. Departure path: soaring upwards from pedestal release to perch on right column ledge
 export const PERCH_PATH = {
-  p0: { x: 50, y: 50 },   // Above pedestal after letter release
-  p1: { x: 58, y: 38 },   // Ascending bank
-  p2: { x: 72, y: 22 },   // Approaching column capital
-  p3: { x: 84, y: 10 },   // Resting stone ledge on right column
-  startScale: 0.85,
-  endScale: 0.52,
+  p0: { x: 50, y: 68 },   // Above pedestal after letter release
+  p1: { x: 62, y: 48 },   // Graceful ascending bank
+  p2: { x: 76, y: 28 },   // Approaching column capital
+  p3: { x: 88, y: 12 },   // Resting stone ledge on right column
+  startScale: 0.95,
+  endScale: 0.65,
   minPitch: -26,
   maxPitch: -2,
 };

@@ -61,6 +61,10 @@ app.use('/api/round1', round1Router);
 app.use('/api/round4', round4Router);
 app.use('/api/events', eventsRouter);
 
+// Serve static assets from public and dist bundles
+app.use(express.static('public'));
+app.use(express.static('dist'));
+
 // Database initialization
 initDatabase();
 
