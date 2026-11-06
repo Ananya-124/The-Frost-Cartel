@@ -230,10 +230,10 @@ adminRouter.post('/teams', requireAdminAuth, (req, res) => {
 
 // PUT /api/admin/teams/:id (Edit Squad)
 adminRouter.put('/teams/:id', requireAdminAuth, (req, res) => {
-  const { id } = req.params;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { teamName, password, score } = req.body;
 
-  const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(id) as { id: string; raw_password: string; score: number } | undefined;
+  const team = db.prepare('SELECT id, raw_password, score FROM teams WHERE id = ?').get(id) as { id: string; raw_password: string; score: number } | undefined;
   if (!team) {
     res.status(404).json({ success: false, message: 'Squad not found.' });
     return;
@@ -265,7 +265,12 @@ adminRouter.put('/teams/:id', requireAdminAuth, (req, res) => {
 
 // DELETE /api/admin/teams/:id
 adminRouter.delete('/teams/:id', requireAdminAuth, (req, res) => {
-  const { id } = req.params;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!id) {
+    res.status(400).json({ success: false, message: 'Squad ID is required.' });
+    return;
+  }
+
   const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(id);
   if (!team) {
     res.status(404).json({ success: false, message: 'Squad not found.' });
@@ -278,7 +283,12 @@ adminRouter.delete('/teams/:id', requireAdminAuth, (req, res) => {
 
 // POST /api/admin/teams/:id/pause
 adminRouter.post('/teams/:id/pause', requireAdminAuth, (req, res) => {
-  const { id } = req.params;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!id) {
+    res.status(400).json({ success: false, message: 'Squad ID is required.' });
+    return;
+  }
+
   const team = db.prepare('SELECT is_paused FROM teams WHERE id = ?').get(id) as { is_paused: number } | undefined;
   if (!team) {
     res.status(404).json({ success: false, message: 'Squad not found.' });
@@ -295,7 +305,12 @@ adminRouter.post('/teams/:id/pause', requireAdminAuth, (req, res) => {
 
 // POST /api/admin/teams/:id/reset-password
 adminRouter.post('/teams/:id/reset-password', requireAdminAuth, (req, res) => {
-  const { id } = req.params;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!id) {
+    res.status(400).json({ success: false, message: 'Squad ID is required.' });
+    return;
+  }
+
   const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(id);
   if (!team) {
     res.status(404).json({ success: false, message: 'Squad not found.' });

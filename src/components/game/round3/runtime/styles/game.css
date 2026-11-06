@@ -1,0 +1,66 @@
+.ph-game-root {
+  --bg: #050507;
+  --text: #d9d2c0;
+  --gold: #e8c98a;
+  --gold-bright: #ffd98a;
+  --border: #6b5230;
+  --border-soft: #7a5f36;
+  --panel: #0c0a08ea;
+  --button-bg: #1b1712;
+  --button-hover: #2c2317;
+  --past-amber: #e0a030;
+  --future-teal: #2aa8a0;
+  --future-violet: #8f7cff;
+  --ok: #7f7;
+  --danger: #f66;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 Georgia, serif;
+}
+
+.ph-game-root *, .ph-game-root *::before, .ph-game-root *::after { box-sizing: border-box; }
+.ph-game-root button {
+  cursor: pointer;
+  background: var(--button-bg);
+  color: var(--gold);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 3px;
+}
+.ph-game-root button:hover { background: var(--button-hover); }
+.ph-game-root button:disabled { cursor: default; opacity: .4; }
+.ph-game-root input, .ph-game-root textarea {
+  background: #0b0a08;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px;
+  font: 12px monospace;
+  border-radius: 3px;
+}
+.ph-game-root .ph-exit {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  background: rgba(8, 6, 4, .9);
+  color: var(--gold-bright);
+  border-color: var(--border-soft);
+  font: 11px Cinzel, Georgia, serif;
+  letter-spacing: .12em;
+}
+.ph-game-root .ph-card-error {
+  position: fixed;
+  top: 48px;
+  left: 10px;
+  z-index: 100;
+  max-width: min(480px, calc(100vw - 20px));
+  padding: 8px 12px;
+  background: #3d1010;
+  border: 1px solid #a33;
+  color: #ffd0d0;
+  border-radius: 4px;
+}
