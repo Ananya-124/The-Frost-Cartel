@@ -1,0 +1,217 @@
+/* ===== Round 2 — The Haunted Auction =====
+   Orange frames + dim violet stage, matching the reference mock-up.
+   The page background (HauntedAtmosphere) is untouched. */
+
+:root {
+  --r2-orange: #c4601a;      /* frame colour (dimmed) */
+  --r2-orange-hi: #e0902f;   /* highlights / titles (dimmed amber) */
+  --r2-orange-lo: #8a4a1c;   /* panel borders */
+  --r2-violet: #a58acb;      /* stage text (dimmed lavender) */
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes r2RiseIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes r2Bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+@keyframes r2Breathe {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 110, 20, 0.35)); }
+  50%      { filter: drop-shadow(0 0 15px rgba(255, 125, 35, 0.65)); }
+}
+@keyframes r2Flicker {
+  0%, 100% { opacity: 1; }
+  8%  { opacity: 0.8; }
+  14% { opacity: 1; }
+  41% { opacity: 0.88; }
+  47% { opacity: 1; }
+  72% { opacity: 0.78; }
+  78% { opacity: 1; }
+}
+@keyframes r2Sway {
+  0%, 100% { transform: rotate(-3deg) translateY(0); }
+  50%      { transform: rotate(3deg) translateY(-3px); }
+}
+@keyframes r2Shine {
+  0%        { transform: translateX(-160%) skewX(-18deg); }
+  55%, 100% { transform: translateX(380%) skewX(-18deg); }
+}
+@keyframes r2Pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+@keyframes r2PumpkinPulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 4px rgba(255, 106, 0, 0.35)); }
+  50%      { transform: scale(1.14); filter: drop-shadow(0 0 11px rgba(255, 130, 20, 0.7)); }
+}
+@keyframes r2GhostFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    filter: brightness(0.88) drop-shadow(0 0 15px rgba(150, 105, 225, 0.65));
+  }
+  50% {
+    transform: translateY(-22px) rotate(5deg);
+    filter: brightness(0.98) drop-shadow(0 0 30px rgba(224, 130, 40, 0.65));
+  }
+}
+@keyframes r2Mist {
+  0%, 100% { transform: translateX(-50%) scale(1, 1);       opacity: 0.6; }
+  50%      { transform: translateX(-50%) scale(1.18, 1.35); opacity: 1; }
+}
+@keyframes r2Wisp {
+  0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  20%  { opacity: 0.9; }
+  100% { transform: translate(var(--wx, 0px), -120px) scale(1); opacity: 0; }
+}
+@keyframes r2HourFlip {
+  0%, 35%  { transform: rotate(0deg); }
+  50%, 85% { transform: rotate(180deg); }
+  100%     { transform: rotate(360deg); }
+}
+
+/* ================= HEADER / FOOTER ================= */
+.r2-btn {
+  background: linear-gradient(180deg, #1d1109 0%, #0b0603 100%);
+  border: 2px solid var(--r2-orange);
+  box-shadow: 0 0 12px rgba(196, 96, 26, 0.4), inset 0 0 10px rgba(196, 96, 26, 0.22);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+button.r2-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(196, 96, 26, 0.55), inset 0 0 12px rgba(196, 96, 26, 0.3);
+}
+
+/* Title floats on the scene — no box, just a soft dark halo for legibility */
+.r2-title-plate {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+}
+.r2-title {
+  background: linear-gradient(180deg, #f0b04a 0%, var(--r2-orange) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 1px #3a1604;
+  filter: drop-shadow(0 0 8px rgba(196, 96, 26, 0.5));
+}
+
+.r2-pumpkin { display: inline-block; animation: r2PumpkinPulse 2.8s ease-in-out infinite; }
+.r2-hourglass { display: inline-block; animation: r2HourFlip 6s ease-in-out infinite; }
+.r2-candle { display: inline-block; animation: r2Flicker 2.6s linear infinite; }
+
+/* ================= STAGE + YOUR CARDS ================= */
+.r2-panel {
+  background:
+    radial-gradient(ellipse at 50% 80%, rgba(120, 70, 185, 0.30), transparent 62%),
+    linear-gradient(180deg, #170d26 0%, #0a0612 100%);
+  border: 3px solid var(--r2-orange-lo);
+  box-shadow: 0 0 18px rgba(196, 96, 26, 0.35), inset 0 0 40px rgba(196, 96, 26, 0.14);
+}
+/* thin second frame line, like the ornate border in the mock-up */
+.r2-panel::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  border: 1px solid rgba(196, 96, 26, 0.35);
+  pointer-events: none;
+}
+
+.r2-ghost {
+  animation: r2GhostFloat 4s ease-in-out infinite;
+  will-change: transform, filter;
+}
+.r2-mist {
+  background: radial-gradient(ellipse, rgba(140, 95, 215, 0.55), rgba(196, 96, 26, 0.18) 55%, transparent 72%);
+  animation: r2Mist 4s ease-in-out infinite;
+}
+.r2-wisp {
+  position: absolute;
+  bottom: 18%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f0b04a, rgba(196, 96, 26, 0));
+  box-shadow: 0 0 8px rgba(224, 144, 47, 0.7);
+  opacity: 0;
+  animation: r2Wisp 4.5s ease-in infinite;
+  animation-delay: var(--wd, 0s);
+}
+.r2-wait { animation: r2Pulse 2.6s ease-in-out infinite; }
+
+/* ================= AUCTION CARD ================= */
+.r2-card {
+  animation: r2RiseIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.12s);
+}
+.r2-card-float {
+  animation: r2Bob 5s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.r2-card-body {
+  position: relative;
+  transition: transform 0.35s ease;
+}
+.r2-card:hover .r2-card-body { transform: translateY(-6px) scale(1.045); }
+
+/* SVG frame (outline, inner line, horns) */
+.r2-frame-svg {
+  animation: r2Breathe 3.6s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+  transition: filter 0.3s ease;
+}
+.r2-card:hover .r2-frame-svg { animation-duration: 1.4s; }
+.r2-frame-stroke,
+.r2-frame-horn { stroke: var(--c, var(--r2-orange)); }
+.r2-frame-inner { stroke: var(--c, var(--r2-orange)); stroke-opacity: 0.45; }
+
+.r2-crest {
+  background: radial-gradient(circle, #2a1608 0%, #0b0603 100%);
+  border: 2px solid var(--c, var(--r2-orange));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--c, #c4601a) 55%, transparent);
+  animation: r2Flicker 3.4s linear infinite;
+  animation-delay: var(--d, 0s);
+}
+
+.r2-art {
+  position: relative;
+  background: radial-gradient(circle at 50% 40%, rgba(196, 96, 26, 0.18), rgba(10, 6, 3, 0.92) 75%);
+  border: 2px solid color-mix(in srgb, var(--c, #c4601a) 50%, transparent);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.7);
+}
+.r2-art-img {
+  transform-origin: 50% 85%;
+  filter: brightness(0.85) saturate(0.85) drop-shadow(0 0 8px color-mix(in srgb, var(--c, #c4601a) 45%, transparent));
+  animation: r2Sway 4.5s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.r2-card:hover .r2-art-img { animation-duration: 1.6s; }
+
+.r2-shine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 200, 130, 0.22), transparent);
+  animation: r2Shine 5.5s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.r2-card:hover .r2-shine { animation-duration: 1.6s; }
+
+.r2-price {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1.5px solid color-mix(in srgb, var(--c, #c4601a) 70%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--c, #c4601a) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r2-card, .r2-card-float, .r2-frame-svg, .r2-crest, .r2-art-img, .r2-shine,
+  .r2-ghost, .r2-mist, .r2-wisp, .r2-wait, .r2-pumpkin, .r2-hourglass, .r2-candle {
+    animation: none !important;
+  }
+  .r2-wisp { display: none; }
+}
