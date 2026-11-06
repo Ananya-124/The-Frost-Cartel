@@ -15,13 +15,53 @@ const THEMES: Theme[] = [
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const CHAMFER = 'polygon(7% 0, 93% 0, 100% 4%, 100% 96%, 93% 100%, 7% 100%, 0 96%, 0 4%)';
 
+// Vine colours (lighter than the static leaves so the crawling vines read on the dark card).
+const VINES = ['#7fa05a', '#6fa085', '#a8a8a8', '#5fa070', '#a39a4a', '#6c9ab8'];
+
+// Animation styles for the card art: crawling vines, swaying leaves and the neon border on the live card.
+const FX_CSS = `
+.fc-vine{stroke-dasharray:1;animation:fcVine var(--dur) ease-in-out var(--dl) infinite}
+@keyframes fcVine{0%{stroke-dashoffset:1}40%,60%{stroke-dashoffset:0}100%{stroke-dashoffset:-1}}
+.fc-leafpop{opacity:0;animation:fcLeaf var(--dur) ease-in-out var(--dl) infinite}
+@keyframes fcLeaf{0%,25%{opacity:0}40%,60%{opacity:1}75%,100%{opacity:0}}
+.fc-sway{transform-box:fill-box;transform-origin:0 50%;animation:fcSway 3.2s ease-in-out infinite alternate}
+@keyframes fcSway{from{transform:rotate(-12deg)}to{transform:rotate(12deg)}}
+.fc-neon{animation:fcFlicker 3.4s linear infinite;filter:drop-shadow(0 0 2px var(--neon)) drop-shadow(0 0 7px var(--neon)) drop-shadow(0 0 16px var(--neon))}
+.fc-neon2{animation-delay:-1.6s}
+@keyframes fcFlicker{0%,18%,22%,62%,64%,100%{opacity:1}20%{opacity:.5}63%{opacity:.65}}
+.fc-run{stroke-dasharray:.1 .9;animation:fcRun 3s linear infinite;filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 9px var(--neon))}
+@keyframes fcRun{to{stroke-dashoffset:-1}}
+.fc-live-glow{animation:fcGlow 2.4s ease-in-out infinite alternate}
+@keyframes fcGlow{from{filter:drop-shadow(0 0 8px rgba(255,106,0,.55))}to{filter:drop-shadow(0 0 22px rgba(178,77,255,.65))}}
+@media (prefers-reduced-motion:reduce){.fc-vine{animation:none;stroke-dashoffset:0}.fc-leafpop{animation:none;opacity:1}.fc-sway,.fc-neon,.fc-run,.fc-live-glow{animation:none}}
+`;
+
+interface VineProps { d: string; leaves: [number, number, number][]; dur: number; delay: number; transform?: string }
+
+/** A vine that grows along a path, rests, then crawls away; leaves fade in and out with it. */
+const Vine: React.FC<VineProps> = ({ d, leaves, dur, delay, transform }) => (
+  <g transform={transform} style={{ '--dur': `${dur}s`, '--dl': `${delay}s` } as React.CSSProperties}>
+    <path d={d} pathLength={1} className="fc-vine" fill="none" stroke="var(--vine)" strokeWidth="1.6" strokeLinecap="round" />
+    {leaves.map(([x, y, r]) => (
+      <g key={`${x}-${y}`} transform={`translate(${x} ${y}) rotate(${r}) scale(.75)`}>
+        <use href="#fc-vleaf" className="fc-leafpop" />
+      </g>
+    ))}
+  </g>
+);
+
 /** Shared ornament shapes. Render once per page; every card references them with <use> and its own colours. */
 export const AuctionCardDefs: React.FC = () => (
+  <>
+  <style>{FX_CSS}</style>
   <svg width="0" height="0" className="absolute" aria-hidden="true">
     <defs>
       <g id="fc-leaf">
         <path d="M0 0C5-5 12-5 18 0C12 5 5 5 0 0Z" fill="var(--leaf)" />
         <path d="M1 0H16" stroke="var(--bg)" strokeWidth=".5" opacity=".6" />
+      </g>
+      <g id="fc-vleaf">
+        <path d="M0 0C5-5 12-5 18 0C12 5 5 5 0 0Z" fill="var(--vine)" />
       </g>
       <g id="fc-bloom">
         <g fill="var(--flower)">
@@ -49,6 +89,7 @@ export const AuctionCardDefs: React.FC = () => (
       </g>
     </defs>
   </svg>
+  </>
 );
 
 interface AuctionCardProps {
@@ -69,31 +110,45 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ card, lot, base, live 
   if (sold) tag = 'SOLD';
   else if (unsold) tag = 'UNSOLD';
   else if (isLive) tag = 'LIVE';
-  const vars = { '--accent': t.accent, '--leaf': t.leaf, '--flower': t.flower, '--bg': t.bg, containerType: 'inline-size' } as React.CSSProperties;
+  const vars = { '--accent': t.accent, '--leaf': t.leaf, '--flower': t.flower, '--bg': t.bg, '--vine': VINES[(card.id - 1) % VINES.length], '--neon': '#ff7a1a', '--neon2': '#b24dff', containerType: 'inline-size' } as React.CSSProperties;
   const motif = t.motif === 'pumpkin' ? '#fc-pumpkin' : '#fc-bloom';
+  const phase = card.id * -1.3; // so the cards do not all animate in step
 
   return (
     <div
       style={vars}
-      className={`relative aspect-[2/3] w-full select-none transition ${unsold ? 'grayscale opacity-60' : ''} ${isLive ? 'drop-shadow-[0_0_16px_rgba(255,102,0,.6)]' : ''}`}
+      className={`relative aspect-[2/3] w-full select-none transition ${unsold ? 'grayscale opacity-60' : ''} ${isLive ? 'fc-live-glow' : ''}`}
     >
       {/* Ornate border: double frame, vines in the corners, bloom or pumpkin top and bottom */}
-      <svg viewBox="0 0 200 300" className="absolute inset-0 h-full w-full" aria-hidden="true">
+      <svg viewBox="0 0 200 300" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
         <rect x="1.5" y="1.5" width="197" height="297" rx="6" fill="var(--bg)" stroke="var(--accent)" strokeOpacity=".55" />
         <rect x="7" y="7" width="186" height="286" rx="3" fill="none" stroke="var(--accent)" strokeOpacity=".3" />
         <path d="M11 78V222M189 78V222" stroke="var(--accent)" strokeOpacity=".45" />
         {[100, 125, 150, 175, 200].map((y) => (
           <g key={y}>
-            <use href="#fc-leaf" transform={`translate(11 ${y}) rotate(-50) scale(.6)`} />
-            <use href="#fc-leaf" transform={`translate(189 ${y}) rotate(230) scale(.6)`} />
+            <g transform={`translate(11 ${y}) rotate(-50) scale(.6)`}><use href="#fc-leaf" className="fc-sway" style={{ animationDelay: `${-y / 40}s` }} /></g>
+            <g transform={`translate(189 ${y}) rotate(230) scale(.6)`}><use href="#fc-leaf" className="fc-sway" style={{ animationDelay: `${-y / 50}s` }} /></g>
           </g>
         ))}
         <use href="#fc-corner" />
         <use href="#fc-corner" transform="translate(200 0) scale(-1 1)" />
         <use href="#fc-corner" transform="translate(0 300) scale(1 -1)" />
         <use href="#fc-corner" transform="translate(200 300) scale(-1 -1)" />
+        {/* Crawling vines: left and right sides, top and bottom */}
+        <Vine d="M16 292C6 260 26 240 16 210S6 150 18 120S26 60 14 30" leaves={[[16, 210, -40], [18, 120, 200], [14, 30, -30]]} dur={7} delay={phase} />
+        <Vine d="M16 292C6 260 26 240 16 210S6 150 18 120S26 60 14 30" leaves={[[16, 210, -40], [18, 120, 200], [14, 30, -30]]} dur={8} delay={phase - 3} transform="translate(200 0) scale(-1 1)" />
+        <Vine d="M34 46C50 38 62 54 80 46S112 38 126 46S150 54 166 44" leaves={[[80, 46, -50], [126, 46, -130]]} dur={6} delay={phase - 2} />
+        <Vine d="M34 46C50 38 62 54 80 46S112 38 126 46S150 54 166 44" leaves={[[80, 46, -50], [126, 46, -130]]} dur={9} delay={phase - 5} transform="translate(0 300) scale(1 -1)" />
         <use href={motif} transform="translate(100 21) scale(1.2)" />
         <use href={motif} transform="translate(100 279) scale(1.2)" />
+        {/* Neon border while the card is being bid on: orange outer tube, purple inner tube, a light running round */}
+        {isLive && (
+          <g fill="none">
+            <rect x="1.5" y="1.5" width="197" height="297" rx="6" stroke="var(--neon)" strokeWidth="1.8" className="fc-neon" />
+            <rect x="7" y="7" width="186" height="286" rx="3" stroke="var(--neon2)" strokeWidth="1.2" className="fc-neon fc-neon2" />
+            <rect x="1.5" y="1.5" width="197" height="297" rx="6" pathLength={1} stroke="#fff" strokeWidth="2.2" strokeLinecap="round" className="fc-run" />
+          </g>
+        )}
       </svg>
 
       {/* Framed centre panel with notched corners, like the invitation reference */}
