@@ -6,12 +6,18 @@ interface EndScreenProps {
   summary: EndSummary;
   onNewSession: () => void;
   expired?: boolean;
+  storyReveal?: boolean;
 }
 
-export default function EndScreen({ summary, onNewSession, expired = false }: EndScreenProps) {
+export default function EndScreen({ summary, onNewSession, expired = false, storyReveal = false }: EndScreenProps) {
   return (
     <div className={styles.end}>
-      <h1>{expired ? 'TIME EXPIRED · SCORE PRESERVED' : 'THE PARADOX IS BOUND'}</h1>
+      <h1>{expired ? 'TIME EXPIRED · SCORE PRESERVED' : storyReveal ? 'THE ENTITY IS CONTAINED' : 'THE PARADOX IS BOUND'}</h1>
+      {storyReveal && <section className={styles.storyReveal} aria-label="Final incident report">
+        <h2>FINAL INCIDENT REPORT · CONTAINMENT SEALED</h2>
+        <p>The experiment was designed to use temporal resonance to reconstruct human memories. The team pushed the apparatus beyond its intended limits.</p>
+        <p>Something inside the reconstructed memories became conscious. That consciousness was the entity encountered throughout the facility—and it is now contained.</p>
+      </section>}
       <div>Team {summary.teamName}</div>
       <div className={styles.big}>{summary.totalScore}</div>
       <div className={styles.stats}>

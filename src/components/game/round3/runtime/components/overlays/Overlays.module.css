@@ -55,6 +55,20 @@
   color: var(--gold-bright);
 }
 
+.storyReveal {
+  max-width: 680px;
+  margin: 12px auto;
+  padding: 14px 18px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(135deg, #111d22dd, #130f0ddd);
+  color: var(--bone, #e7dfd0);
+  text-align: left;
+  box-shadow: 0 0 34px #8fb8c11c;
+}
+
+.storyReveal h2 { color: var(--gold-bright); font: 600 13px Georgia, serif; letter-spacing: .12em; margin: 0 0 8px; }
+.storyReveal p { margin: 7px 0; line-height: 1.6; opacity: .9; }
+
 .stats {
   display: flex;
   gap: 12px;

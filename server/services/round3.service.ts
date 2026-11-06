@@ -257,6 +257,10 @@ export function activateRound3Card(teamId: string, cardId: string, requestedSour
 
 export function completeRound3Hunt(teamId: string) {
   if (!round3GameplayAllowed(teamId)) return null;
+  const finale = db.prepare('SELECT state_json FROM round3_hunt3_sessions WHERE team_id=?').get(teamId) as { state_json: string } | undefined;
+  const hunt2Session = db.prepare('SELECT 1 AS present FROM round3_hunt2_sessions WHERE team_id=?').get(teamId);
+  // Preserve the legacy API-only session path; real Hunt II runs must finish the server-authoritative finale.
+  if ((finale && (JSON.parse(finale.state_json) as { completed?: unknown }).completed !== true) || (hunt2Session && !finale)) return null;
   const now = new Date().toISOString();
   db.prepare('UPDATE round3_sessions SET is_completed = 1, completed_at = COALESCE(completed_at, ?), updated_at = ? WHERE team_id = ?').run(now, now, teamId);
   db.prepare("UPDATE round3_runs SET status='completed', started_at=NULL, updated_at=? WHERE team_id=?").run(now, teamId);

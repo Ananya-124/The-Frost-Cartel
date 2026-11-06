@@ -94,13 +94,16 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
   let success = true;
 
   if (type === 'interact') {
-    if (state.actions.includes(id)) return { success: true, message: 'That clue or control has already been recorded.', state };
+    const archivistOnly = ['sighting-ledger', 'containment-observation', 'old-facility-report', 'power-diagram', 'resonance-diagram', 'memory-diagram', 'component-catalog', 'apparatus-blueprint', 'weakness-notes', 'lure-control', 'secret-inscription', 'release-memory', 'hold-record', 'lock-sequence'];
+    const trackerOnly = ['cold-ash', 'drag-marks', 'shattered-compass', 'power-mechanism', 'resonance-mechanism', 'memory-mechanism', 'test-station', 'disruptor', 'secret-residue', 'ground-current', 'vent-pressure', 'close-containment', 'physical-apparatus', 'recover-induction-coil', 'recover-prism-lens', 'recover-grounding-braid', 'recover-memory-core', 'recover-shattered-glass', 'recover-scorched-lattice'];
+    if (archivistOnly.includes(id) && actor !== 'archivist' || trackerOnly.includes(id) && actor !== 'tracker') return { success: false, message: 'That control belongs to the other investigator’s timeline.', state };
+    if (state.actions.includes(id) && id !== 'disruptor' && !(state.stage === 4 && BOSS_SEQUENCE.some((entry) => entry.control === id))) return { success: true, message: 'That clue or control has already been recorded.', state };
     if (state.stage === 1) {
       const archive = ['sighting-ledger', 'containment-observation', 'old-facility-report'];
       const field = actor === 'archivist' ? archive : ['cold-ash', 'drag-marks', 'shattered-compass'];
       if (!field.includes(id)) return { success: false, message: 'That evidence is not available in this stage or timeline.', state };
       state.evidence[actor].push(id); state.actions.push(id);
-      message = actor === 'archivist' ? ({ 'sighting-ledger': '02:13 — last verified presence in Observation Room; cold resonance preceded the sighting.', 'containment-observation': 'The entity approached when the chamber was dark and the resonance field fell below its marked threshold.', 'old-facility-report': 'A low-frequency hum drew it away from the archive toward the Observation Room.' } as Record<string, string>)[id] : ({ 'cold-ash': 'Ash is coldest outside the Observation Room, pointing inward along the corridor.', 'drag-marks': 'Heavy marks stop at the Observation Room threshold; nothing was dragged back out.', 'shattered-compass': 'The needle swings toward the Observation Room whenever the lights are off.' } as Record<string, string>)[id];
+      message = actor === 'archivist' ? ({ 'sighting-ledger': '02:13 — the final sighting places movement in the eastern wing, but the room number is missing.', 'containment-observation': 'The entity approached only during a dark interval when the resonance field fell below its marked threshold.', 'old-facility-report': 'A low-frequency hum attracted it toward one of the eastern observation spaces; the report map is incomplete.' } as Record<string, string>)[id] : ({ 'cold-ash': 'Ash temperature falls in a repeating star-shaped pattern; it does not identify a room by itself.', 'drag-marks': 'The marks lead toward a sealed inner threshold, then stop. The trail has not crossed back.', 'shattered-compass': 'The needle swings south only during the dark interval recorded in the old notes.' } as Record<string, string>)[id];
     } else if (state.stage === 2) {
       if (actor === 'archivist' && SEALS.some((seal) => `${seal}-diagram` === id)) {
         const seal = id.replace('-diagram', '') as typeof SEALS[number]; state.seals[seal].archive = true; state.evidence.archivist.push(id); state.actions.push(id); message = ({ power: 'Power diagram: source feeds ground before the return loop.', resonance: 'Resonance note: set low tone, align phase two, then silence the carrier.', memory: 'Memory protocol: arrival, warning, then anchor.' } as Record<string, string>)[seal];
@@ -119,7 +122,8 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
         // The blueprint is only required in Stage 3; collection completion stays gated on it being found here.
       }
     } else if (state.stage === 3) {
-      if (id === 'apparatus-blueprint' && actor === 'archivist') { state.evidence.archivist.push(id); message = 'Blueprint examined. The placement plan is ready for independent reconstruction.'; }
+      if (id === 'apparatus-blueprint' && actor === 'archivist') { state.evidence.archivist.push(id); message = 'The faded placement key resolves in the old diagram: induction coil west, prism lens center, grounding braid below, memory core east.'; }
+      else if (id === 'physical-apparatus' && actor === 'tracker') message = 'The Future apparatus sockets are exposed. Place each recovered component independently.';
       else if (id === 'weakness-notes' && actor === 'archivist') { state.weakness.archive = true; state.evidence.archivist.push(id); message = 'Historical reaction notes compared. A specific environmental response stands out, but it needs a live test.'; }
       else if (id === 'test-station' && actor === 'tracker') message = 'The controlled test station is ready. Change one condition per trial and observe the entity.';
       else if (id === 'lure-control' && actor === 'archivist') { if (!state.apparatus.configured || !state.weakness.discovered) return { success: false, message: 'Configure the apparatus and verify the weakness before activating the lure.', state }; state.weakness.lure = Math.min(1, state.weakness.lure + 1); message = 'Lure tone engaged. The entity is moving toward the chamber.'; }
@@ -159,14 +163,14 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
       const location = typeof value.location === 'string' ? value.location : '';
       if (actor === 'archivist') {
         if (state.evidence.archivist.length < 3) return { success: false, message: 'Examine all three historical records first.', state };
-        if (location !== 'observation-room') return fail(state, 'The historical sequence points elsewhere. Reconcile the last recorded sighting with the attraction conditions.');
-        state.trail.archivist = location; message = 'Historical trail interpretation recorded privately.';
+        if (location !== 'east-wing') return fail(state, 'The dated movement record contradicts that wing. Reconcile the final entry with the facility map.' );
+        state.trail.archivist = location; message = 'Historical wing interpretation recorded privately. The surviving report does not identify the room.';
       } else {
         if (state.evidence.tracker.length < 3) return { success: false, message: 'Collect all three physical traces first.', state };
-        if (location !== 'observation-room') return fail(state, 'Those traces do not converge at that location. Re-map the cold ash, drag marks and compass disturbance.');
-        state.trail.tracker = location; message = 'Physical trail interpretation recorded privately.';
+        if (location !== 'cold-star') return fail(state, 'The physical pattern does not match that trace signature. Compare the ash, threshold marks and compass response.');
+        state.trail.tracker = location; message = 'Physical trail signature recorded privately. The markings need historical map context.';
       }
-      if (state.trail.archivist && state.trail.tracker && state.trail.archivist === state.trail.tracker) { state.trail.resolved = true; state.evidence.archivist.push('trail-resolution'); state.evidence.tracker.push('trail-resolution'); completeStage(state, 1); message = 'Both investigations converge on the Observation Room. The roaming entity manifests there. Stage 2 unlocked.'; }
+      if (state.trail.archivist === 'east-wing' && state.trail.tracker === 'cold-star') { state.trail.resolved = true; state.evidence.archivist.push('trail-resolution'); state.evidence.tracker.push('trail-resolution'); completeStage(state, 1); message = 'The eastern-wing report matches the cold-star trace at the Observation Room. The entity manifests there. Stage 2 unlocked.'; }
     } else if (state.stage === 2 && id.startsWith('seal-')) {
       const seal = id.slice(5) as typeof SEALS[number]; if (!(SEALS as readonly string[]).includes(seal)) return null;
       const sequence = strings(value.sequence);
@@ -188,7 +192,7 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
         if (JSON.stringify(sequence) !== JSON.stringify(APPARATUS)) return fail(state, 'Blueprint interpretation is inconsistent. Recheck component orientation and grounding.');
         state.apparatus.archive = APPARATUS; message = 'Historical apparatus layout verified. Tracker can now configure the physical rig.';
       } else {
-        if (!state.apparatus.archive || state.components.length !== COMPONENTS.length) return { success: false, message: 'The verified blueprint and all four recovered parts are required.', state };
+        if (!state.apparatus.archive || state.components.length !== COMPONENTS.length || !state.actions.includes('physical-apparatus')) return { success: false, message: 'Examine the Future apparatus after the blueprint is verified and all four parts are recovered.', state };
         if (JSON.stringify(sequence) !== JSON.stringify(APPARATUS)) return fail(state, 'The apparatus rejects that placement. Completed placements remain available for retry.');
         state.apparatus.physical = APPARATUS; state.apparatus.configured = true; message = 'Physical rig matches the Past blueprint. Run the weakness investigation.';
       }
@@ -196,6 +200,7 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
       const condition = typeof value.condition === 'string' ? value.condition : '';
       const reading = typeof value.reading === 'string' ? value.reading : '';
       if (!['frequency-low', 'light-dark', 'temperature-cold'].includes(condition) || !['withdrawal', 'surge'].includes(reading)) return null;
+      if (!state.actions.includes('test-station')) return { success: false, message: 'Examine the physical test station before running a controlled trial.', state };
       if (!state.apparatus.configured) return { success: false, message: 'The reconstructed apparatus must be configured before running controlled trials.', state };
       const correct = (condition === 'frequency-low' || condition === 'temperature-cold') ? reading === 'withdrawal' : reading === 'surge';
       const trial = `${condition}:${reading}`; if (!state.weakness.trials.includes(trial)) state.weakness.trials.push(trial);

@@ -140,7 +140,8 @@ export type InteractableId =
   | 'sighting-ledger' | 'containment-observation' | 'old-facility-report' | 'cold-ash' | 'drag-marks' | 'shattered-compass'
   | 'power-diagram' | 'power-mechanism' | 'resonance-diagram' | 'resonance-mechanism' | 'memory-diagram' | 'memory-mechanism'
   | 'component-catalog' | 'apparatus-blueprint' | 'weakness-notes' | 'test-station' | 'lure-control' | 'disruptor'
-  | 'secret-inscription' | 'secret-residue' | 'hold-record' | 'ground-current' | 'release-memory' | 'vent-pressure' | 'lock-sequence' | 'close-containment';
+  | 'secret-inscription' | 'secret-residue' | 'hold-record' | 'ground-current' | 'release-memory' | 'vent-pressure' | 'lock-sequence' | 'close-containment'
+  | 'recover-induction-coil' | 'recover-prism-lens' | 'recover-grounding-braid' | 'recover-memory-core' | 'recover-shattered-glass' | 'recover-scorched-lattice' | 'physical-apparatus';
 
 /** Visual style used by the prop renderer. */
 export type PropKind =

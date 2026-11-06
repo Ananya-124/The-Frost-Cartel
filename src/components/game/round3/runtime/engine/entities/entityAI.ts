@@ -38,13 +38,27 @@ export function updateEntities(state: GameState, dt: number): void {
   const tracker = state.players[1];
   const chamber = ROOM_BY_ID.exp;
 
-  for (const e of state.entities) {
+  for (const [entityIndex, e] of state.entities.entries()) {
     if (e.gone) continue;
     let speed: number = ENTITY.speedByHunt[state.huntIndex];
     let tx = e.targetX;
     let ty = e.targetY;
 
-    if (e.real && state.flags.tape) {
+    if (state.huntIndex === 2 && state.hunt3Stage !== undefined) {
+      const phase = state.time % 12;
+      if (e.real && state.hunt3Stage >= 3 && phase >= 5 && phase < 7 && state.messageUntil[1] <= state.time) {
+        showMessage(state, 1, 'The entity is drawing near. The chamber’s low hum will disrupt its approach.', 2200);
+      }
+      if (e.real && state.hunt3LureActive) {
+        tx = chamber.x + ENTITY.captureTargetOffset.x;
+        ty = chamber.y + ENTITY.captureTargetOffset.y;
+      } else if (e.real && state.hunt3Stage >= 3 && phase >= 7) {
+        tx = tracker.x; ty = tracker.y; speed = ENTITY.chaseSpeed;
+      } else {
+        const roomIndex = (Math.floor(state.time / 5) + entityIndex * 2 + (e.real ? 1 : 0)) % ROOMS.length;
+        const room = ROOMS[roomIndex]; tx = room.x + room.w / 2; ty = room.y + room.h / 2;
+      }
+    } else if (e.real && state.flags.tape) {
       tx = chamber.x + ENTITY.captureTargetOffset.x;
       ty = chamber.y + ENTITY.captureTargetOffset.y;
       speed = ENTITY.tapeSpeed;
@@ -78,7 +92,7 @@ export function updateEntities(state: GameState, dt: number): void {
       }
     }
 
-    if (state.huntIndex === 2 && e.real && !state.flags.tape) {
+    if (state.huntIndex === 2 && state.hunt3Stage === undefined && e.real && !state.flags.tape) {
       e.teleportTimer -= dt;
       if (e.teleportTimer < 0) {
         e.teleportTimer = ENTITY.teleportInterval;

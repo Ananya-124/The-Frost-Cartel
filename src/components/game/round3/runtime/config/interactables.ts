@@ -115,17 +115,24 @@ const DEFINITIONS: readonly InteractableDefinition[] = [
   ['sighting-ledger', 'past', 'arch', 75, 55, 'desk', 'Entity sighting ledger'],
   ['containment-observation', 'past', 'obs', 75, 55, 'term', 'Containment observation record'],
   ['old-facility-report', 'past', 'dir', 210, 55, 'desk', 'Facility movement report'],
-  ['cold-ash', 'future', 'hall', 150, 150, 'prints', 'Cold ash trail'],
+  ['cold-ash', 'future', 'hall', 55, 230, 'prints', 'Cold ash trail'],
   ['drag-marks', 'future', 'obs', 220, 65, 'crack', 'Fresh drag marks'],
-  ['shattered-compass', 'future', 'obs', 220, 200, 'mach', 'Shattered compass'],
+  ['shattered-compass', 'future', 'obs', 75, 205, 'mach', 'Shattered compass'],
   ['power-diagram', 'past', 'gen', 75, 55, 'term', 'Original power seal diagram'],
   ['power-mechanism', 'future', 'gen', 225, 185, 'mach', 'Damaged power seal'],
   ['resonance-diagram', 'past', 'sec', 75, 55, 'shelf', 'Resonance seal notes'],
   ['resonance-mechanism', 'future', 'sec', 225, 190, 'mach', 'Resonance seal array'],
   ['memory-diagram', 'past', 'obs', 75, 55, 'desk', 'Memory seal protocol'],
-  ['memory-mechanism', 'future', 'obs', 220, 200, 'node', 'Memory seal mechanism'],
+  ['memory-mechanism', 'future', 'obs', 225, 145, 'node', 'Memory seal mechanism'],
   ['component-catalog', 'past', 'arch', 220, 190, 'shelf', 'Containment component catalogue'],
+  ['recover-induction-coil', 'future', 'gen', 75, 185, 'mach', 'Scorched induction coil'],
+  ['recover-prism-lens', 'future', 'exam', 220, 190, 'mirror', 'Cracked prism lens'],
+  ['recover-grounding-braid', 'future', 'sec', 75, 190, 'tape', 'Loose grounding braid'],
+  ['recover-memory-core', 'future', 'obs', 75, 205, 'node', 'Memory core'],
+  ['recover-shattered-glass', 'future', 'hall', 45, 230, 'mirror', 'Shattered glass decoy'],
+  ['recover-scorched-lattice', 'future', 'hall', 250, 230, 'mach', 'Scorched lattice decoy'],
   ['apparatus-blueprint', 'past', 'con', 75, 55, 'term', 'Original containment blueprint'],
+  ['physical-apparatus', 'future', 'con', 150, 135, 'mach', 'Reconstruction apparatus'],
   ['weakness-notes', 'past', 'exp', 75, 55, 'desk', 'Historical entity reaction notes'],
   ['test-station', 'future', 'exp', 225, 190, 'mach', 'Environmental test station'],
   ['lure-control', 'past', 'con', 75, 195, 'mach', 'Lure tone control'],
@@ -157,9 +164,18 @@ export const HUNT2_INTERACTABLE_IDS: ReadonlySet<InteractableId> = new Set([
 export const HUNT3_INTERACTABLE_IDS: ReadonlySet<InteractableId> = new Set([
   'sighting-ledger', 'containment-observation', 'old-facility-report', 'cold-ash', 'drag-marks', 'shattered-compass',
   'power-diagram', 'power-mechanism', 'resonance-diagram', 'resonance-mechanism', 'memory-diagram', 'memory-mechanism',
-  'component-catalog', 'apparatus-blueprint', 'weakness-notes', 'test-station', 'lure-control', 'disruptor', 'secret-inscription', 'secret-residue',
+  'component-catalog', 'recover-induction-coil', 'recover-prism-lens', 'recover-grounding-braid', 'recover-memory-core', 'recover-shattered-glass', 'recover-scorched-lattice', 'apparatus-blueprint', 'physical-apparatus', 'weakness-notes', 'test-station', 'lure-control', 'disruptor', 'secret-inscription', 'secret-residue',
   'hold-record', 'ground-current', 'release-memory', 'vent-pressure', 'lock-sequence', 'close-containment',
 ]);
+const HUNT3_STAGE_OBJECTS: Record<number, ReadonlySet<InteractableId>> = {
+  1: new Set(['sighting-ledger', 'containment-observation', 'old-facility-report', 'cold-ash', 'drag-marks', 'shattered-compass']),
+  2: new Set(['power-diagram', 'power-mechanism', 'resonance-diagram', 'resonance-mechanism', 'memory-diagram', 'memory-mechanism', 'component-catalog', 'recover-induction-coil', 'recover-prism-lens', 'recover-grounding-braid', 'recover-memory-core', 'recover-shattered-glass', 'recover-scorched-lattice']),
+  3: new Set(['apparatus-blueprint', 'physical-apparatus', 'weakness-notes', 'test-station', 'lure-control', 'disruptor']),
+  4: new Set(['hold-record', 'ground-current', 'release-memory', 'vent-pressure', 'lock-sequence', 'close-containment']),
+};
+export function isHunt3InteractableAvailable(id: InteractableId, stage: number | undefined): boolean {
+  return id === 'secret-inscription' || id === 'secret-residue' || (HUNT3_STAGE_OBJECTS[stage ?? 1]?.has(id) ?? false);
+}
 
 /** World footprints remain independent from art crops and render scale. */
 const OBJECT_BOUNDS: Record<PropKind, readonly [width: number, height: number, solid: boolean]> = {

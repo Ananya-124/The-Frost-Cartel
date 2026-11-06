@@ -186,9 +186,11 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
     setHunt3(next);
     if (store.state.huntIndex !== 2) return;
     const base = store.state.score - (store.state.huntScores[2] ?? 0);
-    const entities = next.trail.resolved || next.stage > 1 ? store.state.entities.map((entity) => ({ ...entity, gone: false })) : store.state.entities.map((entity) => ({ ...entity, gone: true }));
-    if (store.state.huntScores[2] !== next.score || JSON.stringify(store.state.entities) !== JSON.stringify(entities)) {
-      store.replaceState({ ...store.state, score: base + next.score, huntScores: [store.state.huntScores[0], store.state.huntScores[1], next.score], entities });
+    const entityVisible = next.trail.resolved || next.stage > 1;
+    const entities = store.state.entities.map((entity) => ({ ...entity, gone: !entityVisible }));
+    if (store.state.huntScores[2] !== next.score || JSON.stringify(store.state.entities) !== JSON.stringify(entities)
+      || store.state.hunt3Stage !== next.stage || store.state.hunt3LureActive !== (next.weakness.lure > 0)) {
+      store.replaceState({ ...store.state, score: base + next.score, huntScores: [store.state.huntScores[0], store.state.huntScores[1], next.score], entities, hunt3Stage: next.stage, hunt3EntityVisible: entityVisible, hunt3LureActive: next.weakness.lure > 0 });
     }
   }, [store]);
 
@@ -502,7 +504,7 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
       />}
       {snapshot.phase === 'playing' && snapshot.huntIntro && <HuntIntro intro={snapshot.huntIntro} />}
       {snapshot.phase === 'ended' && snapshot.summary && (
-        <EndScreen summary={snapshot.summary} onNewSession={() => { void exitGame(); }} expired={timer.run.status === 'expired'} />
+        <EndScreen summary={snapshot.summary} onNewSession={() => { void exitGame(); }} expired={timer.run.status === 'expired'} storyReveal={hunt3?.completed === true && timer.run.status !== 'expired'} />
       )}
       {snapshot.phase !== 'menu' && <button className="ph-exit" onClick={() => { void exitGame(); }}>RETURN TO CARTEL</button>}
       {(cardError || externalError || timer.error) && <div className="ph-card-error" role="alert">
