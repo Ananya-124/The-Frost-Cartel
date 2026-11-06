@@ -60,3 +60,4 @@ Ownership is enforced declaratively through `.github/CODEOWNERS`:
 - CI/CD & Deployments: `/.github/`
 
 A minimum of one approving review from the designated codeowner is required for merging into `main`. Force-pushing (`git push --force`) to `main` is protected and strictly forbidden.
+
