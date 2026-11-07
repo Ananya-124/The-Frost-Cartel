@@ -84,6 +84,7 @@ export function seedBootstrapData(): void {
       { name: 'Shadow Syndicate', pass: 'SHADOW#88' },
       { name: 'Grave Walkers', pass: 'GRAVE#44' },
       { name: 'Cursed Alchemists', pass: 'ALCHEMY!22' },
+      {name:'a',pass:'aaa'}
     ];
 
     for (const team of defaultTeams) {

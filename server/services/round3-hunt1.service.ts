@@ -204,6 +204,7 @@ function updateState(teamId: string, state: Hunt1State): void {
 export function applyRound3Hunt1Action(
   teamId: string,
   input: { type: string; actor?: unknown; objectId?: unknown; value?: unknown },
+  playerNumber?: number,
 ): Hunt1ActionResult | null {
   if (!round3GameplayAllowed(teamId)) return null;
   if (!isActor(input.actor)) return null;
@@ -454,7 +455,7 @@ export function applyRound3Hunt1Action(
     } else { db.exec('ROLLBACK'); return null; }
     updateState(teamId, state);
     db.exec('COMMIT');
-    const responseState = getRound3Hunt1State(teamId) ?? state;
+    const responseState = getRound3Hunt1State(teamId, playerNumber) ?? state;
     return { success: actionSuccess, message, state: responseState, hint };
   } catch (error) {
     db.exec('ROLLBACK');

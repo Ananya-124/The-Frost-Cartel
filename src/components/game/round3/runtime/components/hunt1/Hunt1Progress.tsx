@@ -52,16 +52,15 @@ function movePiece(sequence: string[], from: number, to: number): string[] {
 
 export default function Hunt1Progress({ state, playerNumber, showOverview = true, message, working, onHint, onSubmit, onSpecialAction, onContinue }: Hunt1ProgressProps) {
   const [tasksOpen, setTasksOpen] = useState(true);
-  const [journalOpen, setJournalOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(true);
   const [sequence, setSequence] = useState<string[]>([]);
   const [workingSubmit, setWorkingSubmit] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const actor: Hunt1Actor = playerNumber === 1 ? 'archivist' : 'tracker';
-
-  useEffect(() => {
-    if (!state) return;
-    const savedOrder = state.currentChallenge === 2
+  const sequenceSyncData = state ? JSON.stringify({
+    challenge: state.currentChallenge,
+    playerNumber,
+    savedOrder: state.currentChallenge === 2
       ? (playerNumber === 1 ? state.missingReport?.archivistOrder : state.missingReport?.trackerOrder)
       : state.currentChallenge === 3
         ? (playerNumber === 1 ? state.powerFailure?.archivistConnections : state.powerFailure?.trackerConnections)
@@ -71,10 +70,19 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
             ? (playerNumber === 1 ? state.signalReconstruction?.archivistRoute : state.signalReconstruction?.trackerRoute)
             : state.currentChallenge === 6
               ? (playerNumber === 1 ? state.incidentConclusion?.archivistInterpretation : state.incidentConclusion?.trackerInterpretation)
-              : null;
-    const roleDefault = state.currentChallenge === 6 ? (playerNumber === 1 ? CONCLUSION_ARCHIVE : CONCLUSION_FUTURE) : TASKS[state.currentChallenge].initial;
+              : null,
+  }) : '';
+
+  useEffect(() => {
+    if (!sequenceSyncData) return;
+    const { challenge, playerNumber: role, savedOrder } = JSON.parse(sequenceSyncData) as {
+      challenge: Hunt1Challenge;
+      playerNumber: 1 | 2;
+      savedOrder: string[] | null;
+    };
+    const roleDefault = challenge === 6 ? (role === 1 ? CONCLUSION_ARCHIVE : CONCLUSION_FUTURE) : TASKS[challenge].initial;
     setSequence(savedOrder ?? roleDefault);
-  }, [state?.currentChallenge, state?.incidentConclusion?.archivistInterpretation, state?.incidentConclusion?.trackerInterpretation, playerNumber]);
+  }, [sequenceSyncData]);
 
   if (!state) return <div className={styles.loading}>Connecting to the shared Hunt I investigation…</div>;
   const challenge = state.currentChallenge;
@@ -83,7 +91,7 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
   const priorTasksReady = task.key !== 'incidentConclusion'
     || Object.entries(state.taskCompleted).filter(([key]) => key !== 'incidentConclusion').every(([, done]) => done);
   const submittedAlready = challenge === 6 && !!state.subtasks[actor === 'archivist' ? 'conclusionArchivist' : 'conclusionTracker'];
-  const canSubmit = !state.completed && evidenceReady && priorTasksReady && !submittedAlready
+  const canSubmit = !state.completed && !state.taskCompleted[task.key] && evidenceReady && priorTasksReady && !submittedAlready
     && (task.submitter === 'team' || task.submitter === actor);
   const unlockedObjects = state.availableInteractables.filter((id) => !id.startsWith('optional'));
   const optionalFound = Object.values(state.optionalScores).reduce((sum, value) => sum + value, 0);
@@ -100,6 +108,7 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
   const observationPuzzle = state.observationTimeline;
   const signalPuzzle = state.signalReconstruction;
   const reportOrder = actor === 'archivist' ? reportPuzzle?.archivistOrder : reportPuzzle?.trackerOrder;
+  const reportOrderAlreadySubmitted = !!reportOrder && reportOrder.join('|') === sequence.join('|');
   const submitReportOrder = async () => {
     if (workingSubmit || working) return;
     setWorkingSubmit(true);
@@ -160,25 +169,39 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
 
     {!state.completed && briefOpen && <div className={`${styles.reconstruction} ${actor === 'archivist' ? styles.pastBrief : styles.futureBrief}`} id={`hunt1-reconstruction-${actor}`} aria-label={`${actor} ${task.title} reconstruction`}>
       <header>
-        <span>ACTIVE INVESTIGATION · {task.title.toUpperCase()}</span>
+        <span>{state.taskCompleted[task.key] ? 'VERIFIED INVESTIGATION' : 'ACTIVE INVESTIGATION'} · {task.title.toUpperCase()}</span>
         <b>{task.points} POINTS</b>
         <button className={styles.hideBrief} type="button" onClick={() => setBriefOpen(false)} aria-label="Hide task brief">Hide</button>
       </header>
       <p className={actor === 'archivist' ? styles.pastText : styles.futureText}>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'} — {task.objective[actor]}</p>
-      <p className={styles.fieldInstructions}>FIELDWORK: Move to each listed object in your timeline and press {actor === 'archivist' ? 'E' : 'Enter'} to examine it. Then open Incident evidence to compare the finding with your partner’s timeline. Evidence alone does not complete the task; arrange or interpret it here and submit for verification.</p>
+      <p className={styles.fieldInstructions}>FIELDWORK: Move to each listed object in your timeline and press {actor === 'archivist' ? 'E' : 'Enter'} to examine it. Review findings in the shared journal ({actor === 'archivist' ? 'Q' : 'P'}) and compare them with your partner’s timeline. Evidence alone does not complete the task; arrange or interpret it here and submit for verification.</p>
       <div className={styles.objects} aria-label="Evidence to examine">
         {unlockedObjects.length === 0 ? <span>Both investigators’ evidence is needed before reconstruction.</span> : unlockedObjects.map((id) => <span key={id}>{OBJECT_LABELS[id] ?? id}</span>)}
         {state.availableInteractables.some((id) => id.startsWith('optional')) && <span>Optional evidence may also be hidden in this hunt.</span>}
       </div>
       {challenge === 2 && evidenceReady ? <section className={styles.reportCoop} aria-label="Missing Report cooperative reconstruction">
-        <header><span>PAST INDEX ↔ FUTURE FRAGMENTS</span><b>RECONSTRUCTION {reportPuzzle?.reconstructionVersion ?? 1}</b></header>
+        <header><span>PAST INDEX ↔ FUTURE FRAGMENTS</span><b>150 POINTS AFTER JOINT VERIFICATION</b></header>
+        <div className={styles.reportSteps} role="status" aria-live="polite">
+          <span>Archivist index: {reportPuzzle?.archivistValid ? 'verified' : reportPuzzle?.archivistOrder ? 'needs correction' : 'waiting'}</span>
+          <span>Tracker fragments: {reportPuzzle?.trackerValid ? 'verified' : reportPuzzle?.trackerOrder ? 'needs correction' : 'waiting'}</span>
+          <span>Joint confirmations: {reportPuzzle?.confirmations.archivist === reportPuzzle?.reconstructionVersion ? 'Archivist confirmed' : 'Archivist waiting'} · {reportPuzzle?.confirmations.tracker === reportPuzzle?.reconstructionVersion ? 'Tracker confirmed' : 'Tracker waiting'}</span>
+          <b>{actor === 'archivist' && reportPuzzle?.archivistValid && !reportPuzzle.trackerValid
+            ? 'Next: use the Tracker panel on the left to arrange and submit the Future fragments in this same team session.'
+            : actor === 'tracker' && reportPuzzle?.trackerValid && !reportPuzzle.archivistValid
+              ? 'Next: use the Archivist panel on the right to submit the Past index in this same team session.'
+              : reportPuzzle?.archivistValid && reportPuzzle.trackerValid
+                ? 'Both arrangements are verified. Confirm once in each investigator panel; Task 3 unlocks after both confirmations.'
+                : 'Submit each investigator’s own arrangement in the two panels. Both correct arrangements and both confirmations are required to unlock Task 3.'}</b>
+        </div>
         {actor === 'archivist' ? <>
           <p className={styles.pastText}>ARCHIVIST · HISTORICAL INDEX — Interpret the filing notes. The report opens with its purpose, follows with the apparatus, places safeguards before the findings, and ends with the result.</p>
           <p>Arrange the index entries, then submit your decoded order. The Tracker will receive it in the shared investigation once recorded.</p>
         </> : <>
           <p className={styles.futureText}>TRACKER · SHREDDED REPORT — Four loose fragments have no printed numbers. Arrange the physical sections using the Archivist’s decoded index when it is shared.</p>
           {reportPuzzle?.archivistValid && <p className={styles.decodedOrder}>ARCHIVIST’S DECODED INDEX: {reportPuzzle.archivistOrder?.map((piece) => TASKS[2].labels[piece]).join(' → ')}</p>}
-          {!reportPuzzle?.archivistOrder && <p className={styles.waiting}>Waiting for the Archivist to decode the historical index.</p>}
+          {!reportPuzzle?.archivistValid && <p className={styles.waiting}>{reportPuzzle?.archivistOrder
+            ? 'The Archivist’s index is not verified yet. Use the filing evidence to arrange the fragments independently.'
+            : 'Submit the Archivist index from the panel on the right. The Tracker fragments can be arranged here in the left panel.'}</p>}
         </>}
         <ol className={styles.sequenceBoard} aria-label={actor === 'archivist' ? 'Historical index entries' : 'Shredded report fragments'}>
           {sequence.map((piece, index) => <li key={piece} draggable onDragStart={() => setDragIndex(index)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragIndex !== null) setSequence((old) => movePiece(old, dragIndex, index)); setDragIndex(null); }}>
@@ -187,8 +210,8 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
             <button type="button" aria-label={`Move ${TASKS[2].labels[piece]} later`} disabled={index === sequence.length - 1} onClick={() => setSequence((old) => movePiece(old, index, index + 1))}>↓</button>
           </li>)}
         </ol>
-        <button className={styles.submit} type="button" disabled={working || workingSubmit} onClick={() => { void submitReportOrder(); }}>
-          {workingSubmit ? 'Recording…' : reportOrder && reportOrder.join('|') === sequence.join('|') ? 'Order submitted' : actor === 'archivist' ? 'Submit decoded index' : 'Submit reconstructed report'}
+        <button className={styles.submit} type="button" disabled={working || workingSubmit || reportOrderAlreadySubmitted || (actor === 'tracker' && !reportPuzzle?.archivistValid)} onClick={() => { void submitReportOrder(); }}>
+          {workingSubmit ? 'Recording…' : reportOrderAlreadySubmitted ? actor === 'archivist' ? 'Index submitted · waiting for Tracker' : reportPuzzle?.archivistValid ? 'Fragments submitted · waiting for confirmations' : 'Fragments submitted · waiting for Archivist' : actor === 'archivist' ? 'Submit decoded index' : 'Submit reconstructed report'}
         </button>
         {reportPuzzle?.archivistOrder && reportPuzzle.trackerOrder && <div className={styles.reportCompare}>
           <p>ARCHIVIST: {reportPuzzle.archivistOrder.map((piece) => TASKS[2].labels[piece]).join(' → ')}</p>
@@ -297,7 +320,7 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
           </li>)}
         </ol>
         <button className={styles.submit} type="button" disabled={!canSubmit || working || workingSubmit} onClick={() => { void reconstruct(); }}>
-          {workingSubmit ? 'Reconstructing…' : submittedAlready ? 'Your conclusion is confirmed' : task.submitter !== 'team' && task.submitter !== actor ? `Waiting for ${task.submitter}` : 'Reconstruct from both timelines'}
+          {workingSubmit ? 'Reconstructing…' : state.taskCompleted[task.key] ? 'Task verified' : submittedAlready ? 'Your conclusion is confirmed' : task.submitter !== 'team' && task.submitter !== actor ? `Waiting for ${task.submitter}` : 'Reconstruct from both timelines'}
         </button>
       </> : <p className={styles.waiting}>Examine the required Past and Future objects in the active investigation to unlock the reconstruction board.</p>}
       <button className={styles.hint} type="button" disabled={working || (state.hintUses[String(challenge)] ?? 0) >= 2} onClick={() => onHint(actor)}>Request field note · −10 points</button>
@@ -307,24 +330,12 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
     </button>}
 
     {showOverview && <div className={styles.toolbar}>
-      <button onClick={() => setJournalOpen((open) => !open)}>Incident evidence · {state.evidence.length}</button>
       {message && <span role="status">{message}</span>}
       <span>HUNT I SCORE {state.score} · PENALTIES −{state.penalties}</span>
       <details className={styles.teamScoreDetails}><summary>Score breakdown</summary>
         <span>{TASK_KEYS.map((number) => `${TASKS[number].title} ${state.taskScores[TASKS[number].key]}`).join(' · ')} · Optional ${optionalFound} · Penalties −${state.penalties}</span>
       </details>
     </div>}
-    {showOverview && journalOpen && <aside className={styles.journal}>
-      <button className={styles.close} onClick={() => setJournalOpen(false)}>Close</button>
-      <h2>Shared incident evidence</h2>
-      {!state.evidence.length && <p>No incident evidence examined yet.</p>}
-      {[...state.evidence].reverse().map((entry) => <article key={entry.id}>
-        <small>{entry.type.toUpperCase()} · {entry.location} · {entry.discoveredBy} · Supports: {entry.relatedObjective}</small>
-        <h3>{entry.title}{entry.verified ? ' · VERIFIED' : ''}</h3>
-        <p>{entry.content}</p>
-        <p><b>Why it matters:</b> {entry.inference}</p>
-      </article>)}
-    </aside>}
     {showOverview && state.completed && <div className={styles.completed} role="status">
       <b>THE FORGOTTEN INCIDENT RECONSTRUCTED</b><span>Hunt I complete · {state.score} points preserved</span>
       <article aria-label="Final incident report">

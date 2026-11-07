@@ -985,6 +985,23 @@ export function renderScene(p: SceneParams): void {
 
       ctx.fill();
       ctx.restore();
+
+      // If already examined, show clear completion indicator
+      const isExamined = !!state.completed[object.id]
+        || !!state.flags[object.id as keyof typeof state.flags]
+        || !!state.hunt2Subtasks?.[object.id]
+        || state.hunt2ObjectStates?.[object.id] === 'examined'
+        || state.hunt2ObjectStates?.[object.id] === 'inspected';
+      if (isExamined) {
+        ctx.save();
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = '#34d399';
+        ctx.shadowColor = '#059669';
+        ctx.shadowBlur = 6;
+        ctx.textAlign = 'center';
+        ctx.fillText('✓ EXAMINED', object.x, object.y - object.hitbox.h - 6);
+        ctx.restore();
+      }
     }
   }
 

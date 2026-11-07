@@ -13,7 +13,7 @@ const state: Hunt1State = {
 };
 
 describe('Hunt I reconstruction interface', () => {
-  it('opens task guidance by default and shows evidence relevance without an extra examination click', () => {
+  it('keeps task instructions visible without an incident evidence panel', () => {
     const evidenceState: Hunt1State = {
       ...state,
       evidence: [{
@@ -24,9 +24,24 @@ describe('Hunt I reconstruction interface', () => {
     };
     render(<Hunt1Progress state={evidenceState} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
     expect(screen.getByText(/Move to each listed object in your timeline and press E/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Incident evidence/ }));
-    expect(screen.getByText(/Compare this entry with the Future tracks/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review findings in the shared journal \(Q\)/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Incident evidence/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/The last visitor had no badge/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Examine evidence' })).not.toBeInTheDocument();
+  });
+
+  it('does not render a separate evidence tray over the room', () => {
+    const evidenceState: Hunt1State = {
+      ...state,
+      evidence: [{
+        id: 'visitorLedger', title: 'Reception visitor ledger', location: 'Reception — Past', discoveredBy: 'archivist',
+        type: 'evidence', content: 'The last visitor had no badge.', inference: 'Compare this entry with the Future tracks.',
+        relatedObjective: 'The Last Visitor', verified: false, createdAt: new Date().toISOString(),
+      }],
+    };
+    render(<Hunt1Progress state={evidenceState} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.queryByRole('button', { name: /Incident evidence/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/evidence details/i)).not.toBeInTheDocument();
   });
 
   it('lets players hide and reopen the task brief to clear the room view', () => {
@@ -52,6 +67,16 @@ describe('Hunt I reconstruction interface', () => {
     expect(screen.getByRole('button', { name: 'Waiting for archivist' })).toBeDisabled();
   });
 
+  it('shows a completed task as verified instead of waiting for the Archivist', () => {
+    const completedState: Hunt1State = {
+      ...state,
+      taskCompleted: { ...state.taskCompleted, lastVisitor: true },
+    };
+    render(<Hunt1Progress state={completedState} playerNumber={2} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Task verified' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Waiting for archivist' })).not.toBeInTheDocument();
+  });
+
   it('shows the Archivist a decodable index and sends an authenticated-role submission', () => {
     const reportState: Hunt1State = { ...state, currentChallenge: 2, subtasks: { archiveIndex: true, shreddedReport: true }, missingReport: { reconstructionVersion: 1, archivistOrder: null, archivistValid: false, trackerOrder: null, trackerValid: false, confirmations: {} } };
     const onSpecialAction = vi.fn().mockResolvedValue({ success: true, message: 'decoded', state: reportState });
@@ -61,15 +86,72 @@ describe('Hunt I reconstruction interface', () => {
     expect(onSpecialAction).toHaveBeenCalledWith('archivist', 'missingReportArchivist', { sequence: ['result', 'safeguards', 'purpose', 'apparatus'] });
   });
 
-  it('shows the shared decoded order without auto-arranging the Tracker fragments', () => {
-    const reportState: Hunt1State = { ...state, currentChallenge: 2, subtasks: { archiveIndex: true, shreddedReport: true }, missingReport: { reconstructionVersion: 4, archivistOrder: ['purpose', 'apparatus', 'safeguards', 'result'], archivistValid: true, trackerOrder: null, trackerValid: false, confirmations: {} } };
-    render(<Hunt1Progress state={reportState} playerNumber={2} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
-    expect(screen.getByText(/ARCHIVIST’S DECODED INDEX:/)).toBeInTheDocument();
-    expect(screen.getByText('Purpose fragment')).toBeInTheDocument();
-    expect(screen.queryByText('1 · Purpose')).not.toBeInTheDocument();
+  it('explains that the Tracker submits from the other panel in the same session', () => {
+    const reportState: Hunt1State = {
+      ...state,
+      currentChallenge: 2,
+      score: 150,
+      subtasks: { archiveIndex: true, shreddedReport: true },
+      missingReport: {
+        reconstructionVersion: 2,
+        archivistOrder: ['purpose', 'apparatus', 'safeguards', 'result'],
+        archivistValid: true,
+        trackerOrder: null,
+        trackerValid: false,
+        confirmations: {},
+      },
+    };
+    render(<Hunt1Progress state={reportState} playerNumber={1} message="Historical index decoded." working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.getByText(/use the Tracker panel on the left .* same team session/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Index submitted · waiting for Tracker' })).toBeDisabled();
+    expect(screen.getByText('HUNT I SCORE 150 · PENALTIES −0')).toBeInTheDocument();
+    expect(screen.getAllByRole('status').some((status) => status.textContent === 'Historical index decoded.')).toBe(true);
   });
 
-  it('keeps the Future circuit unsolved until the Tracker arranges and submits connections', () => {
+  it('marks Task 2 complete and Task 3 active after the joint confirmation state arrives', () => {
+    const completedState: Hunt1State = {
+      ...state,
+      currentChallenge: 3,
+      score: 250,
+      subtasks: { archiveIndex: true, shreddedReport: true },
+      taskCompleted: { ...state.taskCompleted, lastVisitor: true, missingReport: true },
+      taskScores: { ...state.taskScores, lastVisitor: 100, missingReport: 150 },
+    };
+    render(<Hunt1Progress state={completedState} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    const task2 = screen.getByText('TASK 2 · THE MISSING REPORT').closest('section');
+    const task3 = screen.getByText('TASK 3 · THE POWER FAILURE').closest('section');
+    expect(task2).toHaveTextContent('+150');
+    expect(task2).toHaveTextContent('✓');
+    expect(task3).toHaveTextContent('ACTIVE');
+  });
+
+  it('shows the Tracker arrangement when both clues are found without filling in the answer', () => {
+    const reportState: Hunt1State = { ...state, currentChallenge: 2, subtasks: { archiveIndex: false, shreddedReport: false }, missingReport: { reconstructionVersion: 4, archivistOrder: null, archivistValid: false, trackerOrder: null, trackerValid: false, confirmations: {} } };
+    const view = render(<Hunt1Progress state={reportState} playerNumber={2} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.queryByLabelText('Missing Report cooperative reconstruction')).not.toBeInTheDocument();
+
+    view.rerender(<Hunt1Progress state={{ ...reportState, subtasks: { archiveIndex: true, shreddedReport: true } }} playerNumber={2} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.getByLabelText('Missing Report cooperative reconstruction')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit reconstructed report' })).toBeDisabled();
+
+    const verifiedReportState: Hunt1State = {
+      ...reportState,
+      subtasks: { archiveIndex: true, shreddedReport: true },
+      missingReport: { ...reportState.missingReport!, archivistOrder: ['purpose', 'apparatus', 'safeguards', 'result'], archivistValid: true },
+    };
+    view.rerender(<Hunt1Progress state={verifiedReportState} playerNumber={2} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.getByText(/ARCHIVIST’S DECODED INDEX:/)).toBeInTheDocument();
+    const fragmentList = screen.getByRole('list', { name: 'Shredded report fragments' });
+    expect(Array.from(fragmentList.querySelectorAll('li span')).map((item) => item.textContent)).toEqual([
+      'Result fragment',
+      'Safeguards fragment',
+      'Purpose fragment',
+      'Apparatus fragment',
+    ]);
+    expect(screen.getByRole('button', { name: 'Submit reconstructed report' })).toBeEnabled();
+  });
+
+  it('shows the Archivist circuit as a starting arrangement without automatically restoring power', () => {
     const circuitState: Hunt1State = {
       ...state, currentChallenge: 3, subtasks: { generatorLog: true, burntRelay: true, openGround: true },
       powerFailure: { archivistConnections: ['generator-relay', 'relay-load', 'load-ground', 'ground-frame'], archivistValid: true, trackerConnections: null, trackerValid: false },
@@ -127,7 +209,7 @@ describe('Hunt I reconstruction interface', () => {
     expect(onSpecialAction).toHaveBeenCalledWith('archivist', 'signalArchivist', { sequence: ['transmit', 'intake', 'observer', 'ground'] });
   });
 
-  it('shows the Tracker the submitted route without auto-connecting the Future console', () => {
+  it('shows the Tracker the Archivist route without auto-connecting the Future console', () => {
     const signalState: Hunt1State = {
       ...state, currentChallenge: 5, subtasks: { signalChart: true, cableJunction: true },
       signalReconstruction: { archivistRoute: ['intake', 'ground', 'observer', 'transmit'], archivistValid: true, trackerRoute: null, trackerValid: false },

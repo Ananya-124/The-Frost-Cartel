@@ -62,7 +62,7 @@ export const ROUNDS_DATA: RoundConfig[] = [
   {
     id: 'round-03',
     number: '03',
-    title: 'PARADOX HUNT',
+    title: 'PARADOX LAB',
     tagline: 'A Past and Future Investigation',
     statusText: 'ROUND 03 FOUNDATION • READY',
     statusBadge: 'active',
@@ -90,4 +90,3 @@ export const ROUNDS_DATA: RoundConfig[] = [
     isAccessible: true,
   },
 ];
-

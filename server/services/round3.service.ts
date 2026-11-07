@@ -1,4 +1,3 @@
-import * as crypto from 'node:crypto';
 import { db } from '../../database/db.ts';
 import { ROUND3_CARD_CATALOG, ROUND3_DEVELOPMENT_SAMPLE_INVENTORY, type Round3CardId } from '../../src/constants/round3.cards.ts';
 import type { Round3Timeline } from '../../src/types/round3.types.ts';
@@ -250,7 +249,7 @@ export function activateRound3Card(teamId: string, cardId: string, requestedSour
   if (!activation) return { error: 'This team does not own that card or has no charges remaining.' };
   const now = new Date().toISOString();
   db.prepare('INSERT INTO round3_card_usage (id, team_id, card_id, source, used_at, remaining_quantity) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(`r3use-${crypto.randomUUID()}`, teamId, cardId, activation.source, now, activation.remainingQuantity);
+    .run(`r3use-${globalThis.crypto.randomUUID()}`, teamId, cardId, activation.source, now, activation.remainingQuantity);
   db.prepare('UPDATE round3_sessions SET updated_at = ? WHERE team_id = ?').run(now, teamId);
   return { cardId, source: activation.source, remainingQuantity: activation.remainingQuantity, consumption: definition.consumption };
 }

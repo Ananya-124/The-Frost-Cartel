@@ -69,13 +69,13 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
     {state.stage === 4 && <section className={styles.task}><h3>Capture the weakened entity</h3><p>{state.boss.warning ?? 'Containment warning approaching.'}</p><strong>Containment room · Stability {state.boss.stability}/6 · Next control: {nextBossActor === 'archivist' ? 'Archivist · Past' : 'Tracker · Future'}</strong><small>{nextBossActor === actor ? 'Walk to the control named in this warning in your timeline and press E within 12 seconds. The roles alternate; read the next warning after each successful action.' : 'Your partner must operate the named control in their timeline before the sequence advances. Stay ready for your turn.'}</small></section>}
     {state.completed && <div className={styles.complete} role="status">CONTAINMENT COMPLETE · Hunt III score {state.score}/1,600. The entity has been captured.</div>}
     <details className={styles.journal} open={journalOpen} onToggle={(event) => setJournalOpen(event.currentTarget.open)}>
-      <summary>Shared evidence journal · {state.journal?.length ?? 0}</summary>
-      <p>These findings are shared across both timelines. Use them to support a submission; an unverified clue is not itself task completion.</p>
+      <summary><span>Shared evidence journal</span><b>{state.journal?.length ?? 0} FINDINGS</b></summary>
+      <p className={styles.journalGuide}>Both timelines can review these findings. Use verified clues to support your submission; collecting evidence alone does not complete a task.</p>
       {[...(state.journal ?? [])].reverse().map((entry) => <article key={entry.id}>
-        <small>HUNT III · {entry.relatedObjective} · {entry.location} · {entry.actor === 'team' ? 'TEAM' : entry.actor.toUpperCase()}{entry.verified ? ' · VERIFIED' : ''}</small>
+        <small><span>{entry.actor === 'team' ? 'TEAM' : entry.actor.toUpperCase()}</span> · {entry.location} · {entry.relatedObjective} {entry.verified && <b className={styles.verified}>VERIFIED</b>}</small>
         <b>{entry.title}</b><p>{entry.content}</p>
       </article>)}
-      {!state.journal?.length && <small>No evidence recorded yet. Examine the named objects in the active stage.</small>}
+      {!state.journal?.length && <p className={styles.emptyJournal}>No evidence recorded yet. Examine the named objects in the active stage, then return here to compare findings.</p>}
     </details>
   </section>;
 }

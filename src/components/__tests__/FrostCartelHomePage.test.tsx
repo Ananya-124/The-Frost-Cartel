@@ -50,7 +50,7 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     expect(round2Btn).toBeEnabled();
 
     // Round 3
-    expect(screen.getByText('PARADOX HUNT')).toBeInTheDocument();
+    expect(screen.getByText('PARADOX LAB')).toBeInTheDocument();
     expect(screen.getByText('ROUND 03 FOUNDATION • READY')).toBeInTheDocument();
     const round3Btn = screen.getByRole('button', { name: /ENTER ROUND 03/i });
     expect(round3Btn).toBeEnabled();

@@ -1,6 +1,6 @@
 .game {
   display: flex;
-  height: calc(100% - 34px);
+  height: calc(100% - 70px);
 }
 
 .hidden {
@@ -129,6 +129,7 @@
 .entry {
   padding: 5px 0;
   border-top: 1px solid #3a2f1e;
+  white-space: pre-line;
 }
 
 .entry b {
@@ -325,36 +326,144 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34px;
+  min-height: 70px;
   z-index: 8;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px;
-  background: #050403;
-  border-top: 1px solid var(--border);
-  font-size: 11px;
+  gap: 14px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, #090a0beF, #12110fF2 50%, #090a0beF);
+  border-top: 1px solid #a68a58;
+  box-shadow: 0 -8px 26px #0009;
+  font: 10px/1.5 system-ui, sans-serif;
 }
 
 .bar kbd {
-  background: #2a2218;
-  border: 1px solid var(--border);
-  padding: 0 4px;
-  border-radius: 3px;
+  display: inline-block;
+  padding: 1px 5px;
+  color: #f0dfb8;
+  background: #25231e;
+  border: 1px solid #776747;
+  border-radius: 4px;
+  font: 700 9px/1.4 ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.controlGroup,
+.powerGroup {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+
+.controlGroup > b,
+.powerGroup > b {
+  color: #e7c982;
+  font: 700 9px/1.2 system-ui, sans-serif;
+  letter-spacing: .12em;
+}
+
+.controlGroup > b span {
+  margin-left: 4px;
+  color: #bcae8c;
+  font-size: 8px;
+}
+
+.pastControls > b {
+  color: #f0c77d;
+}
+
+.futureControls > b {
+  color: #91d7d8;
+}
+
+.controlGroup > div {
+  color: #d3d0c7;
+  white-space: nowrap;
+}
+
+.controlGroup i {
+  padding: 0 3px;
+  color: #8e8266;
+  font-style: normal;
 }
 
 .cards {
   display: flex;
-  gap: 6px;
+  justify-content: center;
+  gap: 5px;
 }
 
 .cards button {
-  padding: 2px 8px;
-  font-size: 11px;
+  max-width: 150px;
+  overflow: hidden;
+  padding: 4px 7px;
+  border-color: #655b44;
+  border-radius: 5px;
+  font: 600 9px/1.2 system-ui, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cards button:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+@media (max-width: 900px) {
+  .bar {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    min-height: 104px;
+  }
+
+  .game {
+    height: calc(100% - 104px);
+  }
+
+  .powerGroup {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .controlGroup > div {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 560px) {
+  .bar {
+    min-height: 126px;
+    gap: 5px;
+    padding: 7px;
+    font-size: 9px;
+  }
+
+  .game {
+    height: calc(100% - 126px);
+  }
+
+  .controlGroup > div {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    gap: 2px 5px;
+    font-size: 8px;
+  }
+
+  .controlGroup i {
+    display: none;
+  }
+
+  .cards {
+    flex-wrap: wrap;
+  }
+
+  .cards button {
+    max-width: 130px;
+    font-size: 8px;
+  }
 }

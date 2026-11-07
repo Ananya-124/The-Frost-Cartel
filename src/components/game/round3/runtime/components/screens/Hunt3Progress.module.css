@@ -4,3 +4,27 @@
 .root header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;border-bottom:1px solid #b7955b55;padding-bottom:.6rem}.root header small{color:#d4b06c;letter-spacing:.14em;font-size:9px}.root h2{font:600 17px Georgia,serif;margin:.2rem 0}.root header strong{color:#f2ca7d;white-space:nowrap}.status{margin:.7rem 0;padding:.6rem;background:#15202a;border-left:2px solid #82b4c2}.progress{font-size:10px;color:#a9a294;margin-bottom:.6rem}.task{border-top:1px solid #ffffff20;padding:.7rem 0}.task h3{font:600 15px Georgia,serif;color:#e6c789;margin:0}.task p{color:#c2bcae;margin:.4rem 0 .7rem}.task small{display:block;color:#b3ad9f;margin:.4rem 0}.actions,.seals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem;margin:.6rem 0}.seals{grid-template-columns:1fr}.seals>div{display:grid;grid-template-columns:1fr auto;gap:.35rem;padding:.55rem;border:1px solid #ffffff20;border-radius:7px}.seals>div>span{font-size:10px;color:#bdcfca}.seals button{grid-column:span 2}.root button,.root select{border:1px solid #a98b5a88;border-radius:5px;background:#17191c;color:#e9e1d1;padding:.4rem .5rem;font:inherit}.root button{cursor:pointer;text-align:left}.root button:hover:not(:disabled){background:#30281c}.root button:disabled{opacity:.45;cursor:not-allowed}.root label{display:grid;gap:.25rem;color:#bdb5a6;margin:.35rem 0}.sequence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem;margin:.5rem 0}.trial{display:grid;gap:.4rem;margin:.7rem 0;padding:.6rem;border:1px solid #8fb6c644}.secret{border-top:1px solid #ffffff20;padding:.7rem 0;color:#b8c4bd}.secret summary{cursor:pointer;color:#c5a568}.complete{margin-top:.8rem;padding:.8rem;border:1px solid #a9d3a2;color:#bce8b0;background:#162518;text-align:center;font-weight:700;letter-spacing:.06em}.loading{position:fixed;right:1rem;top:5.25rem;background:#101419;color:#ddd;padding:1rem;border:1px solid #a98b5a}
 .journal{border-top:1px solid #ffffff20;padding:.7rem 0;color:#c4c0b5}.journal summary{cursor:pointer;color:#d7c08d;font-weight:700}.journal>p{font-size:11px}.journal article{padding:.5rem 0;border-top:1px solid #ffffff18}.journal article small{display:block;color:#a8b6ae;font-size:9px}.journal article b{color:#ecd39d}.journal article p{margin:.25rem 0}.complete{margin-top:.8rem;padding:.8rem;border:1px solid #a9d3a2;color:#bce8b0;background:#162518;text-align:center;font-weight:700;letter-spacing:.06em}.loading{position:fixed;right:1rem;top:5.25rem;background:#101419;color:#ddd;padding:1rem;border:1px solid #a98b5a}
 @media(max-width:760px){.root{top:auto;bottom:4.5rem;width:calc(50vw - .75rem);max-height:40vh;padding:.55rem;font-size:10px}.archivistPanel{right:calc(50% + .25rem)}.trackerPanel{right:.5rem}.sequence{grid-template-columns:1fr}}
+
+.root{font-size:13px;line-height:1.55}
+.root h2{font-size:18px}
+.status{padding:.7rem;color:#e0e6e5;border-left-width:3px}
+.progress{color:#bdb6a8}
+.task{padding:.8rem 0}
+.task h3{font-size:16px}
+.task p{color:#ddd8cd}
+.task small{color:#c3bdae;line-height:1.55}
+.journal{margin-top:.8rem;padding:.7rem .8rem;color:#d3d8d3;background:linear-gradient(135deg,#101918,#0b1012);border:1px solid #60817b;border-radius:8px}
+.journal summary{display:flex;align-items:center;justify-content:space-between;gap:.75rem;cursor:pointer;color:#b8e4d7;font-weight:700;letter-spacing:.1em;list-style:none;text-transform:uppercase}
+.journal summary::-webkit-details-marker{display:none}
+.journal summary::after{content:'+';color:#b8e4d7;font-size:16px}
+.journal[open] summary::after{content:'−'}
+.journal summary b{margin-left:auto;padding:.15rem .45rem;color:#d8d1b8;background:#24302d;border-radius:999px;font-size:9px;letter-spacing:.06em}
+.journalGuide,.emptyJournal{margin:.65rem 0;color:#c1cbc4;font-size:11px;line-height:1.5}
+.journal article{margin-top:.55rem;padding:.65rem .7rem;background:#151d1c;border:1px solid #ffffff18;border-left:2px solid #78b9a2;border-radius:5px}
+.journal article small{display:block;color:#afc3b6;font-size:9px;line-height:1.5}
+.journal article small span{color:#c7dccb;font-weight:700}
+.journal article .verified{margin-left:.25rem;color:#9be0ad;font-size:9px}
+.journal article>b{display:block;margin:.25rem 0;color:#f0d7a4;font-size:12px}
+.journal article p{margin:.2rem 0;color:#d4d8d1;font-size:11px}
+.emptyJournal{padding:.65rem;background:#151d1c;border:1px dashed #536660;border-radius:5px}
+@media(max-width:760px){.root{bottom:8.5rem;max-height:calc(100vh - 11rem);font-size:11px}}

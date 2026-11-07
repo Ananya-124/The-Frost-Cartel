@@ -21,7 +21,7 @@ export default function MenuScreen({ visible, canvasRef, teamName, cards, invent
       <canvas ref={canvasRef} className={styles.background} />
       <div className={styles.content}>
         <button className={styles.exit} onClick={onExit}>RETURN TO CARTEL</button>
-        <h1 className={styles.title}>PARADOX HUNT</h1>
+        <h1 className={styles.title}>PARADOX LAB</h1>
         <p className={styles.story}>
           Ward 9 of the Halloran Institute vanished in one night. Thirty years apart, two
           investigators walk the same halls: one through its last working day, one through what

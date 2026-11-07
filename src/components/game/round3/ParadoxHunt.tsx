@@ -3,6 +3,7 @@ import type { TeamSession } from '../../../types/team.types';
 import type { Round3StateResponse } from '../../../types/round3.types';
 import type { Round3RunState } from '../../../types/round3.types';
 import { round3Service } from '../../../services/round3Service';
+import { authService } from '../../../services/authService';
 import { inventoryToPowerCards } from './runtime/inventoryCards';
 import GameScreen from './runtime/components/screens/GameScreen';
 import './runtime/styles/game.css';
@@ -47,21 +48,27 @@ const parseRunState = (value: unknown): Round3RunState => {
 export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome }) => {
   const [state, setState] = useState<Round3StateResponse | null>(null);
   const [run, setRun] = useState<Round3RunState | null>(null);
+  const [playerNumber, setPlayerNumber] = useState<1 | 2 | null>(session.playerNumber ?? null);
   const [error, setError] = useState('');
 
   const connect = useCallback(async () => {
     setError('');
     try {
-      const [sessionState, runState] = await Promise.all([round3Service.openSession(), round3Service.getRun().catch(() => ({ success: false, run: createDefaultRun() }))]);
+      const [sessionState, runState, authenticatedPlayer] = await Promise.all([
+        round3Service.openSession(),
+        round3Service.getRun().catch(() => ({ success: false, run: createDefaultRun() })),
+        session.playerNumber ? Promise.resolve(session.playerNumber) : authService.getPlayerNumber(),
+      ]);
       setState(sessionState);
       setRun(parseRunState(runState));
+      setPlayerNumber(authenticatedPlayer);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not open the Round 3 session.';
       setError(message.includes('No squad token') || message.includes('Authentication required')
         ? 'Your browser session is not connected to the game server. Sign out, then log in again with the backend running.'
         : message);
     }
-  }, []);
+  }, [session.playerNumber]);
 
   useEffect(() => { void connect(); }, [connect]);
 
@@ -74,7 +81,7 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
   const saveGameState = useCallback((gameState: unknown) => round3Service.saveGameState(gameState), []);
   const completeHunt = useCallback(() => round3Service.completeHunt(), []);
 
-  if (state && run) {
+  if (state && run && playerNumber) {
     return (
       <div className="ph-game-root">
         <GameScreen
@@ -83,6 +90,7 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
           inventory={state.inventory}
           savedGameState={state.session.playerProgress.engine}
           initialRun={run}
+          playerNumber={playerNumber}
           externalError={error}
           onExit={onReturnHome}
           onSaveGameState={saveGameState}
@@ -98,7 +106,7 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
       <div className="max-w-5xl mx-auto">
         <header className="flex items-center justify-between gap-4 mb-8">
           <button onClick={onReturnHome} className="font-cinzel text-xs tracking-widest text-cartel-silver/70 hover:text-white cursor-pointer">← RETURN</button>
-          <div className="text-right"><div className="font-cinzel text-xs text-cartel-silver/70">{session.teamName}</div><div className="font-gothic text-3xl sm:text-4xl text-cartel-cyan">PARADOX HUNT</div></div>
+          <div className="text-right"><div className="font-cinzel text-xs text-cartel-silver/70">{session.teamName}</div><div className="font-gothic text-3xl sm:text-4xl text-cartel-cyan">PARADOX LAB</div></div>
         </header>
 
         <section className="stone-panel rounded-xl p-5 sm:p-7">
