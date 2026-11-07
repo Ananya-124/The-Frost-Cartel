@@ -14,6 +14,20 @@ import { ParadoxHunt } from '../game/round3/ParadoxHunt';
 import { CornerQuickNav } from '../layout/CornerQuickNav';
 import { GothicLeaderboardModal } from '../leaderboard/GothicLeaderboardModal';
 
+function resolveChamberFromLocation(
+  hash: string,
+  search: string,
+  current: number | null
+): number | null {
+  if (isRound2Route(hash)) return 2;
+  if (isRound3Route(hash, search)) return 3;
+  if (isRound4Route(hash, search)) return 4;
+  const params = new URLSearchParams(search);
+  if (params.get('round') === '1') return 1;
+  if (current === 4 || current === 3 || current === 2) return null;
+  return current;
+}
+
 export const FrostCartelHomePage: React.FC = () => {
   const [session, setSession] = useState<TeamSession | null>(() => {
     const current = authService.getCurrentSession();
@@ -52,37 +66,16 @@ export const FrostCartelHomePage: React.FC = () => {
   });
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [activeChamberRound, setActiveChamberRound] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      if (isRound2Route(window.location.hash)) return 2;
-      if (isRound3Route(window.location.hash, window.location.search)) return 3;
-      if (isRound4Route(window.location.hash, window.location.search)) return 4;
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('round') === '1') return 1;
-    }
-    return null;
+    if (typeof window === 'undefined') return null;
+    return resolveChamberFromLocation(window.location.hash, window.location.search, null);
   });
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const handleRouteSync = () => {
-      if (isRound2Route(window.location.hash)) {
-        setActiveChamberRound(2);
-        return;
-      }
-      if (isRound3Route(window.location.hash, window.location.search)) {
-        setActiveChamberRound(3);
-        return;
-      }
-      if (isRound4Route(window.location.hash, window.location.search)) {
-        setActiveChamberRound(4);
-      } else {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('round') === '1') {
-          setActiveChamberRound(1);
-        } else if (activeChamberRound === 4 || activeChamberRound === 3 || activeChamberRound === 2) {
-          setActiveChamberRound(null);
-        }
-      }
+      setActiveChamberRound((prev) =>
+        resolveChamberFromLocation(window.location.hash, window.location.search, prev)
+      );
     };
     window.addEventListener('hashchange', handleRouteSync);
     window.addEventListener('popstate', handleRouteSync);
@@ -90,7 +83,7 @@ export const FrostCartelHomePage: React.FC = () => {
       window.removeEventListener('hashchange', handleRouteSync);
       window.removeEventListener('popstate', handleRouteSync);
     };
-  }, [activeChamberRound]);
+  }, []);
 
   const handleLoginSuccess = (newSession: TeamSession) => {
     setSession(newSession);

@@ -16,7 +16,7 @@ export const RoundPortalSection: React.FC<RoundPortalSectionProps> = ({
       aria-label="Frost Cartel Game Rounds"
       className="w-full max-w-7xl mx-auto px-4"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-6 lg:gap-8 items-start justify-items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-6 lg:gap-8 items-stretch justify-items-center">
         {rounds.map((round) => (
           <RoundPortalCard
             key={round.id}
