@@ -40,8 +40,8 @@ function settle() {
   const l = S.live;
   if (!l) return;
   const card = S.cards.find((c) => c.id === l.cardId);
-  if (card && l.highBidder) {
-    const t = S.teams[key(l.highBidder)];
+  const t = l.highBidder ? S.teams[key(l.highBidder)] : undefined;
+  if (card && t) {
     t.spent += l.highBid;
     t.cards.push({ id: card.id, name: card.name, price: l.highBid });
     Object.assign(card, { status: 'sold', winner: t.name, price: l.highBid });
@@ -49,7 +49,7 @@ function settle() {
   S.live = null;
   save();
 }
-setInterval(() => { if (S.live?.endsAt && Date.now() >= S.live.endsAt) settle(); }, 250);
+setInterval(() => { if (S.live?.endsAt && Date.now() >= S.live.endsAt) settle(); }, 250).unref();
 
 // ---------- Player endpoints ----------
 round2Router.get('/state', (req, res) => { res.json(view(req.query.team as string | undefined)); });
@@ -106,6 +106,7 @@ round2Router.post('/admin/reset', admin, (_req, res) => { S = fresh(); save(); r
 round2Router.delete('/admin/team/:name', admin, (req, res) => {
   const t = S.teams[key(String(req.params.name))];
   if (t?.cards.length) return fail(res, 409, 'This team already won cards.');
+  if (t && S.live?.highBidder && key(S.live.highBidder) === key(t.name)) return fail(res, 409, 'This team leads the live card. End bidding first.');
   delete S.teams[key(String(req.params.name))];
   save();
   res.json({ success: true });

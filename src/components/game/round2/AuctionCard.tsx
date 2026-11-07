@@ -1,9 +1,13 @@
-import React from 'react';
-import type { AuctionCardData } from '../../../constants/auction.constants';
+import React, { useState } from 'react';
+import type { R2Card } from '../../../services/round2Service';
+import { CARD_ART, CARD_COLOR, CARD_TITLE_COLOR } from '../../../constants/auction.constants';
 
 interface AuctionCardProps {
-  card: AuctionCardData;
+  card: R2Card;
+  /** Position in the row (staggers the animations). */
   index?: number;
+  /** Highlight as the card currently being bid on. */
+  live?: boolean;
 }
 
 /* Ornate card outline (200 x 300 box, stretched to the card; strokes stay thin) */
@@ -34,19 +38,40 @@ const CardFrame: React.FC = () => (
   </svg>
 );
 
-export const AuctionCard: React.FC<AuctionCardProps> = ({ card, index = 0 }) => {
+/** Card picture with an emoji fallback if the image file is missing. */
+export const CardArt: React.FC<{ card: R2Card; className?: string }> = ({ card, className = '' }) => {
+  const [broken, setBroken] = useState(false);
+  const src = CARD_ART[card.id];
+  if (!src || broken) {
+    return <span aria-hidden="true" className="text-6xl">{card.icon}</span>;
+  }
+  return <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} className={className} />;
+};
+
+const STATUS_TAG: Record<R2Card['status'], string> = {
+  pending: 'BASE',
+  live: 'LIVE',
+  sold: 'SOLD',
+  unsold: 'UNSOLD',
+};
+
+export const AuctionCard: React.FC<AuctionCardProps> = ({ card, index = 0, live = false }) => {
+  const isLive = live || card.status === 'live';
+  const sold = card.status === 'sold';
+  const unsold = card.status === 'unsold';
+  const price = sold && card.price !== null ? card.price : card.defaultBase;
   const vars = {
-    '--c': card.color,
-    '--t': card.titleColor,
+    '--c': CARD_COLOR,
+    '--t': CARD_TITLE_COLOR,
     '--d': `${-index * 0.8}s`,
     '--i': index,
   } as React.CSSProperties;
 
   return (
     <article
-      className="r2-card relative w-full max-w-[240px] mx-auto"
+      className={`r2-card relative w-full max-w-[240px] mx-auto ${isLive ? 'r2-card-live' : ''} ${unsold ? 'r2-card-unsold' : ''}`}
       style={vars}
-      aria-label={`${card.name}, base price ${card.basePrice} credits`}
+      aria-label={`${card.name}, ${STATUS_TAG[card.status].toLowerCase()} ${price} credits`}
     >
       <div className="r2-card-float">
         <div className="r2-card-body pt-6 pb-4">
@@ -60,27 +85,30 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ card, index = 0 }) => 
 
             {/* Art window */}
             <div className="r2-art w-full aspect-[5/4] rounded-lg overflow-hidden flex items-center justify-center">
-              <img src={card.art} alt="" loading="lazy" className="h-[88%] w-auto object-contain r2-art-img" />
+              <CardArt card={card} className="h-[88%] w-auto object-contain r2-art-img" />
               <span aria-hidden="true" className="r2-shine" />
+              {(isLive || sold || unsold) && (
+                <span className={`r2-badge r2-badge-${isLive ? 'live' : card.status}`}>{isLive ? 'LIVE' : STATUS_TAG[card.status]}</span>
+              )}
             </div>
 
             {/* Name */}
             <h3
               className="mt-3 font-cinzel font-black uppercase tracking-wide text-center text-base sm:text-lg leading-tight"
-              style={{ color: card.titleColor, textShadow: `0 0 10px ${card.color}` }}
+              style={{ color: CARD_TITLE_COLOR, textShadow: `0 0 10px ${CARD_COLOR}` }}
             >
               {card.name}
             </h3>
 
             {/* Description */}
             <p className="mt-2 w-full rounded-md bg-black/45 border border-white/10 px-2 py-2 text-center font-garamond text-sm text-cartel-ghost min-h-[3.4rem] flex items-center justify-center">
-              {card.description}
+              {sold && card.winner ? `Won by ${card.winner}` : card.description}
             </p>
 
-            {/* Base price */}
+            {/* Price */}
             <div className="r2-price mt-3 w-full rounded-full flex items-center justify-center gap-1.5 py-1 px-3">
-              <span className="text-[9px] font-cinzel font-bold tracking-widest text-cartel-silver/80">BASE</span>
-              <span className="font-cinzel font-black text-xl text-amber-100/90 leading-none">{card.basePrice}</span>
+              <span className="text-[9px] font-cinzel font-bold tracking-widest text-cartel-silver/80">{STATUS_TAG[card.status]}</span>
+              <span className="font-cinzel font-black text-xl text-amber-100/90 leading-none">{price}</span>
               <span aria-hidden="true" className="r2-pumpkin text-lg leading-none">🎃</span>
               <span className="text-[9px] font-cinzel font-bold tracking-widest text-cartel-silver/80">CR</span>
             </div>

@@ -215,3 +215,32 @@ button.r2-btn:hover {
   }
   .r2-wisp { display: none; }
 }
+
+/* ===== Live / sold / unsold states ===== */
+.r2-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid var(--c, var(--r2-orange));
+  color: var(--t, var(--r2-orange-hi));
+}
+.r2-badge-live {
+  color: #ffd9a0;
+  border-color: #ff8a2a;
+  box-shadow: 0 0 8px rgba(255, 120, 30, 0.6);
+  animation: r2Pulse 1.2s ease-in-out infinite;
+}
+.r2-badge-sold { color: #9fd8a8; border-color: #4f9a5c; }
+.r2-badge-unsold { color: #c9a0a0; border-color: #8a4a4a; }
+
+.r2-card-live .r2-frame-svg { animation-duration: 1.6s; }
+.r2-card-unsold { filter: grayscale(0.85); opacity: 0.6; }
