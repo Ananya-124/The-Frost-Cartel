@@ -73,7 +73,12 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
       },
       inventory: [], cards: [],
     };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state });
+    const initialRun = { status: 'not_started' as const, remainingMs: 25 * 60 * 1000, remainingSeconds: 1500, startedAt: null, updatedAt: new Date().toISOString() };
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => ({
+      ok: true,
+      json: async () => String(input).endsWith('/run') ? { success: true, run: initialRun }
+        : String(input).endsWith('/auth/session') ? { success: true, playerNumber: 1 } : state,
+    }));
     vi.stubGlobal('fetch', fetchMock);
     render(<FrostCartelHomePage />);
 
