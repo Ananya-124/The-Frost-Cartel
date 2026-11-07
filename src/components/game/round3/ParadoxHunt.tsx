@@ -12,6 +12,38 @@ interface ParadoxHuntProps {
   onReturnHome: () => void;
 }
 
+const createDefaultRun = (): Round3RunState => ({
+  status: 'not_started',
+  remainingMs: 25 * 60 * 1000,
+  remainingSeconds: 25 * 60,
+  startedAt: null,
+  updatedAt: new Date().toISOString(),
+});
+
+const parseRunState = (value: unknown): Round3RunState => {
+  const candidate = value && typeof value === 'object' && 'run' in value
+    ? (value as { run?: unknown }).run
+    : value;
+
+  if (!candidate || typeof candidate !== 'object') {
+    return createDefaultRun();
+  }
+
+  const source = candidate as Partial<Round3RunState>;
+  const status = source.status === 'running' || source.status === 'paused' || source.status === 'completed' || source.status === 'expired'
+    ? source.status
+    : 'not_started';
+  const remainingMs = typeof source.remainingMs === 'number' ? source.remainingMs : 25 * 60 * 1000;
+
+  return {
+    status,
+    remainingMs,
+    remainingSeconds: typeof source.remainingSeconds === 'number' ? source.remainingSeconds : Math.ceil(remainingMs / 1000),
+    startedAt: typeof source.startedAt === 'string' ? source.startedAt : null,
+    updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : new Date().toISOString(),
+  };
+};
+
 export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome }) => {
   const [state, setState] = useState<Round3StateResponse | null>(null);
   const [run, setRun] = useState<Round3RunState | null>(null);
@@ -20,9 +52,9 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
   const connect = useCallback(async () => {
     setError('');
     try {
-      const [sessionState, runState] = await Promise.all([round3Service.openSession(), round3Service.getRun()]);
+      const [sessionState, runState] = await Promise.all([round3Service.openSession(), round3Service.getRun().catch(() => ({ success: false, run: createDefaultRun() }))]);
       setState(sessionState);
-      setRun(runState.run);
+      setRun(parseRunState(runState));
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not open the Round 3 session.';
       setError(message.includes('No squad token') || message.includes('Authentication required')
