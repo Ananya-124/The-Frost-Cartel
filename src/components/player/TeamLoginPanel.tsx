@@ -51,20 +51,17 @@ export const TeamLoginPanel: React.FC<TeamLoginPanelProps> = ({
     <div className="relative w-full max-w-2xl mx-auto text-center px-4">
       {/* 1. Ancient Gothic Altar Crest / Carved Skull Sigil */}
       <div className="flex flex-col items-center mb-2">
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-cartel-amber/50 bg-black/80 flex items-center justify-center shadow-[0_0_20px_rgba(246,166,58,0.35)] mb-1">
-          <svg
-            className="w-5 h-5 sm:w-6 sm:h-6 text-cartel-amber"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
+        <div className="relative group/skull flex items-center justify-center mb-1">
+          {/* Subtle warm amber radial glow aura */}
+          <div
             aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M9 10h.01M15 10h.01" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M8 16c1.5-1 3-1 4 0 1-1 2.5-1 4 0" />
-            <line x1="12" y1="12" x2="12" y2="14" />
-          </svg>
+            className="absolute -inset-2 rounded-full bg-cartel-amber/20 blur-md opacity-70 group-hover/skull:opacity-100 transition-opacity duration-300 pointer-events-none"
+          />
+          <img
+            src="/assets/cartel_skull_crossbones.png"
+            alt="Frost Cartel Skull and Crossbones"
+            className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain drop-shadow-[0_0_16px_rgba(246,166,58,0.65)] group-hover/skull:drop-shadow-[0_0_24px_rgba(246,166,58,0.95)] group-hover/skull:scale-105 transition-all duration-300 select-none filter brightness-105"
+          />
         </div>
 
         {/* Console Heading */}
