@@ -5,9 +5,10 @@ import styles from './Hunt1Progress.module.css';
 interface Hunt1ProgressProps {
   state: Hunt1State | null;
   playerNumber: 1 | 2;
+  showOverview?: boolean;
   message: string;
   working: boolean;
-  onHint: () => void;
+  onHint: (actor: Hunt1Actor) => void;
   onSubmit: (actor: Hunt1Actor, sequence: string[]) => Promise<Hunt1ActionResult>;
   onSpecialAction: (actor: Hunt1Actor, type: string, value: unknown) => Promise<Hunt1ActionResult>;
   onContinue: () => void;
@@ -49,10 +50,10 @@ function movePiece(sequence: string[], from: number, to: number): string[] {
   return next;
 }
 
-export default function Hunt1Progress({ state, playerNumber, message, working, onHint, onSubmit, onSpecialAction, onContinue }: Hunt1ProgressProps) {
-  const [tasksOpen, setTasksOpen] = useState(false);
+export default function Hunt1Progress({ state, playerNumber, showOverview = true, message, working, onHint, onSubmit, onSpecialAction, onContinue }: Hunt1ProgressProps) {
+  const [tasksOpen, setTasksOpen] = useState(true);
   const [journalOpen, setJournalOpen] = useState(false);
-  const [selectedEvidence, setSelectedEvidence] = useState<string | null>(null);
+  const [briefOpen, setBriefOpen] = useState(true);
   const [sequence, setSequence] = useState<string[]>([]);
   const [workingSubmit, setWorkingSubmit] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -142,10 +143,10 @@ export default function Hunt1Progress({ state, playerNumber, message, working, o
   };
 
   return <>
-    <button className={styles.taskToggle} type="button" aria-expanded={tasksOpen} aria-controls="hunt1-objectives" onClick={() => setTasksOpen((open) => !open)}>
+    {showOverview && <button className={styles.taskToggle} type="button" aria-expanded={tasksOpen} aria-controls="hunt1-objectives" onClick={() => setTasksOpen((open) => !open)}>
       HUNT I · {challenge}/6 · {tasksOpen ? 'Hide progress' : 'Investigation progress'}
-    </button>
-    {tasksOpen && <div className={styles.grid} id="hunt1-objectives" aria-label="Hunt I task progress">
+    </button>}
+    {showOverview && tasksOpen && <div className={styles.grid} id="hunt1-objectives" aria-label="Hunt I task progress">
       {TASK_KEYS.map((number) => {
         const item = TASKS[number];
         const done = state.taskCompleted[item.key];
@@ -157,9 +158,14 @@ export default function Hunt1Progress({ state, playerNumber, message, working, o
       })}
     </div>}
 
-    {!state.completed && <div className={styles.reconstruction} aria-label={`${task.title} reconstruction`}>
-      <header><span>ACTIVE INVESTIGATION · {task.title.toUpperCase()}</span><b>{task.points} POINTS</b></header>
+    {!state.completed && briefOpen && <div className={`${styles.reconstruction} ${actor === 'archivist' ? styles.pastBrief : styles.futureBrief}`} id={`hunt1-reconstruction-${actor}`} aria-label={`${actor} ${task.title} reconstruction`}>
+      <header>
+        <span>ACTIVE INVESTIGATION · {task.title.toUpperCase()}</span>
+        <b>{task.points} POINTS</b>
+        <button className={styles.hideBrief} type="button" onClick={() => setBriefOpen(false)} aria-label="Hide task brief">Hide</button>
+      </header>
       <p className={actor === 'archivist' ? styles.pastText : styles.futureText}>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'} — {task.objective[actor]}</p>
+      <p className={styles.fieldInstructions}>FIELDWORK: Move to each listed object in your timeline and press {actor === 'archivist' ? 'E' : 'Enter'} to examine it. Then open Incident evidence to compare the finding with your partner’s timeline. Evidence alone does not complete the task; arrange or interpret it here and submit for verification.</p>
       <div className={styles.objects} aria-label="Evidence to examine">
         {unlockedObjects.length === 0 ? <span>Both investigators’ evidence is needed before reconstruction.</span> : unlockedObjects.map((id) => <span key={id}>{OBJECT_LABELS[id] ?? id}</span>)}
         {state.availableInteractables.some((id) => id.startsWith('optional')) && <span>Optional evidence may also be hidden in this hunt.</span>}
@@ -294,29 +300,32 @@ export default function Hunt1Progress({ state, playerNumber, message, working, o
           {workingSubmit ? 'Reconstructing…' : submittedAlready ? 'Your conclusion is confirmed' : task.submitter !== 'team' && task.submitter !== actor ? `Waiting for ${task.submitter}` : 'Reconstruct from both timelines'}
         </button>
       </> : <p className={styles.waiting}>Examine the required Past and Future objects in the active investigation to unlock the reconstruction board.</p>}
-      <button className={styles.hint} type="button" disabled={working || (state.hintUses[String(challenge)] ?? 0) >= 2} onClick={onHint}>Request field note · −10 points</button>
+      <button className={styles.hint} type="button" disabled={working || (state.hintUses[String(challenge)] ?? 0) >= 2} onClick={() => onHint(actor)}>Request field note · −10 points</button>
     </div>}
+    {!state.completed && !briefOpen && <button className={`${styles.briefToggle} ${actor === 'archivist' ? styles.pastBriefToggle : styles.futureBriefToggle}`} type="button" aria-expanded={false} onClick={() => setBriefOpen(true)}>
+      TASK BRIEF · {task.title}
+    </button>}
 
-    <div className={styles.toolbar}>
+    {showOverview && <div className={styles.toolbar}>
       <button onClick={() => setJournalOpen((open) => !open)}>Incident evidence · {state.evidence.length}</button>
       {message && <span role="status">{message}</span>}
       <span>HUNT I SCORE {state.score} · PENALTIES −{state.penalties}</span>
       <details className={styles.teamScoreDetails}><summary>Score breakdown</summary>
         <span>{TASK_KEYS.map((number) => `${TASKS[number].title} ${state.taskScores[TASKS[number].key]}`).join(' · ')} · Optional ${optionalFound} · Penalties −${state.penalties}</span>
       </details>
-    </div>
-    {journalOpen && <aside className={styles.journal}>
+    </div>}
+    {showOverview && journalOpen && <aside className={styles.journal}>
       <button className={styles.close} onClick={() => setJournalOpen(false)}>Close</button>
       <h2>Shared incident evidence</h2>
       {!state.evidence.length && <p>No incident evidence examined yet.</p>}
       {[...state.evidence].reverse().map((entry) => <article key={entry.id}>
-        <small>{entry.type.toUpperCase()} · {entry.location} · {entry.discoveredBy}</small>
+        <small>{entry.type.toUpperCase()} · {entry.location} · {entry.discoveredBy} · Supports: {entry.relatedObjective}</small>
         <h3>{entry.title}{entry.verified ? ' · VERIFIED' : ''}</h3>
-        <button type="button" onClick={() => setSelectedEvidence((current) => current === entry.id ? null : entry.id)}>{selectedEvidence === entry.id ? 'Close examination' : 'Examine evidence'}</button>
-        {selectedEvidence === entry.id && <><p>{entry.content}</p><p><b>Inference:</b> {entry.inference}</p></>}
+        <p>{entry.content}</p>
+        <p><b>Why it matters:</b> {entry.inference}</p>
       </article>)}
     </aside>}
-    {state.completed && <div className={styles.completed} role="status">
+    {showOverview && state.completed && <div className={styles.completed} role="status">
       <b>THE FORGOTTEN INCIDENT RECONSTRUCTED</b><span>Hunt I complete · {state.score} points preserved</span>
       <article aria-label="Final incident report">
         <h2>FINAL INCIDENT REPORT</h2>

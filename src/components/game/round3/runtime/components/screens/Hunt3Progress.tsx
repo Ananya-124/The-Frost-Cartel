@@ -7,12 +7,16 @@ const ORDER_OPTIONS = ['source', 'ground', 'return', 'low-tone', 'phase-two', 's
 const selectSequence = (count: number, options: string[], initial: string[] = []) => Array.from({ length: count }, (_, i) => initial[i] ?? options[0]);
 export default function Hunt3Progress({ state, actor, message, working, onAction }: Props) {
   const [sequence, setSequence] = useState<string[]>([]);
+  const [sealAnswers, setSealAnswers] = useState<Record<'power' | 'resonance' | 'memory', string[]>>({
+    power: ['return', 'ground', 'source'],
+    resonance: ['silence', 'phase-two', 'low-tone'],
+    memory: ['anchor', 'warning', 'arrival'],
+  });
   const [location, setLocation] = useState(actor === 'archivist' ? 'west-wing' : 'broken-compass');
   const [condition, setCondition] = useState('frequency-low');
   const [reading, setReading] = useState<'withdrawal' | 'surge'>('withdrawal');
   const [profile, setProfile] = useState(['temperature-cold', 'light-dark', 'frequency-low']);
-  const [resonance, setResonance] = useState({ frequency: 'high', phase: 'one', carrier: 'audible' });
-  const [cadence, setCadence] = useState([2, 1, 2]);
+  const [journalOpen, setJournalOpen] = useState(false);
   if (!state) return <div className={styles.loading}>Restoring the shared containment investigation…</div>;
   const run = (type: string, id: string, value?: unknown) => { if (!working) void onAction({ type, id, value }); };
   const editor = (count: number, initial: string[] = []) => {
@@ -21,34 +25,37 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
   };
   const submit = (id: string, current: string[] = sequence) => run('submit', id, { sequence: current });
   const nextBossActor = state.stage === 4 ? (state.boss.step % 2 === 0 ? 'archivist' : 'tracker') : null;
-  return <section className={styles.root} aria-label="Hunt III progress">
+  return <section className={`${styles.root} ${actor === 'archivist' ? styles.archivistPanel : styles.trackerPanel}`} aria-label={`Hunt III ${actor} progress`}>
     <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>{['The Entity’s Trail', 'Break the Three Seals', 'The Bait Protocol', 'Final Containment'][state.stage - 1]}</h2></div><strong>STAGE {state.stage}/4</strong></header>
     <div className={styles.status} aria-live="polite">{message || `Server-confirmed score: ${state.score} · Entity state: ${state.stage === 1 ? 'roaming' : state.stage === 2 ? 'safeguards active' : state.stage === 3 ? 'approaching containment' : state.boss.captured ? 'captured' : 'attacking'}`}</div>
-    <div className={styles.progress}>Stage awards: {state.scoreBreakdown.stage1}/250 · {state.scoreBreakdown.stage2}/400 · {state.scoreBreakdown.stage3}/350 · {state.scoreBreakdown.stage4}/500 · Hidden evidence {state.optional.complete ? '100/100' : 'undiscovered'}</div>
+    <div className={styles.progress}>Stage awards: {state.scoreBreakdown.stage1}/250 · {state.scoreBreakdown.stage2}/400 · {state.scoreBreakdown.stage3}/350 · {state.scoreBreakdown.stage4}/500 · Hidden evidence {state.optional.complete ? '100/100' : 'undiscovered'} · Maximum 1,600</div>
 
-    {state.stage === 1 && <section className={styles.task}><h3>Track the roaming entity</h3><p>{actor === 'archivist' ? 'Compare the old sighting ledger, containment observations and facility report. Their entries point toward the last verified location.' : 'Search the Future for the cold ash, drag marks and broken compass disturbance. The physical traces converge, but do not explain when the entity moved.'}</p>
-      <small>Search the {actor === 'archivist' ? 'Past archive records' : 'Future physical disturbances'} in the world. Evidence examined: {state.evidence[actor].length}/3. Use your movement controls and interact key near each clue.</small>
+    {state.stage === 1 && <section className={styles.task}><h3>Track the roaming entity</h3><p>{actor === 'archivist' ? 'Archive and Observation room, Past: compare the sighting ledger, containment observations and facility report to infer the last known wing.' : 'Main hall, Future: examine the cold ash, drag marks and shattered compass to infer the physical trace signature. Your partner’s records provide the time and map context.'}</p>
+      <small>Walk to each named object and press {actor === 'archivist' ? 'E' : 'Enter'}. Then enter your own deduction below; the entity is located only when both investigators’ submissions agree. Evidence examined: {state.evidence[actor].length}/3.</small>
       <label>{actor === 'archivist' ? 'Last known wing' : 'Physical trace signature'}<select value={location} onChange={(e) => setLocation(e.target.value)}>{actor === 'archivist' ? <><option value="west-wing">West wing</option><option value="north-wing">North wing</option><option value="east-wing">East wing</option></> : <><option value="broken-compass">Broken compass</option><option value="cold-star">Cold star</option><option value="drag-loop">Drag loop</option></>}</select></label>
       <button disabled={working || state.evidence[actor].length < 3} onClick={() => run('submit', 'trail-location', { location })}>Submit private trail finding</button>
       <small>Archivist finding: {state.trail.archivist ? 'submitted' : 'awaiting'} · Tracker finding: {state.trail.tracker ? 'submitted' : 'awaiting'}</small>
     </section>}
 
-    {state.stage === 2 && <section className={styles.task}><h3>Disable three distinct safeguards</h3><p>Each seal needs a Past diagram interpretation and a separate Future-side physical configuration. Verified parts are secured independently.</p>
+    {state.stage === 2 && <section className={styles.task}><h3>Disable three distinct safeguards</h3><p>The Archivist must interpret each Past diagram and submit its three-part order. The Tracker must inspect that seal’s Future mechanism, independently enter the same order, and recover the four usable components. Compare the shared evidence before either submission.</p>
       <div className={styles.seals}>{(['power', 'resonance', 'memory'] as const).map((seal) => <div key={seal}><b>{seal.toUpperCase()} SEAL</b><span>{state.seals[seal].disabled ? 'DISABLED' : `Past ${state.seals[seal].archive ? '✓' : '○'} · Future ${state.seals[seal].physical.length ? '✓' : '○'}`}</span>
-        {actor === 'archivist' && <small>Find the Past {seal} diagram. {state.seals[seal].archive ? 'Historical clue recorded.' : 'Awaiting examination.'}</small>}
-        {actor === 'tracker' && <>{!state.seals[seal].disabled && state.seals[seal].physical.length > 0 && <>
-          {seal === 'power' && <SequenceSelect count={3} options={['source', 'ground', 'return']} values={sequence} setValues={setSequence} />}
-          {seal === 'resonance' && <div className={styles.sequence}>{(['frequency', 'phase', 'carrier'] as const).map((key) => <label key={key}>{key}<select value={resonance[key]} onChange={(e) => setResonance({ ...resonance, [key]: e.target.value })}>{(key === 'frequency' ? ['high', 'low'] : key === 'phase' ? ['one', 'two'] : ['audible', 'muted']).map((option) => <option key={option}>{option}</option>)}</select></label>)}</div>}
-          {seal === 'memory' && <div className={styles.sequence}>{cadence.map((beat, i) => <label key={i}>Pulse {i + 1}<button type="button" onClick={() => setCadence(cadence.map((value, j) => j === i ? (value === 1 ? 2 : 1) : value))}>{beat === 1 ? 'short' : 'long'}</button></label>)}</div>}
-          <button disabled={working || (seal === 'power' ? sequence.length !== 3 : false)} onClick={() => run('submit', `seal-${seal}`, seal === 'power' ? { sequence } : seal === 'resonance' ? { settings: resonance } : { cadence })}>Configure {seal} seal</button>
-        </>}</>}
+        {actor === 'archivist' &&         <small>Archive, Communications room or Observation room, Past: press E at the {seal} diagram, deduce its order from the annotations, then submit it below.</small>}
+        {actor === 'archivist' && state.evidence.archivist.includes(`${seal}-diagram`) && !state.seals[seal].archive && <>
+          <SequenceSelect count={3} options={seal === 'power' ? ['source', 'ground', 'return'] : seal === 'resonance' ? ['low-tone', 'phase-two', 'silence'] : ['arrival', 'warning', 'anchor']} values={sealAnswers[seal]} setValues={(values) => setSealAnswers({ ...sealAnswers, [seal]: values })} />
+          <button disabled={working} onClick={() => run('submit', `seal-${seal}-archive`, { sequence: sealAnswers[seal] })}>Submit Past {seal} interpretation</button>
+        </>}
+        {actor === 'tracker' && <small>{seal === 'power' ? 'Generator room, communications room or Observation room, Future' : seal === 'resonance' ? 'Communications room, Future' : 'Observation room, Future'}: press Enter at the mechanism before configuring it. {state.seals[seal].physical.length ? 'Mechanism examined.' : 'Awaiting inspection.'}</small>}
+        {actor === 'tracker' && !state.seals[seal].disabled && state.seals[seal].physical.length > 0 && <>
+          <SequenceSelect count={3} options={seal === 'power' ? ['source', 'ground', 'return'] : seal === 'resonance' ? ['low-tone', 'phase-two', 'silence'] : ['arrival', 'warning', 'anchor']} values={sealAnswers[seal]} setValues={(values) => setSealAnswers({ ...sealAnswers, [seal]: values })} />
+          <button disabled={working} onClick={() => run('submit', `seal-${seal}`, { sequence: sealAnswers[seal] })}>Configure {seal} seal</button>
+        </>}
       </div>)}</div>
-      <small>{actor === 'archivist' ? 'Compare the Past equipment catalogue in the Archive; the Tracker can then distinguish usable Future parts from decoys.' : 'Search the Future generator, examination room, communications room and observation room for recoverable components.'}</small>
+      <small>{actor === 'archivist' ? 'Archive, Past: inspect the component catalogue and identify which four named parts belong in the rig.' : 'Generator, Examination, Communications and Observation rooms, Future: recover the coil, lens, braid and core. The shattered glass and scorched lattice in the Main hall are decoys.'}</small>
       <small>Secured parts: {state.components.length}/4 · seals stable: {Object.values(state.seals).filter((s) => s.disabled).length}/3</small>
     </section>}
 
-    {state.stage === 3 && <section className={styles.task}><h3>Rebuild, test, lure and weaken</h3><p>The Past blueprint is a reference only. The Tracker must place each recovered part at the physical apparatus independently.</p>
-      <small>{actor === 'archivist' ? 'Find the Past blueprint and reaction notes. The blueprint’s decoded arrangement becomes the Tracker’s reference.' : 'Inspect the physical apparatus and test station. Place components at the Future rig, then perform controlled environment trials.'}</small>
+    {state.stage === 3 && <section className={styles.task}><h3>Rebuild, test, lure and weaken</h3><p>The Archivist reconstructs the apparatus layout from the Past blueprint and interprets the reaction notes. The Tracker independently places the recovered parts, tests environmental conditions, and reports what the entity does.</p>
+      <small>{actor === 'archivist' ? 'Containment room, Past: press E at the blueprint, solve and submit its four-part layout. Then use the Experiment room notes to verify the Tracker’s readings and submit the vulnerability profile.' : 'Containment room and Experiment room, Future: press Enter at the rig and test station, place all four parts, then test frequency, light and temperature one at a time. Record each response for the Archivist to compare with the Past notes.'}</small>
       {(actor === 'archivist' ? state.evidence.archivist.includes('apparatus-blueprint') : state.apparatus.archive !== null && state.actions.includes('physical-apparatus')) && <><b>{actor === 'archivist' ? 'Decode blueprint placement' : 'Place recovered apparatus components'}</b>{editor(4, ['coil:west', 'lens:center', 'braid:ground', 'core:east'])}<button disabled={working || sequence.length !== 4} onClick={() => submit('apparatus')}>{actor === 'archivist' ? 'Submit Past blueprint reading' : 'Configure Future apparatus'}</button></>}
       {actor === 'tracker' && state.actions.includes('test-station') && <div className={styles.trial}><b>Controlled environmental trial</b><select value={condition} onChange={(e) => setCondition(e.target.value)}><option value="frequency-low">Low frequency</option><option value="light-dark">Darkness</option><option value="temperature-cold">Cold</option></select><select value={reading} onChange={(e) => setReading(e.target.value as 'withdrawal' | 'surge')}><option value="surge">Entity surges</option><option value="withdrawal">Entity withdraws</option></select><button disabled={working} onClick={() => run('submit', 'weakness-trial', { condition, reading })}>Run trial</button><small>Verified response trials: {state.weakness.trials.filter((t) => t.endsWith(':withdrawal') || t.endsWith('light-dark:surge')).length}/3</small></div>}
       {state.weakness.archive && actor === 'archivist' && <>
@@ -59,8 +66,17 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
       {state.weakness.discovered && <><button disabled={working || state.weakness.lure > 0} onClick={() => run('interact', 'lure-control')}>Activate chamber lure</button><small>Lure {state.weakness.lure ? 'active' : 'off'} · entity weakened {state.weakness.weakened}/3</small></>}
     </section>}
 
-    {state.stage === 4 && <section className={styles.task}><h3>Capture the weakened entity</h3><p>{state.boss.warning ?? 'Containment warning approaching.'}</p><strong>Containment stability {state.boss.stability}/6 · Next control: {nextBossActor === 'archivist' ? 'Archivist · Past' : 'Tracker · Future'}</strong><small>{nextBossActor === actor ? 'Move to the highlighted control in your timeline and interact before the warning window closes.' : 'Your partner must operate their timeline control before this sequence advances.'}</small></section>}
-    {state.completed && <div className={styles.complete} role="status">CONTAINMENT COMPLETE · Hunt III score {state.score}/1,800. The entity has been captured.</div>}
+    {state.stage === 4 && <section className={styles.task}><h3>Capture the weakened entity</h3><p>{state.boss.warning ?? 'Containment warning approaching.'}</p><strong>Containment room · Stability {state.boss.stability}/6 · Next control: {nextBossActor === 'archivist' ? 'Archivist · Past' : 'Tracker · Future'}</strong><small>{nextBossActor === actor ? 'Walk to the control named in this warning in your timeline and press E within 12 seconds. The roles alternate; read the next warning after each successful action.' : 'Your partner must operate the named control in their timeline before the sequence advances. Stay ready for your turn.'}</small></section>}
+    {state.completed && <div className={styles.complete} role="status">CONTAINMENT COMPLETE · Hunt III score {state.score}/1,600. The entity has been captured.</div>}
+    <details className={styles.journal} open={journalOpen} onToggle={(event) => setJournalOpen(event.currentTarget.open)}>
+      <summary>Shared evidence journal · {state.journal?.length ?? 0}</summary>
+      <p>These findings are shared across both timelines. Use them to support a submission; an unverified clue is not itself task completion.</p>
+      {[...(state.journal ?? [])].reverse().map((entry) => <article key={entry.id}>
+        <small>HUNT III · {entry.relatedObjective} · {entry.location} · {entry.actor === 'team' ? 'TEAM' : entry.actor.toUpperCase()}{entry.verified ? ' · VERIFIED' : ''}</small>
+        <b>{entry.title}</b><p>{entry.content}</p>
+      </article>)}
+      {!state.journal?.length && <small>No evidence recorded yet. Examine the named objects in the active stage.</small>}
+    </details>
   </section>;
 }
 

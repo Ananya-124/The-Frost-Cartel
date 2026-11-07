@@ -120,11 +120,6 @@ export function getRound3Hunt1State(teamId: string, playerNumber?: number): Hunt
     } else if (playerNumber === 2) {
       observationTimeline.archivistTimeline = null;
       observationTimeline.archivistValid = false;
-    } else {
-      observationTimeline.trackerTimeline = null;
-      observationTimeline.trackerValid = false;
-      observationTimeline.archivistTimeline = null;
-      observationTimeline.archivistValid = false;
     }
     // Before completion, players get comparison status but not the other role's submitted answer.
     return { ...state, observationTimeline };
@@ -136,11 +131,6 @@ export function getRound3Hunt1State(teamId: string, playerNumber?: number): Hunt
       signalReconstruction.trackerValid = false;
     } else if (playerNumber === 2) {
       if (!signalReconstruction.archivistValid) signalReconstruction.archivistRoute = null;
-    } else {
-      signalReconstruction.archivistRoute = null;
-      signalReconstruction.archivistValid = false;
-      signalReconstruction.trackerRoute = null;
-      signalReconstruction.trackerValid = false;
     }
     return { ...state, signalReconstruction };
   }
@@ -152,11 +142,6 @@ export function getRound3Hunt1State(teamId: string, playerNumber?: number): Hunt
     } else if (playerNumber === 2) {
       incidentConclusion.archivistInterpretation = null;
       incidentConclusion.archivistValid = false;
-    } else {
-      incidentConclusion.archivistInterpretation = null;
-      incidentConclusion.archivistValid = false;
-      incidentConclusion.trackerInterpretation = null;
-      incidentConclusion.trackerValid = false;
     }
     return { ...state, incidentConclusion };
   }
@@ -199,10 +184,6 @@ function getTaskKey(challenge: number): Hunt1TaskKey | null {
   return Object.entries(TASKS).find(([, task]) => task.number === challenge)?.[0] as Hunt1TaskKey | undefined ?? null;
 }
 
-function roleForPlayer(playerNumber: number | undefined): Hunt1Actor | null {
-  return playerNumber === 1 ? 'archivist' : playerNumber === 2 ? 'tracker' : null;
-}
-
 function normalizeSequence(value: unknown): string[] | null {
   return Array.isArray(value) && value.length <= 10 && value.every((item) => typeof item === 'string') ? value as string[] : null;
 }
@@ -223,10 +204,9 @@ function updateState(teamId: string, state: Hunt1State): void {
 export function applyRound3Hunt1Action(
   teamId: string,
   input: { type: string; actor?: unknown; objectId?: unknown; value?: unknown },
-  playerNumber?: number,
 ): Hunt1ActionResult | null {
   if (!round3GameplayAllowed(teamId)) return null;
-  if (!isActor(input.actor) || roleForPlayer(playerNumber) !== input.actor) return null;
+  if (!isActor(input.actor)) return null;
   db.exec('BEGIN IMMEDIATE');
   try {
     const row = db.prepare('SELECT state_json FROM round3_hunt1_sessions WHERE team_id=?').get(teamId) as { state_json: string } | undefined;
@@ -257,8 +237,8 @@ export function applyRound3Hunt1Action(
         const taskKey = getTaskKey(state.currentChallenge);
         const task = taskKey ? TASKS[taskKey] : null;
         const expectedActor = task?.objects[objectId];
-        if (!task || !expectedActor) message = 'That evidence is sealed until its investigation task is unlocked.';
-        else if (expectedActor !== actor) message = `The ${actor === 'archivist' ? 'Tracker' : 'Archivist'} must examine this evidence in their timeline.`;
+        if (!task || !expectedActor) { actionSuccess = false; message = 'That evidence is sealed until its investigation task is unlocked.'; }
+        else if (expectedActor !== actor) { actionSuccess = false; message = `The ${actor === 'archivist' ? 'Tracker' : 'Archivist'} must examine this evidence in their timeline.`; }
         else if (state.subtasks[objectId]) message = 'This evidence is already in the shared incident file.';
         else {
           state.subtasks[objectId] = true;
@@ -474,9 +454,7 @@ export function applyRound3Hunt1Action(
     } else { db.exec('ROLLBACK'); return null; }
     updateState(teamId, state);
     db.exec('COMMIT');
-    const responseState = playerNumber === 1
-      ? getRound3Hunt1State(teamId, 1) ?? state
-      : playerNumber === 2 ? getRound3Hunt1State(teamId, 2) ?? state : state;
+    const responseState = getRound3Hunt1State(teamId) ?? state;
     return { success: actionSuccess, message, state: responseState, hint };
   } catch (error) {
     db.exec('ROLLBACK');

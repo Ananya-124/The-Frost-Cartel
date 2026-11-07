@@ -42,35 +42,47 @@ describe('Round 3 Hunt III final containment', () => {
     const call = async (actor: Hunt3Actor, endpoint: string, body?: unknown) => fetch(`${baseUrl}/api/round3${endpoint}`, {
       method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${token[actor]}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const act = async (actor: Hunt3Actor, id: string) => {
-      const response = await call(actor, '/hunt3/action', { type: 'interact', id }); expect(response.status).toBe(200); return response.json() as Promise<Hunt3ActionResult>;
+    const actAs = async (session: Hunt3Actor, actor: Hunt3Actor, id: string) => {
+      const response = await call(session, '/hunt3/action', { type: 'interact', id, actor }); expect(response.status).toBe(200); return response.json() as Promise<Hunt3ActionResult>;
     };
+    const act = (actor: Hunt3Actor, id: string) => actAs(actor, actor, id);
     const submit = async (actor: Hunt3Actor, id: string, value: unknown) => {
-      const response = await call(actor, '/hunt3/action', { type: 'submit', id, value }); expect(response.status).toBe(200); return response.json() as Promise<Hunt3ActionResult>;
+      const response = await call(actor, '/hunt3/action', { type: 'submit', id, value, actor }); expect(response.status).toBe(200); return response.json() as Promise<Hunt3ActionResult>;
     };
     await call('archivist', '/session', {}); await call('archivist', '/run/start', {});
     const opened = await call('tracker', '/hunt3/session', {});
     if (opened.status !== 200) throw new Error(`Hunt III session open failed (${opened.status}): ${await opened.text()}`);
-    expect((await call('archivist', '/hunt3/action', { type: 'interact', id: 'sighting-ledger', actor: 'tracker' })).status).toBe(403);
+    expect((await call('archivist', '/hunt3/action', { type: 'interact', id: 'sighting-ledger', actor: 'tracker' }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
 
+    const localTrackerEvidence = await actAs('archivist', 'tracker', 'cold-ash');
+    expect(localTrackerEvidence.success).toBe(true);
     for (const id of ['sighting-ledger', 'containment-observation', 'old-facility-report']) await act('archivist', id);
+    const sharedProgress = (await call('tracker', '/hunt3/state').then((r) => r.json())) as { state: Hunt3State };
+    expect(sharedProgress.state.journal).toHaveLength(4);
+    expect(sharedProgress.state.evidence.archivist).toHaveLength(3);
     const historical = await submit('archivist', 'trail-location', { location: 'east-wing' });
     expect(historical.state.trail.tracker).toBeNull();
-    for (const id of ['cold-ash', 'drag-marks', 'shattered-compass']) await act('tracker', id);
+    for (const id of ['drag-marks', 'shattered-compass']) await act('tracker', id);
     let result = await submit('tracker', 'trail-location', { location: 'cold-star' });
     expect(result.state.stage).toBe(2); expect(result.state.scoreBreakdown.stage1).toBe(250);
 
     for (const seal of ['power', 'resonance', 'memory'] as const) {
       await act('archivist', `${seal}-diagram`);
+      if (seal === 'power') {
+        expect((await call('tracker', '/hunt3/action', { type: 'submit', actor: 'tracker', id: 'seal-power-archive', value: { sequence: ['source', 'ground', 'return'] } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+        expect((await submit('tracker', 'seal-power', { sequence: ['source', 'ground', 'return'] })).success).toBe(false);
+        expect((await submit('archivist', 'seal-power-archive', { sequence: ['source', 'return', 'ground'] })).success).toBe(false);
+      }
+      const archiveOrder = seal === 'power' ? ['source', 'ground', 'return'] : seal === 'resonance' ? ['low-tone', 'phase-two', 'silence'] : ['arrival', 'warning', 'anchor'];
+      expect((await submit('archivist', `seal-${seal}-archive`, { sequence: archiveOrder })).success).toBe(true);
       if (seal === 'power') expect((await act('tracker', 'power-diagram')).success).toBe(false);
       expect((await act('tracker', `${seal}-mechanism`)).success).toBe(true);
       if (seal === 'power') {
-        expect((await submit('archivist', 'seal-power', { sequence: ['source', 'ground', 'return'] })).success).toBe(false);
         expect((await submit('tracker', 'seal-power', { sequence: ['source', 'return', 'ground'] })).success).toBe(false);
         result = await submit('tracker', 'seal-power', { sequence: ['source', 'ground', 'return'] });
       }
-      if (seal === 'resonance') result = await submit('tracker', 'seal-resonance', { settings: { frequency: 'low', phase: 'two', carrier: 'muted' } });
-      if (seal === 'memory') result = await submit('tracker', 'seal-memory', { cadence: [1, 2, 1] });
+      if (seal === 'resonance') result = await submit('tracker', 'seal-resonance', { sequence: archiveOrder });
+      if (seal === 'memory') result = await submit('tracker', 'seal-memory', { sequence: archiveOrder });
       expect(result.success).toBe(true);
     }
     await act('archivist', 'component-catalog');
@@ -106,19 +118,19 @@ describe('Round 3 Hunt III final containment', () => {
     result = await act('tracker', 'close-containment'); expect(result.success).toBe(false); expect(result.message).toContain('warning window closed');
     await new Promise((resolve) => setTimeout(resolve, 710)); await act('archivist', 'lock-sequence');
     await new Promise((resolve) => setTimeout(resolve, 710)); result = await act('tracker', 'close-containment');
-    expect(result.state.completed).toBe(true); expect(result.state.scoreBreakdown.stage4).toBe(500); expect(result.state.score).toBe(1580);
-    result = await act('tracker', 'close-containment'); expect(result.state.score).toBe(1580);
+    expect(result.state.completed).toBe(true); expect(result.state.scoreBreakdown.stage4).toBe(500); expect(result.state.score).toBe(1560);
+    result = await act('tracker', 'close-containment'); expect(result.state.score).toBe(1560);
     const restored = await (await call('archivist', '/hunt3/state')).json() as { state: Hunt3State };
-    expect(restored.state.completed).toBe(true); expect(restored.state.score).toBe(1580);
+    expect(restored.state.completed).toBe(true); expect(restored.state.score).toBe(1560);
 
     await call('archivist', '/progress', { playerProgress: { engine: { score: 999999 } } });
     const official = await (await call('tracker', '/state')).json() as { session: { score: number } };
-    expect(official.session.score).toBe(1580);
+    expect(official.session.score).toBe(1560);
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await new Promise<void>((resolve) => { server = app.listen(0, '127.0.0.1', () => { const address = server.address(); if (address && typeof address === 'object') baseUrl = `http://127.0.0.1:${address.port}`; resolve(); }); });
-    expect((await call('tracker', '/hunt3/state').then((r) => r.json()) as { state: Hunt3State }).state.score).toBe(1580);
+    expect((await call('tracker', '/hunt3/state').then((r) => r.json()) as { state: Hunt3State }).state.score).toBe(1560);
     db.prepare("UPDATE round3_runs SET status='running',remaining_ms=1,started_at=? WHERE team_id=?").run(new Date(Date.now() - 1000).toISOString(), team.id);
     expect((await call('tracker', '/hunt3/action', { type: 'interact', id: 'close-containment' })).status).toBe(409);
-    expect((await call('tracker', '/state').then((r) => r.json()) as { session: { score: number } }).session.score).toBe(1580);
+    expect((await call('tracker', '/state').then((r) => r.json()) as { session: { score: number } }).session.score).toBe(1560);
   });
 });

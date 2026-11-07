@@ -42,11 +42,12 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
 
   it('validates all five challenge dependencies, penalties, score deduplication, and persistence', async () => {
     const call = async (actor: 'archivist' | 'tracker', pathName: string, body?: unknown) => fetch(`${baseUrl}/api/round3${pathName}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${tokens[actor]}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
-    const act = async (actor: 'archivist' | 'tracker', objectId: string) => {
-      const response = await call(actor, '/hunt2/action', { type: 'interact', actor, objectId });
+    const actAs = async (session: 'archivist' | 'tracker', actor: 'archivist' | 'tracker', objectId: string) => {
+      const response = await call(session, '/hunt2/action', { type: 'interact', actor, objectId });
       expect(response.status).toBe(200);
       return response.json() as Promise<{ success: boolean; message: string; input?: string; state: Hunt2State }>;
     };
+    const act = (actor: 'archivist' | 'tracker', objectId: string) => actAs(actor, actor, objectId);
     const submit = async (actor: 'archivist' | 'tracker', value: unknown) => {
       const response = await call(actor, '/hunt2/action', { type: 'submit', actor, value });
       expect(response.status).toBe(200);
@@ -75,8 +76,9 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: { penalties: number } }).state.penalties).toBe(50);
     const blockedDoor = await act('tracker', 'falseDoor3');
     expect(blockedDoor.state.currentChallenge).toBe(1);
-    expect((await call('archivist', '/hunt2/action', { type: 'interact', actor: 'tracker', objectId: 'identityTraceA' })).status).toBe(403);
-    expect((await call('tracker', '/hunt2/action', { type: 'interact', actor: 'archivist', objectId: 'identityPatientFile' })).status).toBe(403);
+    expect((await call('archivist', '/hunt2/action', { type: 'interact', actor: 'archivist', objectId: 'identityTraceA' }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('tracker', '/hunt2/action', { type: 'interact', actor: 'tracker', objectId: 'identityPatientFile' }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await actAs('archivist', 'tracker', 'identityTraceA')).success).toBe(true);
     const historicalClue = await act('archivist', 'identityPatientFile');
     expect(historicalClue.input).toBe('identity-historical');
     expect((await submit('tracker', { kind: 'identity-historical', order: ['mara-voss', 'dr-s-vale', 'subject-zero'] })).success).toBe(false);
@@ -87,7 +89,7 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect(correctHistorical.state.identityReconstruction.historicalValid).toBe(true);
     expect(correctHistorical.state.subtasks.threeIdentitiesComplete).not.toBe(true);
     expect(correctHistorical.state.scoreBreakdown.identities).toBe(0);
-    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.identityReconstruction.historical).toBeNull();
+    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.identityReconstruction.historical).toEqual(['mara-voss', 'dr-s-vale', 'subject-zero']);
     expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.identityReconstruction.historical).toEqual(['mara-voss', 'dr-s-vale', 'subject-zero']);
     for (const id of ['identityTraceA', 'identityTraceB', 'identityTraceC']) await act('tracker', id);
     const wrongPhysical = await submit('tracker', { kind: 'identity-physical', order: ['patient-memory-imprint', 'autonomous-entity-presence', 'researcher-transmission-signature'] });
@@ -100,8 +102,8 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect(duplicateIdentities.state.scoreBreakdown.identities).toBe(150);
     expect((await call('tracker', '/hunt2/action', { type: 'interact', actor: 'tracker', objectId: 'manifestationRecords' }).then((r) => r.json()) as { success: boolean }).success).toBe(false);
     expect((await call('archivist', '/hunt2/action', { type: 'interact', actor: 'archivist', objectId: 'manifestationA' }).then((r) => r.json()) as { success: boolean }).success).toBe(false);
-    expect((await call('archivist', '/hunt2/action', { type: 'submit', actor: 'tracker', value: { kind: 'manifestation-physical', order: ['fabricated', 'genuine', 'fabricated'] } })).status).toBe(403);
-    expect((await call('tracker', '/hunt2/action', { type: 'submit', actor: 'archivist', value: { kind: 'manifestation-history', order: ['authenticated', 'altered', 'impossible'] } })).status).toBe(403);
+    expect((await call('archivist', '/hunt2/action', { type: 'submit', actor: 'archivist', value: { kind: 'manifestation-physical', order: ['fabricated', 'genuine', 'fabricated'] } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('tracker', '/hunt2/action', { type: 'submit', actor: 'tracker', value: { kind: 'manifestation-history', order: ['authenticated', 'altered', 'impossible'] } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
     const historicalManifestationRecord = await act('archivist', 'manifestationRecords');
     expect(historicalManifestationRecord.input).toBe('manifestation-history');
     expect((await submit('tracker', { kind: 'manifestation-history', order: ['authenticated', 'altered', 'impossible'] })).success).toBe(false);
@@ -112,7 +114,7 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect(correctHistoryClassification.state.falseManifestation.historicalValid).toBe(true);
     expect(correctHistoryClassification.state.subtasks.falseManifestationComplete).not.toBe(true);
     expect(correctHistoryClassification.state.scoreBreakdown.falseManifestation).toBe(0);
-    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.falseManifestation.historicalClassification).toBeNull();
+    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.falseManifestation.historicalClassification).toEqual(['authenticated', 'altered', 'impossible']);
     expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.falseManifestation.historicalClassification).toEqual(['authenticated', 'altered', 'impossible']);
     for (const id of ['manifestationA', 'manifestationB', 'manifestationC']) await act('tracker', id);
     const wrongPhysicalClassification = await submit('tracker', { kind: 'manifestation-physical', order: ['genuine', 'fabricated', 'fabricated'] });
@@ -158,7 +160,7 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await submit('archivist', { kind: 'weakness-history', conclusion: 'bright and warm' })).success).toBe(true);
     expect((await submit('tracker', { kind: 'weakness-conclusion', profile: { frequency: 'low', light: 'dark', temperature: 'warm' } })).success).toBe(false);
     await submit('tracker', { kind: 'weakness-conclusion', profile: { frequency: 'low', light: 'dark', temperature: 'cold' } });
-    expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.hiddenWeakness.experimentalConclusion).toBeNull();
+    expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.hiddenWeakness.experimentalConclusion).toBe('{"frequency":"low","light":"dark","temperature":"cold"}');
     await act('tracker', 'weaknessContainmentConsole');
     const savedWeakness = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };
     const pendingWeakness = JSON.parse(savedWeakness.state_json) as Hunt2State;
@@ -189,7 +191,7 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await submit('tracker', { kind: 'broken-historical', order: history })).success).toBe(false);
     expect((await submit('archivist', { kind: 'broken-historical', order: ['photograph:source', 'ledger:duplicate', 'recording:fragmented-voice', 'keepsake:after-test', 'shadow:original', 'name:subject-zero'] })).success).toBe(false);
     await submit('archivist', { kind: 'broken-historical', order: history });
-    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.brokenMemory.historical).toBeNull();
+    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.brokenMemory.historical).toEqual(history);
     expect((await submit('tracker', { kind: 'broken-structure', order: ['photograph:entry', 'ledger:entry', 'recording:resonance', 'keepsake:center', 'shadow:mirror', 'name:anchor'] })).success).toBe(false);
     await submit('tracker', { kind: 'broken-structure', order: structure });
     expect((await act('tracker', 'brokenRestoreMechanism')).success).toBe(false);
@@ -219,8 +221,8 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect(anchorTrackerView.memoryAnchor.trackerEvidence).toHaveLength(4);
     expect(anchorTrackerView.memoryAnchor.nodeStates).toEqual({ A: 'unstable', B: 'reversed', C: 'disconnected', D: 'stable' });
     const anchorArchivistView = (await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state;
-    expect(anchorArchivistView.memoryAnchor.trackerEvidence).toHaveLength(0);
-    expect(anchorArchivistView.memoryAnchor.nodeStates.A).toBe('unknown');
+    expect(anchorArchivistView.memoryAnchor.trackerEvidence).toHaveLength(4);
+    expect(anchorArchivistView.memoryAnchor.nodeStates.A).toBe('unstable');
     expect((await act('archivist', 'anchorPastControl')).input).toBe('anchor-history-config');
     expect((await act('tracker', 'anchorFutureControl')).input).toBe('anchor-physical-config');
     const historicalAnchor = ['A:east', 'B:west', 'C:ground', 'D:loop'];
@@ -228,10 +230,10 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await submit('tracker', { kind: 'anchor-history-config', order: historicalAnchor })).success).toBe(false);
     expect((await submit('archivist', { kind: 'anchor-history-config', order: ['A:west', 'B:west', 'C:ground', 'D:loop'] })).success).toBe(false);
     await submit('archivist', { kind: 'anchor-history-config', order: historicalAnchor });
-    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.memoryAnchor.historicalConfiguration).toBeNull();
+    expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.memoryAnchor.historicalConfiguration).toEqual(historicalAnchor);
     expect((await submit('tracker', { kind: 'anchor-physical-config', order: ['A:redirect', 'B:forward', 'C:reconnect', 'D:hold'] })).success).toBe(false);
     await submit('tracker', { kind: 'anchor-physical-config', order: physicalAnchor });
-    expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.memoryAnchor.physicalConfiguration).toBeNull();
+    expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.memoryAnchor.physicalConfiguration).toEqual(physicalAnchor);
     expect((await act('tracker', 'anchorFutureControl')).success).toBe(false);
     await act('archivist', 'anchorPastControl');
     const anchorRaw = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };

@@ -16,6 +16,37 @@ const SEAL_SOLUTIONS: Record<(typeof SEALS)[number], string[]> = {
   resonance: ['low-tone', 'phase-two', 'silence'],
   memory: ['arrival', 'warning', 'anchor'],
 };
+const SEAL_EVIDENCE: Record<(typeof SEALS)[number], string> = {
+  power: 'The archive sketch marks a feed, a ground bond, and a return path. Use the terminal labels on the Future relay to work out their order.',
+  resonance: 'The old notes describe a low-frequency condition, a phase alignment, and a silenced carrier. The order is damaged; compare the notes with the Future controls.',
+  memory: 'Three event names survive in the Past protocol, but the cadence marks are incomplete. Compare them with the Future mechanism before submitting.',
+};
+const HUNT3_EVIDENCE_LOCATIONS: Record<string, { title: string; location: string }> = {
+  'sighting-ledger': { title: 'Entity sighting ledger', location: 'Archive · Past' },
+  'containment-observation': { title: 'Containment observation', location: 'Observation room · Past' },
+  'old-facility-report': { title: 'Facility incident report', location: 'Director’s office · Past' },
+  'cold-ash': { title: 'Cold ash pattern', location: 'Main hall · Future' },
+  'drag-marks': { title: 'Drag marks at the threshold', location: 'Main hall · Future' },
+  'shattered-compass': { title: 'Shattered compass', location: 'Main hall · Future' },
+  'power-diagram': { title: 'Power seal diagram', location: 'Archive · Past' },
+  'power-mechanism': { title: 'Power relay', location: 'Generator room · Future' },
+  'resonance-diagram': { title: 'Resonance seal notes', location: 'Communications room · Past' },
+  'resonance-mechanism': { title: 'Resonator controls', location: 'Communications room · Future' },
+  'memory-diagram': { title: 'Memory seal protocol', location: 'Observation room · Past' },
+  'memory-mechanism': { title: 'Memory seal mechanism', location: 'Observation room · Future' },
+  'component-catalog': { title: 'Containment component catalogue', location: 'Archive · Past' },
+  'recover-induction-coil': { title: 'Induction coil recovered', location: 'Generator room · Future' },
+  'recover-prism-lens': { title: 'Prism lens recovered', location: 'Examination room · Future' },
+  'recover-grounding-braid': { title: 'Grounding braid recovered', location: 'Communications room · Future' },
+  'recover-memory-core': { title: 'Memory core recovered', location: 'Observation room · Future' },
+  'apparatus-blueprint': { title: 'Containment apparatus blueprint', location: 'Containment room · Past' },
+  'physical-apparatus': { title: 'Reconstruction apparatus', location: 'Containment room · Future' },
+  'weakness-notes': { title: 'Historical reaction notes', location: 'Experiment room · Past' },
+  'test-station': { title: 'Controlled test station', location: 'Experiment room · Future' },
+  'secret-inscription': { title: 'Concealed containment inscription', location: 'Director’s office · Past' },
+  'secret-residue': { title: 'Impossible containment shadow', location: 'Main hall · Future' },
+};
+const HUNT3_STAGE_TITLES = ['The Entity’s Trail', 'Break the Three Seals', 'The Bait Protocol', 'Final Containment'] as const;
 const APPARATUS = ['coil:west', 'lens:center', 'braid:ground', 'core:east'];
 const BOSS_SEQUENCE: Array<{ actor: Hunt3Actor; control: string; warning: string }> = [
   { actor: 'archivist', control: 'hold-record', warning: 'The archive pulse is surging. Brace the Past sequence.' },
@@ -29,6 +60,7 @@ const now = () => new Date().toISOString();
 const fresh = (teamId: string): Hunt3State => ({
   teamId, stage: 1, completed: false, score: 0,
   scoreBreakdown: { stage1: 0, stage2: 0, stage3: 0, stage4: 0, optional: 0 },
+  journal: [],
   evidence: { archivist: [], tracker: [] },
   trail: { archivist: null, tracker: null, resolved: false },
   seals: { power: { archive: false, physical: [], disabled: false }, resonance: { archive: false, physical: [], disabled: false }, memory: { archive: false, physical: [], disabled: false } },
@@ -44,7 +76,10 @@ export function ensureRound3Hunt3State(teamId: string): Hunt3State {
 }
 export function getRound3Hunt3State(teamId: string): Hunt3State | null {
   const row = db.prepare('SELECT state_json FROM round3_hunt3_sessions WHERE team_id=?').get(teamId) as { state_json: string } | undefined;
-  return row ? JSON.parse(row.state_json) as Hunt3State : null;
+  if (!row) return null;
+  const state = JSON.parse(row.state_json) as Hunt3State;
+  state.journal ??= [];
+  return state;
 }
 function save(state: Hunt3State): void {
   state.updatedAt = now();
@@ -62,6 +97,14 @@ function completeStage(state: Hunt3State, stage: 1 | 2 | 3 | 4): void {
   award(state, stage);
   if (stage < 4) { state.stage = (stage + 1) as Hunt3State['stage']; if (stage === 3) state.boss.deadlineAt = Date.now() + 12_000; }
   else { state.completed = true; state.boss.captured = true; }
+}
+function recordEvidence(state: Hunt3State, actor: Hunt3Actor | 'team', id: string, stage: Hunt3State['stage'], content: string, verified = false): void {
+  if (state.journal.some((entry) => entry.id === id)) return;
+  const location = HUNT3_EVIDENCE_LOCATIONS[id];
+  state.journal.push({
+    id, stage, actor, title: location?.title ?? id, location: location?.location ?? 'Shared investigation',
+    content, relatedObjective: HUNT3_STAGE_TITLES[stage - 1], verified,
+  });
 }
 
 export function round3Hunt3StateForActor(state: Hunt3State, actor: Hunt3Actor): Hunt3State {
@@ -88,6 +131,7 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
   if (typeof data.type !== 'string' || typeof data.id !== 'string') return null;
   const type = data.type;
   const id = data.id;
+  const actionStage = state.stage;
   const value = data.value && typeof data.value === 'object' && !Array.isArray(data.value) ? data.value as Record<string, unknown> : {};
   const strings = (v: unknown): string[] | null => Array.isArray(v) && v.length <= 20 && v.every((x) => typeof x === 'string') ? v as string[] : null;
   let message = '';
@@ -106,7 +150,7 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
       message = actor === 'archivist' ? ({ 'sighting-ledger': '02:13 — the final sighting places movement in the eastern wing, but the room number is missing.', 'containment-observation': 'The entity approached only during a dark interval when the resonance field fell below its marked threshold.', 'old-facility-report': 'A low-frequency hum attracted it toward one of the eastern observation spaces; the report map is incomplete.' } as Record<string, string>)[id] : ({ 'cold-ash': 'Ash temperature falls in a repeating star-shaped pattern; it does not identify a room by itself.', 'drag-marks': 'The marks lead toward a sealed inner threshold, then stop. The trail has not crossed back.', 'shattered-compass': 'The needle swings south only during the dark interval recorded in the old notes.' } as Record<string, string>)[id];
     } else if (state.stage === 2) {
       if (actor === 'archivist' && SEALS.some((seal) => `${seal}-diagram` === id)) {
-        const seal = id.replace('-diagram', '') as typeof SEALS[number]; state.seals[seal].archive = true; state.evidence.archivist.push(id); state.actions.push(id); message = ({ power: 'Power diagram: source feeds ground before the return loop.', resonance: 'Resonance note: set low tone, align phase two, then silence the carrier.', memory: 'Memory protocol: arrival, warning, then anchor.' } as Record<string, string>)[seal];
+        const seal = id.replace('-diagram', '') as typeof SEALS[number]; state.evidence.archivist.push(id); state.actions.push(id); message = SEAL_EVIDENCE[seal];
       } else if (actor === 'tracker' && SEALS.some((seal) => `${seal}-mechanism` === id)) {
         const seal = id.replace('-mechanism', '') as typeof SEALS[number]; state.seals[seal].physical = ['mechanism-inspected']; state.evidence.tracker.push(id); state.actions.push(id); message = ({ power: 'The power relay has three live terminals: source, ground, return.', resonance: 'The resonator has a low-tone dial, a two-step phase wheel and a carrier mute.', memory: 'The memory seal responds to three physical beats: arrival, warning, anchor.' } as Record<string, string>)[seal];
       } else if (actor === 'archivist' && ['component-catalog', 'apparatus-blueprint'].includes(id)) {
@@ -122,7 +166,7 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
         // The blueprint is only required in Stage 3; collection completion stays gated on it being found here.
       }
     } else if (state.stage === 3) {
-      if (id === 'apparatus-blueprint' && actor === 'archivist') { state.evidence.archivist.push(id); message = 'The faded placement key resolves in the old diagram: induction coil west, prism lens center, grounding braid below, memory core east.'; }
+      if (id === 'apparatus-blueprint' && actor === 'archivist') { state.evidence.archivist.push(id); message = 'The faded diagram marks a western branch, a centered optical path, a grounded lower socket, and an eastern return. Match those locations to the recovered component labels.'; }
       else if (id === 'physical-apparatus' && actor === 'tracker') message = 'The Future apparatus sockets are exposed. Place each recovered component independently.';
       else if (id === 'weakness-notes' && actor === 'archivist') { state.weakness.archive = true; state.evidence.archivist.push(id); message = 'Historical reaction notes compared. A specific environmental response stands out, but it needs a live test.'; }
       else if (id === 'test-station' && actor === 'tracker') message = 'The controlled test station is ready. Change one condition per trial and observe the entity.';
@@ -172,19 +216,24 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
       }
       if (state.trail.archivist === 'east-wing' && state.trail.tracker === 'cold-star') { state.trail.resolved = true; state.evidence.archivist.push('trail-resolution'); state.evidence.tracker.push('trail-resolution'); completeStage(state, 1); message = 'The eastern-wing report matches the cold-star trace at the Observation Room. The entity manifests there. Stage 2 unlocked.'; }
     } else if (state.stage === 2 && id.startsWith('seal-')) {
-      const seal = id.slice(5) as typeof SEALS[number]; if (!(SEALS as readonly string[]).includes(seal)) return null;
+      const archiveSubmission = id.endsWith('-archive');
+      const seal = id.slice(5, archiveSubmission ? -8 : undefined) as typeof SEALS[number]; if (!(SEALS as readonly string[]).includes(seal)) return null;
       const sequence = strings(value.sequence);
-      if ((seal === 'power' && !sequence) || (seal !== 'power' && sequence !== null && sequence.length > 0)) return null;
+      if (!sequence || sequence.length !== 3) return null;
       const record = state.seals[seal];
-      if (!record.archive || !record.physical.length) return { success: false, message: 'Both the historical diagram and physical mechanism inspection are required.', state };
-      if (actor !== 'tracker') return { success: false, message: 'The Tracker operates the Future-side seal mechanism.', state };
-      const correct = seal === 'power'
-        ? JSON.stringify(sequence) === JSON.stringify(SEAL_SOLUTIONS.power)
-        : seal === 'resonance'
-          ? JSON.stringify(value.settings) === JSON.stringify({ frequency: 'low', phase: 'two', carrier: 'muted' })
-          : JSON.stringify(value.cadence) === JSON.stringify([1, 2, 1]);
-      if (!correct) return fail(state, `The ${seal} seal rejects that configuration. Its verified state remains intact.`);
-      record.disabled = true; message = `${seal} seal disabled. ${SEALS.filter((s) => state.seals[s].disabled).length}/3 seals are stable.`;
+      if (archiveSubmission) {
+        if (actor !== 'archivist') return { success: false, message: 'The Archivist interprets the Past seal diagram.', state };
+        if (!state.evidence.archivist.includes(`${seal}-diagram`)) return { success: false, message: 'Examine the Past diagram before submitting its interpretation.', state };
+        if (JSON.stringify(sequence) !== JSON.stringify(SEAL_SOLUTIONS[seal])) return fail(state, `The ${seal} diagram interpretation does not fit the historical evidence. Re-examine the annotations and compare them with the Future mechanism.`);
+        record.archive = true;
+        message = `Past ${seal} interpretation verified. The Tracker can now configure its Future mechanism.`;
+      } else {
+        if (!record.archive || !record.physical.length) return { success: false, message: 'Both the historical diagram interpretation and physical mechanism inspection are required.', state };
+        if (actor !== 'tracker') return { success: false, message: 'The Tracker operates the Future-side seal mechanism.', state };
+        const correct = JSON.stringify(sequence) === JSON.stringify(SEAL_SOLUTIONS[seal]);
+        if (!correct) return fail(state, `The ${seal} seal rejects that configuration. Its verified state remains intact.`);
+        record.disabled = true; message = `${seal} seal disabled. ${SEALS.filter((s) => state.seals[s].disabled).length}/3 seals are stable.`;
+      }
     } else if (state.stage === 3 && id === 'apparatus') {
       const sequence = strings(value.sequence); if (!sequence) return null;
       if (actor === 'archivist') {
@@ -204,6 +253,7 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
       if (!state.apparatus.configured) return { success: false, message: 'The reconstructed apparatus must be configured before running controlled trials.', state };
       const correct = (condition === 'frequency-low' || condition === 'temperature-cold') ? reading === 'withdrawal' : reading === 'surge';
       const trial = `${condition}:${reading}`; if (!state.weakness.trials.includes(trial)) state.weakness.trials.push(trial);
+      recordEvidence(state, actor, `weakness-trial-${condition}-${reading}`, actionStage, `Controlled trial: ${condition.replace('-', ' ')} produced ${reading}. Compare this result with the Archivist’s historical notes.`);
       if (!correct) return fail(state, 'The field surges. That condition does not disrupt the entity; wait for it to stabilize and test another condition.', 10);
       message = 'The entity withdraws from the field. Record the observed response and compare the historical notes.';
     } else if (state.stage === 3 && id === 'weakness-conclusion') {
@@ -221,6 +271,8 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
 
   if (state.stage === 2 && SEALS.every((seal) => state.seals[seal].disabled) && state.components.length === COMPONENTS.length) { completeStage(state, 2); message += ' All three safeguards are down and four verified components are secured. Stage 3 unlocked.'; }
   if (state.stage === 3 && state.apparatus.configured && state.weakness.discovered && state.weakness.lure > 0 && state.weakness.weakened >= 3) { completeStage(state, 3); message += ' The weakened entity is drawn into the containment chamber. Stage 4 unlocked.'; }
+  if (type === 'interact' && success && HUNT3_EVIDENCE_LOCATIONS[id]) recordEvidence(state, actor, id, actionStage, message);
+  if (state.stage !== actionStage || state.completed) recordEvidence(state, 'team', `stage-${actionStage}-verified`, actionStage, message, true);
   save(state);
   return { success, message, state };
 }

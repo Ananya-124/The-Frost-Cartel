@@ -13,6 +13,31 @@ const state: Hunt1State = {
 };
 
 describe('Hunt I reconstruction interface', () => {
+  it('opens task guidance by default and shows evidence relevance without an extra examination click', () => {
+    const evidenceState: Hunt1State = {
+      ...state,
+      evidence: [{
+        id: 'visitorLedger', title: 'Reception visitor ledger', location: 'Reception — Past', discoveredBy: 'archivist',
+        type: 'evidence', content: 'The last visitor had no badge.', inference: 'Compare this entry with the Future tracks.',
+        relatedObjective: 'The Last Visitor', verified: false, createdAt: new Date().toISOString(),
+      }],
+    };
+    render(<Hunt1Progress state={evidenceState} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.getByText(/Move to each listed object in your timeline and press E/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Incident evidence/ }));
+    expect(screen.getByText(/Compare this entry with the Future tracks/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Examine evidence' })).not.toBeInTheDocument();
+  });
+
+  it('lets players hide and reopen the task brief to clear the room view', () => {
+    render(<Hunt1Progress state={state} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Hide task brief' }));
+    expect(screen.queryByLabelText('archivist The Last Visitor reconstruction')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'TASK BRIEF · The Last Visitor' }));
+    expect(screen.getByLabelText('archivist The Last Visitor reconstruction')).toBeInTheDocument();
+  });
+
   it('lets the Archivist reorder evidence tiles and submit the reconstruction', async () => {
     const onSubmit = vi.fn().mockResolvedValue({ success: true, message: 'verified', state });
     render(<Hunt1Progress state={state} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={onSubmit} onSpecialAction={vi.fn()} onContinue={() => {}} />);

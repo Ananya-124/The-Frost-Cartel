@@ -28,7 +28,7 @@ describe('Hunt II — Memory Fragments and Hidden Weakness', () => {
     const state = makeState(); state.currentChallenge = 2;
     const onSubmit = vi.fn(async (_actor: Hunt2Actor, _kind: Hunt2Input, _value: unknown): Promise<Hunt2ActionResult> => ({ success: true, message: 'saved', state }));
     render(<Hunt2Progress {...props(state, 'archivist', 'memory-historical', onSubmit)} />);
-    expect(screen.getByText('Hunt II · 3/7 · Show tasks')).toBeInTheDocument();
+    expect(screen.getByText('Hunt II · 3/7 · Hide tasks')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Reconstruct the historical memory' })).toBeInTheDocument();
     const selects = screen.getAllByRole('combobox');
     ['arrival', 'resonance', 'cutoff', 'answer', 'failure'].forEach((value, index) => fireEvent.change(selects[index], { target: { value } }));
@@ -67,7 +67,6 @@ describe('Hunt II — Memory Anchor', () => {
     const onSubmit = vi.fn(async (_actor: Hunt2Actor, _kind: Hunt2Input, _value: unknown): Promise<Hunt2ActionResult> => ({ success: true, message: 'saved', state }));
     render(<Hunt2Progress {...props(state, 'tracker', 'anchor-physical-config', onSubmit)} />);
     expect(screen.getByRole('heading', { name: 'Repair the Future anchor nodes' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Hunt II · 6/7 · Show tasks' }));
     expect(screen.getByText(/LIVE NODES · A: unstable · B: reversed · C: disconnected · D: stable/i)).toBeInTheDocument();
     const answers = ['A:stabilize', 'B:forward', 'C:reconnect', 'D:hold'];
     screen.getAllByRole('combobox').forEach((select, index) => fireEvent.change(select, { target: { value: answers[index] } }));
@@ -127,7 +126,6 @@ describe('Hunt II — The Three Identities', () => {
     const unlockedState = makeState();
     unlockedState.currentChallenge = 2;
     render(<Hunt2Progress {...props(unlockedState, 'tracker', 'manifestation-physical', onSubmit)} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Hunt II · 3/7 · Show tasks' }));
     expect(screen.getAllByRole('heading', { name: 'The Memory Fragments' })).toHaveLength(2);
   });
 });

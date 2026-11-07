@@ -73,7 +73,22 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
       },
       inventory: [], cards: [],
     };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state });
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      return Promise.resolve({
+        ok: true,
+        json: async () => {
+          if (url.includes('/api/auth/session')) return { playerNumber: 1 };
+          if (url.endsWith('/api/round3/run')) {
+            return {
+              success: true,
+              run: { status: 'running', remainingMs: 60_000, remainingSeconds: 60, startedAt: null, updatedAt: new Date().toISOString() },
+            };
+          }
+          return state;
+        },
+      });
+    });
     vi.stubGlobal('fetch', fetchMock);
     render(<FrostCartelHomePage />);
 

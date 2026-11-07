@@ -9,6 +9,7 @@
 .panel h2 { margin: 3px 0; color: #ead09b; font: 500 15px Georgia,serif; }
 .future h2 { color: #a6dfdf; }
 .panel p { margin: 3px 0 5px; color: #dbd8cf; font-size: 10px; }
+.panel .fieldGuide { padding: 6px; color: #e0d1a9; background: #171817; border-left: 2px solid #d1a65c; }
 .panel ul { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 5px 0; padding: 0; list-style: none; }
 .panel li { color: #a7aaa4; font-size: 9px; }
 .panel li span { display: inline-block; width: 14px; color: #d2a45b; }

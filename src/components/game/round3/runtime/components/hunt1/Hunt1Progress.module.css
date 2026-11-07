@@ -53,10 +53,15 @@
 .completed b { color: #c7e3bb; font: 600 18px Georgia, serif; }
 .completed button { justify-self: center; padding: 8px 12px; color: #12120f; background: #ddc58f; border: 0; cursor: pointer; font-weight: 700; }
 .loading { position: absolute; z-index: 10; left: 50%; bottom: 66px; transform: translateX(-50%); padding: 8px 12px; color: #d7ccb1; background: #111; border: 1px solid #625743; font: 11px system-ui, sans-serif; }
-.reconstruction { position: fixed; z-index: 6; top: 112px; left: 10px; display: grid; gap: 7px; width: min(420px, calc(50vw - 20px)); max-height: calc(100vh - 220px); overflow: auto; padding: 12px; pointer-events: auto; color: #e9e4d8; background: rgba(8, 10, 12, .94); border: 1px solid rgba(180, 160, 120, .56); border-top: 2px solid #d1a65c; box-shadow: 0 8px 24px #000a; font: 11px/1.35 system-ui, sans-serif; }
+.reconstruction { position: fixed; z-index: 6; top: 112px; right: 10px; display: grid; gap: 7px; width: min(380px, calc(45vw - 20px)); max-height: calc(100vh - 220px); overflow: auto; padding: 12px; pointer-events: auto; color: #e9e4d8; background: rgba(8, 10, 12, .96); border: 1px solid rgba(180, 160, 120, .56); border-top: 2px solid #d1a65c; box-shadow: 0 8px 24px #000a; font: 11px/1.35 system-ui, sans-serif; }
+.futureBrief { right: auto; left: 10px; border-color: rgba(108, 164, 181, .55); border-top-color: #78c8c9; }
 .reconstruction header { display: flex; justify-content: space-between; gap: 8px; color: #e9d19a; font: 700 10px Georgia, serif; letter-spacing: .07em; }
 .reconstruction header b { color: #f1d596; white-space: nowrap; }
+.hideBrief, .briefToggle { padding: 4px 7px !important; color: #e6cf97 !important; background: rgba(7, 9, 11, .96) !important; border: 1px solid #625743 !important; font: 700 9px/1.2 system-ui, sans-serif !important; cursor: pointer; }
+.briefToggle { position: fixed; z-index: 7; top: 112px; right: 10px; max-width: min(380px, calc(45vw - 20px)); box-shadow: 0 4px 15px #0008; }
+.futureBriefToggle { right: auto; left: 10px; }
 .reconstruction p { margin: 0; color: #d3d0c7; }
+.reconstruction .fieldInstructions { padding: 7px; color: #e0d1a9; background: #171817; border-left: 2px solid #d1a65c; }
 .pastText { color: #f0c77d !important; }
 .futureText { color: #91d7d8 !important; }
 .objects { display: grid; gap: 3px; padding: 6px; color: #c6c1b5; background: #101314; border-left: 2px solid #6c9d9b; font-size: 9px; }
@@ -75,5 +80,5 @@
 .reportCompare small { color: #d6c69f; }
 .decodedOrder { padding: 6px; color: #c3e5bd !important; background: #19221c; border-left: 2px solid #8fbc82; }
 .journal article button { padding: 4px 7px; color: #e6cf97; background: #181a19; border: 1px solid #5b5344; cursor: pointer; font: inherit; }
-@media (max-width: 720px) { .reconstruction { top: 150px; left: 8px; width: min(440px, calc(100vw - 16px)); max-height: calc(100vh - 320px); } }
+@media (max-width: 720px) { .reconstruction { top: auto; right: 8px; bottom: 150px; width: calc(50vw - 12px); max-height: 36vh; padding: 7px; font-size: 9px; } .futureBrief { right: auto; left: 8px; } .briefToggle { top: auto; right: 8px; bottom: 150px; max-width: calc(50vw - 12px); } .futureBriefToggle { right: auto; left: 8px; } }
 @media (max-width: 720px) { .taskToggle { top: 112px; right: 8px; } .grid { right: 8px; bottom: 160px; grid-template-columns: 1fr; gap: 5px; width: min(440px, calc(100% - 16px)); max-height: 40vh; } .panel { padding: 7px; } .panel h2 { font-size: 12px; } .panel p { font-size: 9px; } .panel ul { display: block; } .panel li { margin: 2px 0; } .panel footer { display: none; } .toolbar { bottom: 96px; flex-wrap: wrap; justify-content: center; } .toolbar span[role="status"] { max-width: 80vw; } .journal { bottom: 160px; } }

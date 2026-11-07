@@ -42,43 +42,86 @@ function box(c: Ctx, x: number, y: number, w: number, h: number, col: string, de
 }
 
 function floorTile(future: boolean): HTMLCanvasElement {
-  const canvas = makeCanvas(48, 48);
+  const canvas = makeCanvas(64, 64);
   const x = get2d(canvas);
-  const r = createSeededRandom(future ? 5 : 9);
-  x.fillStyle = future ? '#262c3a' : '#aaa17f';
-  x.fillRect(0, 0, 48, 48);
-  for (let k = 0; k < 50; k++) {
-    x.fillStyle = `rgba(${future ? '0,0,30' : '60,50,20'},${r() * 0.14})`;
-    x.fillRect(r() * 48, r() * 48, r() * 9, r() * 3);
+  const r = createSeededRandom(future ? 105 : 109);
+  const base = future ? '#171b29' : '#77745e';
+  x.fillStyle = base;
+  x.fillRect(0, 0, 64, 64);
+
+  // Large, worn stone slabs with recessed grout.
+  x.fillStyle = future ? 'rgba(0,0,0,.22)' : 'rgba(25,20,10,.18)';
+  x.fillRect(0, 0, 64, 64);
+  x.strokeStyle = future ? 'rgba(125,145,190,.12)' : 'rgba(235,220,175,.13)';
+  x.lineWidth = 1;
+  x.strokeRect(2, 2, 60, 60);
+  x.beginPath();
+  x.moveTo(32, 2); x.lineTo(32, 62);
+  x.moveTo(2, 32); x.lineTo(62, 32);
+  x.stroke();
+
+  for (let k = 0; k < 95; k++) {
+    const alpha = 0.025 + r() * 0.11;
+    x.fillStyle = future
+      ? `rgba(${r() > .5 ? '115,130,175' : '0,0,0'},${alpha})`
+      : `rgba(${r() > .5 ? '235,220,175' : '20,15,8'},${alpha})`;
+    x.fillRect(r() * 64, r() * 64, 1 + r() * 10, 1 + r() * 4);
   }
-  x.strokeStyle = future ? '#151925' : '#7d775e';
-  x.lineWidth = 2;
-  x.strokeRect(1, 1, 47, 47);
+
+  // Hairline cracks and chipped edges.
+  x.strokeStyle = future ? 'rgba(5,8,18,.7)' : 'rgba(35,28,15,.48)';
+  x.lineWidth = 1;
+  for (let k = 0; k < 3; k++) {
+    const sx = 7 + r() * 48;
+    const sy = 7 + r() * 48;
+    x.beginPath();
+    x.moveTo(sx, sy);
+    x.lineTo(sx + (r() - .5) * 9, sy + 5 + r() * 7);
+    x.lineTo(sx + (r() - .5) * 15, sy + 9 + r() * 12);
+    x.stroke();
+  }
+
+  // Subtle stains; stronger and colder in the corrupted timeline.
+  x.fillStyle = future ? 'rgba(92,20,45,.16)' : 'rgba(55,34,18,.12)';
+  x.beginPath();
+  x.ellipse(15 + r() * 34, 14 + r() * 36, 5 + r() * 9, 3 + r() * 6, r() * 3, 0, Math.PI * 2);
+  x.fill();
   return canvas;
 }
 
 function wallTile(future: boolean): HTMLCanvasElement {
-  const canvas = makeCanvas(64, 44);
+  const canvas = makeCanvas(96, 64);
   const x = get2d(canvas);
-  const r = createSeededRandom(future ? 21 : 22);
-  x.fillStyle = future ? '#202638' : '#6f6d54';
-  x.fillRect(0, 0, 64, 44);
-  x.strokeStyle = 'rgba(0,0,0,.35)';
-  for (let y = 0; y < 44; y += 11) {
-    x.beginPath();
-    x.moveTo(0, y);
-    x.lineTo(64, y);
-    x.stroke();
-    for (let b = ((y / 11) % 2) * 16; b < 64; b += 32) {
-      x.beginPath();
-      x.moveTo(b, y);
-      x.lineTo(b, y + 11);
-      x.stroke();
+  const r = createSeededRandom(future ? 221 : 222);
+  x.fillStyle = future ? '#111624' : '#454536';
+  x.fillRect(0, 0, 96, 64);
+
+  const brick = future ? ['#20283a', '#252d40', '#1b2233'] : ['#69634d', '#756c52', '#5d5947'];
+  for (let row = 0; row < 4; row++) {
+    const offset = row % 2 ? -24 : 0;
+    for (let col = 0; col < 3; col++) {
+      const bx = offset + col * 48;
+      const by = row * 16;
+      x.fillStyle = brick[Math.floor(r() * brick.length)];
+      x.fillRect(bx + 1, by + 1, 46, 14);
+      x.fillStyle = future ? 'rgba(0,0,0,.28)' : 'rgba(0,0,0,.2)';
+      x.fillRect(bx + 1, by + 13, 46, 2);
+      x.fillStyle = future ? 'rgba(155,175,220,.07)' : 'rgba(255,235,190,.1)';
+      x.fillRect(bx + 2, by + 1, 44, 1);
     }
   }
-  for (let k = 0; k < 30; k++) {
-    x.fillStyle = `rgba(0,0,0,${r() * 0.12})`;
-    x.fillRect(r() * 64, r() * 44, r() * 10, r() * 5);
+
+  for (let k = 0; k < 42; k++) {
+    x.fillStyle = `rgba(0,0,0,${r() * .18})`;
+    x.fillRect(r() * 96, r() * 64, 2 + r() * 12, 1 + r() * 5);
+  }
+  if (future) {
+    x.strokeStyle = 'rgba(112,130,190,.22)';
+    x.lineWidth = 1;
+    x.beginPath();
+    x.moveTo(13, 4); x.lineTo(20, 18); x.lineTo(12, 29); x.lineTo(24, 43);
+    x.moveTo(77, 20); x.lineTo(69, 31); x.lineTo(81, 44);
+    x.stroke();
   }
   return canvas;
 }
@@ -411,6 +454,73 @@ export function drawProp(c: Ctx, o: InteractableObject, future: boolean): void {
   c.restore();
 }
 
+
+/** Atmospheric dressing drawn into the static world: stains, lamps, cracks and timeline haze. */
+function drawWorldAtmosphere(c: Ctx, future: boolean): void {
+  const q = createSeededRandom(future ? 903 : 407);
+
+  // Darkened perimeter makes the walkable spaces read as a physical interior.
+  const edge = c.createRadialGradient(
+    WORLD_WIDTH / 2, WORLD_HEIGHT / 2, Math.min(WORLD_WIDTH, WORLD_HEIGHT) * 0.18,
+    WORLD_WIDTH / 2, WORLD_HEIGHT / 2, Math.max(WORLD_WIDTH, WORLD_HEIGHT) * 0.72,
+  );
+  edge.addColorStop(0, 'rgba(0,0,0,0)');
+  edge.addColorStop(1, future ? 'rgba(0,0,0,.48)' : 'rgba(20,12,4,.34)');
+  c.fillStyle = edge;
+  c.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+  for (const room of ROOMS) {
+    // A beveled room border and subtle pools of light.
+    c.save();
+    c.strokeStyle = future ? 'rgba(112,132,190,.22)' : 'rgba(232,205,145,.22)';
+    c.lineWidth = 3;
+    c.strokeRect(room.x - 5, room.y - 5, room.w + 10, room.h + 10);
+    c.strokeStyle = 'rgba(0,0,0,.42)';
+    c.lineWidth = 1;
+    c.strokeRect(room.x - 2, room.y - 2, room.w + 4, room.h + 4);
+
+    const lamp = c.createRadialGradient(room.x + room.w / 2, room.y + 22, 4, room.x + room.w / 2, room.y + 22, 118);
+    lamp.addColorStop(0, future ? 'rgba(112,130,210,.10)' : 'rgba(255,211,130,.12)');
+    lamp.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = lamp;
+    c.fillRect(room.x - 90, room.y - 95, room.w + 180, room.h + 190);
+    c.restore();
+
+    // Scattered debris and old scrape marks.
+    for (let k = 0; k < 8; k++) {
+      const x = room.x + 18 + q() * (room.w - 36);
+      const y = room.y + 22 + q() * (room.h - 44);
+      c.fillStyle = future ? 'rgba(8,10,18,.34)' : 'rgba(35,25,12,.22)';
+      c.beginPath();
+      c.ellipse(x, y, 3 + q() * 9, 1 + q() * 3, q() * Math.PI, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  // Fine drifting-looking dust specks are static in the pre-rendered layer.
+  for (let k = 0; k < 180; k++) {
+    c.fillStyle = future ? 'rgba(170,190,255,.13)' : 'rgba(255,230,175,.12)';
+    c.fillRect(q() * WORLD_WIDTH, q() * WORLD_HEIGHT, 1 + q() * 2, 1 + q() * 2);
+  }
+}
+
+/** High-contrast room plaques improve navigation without changing collision or gameplay. */
+function drawRoomPlaque(c: Ctx, room: Room, future: boolean): void {
+  const x = room.x + 8;
+  const y = room.y - 28;
+  c.save();
+  c.fillStyle = future ? 'rgba(12,16,29,.88)' : 'rgba(25,20,12,.82)';
+  c.fillRect(x - 4, y - 13, Math.max(96, room.name.length * 8 + 16), 22);
+  c.strokeStyle = future ? 'rgba(151,169,230,.55)' : 'rgba(226,190,112,.55)';
+  c.lineWidth = 1;
+  c.strokeRect(x - 4, y - 13, Math.max(96, room.name.length * 8 + 16), 22);
+  c.fillStyle = future ? '#c5c9ed' : '#f0d69a';
+  c.font = 'bold 10px monospace';
+  c.textBaseline = 'middle';
+  c.fillText(room.name.toUpperCase(), x + 3, y - 2);
+  c.restore();
+}
+
 /** Draws a whole timeline's world once into an offscreen canvas. */
 function buildWorld(timeline: PlayerIndex, wallPattern: CanvasPattern | null): HTMLCanvasElement {
   const canvas = makeCanvas(WORLD_WIDTH, WORLD_HEIGHT);
@@ -454,6 +564,8 @@ function buildWorld(timeline: PlayerIndex, wallPattern: CanvasPattern | null): H
   for (const o of INTERACTABLES) {
     if (o.timeline === (f ? 'future' : 'past') && !HUNT1_INTERACTABLE_IDS.has(o.id) && !HUNT2_INTERACTABLE_IDS.has(o.id) && !HUNT3_INTERACTABLE_IDS.has(o.id)) drawProp(c, o, f);
   }
+
+  drawWorldAtmosphere(c, f);
 
   for (const d of DOORS) {
     const k = d.connector;
@@ -523,9 +635,11 @@ function buildWorld(timeline: PlayerIndex, wallPattern: CanvasPattern | null): H
     }
   }
 
-  c.fillStyle = 'rgba(240,230,190,.9)';
-  c.font = '11px monospace';
-  for (const r of ROOMS) c.fillText(r.name.toUpperCase(), r.x + 4, r.y - 12);
+  for (const r of ROOMS) drawRoomPlaque(c, r, f);
+
+  // Final color grade separates the timelines at a glance.
+  c.fillStyle = f ? 'rgba(70,82,150,.075)' : 'rgba(166,105,42,.045)';
+  c.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   return canvas;
 }
 

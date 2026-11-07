@@ -3,7 +3,6 @@ import type { TeamSession } from '../../../types/team.types';
 import type { Round3StateResponse } from '../../../types/round3.types';
 import type { Round3RunState } from '../../../types/round3.types';
 import { round3Service } from '../../../services/round3Service';
-import { authService } from '../../../services/authService';
 import { inventoryToPowerCards } from './runtime/inventoryCards';
 import GameScreen from './runtime/components/screens/GameScreen';
 import './runtime/styles/game.css';
@@ -16,19 +15,14 @@ interface ParadoxHuntProps {
 export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome }) => {
   const [state, setState] = useState<Round3StateResponse | null>(null);
   const [run, setRun] = useState<Round3RunState | null>(null);
-  const [playerNumber, setPlayerNumber] = useState<1 | 2>(session.playerNumber ?? 1);
   const [error, setError] = useState('');
 
   const connect = useCallback(async () => {
     setError('');
     try {
-      const [sessionState, runState, authenticatedPlayer] = await Promise.all([
-        round3Service.openSession(), round3Service.getRun(),
-        authService.getPlayerNumber(),
-      ]);
+      const [sessionState, runState] = await Promise.all([round3Service.openSession(), round3Service.getRun()]);
       setState(sessionState);
       setRun(runState.run);
-      if (authenticatedPlayer === 1 || authenticatedPlayer === 2) setPlayerNumber(authenticatedPlayer);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not open the Round 3 session.';
       setError(message.includes('No squad token') || message.includes('Authentication required')
@@ -57,7 +51,6 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
           inventory={state.inventory}
           savedGameState={state.session.playerProgress.engine}
           initialRun={run}
-          playerNumber={playerNumber}
           externalError={error}
           onExit={onReturnHome}
           onSaveGameState={saveGameState}

@@ -19,6 +19,29 @@ const OBJECTIVES: Record<Hunt2Challenge, Record<Hunt2Actor, string>> = {
   4: { archivist: 'Read the original circuit diagram and flow record. Configure the Past alignment, then initiate the synchronization pulse.', tracker: 'Map the four Future node conditions, configure the physical repairs, then complete the alternating stabilization cadence.' },
   5: { archivist: 'Restore and maintain the original event sequence, then prepare the memory control.', tracker: 'Use the verified sequence to activate all three containment mechanisms, then prepare the exposed anchor.' },
 };
+function fieldGuide(challenge: Hunt2Challenge, actor: Hunt2Actor, task: 'identity' | 'manifestation' | 'memory' | 'weakness'): string {
+  if (challenge === 1 && task === 'identity') return actor === 'archivist'
+    ? 'Archive: examine the three-name patient file, then use the identity form opened by E to link each name to its role.'
+    : 'Archive, Future: examine traces A, B and C. Link the imprint, transmission signature and answering presence to the identities in the form opened after the third trace.';
+  if (challenge === 1) return actor === 'archivist'
+    ? 'Security archive, Past: read the sealed manifestation records and classify each record in the form opened by E.'
+    : 'Experiment chamber, Future: inspect manifestations A, B and C; compare the light, reflection and footprint traces, then classify them when prompted.';
+  if (challenge === 2 && task === 'memory') return actor === 'archivist'
+    ? 'Observation room and Archive, Past: read the diary, incident report and dated photograph. Arrange the five events in the submission form.'
+    : 'Observation room and Archive, Future: inspect the echo, residual mark and displaced reel. Use their timing to submit the five-event order.';
+  if (challenge === 2) return actor === 'archivist'
+    ? 'Experiment room, Past: compare the historical containment record with the Tracker’s controlled results, then submit your interpretation at the calibration control.'
+    : 'Experiment room and Containment room, Future: test frequency, light and temperature one at a time; record each response, submit the profile, then arm the containment control.';
+  if (challenge === 3) return actor === 'archivist'
+    ? 'Archive, Observation room and Communications room, Past: inspect the damaged photo, duplicated ledger and fragmented recording. Reconnect their relationships at the shared restoration board.'
+    : 'Experiment chamber, Main hall and Containment room, Future: inspect the unstable chamber, substituted symbols and displaced keepsake; place the six components at the restoration board.';
+  if (challenge === 4) return actor === 'archivist'
+    ? 'Containment room, Past: inspect the anchor diagram and flow record, submit the historical alignment, then operate the Past controls when the pulse starts.'
+    : 'Containment room, Future: inspect all four live nodes, submit repairs based on their readings, then follow the Future–Past–Future–Past pulse order.';
+  return actor === 'archivist'
+    ? 'Observation room and Containment room, Past: restore the original event order and stabilize the memory; prepare the Past control for synchronized activation.'
+    : 'Containment room, Future: activate the three mechanisms in the verified order and prepare the exposed anchor. Both players must activate their controls within the displayed window.';
+}
 const TASKS: Record<Hunt2Challenge, Record<Hunt2Actor, readonly [string, string][]>> = {
   1: { archivist: [['identityRecordsInspected', 'Historical identity records examined'], ['historicalIdentitiesSubmitted', 'Historical reconstruction submitted'], ['manifestationRecordsInspected', 'Historical manifestation records examined'], ['historicalManifestationsSubmitted', 'Historical classification submitted']], tracker: [['identityTraceReview', 'Three physical identity traces examined'], ['physicalIdentitiesSubmitted', 'Physical identity links submitted'], ['falseManifestationsInspected', 'Three Future manifestations examined'], ['physicalManifestationsSubmitted', 'Future classification submitted']] },
   2: { archivist: [['memoryHistoricalSubmitted', 'Historical sequence submitted'], ['memoryFragmentsComplete', 'Memory fragments reconstructed'], ['weaknessHistoricalSubmitted', 'Historical conclusions submitted'], ['hiddenWeaknessComplete', 'Containment calibrated']], tracker: [['memoryPhysicalSubmitted', 'Physical sequence submitted'], ['memoryFragmentsComplete', 'Memory fragments reconstructed'], ['weaknessTrialsComplete', 'Controlled trials completed'], ['weaknessExperimentalSubmitted', 'Experimental profile submitted'], ['hiddenWeaknessComplete', 'Containment calibrated']] },
@@ -31,7 +54,7 @@ function status(state: Hunt2State, actor: Hunt2Actor): string { if (state.comple
 function totalScore(state: Hunt2State): number { const b = state.scoreBreakdown; return b.identities + b.falseManifestation + b.exit + b.identity + b.memoryFragments + b.hiddenWeakness + b.brokenMemory + b.reconstruction + b.anchor + b.final + b.optional - b.penalties; }
 
 export default function Hunt2Progress({ state, pending, message, working, onHint, onSubmit, onClose, onContinue }: Props) {
-  const [tasksOpen, setTasksOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(true);
   const [boardOpen, setBoardOpen] = useState(false); const [boardActor, setBoardActor] = useState<Hunt2Actor>('archivist');
   const [clockNow, setClockNow] = useState(0); const [single, setSingle] = useState(''); const [order, setOrder] = useState(['', '', '', '', '', '']);
   const [profile, setProfile] = useState({ frequency: '', light: '', temperature: '' });
@@ -83,6 +106,7 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
       {(['archivist', 'tracker'] as const).map((actor) => <section key={actor} className={`${styles.panel} ${actor === 'tracker' ? styles.future : ''}`}>
       <header><span>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'}</span><b>{status(state, actor)}</b></header>
       <small>HUNT II · THE FALSE MEMORY · TASK {progressNumber}/7</small><h2>{title}</h2><p>{identityTask ? OBJECTIVES[1][actor] : falseManifestationTask ? (actor === 'archivist' ? 'Classify the sealed historical manifestation records using their signatures, dates and facility chronology.' : 'Inspect three Future manifestations and classify each physical trace as genuine or fabricated.') : weaknessTask ? (actor === 'archivist' ? 'Review the contradictory containment reports, then calibrate the verified vulnerability after the Tracker arms the device.' : 'Run controlled frequency, light and temperature trials, submit the observed profile, then arm containment.') : OBJECTIVES[challenge][actor]}</p>
+      <p className={styles.fieldGuide}><b>FIELD GUIDE · </b>{fieldGuide(challenge, actor, identityTask ? 'identity' : falseManifestationTask ? 'manifestation' : memoryTask ? 'memory' : weaknessTask ? 'weakness' : 'memory')} Walk to each named object and press {actor === 'archivist' ? 'E' : 'Enter'}. Read the shared memory board to compare findings; submit in the prompted form or at the indicated control. Collecting evidence alone does not resolve a challenge.</p>
       <ul>{TASKS[challenge][actor].filter(([key]) => {
         const identityStep = key.startsWith('identity') || key === 'historicalIdentitiesSubmitted' || key === 'physicalIdentitiesSubmitted';
         const falseManifestationStep = key.startsWith('manifestation') || key.startsWith('historicalManifestations') || key.startsWith('physicalManifestations') || key === 'falseManifestationsInspected';

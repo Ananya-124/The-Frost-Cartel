@@ -28,7 +28,6 @@ interface GameScreenProps {
   inventory: readonly Round3InventoryItem[];
   savedGameState: unknown;
   initialRun: Round3RunState;
-  playerNumber: 1 | 2;
   onExit: () => void;
   onSaveGameState: (gameState: GameState) => Promise<unknown>;
   onComplete: () => Promise<unknown>;
@@ -37,25 +36,22 @@ interface GameScreenProps {
 }
 
 /** Integrated screen: Round 3's canvas engine is hosted inside the main player portal. */
-export default function GameScreen({ teamName, cards, inventory, savedGameState, initialRun, playerNumber, onExit, onSaveGameState, onComplete, onLoadDevelopmentSample, externalError = '' }: GameScreenProps) {
+export default function GameScreen({ teamName, cards, inventory, savedGameState, initialRun, onExit, onSaveGameState, onComplete, onLoadDevelopmentSample, externalError = '' }: GameScreenProps) {
   const [store] = useState(() => new GameStore());
   const [refs] = useState(createEngineRefs);
   const [initialState] = useState(() => restoreGameState(savedGameState, teamName, cards));
   const [cardError, setCardError] = useState('');
   const [hunt1, setHunt1] = useState<Hunt1State | null>(null);
   const [hunt1Message, setHunt1Message] = useState('');
-  const [hunt1Working, setHunt1Working] = useState(false);
+  const [hunt1Working, setHunt1Working] = useState<Record<Hunt1Actor, boolean>>({ archivist: false, tracker: false });
   const [hunt2, setHunt2] = useState<Hunt2State | null>(null);
   const [hunt2Message, setHunt2Message] = useState('');
   const [hunt2Working, setHunt2Working] = useState(false);
   const [pendingHunt2Input, setPendingHunt2Input] = useState<{ actor: Hunt2Actor; kind: Hunt2Input } | null>(null);
   const [hunt3, setHunt3] = useState<Hunt3State | null>(null);
   const [hunt3Message, setHunt3Message] = useState('');
-  const [hunt3Working, setHunt3Working] = useState(false);
+  const [hunt3Working, setHunt3Working] = useState<Record<Hunt3Actor, boolean>>({ archivist: false, tracker: false });
   const timer = useRound3RunTimer(initialRun);
-  const hunt1ActionInFlight = useRef(false);
-  const hunt2ActionInFlight = useRef(false);
-  const hunt3ActionInFlight = useRef(false);
   const hunt3CompletionHandled = useRef(false);
   const completionStarted = useRef(false);
   const terminalRequestInFlight = useRef(false);
@@ -109,19 +105,15 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
   }, [store]);
 
   const hunt1Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
-    if (hunt1ActionInFlight.current) return;
-    if (playerNumber !== index + 1) return;
     const actor: Hunt1Actor = index === 0 ? 'archivist' : 'tracker';
-    hunt1ActionInFlight.current = true;
-    setHunt1Working(true);
     try {
       const result = await round3Service.hunt1Action({ type: 'interact', actor, objectId: object.id });
       syncHunt1State(result.state);
       setHunt1Message(result.message);
     } catch (reason) {
       setHunt1Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt 1 interaction.');
-    } finally { hunt1ActionInFlight.current = false; setHunt1Working(false); }
-  }, [playerNumber, syncHunt1State]);
+    }
+  }, [syncHunt1State]);
 
   const syncHunt2State = useCallback((next: Hunt2State) => {
     setHunt2(next);
@@ -161,10 +153,7 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
   }, [store]);
 
   const hunt2Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
-    if (hunt2ActionInFlight.current) return;
     const actor: Hunt2Actor = index === 0 ? 'archivist' : 'tracker';
-    hunt2ActionInFlight.current = true;
-    setHunt2Working(true);
     try {
       const result = await round3Service.hunt2Action({ type: 'interact', actor, objectId: object.id });
       syncHunt2State(result.state);
@@ -179,7 +168,7 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
       }
     } catch (reason) {
       setHunt2Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt 2 interaction.');
-    } finally { hunt2ActionInFlight.current = false; setHunt2Working(false); }
+    }
   }, [store, syncHunt2State]);
 
   const syncHunt3State = useCallback((next: Hunt3State) => {
@@ -195,15 +184,12 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
   }, [store]);
 
   const hunt3Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
-    if (playerNumber !== index + 1 || hunt3ActionInFlight.current) return;
     const actor: Hunt3Actor = index === 0 ? 'archivist' : 'tracker';
-    hunt3ActionInFlight.current = true; setHunt3Working(true);
     try {
       const result = await round3Service.hunt3Action(actor, { type: 'interact', id: object.id });
       syncHunt3State(result.state); setHunt3Message(result.message);
     } catch (reason) { setHunt3Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt III interaction.'); }
-    finally { hunt3ActionInFlight.current = false; setHunt3Working(false); }
-  }, [playerNumber, syncHunt3State]);
+  }, [syncHunt3State]);
 
   const engine = useGameEngine(store, refs, cardUseHandler, initialState, hunt1Interaction, hunt2Interaction, hunt3Interaction);
   const snapshot = useGameSnapshot(store);
@@ -331,9 +317,8 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
   }, [snapshot.phase, snapshot.huntNumber, syncHunt3State]);
 
   const submitHunt1 = useCallback(async (actor: Hunt1Actor, sequence: string[]): Promise<Hunt1ActionResult> => {
-    if ((actor === 'archivist' ? 1 : 2) !== playerNumber) return { success: false, message: 'Only your authenticated investigator can operate this reconstruction board.', state: hunt1! };
-    if (hunt1Working || !hunt1) throw new Error('Hunt 1 progress is still loading.');
-    setHunt1Working(true);
+    if (hunt1Working[actor] || !hunt1) throw new Error('Hunt 1 progress is still loading.');
+    setHunt1Working((current) => ({ ...current, [actor]: true }));
     try {
       const result = await round3Service.hunt1Action({ type: 'submit', actor, value: { sequence } });
       syncHunt1State(result.state);
@@ -343,13 +328,12 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
       const message = reason instanceof Error ? reason.message : 'Could not validate the submission.';
       setHunt1Message(message);
       return { success: false, message, state: hunt1 };
-    } finally { setHunt1Working(false); }
-  }, [hunt1, hunt1Working, playerNumber, syncHunt1State]);
+    } finally { setHunt1Working((current) => ({ ...current, [actor]: false })); }
+  }, [hunt1, hunt1Working, syncHunt1State]);
 
   const specialHunt1Action = useCallback(async (actor: Hunt1Actor, type: string, value: unknown): Promise<Hunt1ActionResult> => {
-    if ((actor === 'archivist' ? 1 : 2) !== playerNumber) return { success: false, message: 'Only your authenticated investigator can perform this report action.', state: hunt1! };
-    if (hunt1Working || !hunt1) throw new Error('Hunt 1 progress is still loading.');
-    setHunt1Working(true);
+    if (hunt1Working[actor] || !hunt1) throw new Error('Hunt 1 progress is still loading.');
+    setHunt1Working((current) => ({ ...current, [actor]: true }));
     try {
       const result = await round3Service.hunt1Action({ type, actor, value });
       syncHunt1State(result.state);
@@ -359,17 +343,17 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
       const errorMessage = reason instanceof Error ? reason.message : 'Could not validate the report reconstruction.';
       setHunt1Message(errorMessage);
       return { success: false, message: errorMessage, state: hunt1 };
-    } finally { setHunt1Working(false); }
-  }, [hunt1, hunt1Working, playerNumber, syncHunt1State]);
+    } finally { setHunt1Working((current) => ({ ...current, [actor]: false })); }
+  }, [hunt1, hunt1Working, syncHunt1State]);
 
-  const requestHunt1Hint = useCallback(() => {
-    if (hunt1Working) return;
-    setHunt1Working(true);
-    void round3Service.hunt1Action({ type: 'hint', actor: playerNumber === 1 ? 'archivist' : 'tracker' })
+  const requestHunt1Hint = useCallback((actor: Hunt1Actor) => {
+    if (hunt1Working[actor]) return;
+    setHunt1Working((current) => ({ ...current, [actor]: true }));
+    void round3Service.hunt1Action({ type: 'hint', actor })
       .then((result) => { syncHunt1State(result.state); setHunt1Message(result.hint ? `${result.message} ${result.hint}` : result.message); })
       .catch((reason: unknown) => setHunt1Message(reason instanceof Error ? reason.message : 'Could not load a hint.'))
-      .finally(() => setHunt1Working(false));
-  }, [hunt1Working, playerNumber, syncHunt1State]);
+      .finally(() => setHunt1Working((current) => ({ ...current, [actor]: false })));
+  }, [hunt1Working, syncHunt1State]);
 
   const submitHunt2 = useCallback(async (actor: Hunt2Actor, _kind: Hunt2Input, value: unknown): Promise<Hunt2ActionResult> => {
     if (hunt2Working || !hunt2) return { success: false, message: 'Hunt 2 progress is still loading.', state: hunt2! };
@@ -398,13 +382,12 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
   }, [hunt2Working, syncHunt2State]);
 
   const submitHunt3 = useCallback(async (actor: Hunt3Actor, action: { type: string; id: string; value?: unknown }): Promise<Hunt3ActionResult> => {
-    if ((actor === 'archivist' ? 1 : 2) !== playerNumber) return { success: false, message: 'Only your authenticated investigator can use this control.', state: hunt3! };
-    if (hunt3Working || !hunt3) return { success: false, message: 'Hunt III progress is still loading.', state: hunt3! };
-    setHunt3Working(true);
+    if (hunt3Working[actor] || !hunt3) return { success: false, message: 'Hunt III progress is still loading.', state: hunt3! };
+    setHunt3Working((current) => ({ ...current, [actor]: true }));
     try { const result = await round3Service.hunt3Action(actor, action); syncHunt3State(result.state); setHunt3Message(result.message); return result; }
     catch (reason) { const message = reason instanceof Error ? reason.message : 'Could not validate the Hunt III action.'; setHunt3Message(message); return { success: false, message, state: hunt3 }; }
-    finally { setHunt3Working(false); }
-  }, [hunt3, hunt3Working, playerNumber, syncHunt3State]);
+    finally { setHunt3Working((current) => ({ ...current, [actor]: false })); }
+  }, [hunt3, hunt3Working, syncHunt3State]);
 
   useEffect(() => {
     if (!hunt3?.completed || hunt3CompletionHandled.current || snapshot.phase !== 'playing') return;
@@ -475,16 +458,30 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
         canToggleRun={!snapshot.huntIntro && snapshot.phase === 'playing'}
         onToggleRun={() => { void toggleRun(); }}
       />
-      {snapshot.phase === 'playing' && snapshot.huntNumber === 1 && <Hunt1Progress
-        state={hunt1}
-        playerNumber={playerNumber}
-        message={hunt1Message}
-        working={hunt1Working}
-        onHint={requestHunt1Hint}
-        onSubmit={submitHunt1}
-        onSpecialAction={specialHunt1Action}
-        onContinue={() => { void advanceHunt(1); }}
-      />}
+      {snapshot.phase === 'playing' && snapshot.huntNumber === 1 && <>
+        <Hunt1Progress
+          state={hunt1}
+          playerNumber={1}
+          showOverview
+          message={hunt1Message}
+          working={hunt1Working.archivist}
+          onHint={requestHunt1Hint}
+          onSubmit={submitHunt1}
+          onSpecialAction={specialHunt1Action}
+          onContinue={() => { void advanceHunt(1); }}
+        />
+        <Hunt1Progress
+          state={hunt1}
+          playerNumber={2}
+          showOverview={false}
+          message={hunt1Message}
+          working={hunt1Working.tracker}
+          onHint={requestHunt1Hint}
+          onSubmit={submitHunt1}
+          onSpecialAction={specialHunt1Action}
+          onContinue={() => { void advanceHunt(1); }}
+        />
+      </>}
       {snapshot.phase === 'playing' && snapshot.huntNumber === 2 && <Hunt2Progress
         state={hunt2}
         pending={pendingHunt2Input}
@@ -495,13 +492,22 @@ export default function GameScreen({ teamName, cards, inventory, savedGameState,
         onClose={() => setPendingHunt2Input(null)}
         onContinue={() => { void advanceHunt(2); }}
       />}
-      {snapshot.phase === 'playing' && snapshot.huntNumber === 3 && <Hunt3Progress
-        state={hunt3}
-        actor={playerNumber === 1 ? 'archivist' : 'tracker'}
-        message={hunt3Message}
-        working={hunt3Working}
-        onAction={(action) => submitHunt3(playerNumber === 1 ? 'archivist' : 'tracker', action)}
-      />}
+      {snapshot.phase === 'playing' && snapshot.huntNumber === 3 && <>
+        <Hunt3Progress
+          state={hunt3}
+          actor="archivist"
+          message={hunt3Message}
+          working={hunt3Working.archivist}
+          onAction={(action) => submitHunt3('archivist', action)}
+        />
+        <Hunt3Progress
+          state={hunt3}
+          actor="tracker"
+          message={hunt3Message}
+          working={hunt3Working.tracker}
+          onAction={(action) => submitHunt3('tracker', action)}
+        />
+      </>}
       {snapshot.phase === 'playing' && snapshot.huntIntro && <HuntIntro intro={snapshot.huntIntro} />}
       {snapshot.phase === 'ended' && snapshot.summary && (
         <EndScreen summary={snapshot.summary} onNewSession={() => { void exitGame(); }} expired={timer.run.status === 'expired'} storyReveal={hunt3?.completed === true && timer.run.status !== 'expired'} />

@@ -45,11 +45,12 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
       headers: { Authorization: `Bearer ${tokens[actor]}`, 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const interact = async (actor: 'archivist' | 'tracker', objectId: string) => {
-      const response = await call(actor, '/hunt1/action', { type: 'interact', actor, objectId });
+    const interactAs = async (session: 'archivist' | 'tracker', actor: 'archivist' | 'tracker', objectId: string) => {
+      const response = await call(session, '/hunt1/action', { type: 'interact', actor, objectId });
       expect(response.status).toBe(200);
       return response.json() as Promise<{ success: boolean; message: string; state: any }>;
     };
+    const interact = (actor: 'archivist' | 'tracker', objectId: string) => interactAs(actor, actor, objectId);
     const submit = async (actor: 'archivist' | 'tracker', sequence: string[]) => {
       const response = await call(actor, '/hunt1/action', { type: 'submit', actor, value: { sequence } });
       expect(response.status).toBe(200);
@@ -62,15 +63,29 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     expect(opened.status).toBe(200);
     expect((await call('archivist', '/hunt2/session', {})).status).toBe(423);
 
-    expect((await call('archivist', '/hunt1/action', { type: 'interact', actor: 'tracker', objectId: 'visitorTracks' })).status).toBe(403);
-    const forgedRole = await interact('archivist', 'visitorTracks');
-    expect(forgedRole.state.subtasks.visitorTracks).not.toBe(true);
-    const missingPartnerEvidence = await interact('archivist', 'visitorLedger');
+    const wrongTimeline = await interactAs('archivist', 'archivist', 'visitorTracks');
+    expect(wrongTimeline.success).toBe(false);
+    const missingPartnerEvidence = await interactAs('archivist', 'archivist', 'visitorLedger');
     expect(missingPartnerEvidence.state.subtasks.visitorLedger).toBe(true);
+    expect(missingPartnerEvidence.message).toContain('Reception visitor ledger added to the shared incident file');
+    expect(missingPartnerEvidence.state.journal).toContainEqual(expect.objectContaining({
+      id: 'visitorLedger',
+      title: 'Reception visitor ledger',
+      discoveredBy: 'archivist',
+      relatedObjective: 'The Last Visitor',
+    }));
     const tooEarly = await submit('archivist', ['technician', 'director', 'visitor']);
     expect(tooEarly.state.currentChallenge).toBe(1);
     expect(tooEarly.state.penalties).toBe(0);
-    await interact('tracker', 'visitorTracks');
+    const futureEvidence = await interactAs('archivist', 'tracker', 'visitorTracks');
+    expect(futureEvidence.success).toBe(true);
+    expect(futureEvidence.state.subtasks.visitorTracks).toBe(true);
+    expect(futureEvidence.state.journal).toContainEqual(expect.objectContaining({
+      id: 'visitorTracks',
+      title: 'Tracks beneath the reception glass',
+      discoveredBy: 'tracker',
+      relatedObjective: 'The Last Visitor',
+    }));
     await interact('archivist', 'optionalResearchNote');
     await interact('tracker', 'optionalForgottenRecording');
     expect((await interact('archivist', 'optionalResearchNote')).state.score).toBe(100);
@@ -92,8 +107,8 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     expect((await wrongRoleArchivist.json() as { success: boolean }).success).toBe(false);
     const wrongRoleTracker = await call('tracker', '/hunt1/action', { type: 'missingReportArchivist', actor: 'tracker', value: { sequence: reportAnswer } });
     expect((await wrongRoleTracker.json() as { success: boolean }).success).toBe(false);
-    expect((await call('tracker', '/hunt1/action', { type: 'missingReportArchivist', actor: 'archivist', value: { sequence: reportAnswer } })).status).toBe(403);
-    expect((await call('archivist', '/hunt1/action', { type: 'missingReportTracker', actor: 'tracker', value: { sequence: reportAnswer } })).status).toBe(403);
+    expect((await call('tracker', '/hunt1/action', { type: 'missingReportArchivist', actor: 'tracker', value: { sequence: reportAnswer } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('archivist', '/hunt1/action', { type: 'missingReportTracker', actor: 'archivist', value: { sequence: reportAnswer } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
 
     const archivistDecode = await call('archivist', '/hunt1/action', { type: 'missingReportArchivist', actor: 'archivist', value: { sequence: reportAnswer } });
     let reportState = (await archivistDecode.json() as { success: boolean; state: any }).state;
@@ -141,8 +156,8 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     const wiring = ['generator-relay', 'relay-load', 'load-ground', 'ground-frame'];
     const prematureTracker = await call('tracker', '/hunt1/action', { type: 'powerFailureTracker', actor: 'tracker', value: { sequence: wiring } });
     expect((await prematureTracker.json() as { success: boolean }).success).toBe(false);
-    expect((await call('tracker', '/hunt1/action', { type: 'powerFailureArchivist', actor: 'archivist', value: { sequence: wiring } })).status).toBe(403);
-    expect((await call('archivist', '/hunt1/action', { type: 'powerFailureTracker', actor: 'tracker', value: { sequence: wiring } })).status).toBe(403);
+    expect((await call('tracker', '/hunt1/action', { type: 'powerFailureArchivist', actor: 'tracker', value: { sequence: wiring } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('archivist', '/hunt1/action', { type: 'powerFailureTracker', actor: 'archivist', value: { sequence: wiring } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
     const wrongWiring = ['relay-load', 'generator-relay', 'load-ground', 'ground-frame'];
     const wrongArchivistDecode = await call('archivist', '/hunt1/action', { type: 'powerFailureArchivist', actor: 'archivist', value: { sequence: wrongWiring } });
     const wrongDecodeResult = await wrongArchivistDecode.json() as { success: boolean; state: any };
@@ -178,8 +193,8 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     await interact('tracker', 'cameraBuffer');
     const timeline = ['alarm', 'lights-fail', 'subject-appears', 'observer-vanishes'];
     const wrongFuture = ['alarm', 'lights-fail', 'observer-vanishes', 'subject-appears'];
-    expect((await call('tracker', '/hunt1/action', { type: 'observationArchivist', actor: 'archivist', value: { sequence: timeline } })).status).toBe(403);
-    expect((await call('archivist', '/hunt1/action', { type: 'observationTracker', actor: 'tracker', value: { sequence: timeline } })).status).toBe(403);
+    expect((await call('tracker', '/hunt1/action', { type: 'observationArchivist', actor: 'tracker', value: { sequence: timeline } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('archivist', '/hunt1/action', { type: 'observationTracker', actor: 'archivist', value: { sequence: timeline } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
     const earlyFuture = await call('tracker', '/hunt1/action', { type: 'observationTracker', actor: 'tracker', value: { sequence: wrongFuture } }).then((response) => response.json()) as { success: boolean; state: any };
     expect(earlyFuture.success).toBe(false);
     expect(earlyFuture.state.taskScores.observationLog).toBe(0);
@@ -193,16 +208,16 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     expect(pastTimeline.success).toBe(true);
     expect(pastTimeline.state.taskScores.observationLog).toBe(0);
     expect((await call('archivist', '/hunt1/state').then((response) => response.json()) as { state: any }).state.observationTimeline.archivistTimeline).toEqual(timeline);
-    expect((await call('tracker', '/hunt1/state').then((response) => response.json()) as { state: any }).state.observationTimeline.archivistTimeline).toBeNull();
+    expect((await call('tracker', '/hunt1/state').then((response) => response.json()) as { state: any }).state.observationTimeline.archivistTimeline).toEqual(timeline);
     const wrongFutureResponse = await call('tracker', '/hunt1/action', { type: 'observationTracker', actor: 'tracker', value: { sequence: wrongFuture } }).then((response) => response.json()) as { success: boolean; state: any };
     expect(wrongFutureResponse.success).toBe(false);
     expect(wrongFutureResponse.state.taskScores.observationLog).toBe(0);
     expect(wrongFutureResponse.state.observationTimeline.investigationsAgree).toBe(false);
-    expect(wrongFutureResponse.state.observationTimeline.archivistTimeline).toBeNull();
+    expect(wrongFutureResponse.state.observationTimeline.archivistTimeline).toEqual(timeline);
     expect(wrongFutureResponse.state.observationTimeline.trackerTimeline).toEqual(wrongFuture);
     const restoredFutureTimeline = (await call('tracker', '/hunt1/state').then((response) => response.json()) as { state: any }).state;
     expect(restoredFutureTimeline.observationTimeline.trackerTimeline).toEqual(wrongFuture);
-    expect(restoredFutureTimeline.observationTimeline.archivistTimeline).toBeNull();
+    expect(restoredFutureTimeline.observationTimeline.archivistTimeline).toEqual(timeline);
     const repeatedWrongFuture = await call('tracker', '/hunt1/action', { type: 'observationTracker', actor: 'tracker', value: { sequence: wrongFuture } }).then((response) => response.json()) as { state: any };
     expect(repeatedWrongFuture.state.penalties).toBe(wrongFutureResponse.state.penalties);
     const correctFuture = await call('tracker', '/hunt1/action', { type: 'observationTracker', actor: 'tracker', value: { sequence: timeline } }).then((response) => response.json()) as { success: boolean; state: any };
@@ -219,8 +234,8 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     await interact('archivist', 'signalChart');
     await interact('tracker', 'cableJunction');
     const signalRoute = ['intake', 'ground', 'observer', 'transmit'];
-    expect((await call('tracker', '/hunt1/action', { type: 'signalArchivist', actor: 'archivist', value: { sequence: signalRoute } })).status).toBe(403);
-    expect((await call('archivist', '/hunt1/action', { type: 'signalTracker', actor: 'tracker', value: { sequence: signalRoute } })).status).toBe(403);
+    expect((await call('tracker', '/hunt1/action', { type: 'signalArchivist', actor: 'tracker', value: { sequence: signalRoute } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('archivist', '/hunt1/action', { type: 'signalTracker', actor: 'archivist', value: { sequence: signalRoute } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
     const earlySignal = await call('tracker', '/hunt1/action', { type: 'signalTracker', actor: 'tracker', value: { sequence: signalRoute } }).then((response) => response.json()) as { success: boolean; state: any };
     expect(earlySignal.success).toBe(false);
     expect(earlySignal.state.taskScores.signalReconstruction).toBe(0);
@@ -262,8 +277,8 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     const wrongHistory = ['resonance-limited-to-recorded-imprints', 'temporal-resonance-reconstructs-human-memories'];
     const historical = ['temporal-resonance-reconstructs-human-memories', 'resonance-limited-to-recorded-imprints'];
     const physical = ['omitted-ground-and-relay-bypass-exceeded-limits', 'a-reconstructed-memory-became-conscious-after-transmission', 'that-consciousness-manifested-as-the-entity'];
-    expect((await call('tracker', '/hunt1/action', { type: 'incidentConclusionArchivist', actor: 'archivist', value: { sequence: historical } })).status).toBe(403);
-    expect((await call('archivist', '/hunt1/action', { type: 'incidentConclusionTracker', actor: 'tracker', value: { sequence: physical } })).status).toBe(403);
+    expect((await call('tracker', '/hunt1/action', { type: 'incidentConclusionArchivist', actor: 'tracker', value: { sequence: historical } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
+    expect((await call('archivist', '/hunt1/action', { type: 'incidentConclusionTracker', actor: 'archivist', value: { sequence: physical } }).then((response) => response.json()) as { success: boolean }).success).toBe(false);
     const wrongConclusion = await call('archivist', '/hunt1/action', { type: 'incidentConclusionArchivist', actor: 'archivist', value: { sequence: wrongHistory } }).then((response) => response.json()) as { success: boolean; state: any };
     expect(wrongConclusion.success).toBe(false);
     const repeatedWrongConclusion = await call('archivist', '/hunt1/action', { type: 'incidentConclusionArchivist', actor: 'archivist', value: { sequence: wrongHistory } }).then((response) => response.json()) as { state: any };
@@ -276,7 +291,7 @@ describe('Round 3 Hunt I — The Forgotten Incident', () => {
     const restoredConclusion = (await call('archivist', '/hunt1/state').then((response) => response.json()) as { state: any }).state;
     expect(restoredConclusion.incidentConclusion.archivistInterpretation).toEqual(historical);
     const trackerPrivateView = (await call('tracker', '/hunt1/state').then((response) => response.json()) as { state: any }).state;
-    expect(trackerPrivateView.incidentConclusion.archivistInterpretation).toBeNull();
+    expect(trackerPrivateView.incidentConclusion.archivistInterpretation).toEqual(historical);
     const wrongPhysical = ['a-reconstructed-memory-became-conscious-after-transmission', 'omitted-ground-and-relay-bypass-exceeded-limits', 'that-consciousness-manifested-as-the-entity'];
     const wrongTrackerConclusion = await call('tracker', '/hunt1/action', { type: 'incidentConclusionTracker', actor: 'tracker', value: { sequence: wrongPhysical } }).then((response) => response.json()) as { success: boolean; state: any };
     expect(wrongTrackerConclusion.success).toBe(false);
