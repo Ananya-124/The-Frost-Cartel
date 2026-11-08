@@ -144,25 +144,6 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
           </button>
         </div>
 
-        {/* Center: Minimal Ornamental Footer Capsule */}
-        <div className="px-5 py-2 rounded-full bg-black/80 border border-amber-900/50 backdrop-blur-md shadow-lg flex items-center gap-2.5 text-[11px] sm:text-xs font-cinzel text-amber-300 tracking-[0.2em] uppercase select-none">
-          <span className="text-amber-400 text-xs" aria-hidden="true">
-            💀
-          </span>
-          <span>3 COFFINS</span>
-          <span className="text-amber-600" aria-hidden="true">
-            •
-          </span>
-          <span>7 RIDDLES</span>
-          <span className="text-amber-600" aria-hidden="true">
-            •
-          </span>
-          <span>1 FINAL CHALLENGE</span>
-          <span className="text-amber-400 text-xs" aria-hidden="true">
-            💀
-          </span>
-        </div>
-
         {/* Right: Round Dashboard Action & Skip */}
         <div className="flex items-center gap-2 sm:gap-3">
           {onSkipStage && (

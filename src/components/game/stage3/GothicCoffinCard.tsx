@@ -92,7 +92,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
           className="w-full h-auto object-contain filter drop-shadow-[0_12px_30px_rgba(0,0,0,0.95)]"
         />
 
-        {/* 4. Interactive PLAY / INSPECT Button */}
+        {/* 4. Interactive PLAY / INSPECT Button Slot (Seamlessly aligns with the artwork's carved action slot) */}
         <button
           type="button"
           onClick={(e) => {
@@ -100,13 +100,23 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
             handleClick();
           }}
           aria-label={accessibleGraveName}
-          className={`absolute top-[83.2%] left-1/2 -translate-x-1/2 w-[52%] h-[8%] min-h-[32px] sm:min-h-[36px] rounded-full ${theme.btnBg} border ${theme.btnBorder} ${theme.btnShadow} flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 group-hover:scale-105 active:scale-95 z-20`}
+          className="absolute top-[84%] left-1/2 -translate-x-1/2 w-[48%] h-[7.8%] rounded-full cursor-pointer z-20 focus:outline-none flex items-center justify-center transition-all duration-200 group-hover:scale-105 active:scale-95"
         >
-          <span
-            className={`font-cinzel text-xs sm:text-[13px] font-black tracking-[0.2em] uppercase ${theme.btnText} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]`}
-          >
-            {isDiscovered ? 'INSPECT ›' : 'PLAY ›'}
-          </span>
+          {isDiscovered ? (
+            <div
+              className={`w-full h-full rounded-full ${theme.btnBg} border-2 ${theme.btnBorder} ${theme.btnShadow} flex items-center justify-center gap-1 px-2`}
+            >
+              <span
+                className={`font-cinzel text-[10px] sm:text-xs font-black tracking-[0.2em] uppercase ${theme.btnText} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]`}
+              >
+                INSPECT ›
+              </span>
+            </div>
+          ) : (
+            <div
+              className="w-full h-full rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 ring-2 ring-amber-400/40 shadow-[0_0_15px_rgba(245,158,11,0.4)] pointer-events-none"
+            />
+          )}
         </button>
       </div>
 
