@@ -357,11 +357,11 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
           </aside>
         </div>
 
-        {/* The six cards */}
+        {/* All auction cards */}
         <section className="mt-9 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-6" aria-label="All auction cards">
           {view
             ? view.cards.map((c, i) => <AuctionCard key={c.id} card={c} index={i} live={live?.cardId === c.id} />)
-            : Array.from({ length: 6 }, (_, i) => <div key={i} className="r2-panel rounded-2xl h-72 animate-pulse" />)}
+            : Array.from({ length: 11 }, (_, i) => <div key={i} className="r2-panel rounded-2xl h-72 animate-pulse" />)}
         </section>
 
         {/* Footer banner */}

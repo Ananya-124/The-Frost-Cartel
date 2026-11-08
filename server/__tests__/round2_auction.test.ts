@@ -47,7 +47,21 @@ describe('Round 2 — Haunted Auction API (player flow)', () => {
     expect(a.json.me.credits).toBe(300);
     expect(b.json.me.credits).toBe(200);
     expect(a.json.live).toBeNull();
-    expect(a.json.cards).toHaveLength(6);
+    expect(a.json.cards).toHaveLength(11);
+    expect(a.json.cards.map((card: { name: string }) => card.name)).toEqual([
+      'Chrono Freeze',
+      'Witching Hour',
+      'Spectral Sight',
+      "Witch's Lens",
+      'Hexbreaker',
+      "Mechanic's Curse",
+      "Witch's Elixir",
+      "Raven's Messenger",
+      'Phantom Shield',
+      'Soul Surge',
+      "The Warden's Decree — Master Card",
+    ]);
+    expect(a.json.cards[10].description).toContain('enforce the pause manually');
     const noCard = await call('/bid', 'POST', { teamName: 'Alpha', amount: 100 });
     expect(noCard.status).toBe(409);
   });
@@ -80,7 +94,7 @@ describe('Round 2 — Haunted Auction API (player flow)', () => {
     expect(card.status).toBe('sold');
     expect(card.winner).toBe('Alpha');
     expect(s.json.me.credits).toBe(180);
-    expect(s.json.me.cards).toEqual([{ id: 1, name: 'Vampire Shield', price: 120 }]);
+    expect(s.json.me.cards).toEqual([{ id: 1, name: 'Chrono Freeze', price: 120 }]);
     expect((await call('/state?team=Beta')).json.me.credits).toBe(200);
   });
 

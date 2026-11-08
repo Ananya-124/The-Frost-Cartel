@@ -2,7 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { R2View, R2Card } from '../../services/round2Service';
 
-const NAMES = ['Vampire Shield', 'Witch Hex', 'Ghost Pass', 'Zombie Revive', 'Pumpkin Bomb', 'Reaper Strike'];
+const NAMES = [
+  'Chrono Freeze',
+  'Witching Hour',
+  'Spectral Sight',
+  "Witch's Lens",
+  'Hexbreaker',
+  "Mechanic's Curse",
+  "Witch's Elixir",
+  "Raven's Messenger",
+  'Phantom Shield',
+  'Soul Surge',
+  "The Warden's Decree — Master Card",
+];
 const makeCards = (): R2Card[] =>
   NAMES.map((name, i) => ({ id: i + 1, name, description: `${name} power`, icon: '🎃', defaultBase: 100, status: 'pending', winner: null, price: null }));
 
@@ -41,7 +53,7 @@ describe('Round2Auction (player screen)', () => {
   it('waits, then shows the card the admin puts up for bidding', async () => {
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
     expect(await screen.findByText(/Waiting for the next card/i)).toBeInTheDocument();
-    expect(screen.getAllByText('Vampire Shield')).toHaveLength(1); // only in the card row
+    expect(screen.getAllByText('Chrono Freeze')).toHaveLength(1); // only in the card row
 
     const cards = makeCards();
     cards[0].status = 'live';
@@ -49,7 +61,7 @@ describe('Round2Auction (player screen)', () => {
 
     expect(await screen.findByRole('button', { name: /PLACE BID/i }, { timeout: 4000 })).toBeEnabled();
     expect(screen.getByText(/ROUND 2 • BIDDING OPEN/)).toBeInTheDocument();
-    expect(screen.getAllByText('Vampire Shield').length).toBeGreaterThan(1); // stage + card row
+    expect(screen.getAllByText('Chrono Freeze').length).toBeGreaterThan(1); // stage + card row
   });
 
   it('places a bid at the minimum and reflects the lead', async () => {
@@ -85,7 +97,7 @@ describe('Round2Auction (player screen)', () => {
     cards[1].status = 'sold';
     cards[1].winner = 'Alpha';
     cards[1].price = 130;
-    current = view({ cards, me: { name: 'Alpha', startCredits: 250, spent: 130, credits: 120, cards: [{ id: 2, name: 'Witch Hex', price: 130 }] } });
+    current = view({ cards, me: { name: 'Alpha', startCredits: 250, spent: 130, credits: 120, cards: [{ id: 2, name: 'Witching Hour', price: 130 }] } });
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
     expect(await screen.findByText('130 CR')).toBeInTheDocument();
     expect(screen.getByText('120')).toBeInTheDocument(); // credits left in the header

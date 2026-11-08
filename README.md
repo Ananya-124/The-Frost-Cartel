@@ -120,7 +120,7 @@ Open `http://127.0.0.1:5173/#/admin` and choose the **Auction** tab:
 - Backend: `server/routes/round2.routes.ts` (mounted at `/api/round2`). Auction state lives in memory and is mirrored to one row in the `round2_state` SQLite table, so a server restart does not lose the auction.
 - Frontend: `src/components/game/round2/Round2Auction.tsx` (squad screen), `src/components/admin/auction/AdminAuctionTab.tsx` (organizer tab), `src/services/round2Service.ts` (API + storage helpers).
 - The squad screen polls `GET /api/round2/state` roughly every 0.8 seconds rather than using the SSE stream.
-- To rename the 6 cards or change their descriptions and default prices, edit the `CARDS` list at the top of `server/routes/round2.routes.ts`. The minimum increment and anti-sniping window are in `CONFIG` just above it.
+- To rename the 11 cards or change their descriptions and default prices, edit the `CARDS` list at the top of `server/routes/round2.routes.ts`. Each card defaults to 100 credits; organizers can override a card's base price before bidding. The Warden's Decree is enforced manually by the event coordinators. The minimum increment and anti-sniping window are in `CONFIG` just above it.
 
 | Endpoint | Auth | Purpose |
 | :--- | :--- | :--- |

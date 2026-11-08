@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { R2Card } from '../../../services/round2Service';
-import { CARD_ART, CARD_COLOR, CARD_TITLE_COLOR } from '../../../constants/auction.constants';
+import { CARD_COLOR, CARD_TITLE_COLOR } from '../../../constants/auction.constants';
 
 interface AuctionCardProps {
   card: R2Card;
@@ -38,15 +38,10 @@ const CardFrame: React.FC = () => (
   </svg>
 );
 
-/** Card picture with an emoji fallback if the image file is missing. */
-export const CardArt: React.FC<{ card: R2Card; className?: string }> = ({ card, className = '' }) => {
-  const [broken, setBroken] = useState(false);
-  const src = CARD_ART[card.id];
-  if (!src || broken) {
-    return <span aria-hidden="true" className="text-6xl">{card.icon}</span>;
-  }
-  return <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} className={className} />;
-};
+/** Show each card's server-provided symbol rather than artwork for the retired catalog. */
+export const CardArt: React.FC<{ card: R2Card; className?: string }> = ({ card, className = '' }) => (
+  <span aria-hidden="true" className={`text-6xl ${className}`}>{card.icon}</span>
+);
 
 const STATUS_TAG: Record<R2Card['status'], string> = {
   pending: 'BASE',
