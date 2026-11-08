@@ -98,7 +98,7 @@ export function seedBootstrapData(): void {
 
       // Seed initial stages for each team
       const stages = [
-        { id: 1, name: 'The Unknown Challenge', max: 100, status: 'NOT CONFIGURED' },
+        { id: 1, name: 'The Pumpkin Shuffle', max: 100, status: 'AVAILABLE' },
         { id: 2, name: 'The Haunted Image Hunt', max: 150, status: 'AVAILABLE' },
         { id: 3, name: 'The Forgotten Graveyard', max: 250, status: 'LOCKED' },
       ];

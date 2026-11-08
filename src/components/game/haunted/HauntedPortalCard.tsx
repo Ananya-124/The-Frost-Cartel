@@ -30,6 +30,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
   const themeStyles = {
     orange: {
       relicImg: '/assets/halloween/portals/relic_full_stage1.png',
+      completedRelicImg: '/assets/halloween/portals/relic_full_stage1_completed.png',
       auraBg: 'bg-[radial-gradient(ellipse_at_50%_45%,rgba(249,115,22,0.45)_0%,rgba(194,65,12,0.2)_50%,transparent_75%)]',
       hoverGlow: 'group-hover:drop-shadow-[0_0_28px_rgba(249,115,22,0.85)]',
       pillBorder: 'border-orange-500/70',
@@ -43,6 +44,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
     },
     purple: {
       relicImg: '/assets/halloween/portals/relic_full_stage2.png',
+      completedRelicImg: '/assets/halloween/portals/relic_full_stage2_completed.png',
       auraBg: 'bg-[radial-gradient(ellipse_at_50%_45%,rgba(168,85,247,0.45)_0%,rgba(126,34,206,0.2)_50%,transparent_75%)]',
       hoverGlow: 'group-hover:drop-shadow-[0_0_28px_rgba(168,85,247,0.85)]',
       pillBorder: 'border-purple-500/70',
@@ -56,6 +58,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
     },
     emerald: {
       relicImg: '/assets/halloween/portals/relic_full_stage3.png',
+      completedRelicImg: '/assets/halloween/portals/relic_full_stage3_completed.png',
       auraBg: 'bg-[radial-gradient(ellipse_at_50%_45%,rgba(20,184,166,0.45)_0%,rgba(13,148,136,0.2)_50%,transparent_75%)]',
       hoverGlow: 'group-hover:drop-shadow-[0_0_28px_rgba(20,184,166,0.85)]',
       pillBorder: 'border-teal-500/70',
@@ -68,6 +71,9 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
       completedShadow: 'shadow-[0_0_16px_rgba(20,184,166,0.6)]',
     },
   }[colorTheme];
+
+  const currentRelicImg =
+    status === 'completed' ? themeStyles.completedRelicImg : themeStyles.relicImg;
 
   const isNotConfigured = status === 'not_configured';
 
@@ -94,7 +100,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
       {/* 2. Freestanding Gothic Reliquary Structure & Frame */}
       <div className="relative w-full z-10 transition-all duration-300 group-hover:scale-[1.03] group-hover:brightness-110 active:scale-[0.98]">
         <img
-          src={themeStyles.relicImg}
+          src={currentRelicImg}
           alt={`Stage ${stageNumber}: ${title}`}
           className={`w-full h-auto object-contain filter drop-shadow-[0_12px_28px_rgba(0,0,0,0.95)] ${themeStyles.hoverGlow} transition-all duration-300 pointer-events-none`}
           loading="eager"
@@ -102,7 +108,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
 
         {/* 3. Dynamic Status Overlays: Seamlessly replaces the reward button on the relic frame */}
         {status === 'completed' && (
-          <div className="absolute top-[77.1%] left-1/2 -translate-x-1/2 w-[48%] h-[9.8%] z-20 pointer-events-none flex items-center justify-center">
+          <div className="absolute top-[77.1%] left-1/2 -translate-x-1/2 w-[50%] h-[9.8%] z-20 pointer-events-none flex items-center justify-center">
             <div
               className={`w-full h-full rounded-full ${themeStyles.completedBg} border-2 ${themeStyles.completedBorder} ${themeStyles.completedShadow} flex items-center justify-center gap-1 sm:gap-1.5 px-2`}
             >

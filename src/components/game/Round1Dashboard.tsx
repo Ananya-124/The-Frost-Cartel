@@ -209,7 +209,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
 
         {/* The Three Compact Gothic Portals in One Centered Horizontal Row */}
         <div className="w-full flex flex-col md:flex-row flex-nowrap md:flex-nowrap justify-center items-center gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto pb-4 md:pb-0">
-          {/* PORTAL 01: The Unknown Challenge (Burnt Orange) */}
+          {/* PORTAL 01: The Pumpkin Shuffle (Burnt Orange) */}
           <HauntedPortalCard
             stageId="stage-1"
             stageNumber={1}
@@ -217,7 +217,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
             rewardCredits={100}
             status={teamSession.stages['stage-1'].status}
             colorTheme="orange"
-            artworkUrl="/assets/halloween/portals/portal_stage1_crypt.jpg"
+            artworkUrl="/assets/halloween/portals/portal_stage1_pumpkin_shuffle.jpg"
             isExpired={isExpired}
             progressText={
               (teamSession.stage1State?.trials.filter((t) => t.status !== 'pending').length ?? 0) > 0
