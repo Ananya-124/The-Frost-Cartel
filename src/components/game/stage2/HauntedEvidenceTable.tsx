@@ -32,7 +32,7 @@ export const HauntedEvidenceTable: React.FC<HauntedEvidenceTableProps> = ({
   return (
     <div
       aria-label="Detective Evidence Table"
-      className="relative flex-1 w-full min-h-[480px] sm:min-h-[550px] md:min-h-[600px] flex flex-col justify-center px-2 sm:px-6 py-4 select-none overflow-hidden"
+      className="relative flex-1 min-h-0 w-full flex flex-col justify-center px-2 sm:px-6 py-1 select-none overflow-hidden"
     >
       {/* 1. Dramatic Ambient Lighting & Table Surface Environment */}
       {/* Warm Golden Desk Lamp Radial Spotlight (shining from left desk area) */}
@@ -113,7 +113,7 @@ export const HauntedEvidenceTable: React.FC<HauntedEvidenceTableProps> = ({
       </div>
 
       {/* 3. Interactive Scattered Photo Arrangement (2 Rows of 4 Irregular Overlapping Photos) */}
-      <div className="relative z-20 w-full max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 lg:gap-6 py-2 sm:py-4">
+      <div className="relative z-20 w-full max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 py-1 flex-1 min-h-0 items-center">
         {images.map((img) => {
           const isHinted = activeHintImageId === img.id;
           const isHovered = hoveredImageId === img.id;
@@ -142,7 +142,7 @@ export const HauntedEvidenceTable: React.FC<HauntedEvidenceTableProps> = ({
                 zIndex,
               }}
               aria-label={`Inspect Evidence Photograph: ${img.title}`}
-              className={`group relative p-2 sm:p-2.5 pb-4 sm:pb-6 rounded-[2px] bg-[#f5f0e6] text-stone-900 shadow-[0_14px_32px_rgba(0,0,0,0.9),0_2px_4px_rgba(0,0,0,0.4)] border border-[#d6cbbb] cursor-pointer transition-all duration-300 ease-out flex flex-col items-center select-none ${
+              className={`group relative p-1.5 sm:p-2 pb-2.5 sm:pb-3 rounded-[2px] bg-[#f5f0e6] text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.9),0_2px_4px_rgba(0,0,0,0.4)] border border-[#d6cbbb] cursor-pointer transition-all duration-300 ease-out flex flex-col items-center justify-between select-none max-h-[min(25vh,230px)] ${
                 styleConfig.translateOffset
               } ${
                 isHinted
@@ -159,7 +159,7 @@ export const HauntedEvidenceTable: React.FC<HauntedEvidenceTableProps> = ({
               </div>
 
               {/* Distressed Photograph Inner Frame */}
-              <div className="relative w-full aspect-[4/3] rounded-[1px] overflow-hidden bg-black border border-stone-800 shadow-inner">
+              <div className="relative w-full aspect-[4/3] max-h-[min(18vh,160px)] rounded-[1px] overflow-hidden bg-black border border-stone-800 shadow-inner flex items-center justify-center">
                 <img
                   src={img.imageUrl}
                   alt={img.title}
@@ -182,11 +182,11 @@ export const HauntedEvidenceTable: React.FC<HauntedEvidenceTableProps> = ({
               </div>
 
               {/* Weathered Handwritten / Typewriter Photo Title */}
-              <div className="w-full mt-2 sm:mt-2.5 px-1 text-center">
-                <h3 className="font-cinzel text-[10px] sm:text-xs font-bold tracking-wider text-[#2d2417] truncate drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">
+              <div className="w-full mt-1 px-1 text-center">
+                <h3 className="font-cinzel text-[9px] sm:text-[10px] font-bold tracking-wider text-[#2d2417] truncate drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] leading-tight">
                   {img.title}
                 </h3>
-                <span className="text-[8px] sm:text-[9px] font-mono text-[#6e5d44] tracking-widest uppercase block mt-0.5">
+                <span className="text-[7.5px] sm:text-[8.5px] font-mono text-[#6e5d44] tracking-widest uppercase block">
                   Click to Inspect
                 </span>
               </div>

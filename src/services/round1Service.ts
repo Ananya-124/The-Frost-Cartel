@@ -6,13 +6,12 @@ import type {
   Stage1Config,
   Stage2Config,
   Stage3Config,
+  Stage1State,
+  Stage1TrialConfig,
+  Stage1TrialState,
 } from '../types/round1.types';
+import { DEFAULT_STAGE1_TRIALS } from '../constants/stage1.constants';
 import { STAGE_CREDITS } from '../constants/credits.constants';
-import {
-  STAGE2_CANONICAL_IMAGES,
-  STAGE2_CANONICAL_TARGETS,
-  normalizeTargetId,
-} from '../components/game/stage2/stage2TargetsConfig';
 
 export type ScoreSyncCallback = (
   teamId: string,
@@ -22,9 +21,120 @@ export type ScoreSyncCallback = (
   activityDesc?: string
 ) => void;
 
-// Canonical 8 Configured Real Photographs & 12 Target Relics for Stage 2 Haunted Image Hunt
-const INITIAL_HUNT_IMAGES: HuntImage[] = STAGE2_CANONICAL_IMAGES;
-const INITIAL_TARGET_ITEMS = STAGE2_CANONICAL_TARGETS;
+export type Stage1AttemptResult =
+  | { ok: true; attemptsUsed: number }
+  | { ok: false; reason: 'unknown_team' | 'bad_trial' | 'locked' | 'resolved' | 'no_tries' | 'expired' };
+
+export interface Stage1ResolveResult {
+  success: boolean;
+  creditsAwarded: number;
+  stageFinished: boolean;
+  reason?: 'unknown_team' | 'bad_trial' | 'not_started' | 'tries_left' | 'already_resolved' | 'expired';
+}
+
+// Initial 8 Configured Illustrated Horror Scenes for Stage 2 Haunted Image Hunt
+const INITIAL_HUNT_IMAGES: HuntImage[] = [
+  {
+    id: 'img_01',
+    title: 'The Ancestral Study',
+    imageUrl: '/assets/stage-2/photographs/moonlit-cemetery.jpg',
+    orientationDeg: -4,
+    description: 'A shadowy cemetery at midnight littered with weathered tombstones and a carved pumpkin.',
+    hotspots: [
+      { id: 'hs_01', name: 'Carved Jack-o\'-Lantern', targetId: 'target_pumpkin', xPercent: 16, yPercent: 76, widthPercent: 14, heightPercent: 16 },
+    ],
+  },
+  {
+    id: 'img_02',
+    title: 'The Alchemist\'s Crypt',
+    imageUrl: '/assets/stage-2/photographs/witches-laboratory.jpg',
+    orientationDeg: 2,
+    description: 'Stone shelves holding occult concoctions, bubbling cauldrons, and venom potion bottles.',
+    hotspots: [
+      { id: 'hs_05', name: 'Venom Potion Bottle', targetId: 'target_potion', xPercent: 68, yPercent: 68, widthPercent: 10, heightPercent: 14 },
+    ],
+  },
+  {
+    id: 'img_03',
+    title: 'The Mausoleum Vault',
+    imageUrl: '/assets/stage-2/photographs/ancient-crypt.jpg',
+    orientationDeg: -1.5,
+    description: 'An ancient resting place holding an ornate stone coffin and an ancestral skull.',
+    hotspots: [
+      { id: 'hs_02', name: 'Ancestral Skull', targetId: 'target_skull', xPercent: 28, yPercent: 44, widthPercent: 10, heightPercent: 12 },
+      { id: 'hs_07', name: 'Carved Coffin', targetId: 'target_coffin', xPercent: 50, yPercent: 62, widthPercent: 24, heightPercent: 24 },
+    ],
+  },
+  {
+    id: 'img_04',
+    title: 'The Witch\'s Belfry',
+    imageUrl: '/assets/stage-2/photographs/gothic-chapel.jpg',
+    orientationDeg: 3,
+    description: 'Moonlit chapel rafters where bats roost and ritual altar candles flicker.',
+    hotspots: [
+      { id: 'hs_04', name: 'Nocturnal Bat', targetId: 'target_bat', xPercent: 74, yPercent: 16, widthPercent: 10, heightPercent: 10 },
+      { id: 'hs_09', name: 'Candle of the Dead', targetId: 'target_candle', xPercent: 46, yPercent: 62, widthPercent: 8, heightPercent: 15 },
+    ],
+  },
+  {
+    id: 'img_05',
+    title: 'The Haunted Mansion',
+    imageUrl: '/assets/stage-2/photographs/haunted-mansion.jpg',
+    orientationDeg: -2.5,
+    description: 'A grand decaying foyer with cobwebs draping the arches and a floating ghost apparition.',
+    hotspots: [
+      { id: 'hs_11', name: 'Pale Ghost Apparition', targetId: 'target_ghost', xPercent: 35, yPercent: 46, widthPercent: 14, heightPercent: 22 },
+      { id: 'hs_03', name: 'Woven Cobweb', targetId: 'target_web', xPercent: 82, yPercent: 8, widthPercent: 14, heightPercent: 16 },
+    ],
+  },
+  {
+    id: 'img_06',
+    title: 'The Cursed Attic',
+    imageUrl: '/assets/stage-2/photographs/cursed-attic.jpg',
+    orientationDeg: 1.5,
+    description: 'Dusty storage trunks holding a pointed witch hat, forgotten dolls, and a crawling spider.',
+    hotspots: [
+      { id: 'hs_10', name: 'Pointed Witch Hat', targetId: 'target_witch_hat', xPercent: 48, yPercent: 64, widthPercent: 12, heightPercent: 14 },
+      { id: 'hs_06', name: 'Crawling Arachnid', targetId: 'target_spider', xPercent: 68, yPercent: 24, widthPercent: 8, heightPercent: 9 },
+    ],
+  },
+  {
+    id: 'img_07',
+    title: 'The Haunted Village',
+    imageUrl: '/assets/stage-2/photographs/haunted-village.jpg',
+    orientationDeg: -3,
+    description: 'A rain-slicked cobblestone street where a black cat prowls in the moonlight.',
+    hotspots: [
+      { id: 'hs_12', name: 'Obsidian Black Cat', targetId: 'target_black_cat', xPercent: 42, yPercent: 68, widthPercent: 10, heightPercent: 12 },
+    ],
+  },
+  {
+    id: 'img_08',
+    title: 'The Forest Bridge',
+    imageUrl: '/assets/stage-2/photographs/forest-bridge.jpg',
+    orientationDeg: 2.5,
+    description: 'An ancient mossy stone bridge hiding an iron skeleton key beside an ominous lantern.',
+    hotspots: [
+      { id: 'hs_08', name: 'Ornate Skeleton Key', targetId: 'target_key', xPercent: 58, yPercent: 72, widthPercent: 9, heightPercent: 12 },
+    ],
+  },
+];
+
+// Initial 12 Configured Halloween Targets
+const INITIAL_TARGET_ITEMS = [
+  { id: 'target_pumpkin', name: 'Pumpkin', icon: '🎃', isFound: false },
+  { id: 'target_skull', name: 'Skull', icon: '💀', isFound: false },
+  { id: 'target_ghost', name: 'Ghost', icon: '👻', isFound: false },
+  { id: 'target_bat', name: 'Bat', icon: '🦇', isFound: false },
+  { id: 'target_witch_hat', name: 'Witch Hat', icon: '🧙‍♀️', isFound: false },
+  { id: 'target_spider', name: 'Spider', icon: '🕷️', isFound: false },
+  { id: 'target_web', name: 'Spider Web', icon: '🕸️', isFound: false },
+  { id: 'target_coffin', name: 'Coffin', icon: '⚰️', isFound: false },
+  { id: 'target_black_cat', name: 'Black Cat', icon: '🐈‍⬛', isFound: false },
+  { id: 'target_potion', name: 'Potion Bottle', icon: '🧪', isFound: false },
+  { id: 'target_candle', name: 'Candle', icon: '🕯️', isFound: false },
+  { id: 'target_key', name: 'Skeleton Key', icon: '🗝️', isFound: false },
+];
 
 export class Round1Service {
   // Global Admin Settings
@@ -37,14 +147,16 @@ export class Round1Service {
     this.onScoreSync = callback;
   }
 
-  // Stage 1 Configuration Framework (Pending puzzle integration)
+  // Stage 1 Configuration: The Pumpkin Shuffle — two trials (5 pumpkins / 40 CR, 7 pumpkins / 60 CR), 2 tries each
   private stage1Config: Stage1Config = {
-    title: 'The Unknown Challenge',
-    description: 'Central organizers are finalizing the dark rites for this chamber.',
-    instructions: 'Prepare your squad operatives. When unsealed by central command, this chamber will award 100 Credits.',
-    rewardCredits: STAGE_CREDITS['stage-1'], // 100
-    isReadyForPublication: false, // Rule: cannot be marked ready until challenge finalized
-    activityType: 'challenge_pending',
+    title: 'The Pumpkin Shuffle',
+    description: 'A skull sleeps beneath one of the pumpkins. Watch it vanish, follow the shuffle, then smash the right pumpkin.',
+    instructions: 'Two trials, two tries each. Trial I: five pumpkins, 40 Credits. Trial II: seven pumpkins, 60 Credits. The skull is shown once, then the pumpkins shuffle for 20 seconds.',
+    rewardCredits: STAGE_CREDITS['stage-1'], // 100 in total
+    isReadyForPublication: true,
+    activityType: 'skull_pumpkin_shuffle',
+    trials: DEFAULT_STAGE1_TRIALS.map((t) => ({ ...t })),
+    revealSeconds: 3,
   };
 
   // Stage 2 Configuration: Haunted Image Hunt
@@ -193,6 +305,12 @@ export class Round1Service {
    */
   getTeamSession(teamId: string, teamName: string): Round1TeamSessionState {
     let session = this.teamStates.get(teamId);
+    // Sessions saved before Stage 1 was built still say "not configured" — open the stage for them.
+    if (session && session.stages['stage-1'].status === 'not_configured' && this.stage1Config.isReadyForPublication) {
+      session.stages['stage-1'].status = 'available';
+      this.persistToStorage();
+    }
+    if (session) this.ensureStage1State(session);
     if (!session) {
       session = {
         teamId,
@@ -234,6 +352,7 @@ export class Round1Service {
           },
         },
         scoreTransactions: [],
+        stage1State: this.freshStage1State(),
         stage2State: {
           foundTargetIds: [],
           usedHintsCount: 0,
@@ -436,6 +555,157 @@ export class Round1Service {
     return { success: true, creditsAwarded: reward };
   }
 
+  // ---------------------------------------------------------------------------
+  // Stage 1 — The Pumpkin Shuffle (two trials, limited tries, credits per trial)
+  // ---------------------------------------------------------------------------
+
+  getStage1Trials(): Stage1TrialConfig[] {
+    return this.stage1Config.trials && this.stage1Config.trials.length > 0
+      ? this.stage1Config.trials
+      : DEFAULT_STAGE1_TRIALS;
+  }
+
+  private freshStage1State(): Stage1State {
+    return {
+      trials: this.getStage1Trials().map((): Stage1TrialState => ({ attemptsUsed: 0, status: 'pending', earnedCredits: 0 })),
+    };
+  }
+
+  /** Sessions saved before the trials existed (or with a different number of trials) get a valid state. */
+  private ensureStage1State(session: Round1TeamSessionState): Stage1State {
+    const wanted = this.getStage1Trials().length;
+    if (!session.stage1State || !Array.isArray(session.stage1State.trials)) {
+      session.stage1State = this.freshStage1State();
+      this.persistToStorage();
+    } else if (session.stage1State.trials.length !== wanted) {
+      const old = session.stage1State.trials;
+      session.stage1State.trials = Array.from({ length: wanted }, (_, i) => old[i] ?? { attemptsUsed: 0, status: 'pending', earnedCredits: 0 });
+      this.persistToStorage();
+    }
+    return session.stage1State;
+  }
+
+  getStage1State(teamId: string): Stage1State | null {
+    const session = this.teamStates.get(teamId);
+    return session ? this.ensureStage1State(session) : null;
+  }
+
+  /**
+   * Called when a squad opens Stage 1. A trial whose last try was used but never answered
+   * (tab closed mid-shuffle) counts as lost, so leaving can never refund a try.
+   */
+  settleAbandonedStage1(teamId: string): void {
+    const session = this.teamStates.get(teamId);
+    if (!session) return;
+    const state = this.ensureStage1State(session);
+    const trials = this.getStage1Trials();
+    let changed = false;
+    state.trials.forEach((t, i) => {
+      if (t.status === 'pending' && t.attemptsUsed >= trials[i].tries) {
+        t.status = 'lost';
+        changed = true;
+      }
+    });
+    if (changed) {
+      this.finalizeStage1IfDone(session);
+      this.persistToStorage();
+    }
+  }
+
+  /** A try is spent the moment a round starts (when the skull is shown), not when the guess is made. */
+  beginStage1Attempt(teamId: string, trialIndex: number): Stage1AttemptResult {
+    const session = this.teamStates.get(teamId);
+    if (!session) return { ok: false, reason: 'unknown_team' };
+    const cfg = this.getStage1Trials()[trialIndex];
+    if (!cfg) return { ok: false, reason: 'bad_trial' };
+    const state = this.ensureStage1State(session);
+    if (trialIndex > 0 && state.trials[trialIndex - 1].status === 'pending') return { ok: false, reason: 'locked' };
+    const trial = state.trials[trialIndex];
+    if (trial.status !== 'pending') return { ok: false, reason: 'resolved' };
+    if (trial.attemptsUsed >= cfg.tries) return { ok: false, reason: 'no_tries' };
+    const remaining = this.getTimeRemainingSeconds(teamId);
+    if (session.status === 'expired' || remaining <= 0) return { ok: false, reason: 'expired' };
+
+    trial.attemptsUsed += 1;
+    const stage = session.stages['stage-1'];
+    if (stage.status === 'available') {
+      stage.status = 'in_progress';
+      if (!stage.startTime) stage.startTime = new Date().toISOString();
+    }
+    this.persistToStorage();
+    return { ok: true, attemptsUsed: trial.attemptsUsed };
+  }
+
+  /**
+   * Close a trial. Won: awards that trial's credits (once). Lost: only allowed once every try is used.
+   * When both trials are closed the stage is completed.
+   */
+  resolveStage1Trial(teamId: string, trialIndex: number, won: boolean): Stage1ResolveResult {
+    const session = this.teamStates.get(teamId);
+    if (!session) return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'unknown_team' };
+    const cfg = this.getStage1Trials()[trialIndex];
+    if (!cfg) return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'bad_trial' };
+    const state = this.ensureStage1State(session);
+    const trial = state.trials[trialIndex];
+    if (trial.status !== 'pending') return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'already_resolved' };
+    if (trial.attemptsUsed < 1) return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'not_started' };
+    if (!won && trial.attemptsUsed < cfg.tries) return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'tries_left' };
+    this.getTimeRemainingSeconds(teamId); // lets the timer flag an expired round
+    if (session.status === 'expired') return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'expired' };
+
+    const stage = session.stages['stage-1'];
+    let awarded = 0;
+    if (won) {
+      awarded = cfg.reward;
+      trial.status = 'won';
+      trial.earnedCredits = awarded;
+      stage.earnedCredits += awarded;
+      session.credits = Math.min(500, session.credits + awarded);
+      session.scoreTransactions.push({
+        id: `tx_${Date.now()}_stage-1_t${trialIndex + 1}`,
+        teamId,
+        stageId: 'stage-1',
+        type: 'stage_completion',
+        deltaCredits: awarded,
+        balanceAfter: session.credits,
+        reason: `Stage 1 trial ${trialIndex + 1} solved in ${trial.attemptsUsed} ${trial.attemptsUsed === 1 ? 'try' : 'tries'} (${awarded} Credits)`,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      trial.status = 'lost';
+    }
+
+    const stageFinished = this.finalizeStage1IfDone(session);
+    this.persistToStorage();
+    if (this.onScoreSync && (awarded > 0 || stageFinished)) {
+      this.onScoreSync(
+        teamId,
+        session.credits,
+        'stage-1',
+        stageFinished ? 'completed' : 'in_progress',
+        won ? `Stage 1 trial ${trialIndex + 1} solved (+${awarded} CR)` : `Stage 1 trial ${trialIndex + 1} failed`
+      );
+    }
+    return { success: true, creditsAwarded: awarded, stageFinished };
+  }
+
+  /** Marks Stage 1 completed once no trial is pending. Returns true when it is finished. */
+  private finalizeStage1IfDone(session: Round1TeamSessionState): boolean {
+    const state = this.ensureStage1State(session);
+    if (state.trials.some((t) => t.status === 'pending')) return false;
+    const stage = session.stages['stage-1'];
+    if (stage.status !== 'completed') {
+      stage.status = 'completed';
+      stage.completionTime = new Date().toISOString();
+    }
+    const allDone = Object.values(session.stages).every((s) => s.status === 'completed' || s.status === 'not_configured');
+    if (allDone) {
+      session.status = 'completed';
+      session.roundEndTime = new Date().toISOString();
+    }
+    return true;
+  }
+
   /**
    * Use a hint (deducts credits if configured by admin).
    */
@@ -524,12 +794,7 @@ export class Round1Service {
     const session = this.teamStates.get(teamId);
     if (!session) return { isNew: false, totalFound: 0, completed: false };
 
-    const normId = normalizeTargetId(targetId);
-    const isAlreadyFound = session.stage2State.foundTargetIds.some(
-      (id) => normalizeTargetId(id) === normId || id === targetId
-    );
-
-    if (isAlreadyFound) {
+    if (session.stage2State.foundTargetIds.includes(targetId)) {
       return {
         isNew: false,
         totalFound: session.stage2State.foundTargetIds.length,
@@ -537,8 +802,7 @@ export class Round1Service {
       };
     }
 
-    // Store normalized ID for consistency
-    session.stage2State.foundTargetIds.push(normId);
+    session.stage2State.foundTargetIds.push(targetId);
     const totalFound = session.stage2State.foundTargetIds.length;
     const targetCount = this.stage2Config.targets.length;
     const completed = totalFound >= targetCount;

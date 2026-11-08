@@ -36,11 +36,6 @@ export interface Hotspot {
   yPercent: number; // 0 - 100
   widthPercent: number; // 0 - 100
   heightPercent: number; // 0 - 100
-  svgPath?: string;
-  originalX?: number;
-  originalY?: number;
-  originalWidth?: number;
-  originalHeight?: number;
 }
 
 export interface HuntImage {
@@ -50,8 +45,6 @@ export interface HuntImage {
   orientationDeg: number;
   description: string;
   hotspots: Hotspot[];
-  width?: number;
-  height?: number;
 }
 
 export interface TargetItem {
@@ -69,7 +62,30 @@ export interface Stage1Config {
   instructions: string;
   rewardCredits: number;
   isReadyForPublication: boolean;
-  activityType: 'challenge_pending' | 'custom_riddle' | 'crypt_cipher';
+  activityType: 'challenge_pending' | 'custom_riddle' | 'crypt_cipher' | 'skull_pumpkin_shuffle';
+  /** Pumpkin Shuffle: the trials (pumpkins, tries, credits, shuffle length). Defaults live in stage1.constants.ts. */
+  trials?: Stage1TrialConfig[];
+  /** Pumpkin Shuffle: how long the skull is shown before it is hidden (default 3). */
+  revealSeconds?: number;
+}
+
+export interface Stage1TrialConfig {
+  pumpkins: number;
+  tries: number;
+  reward: number;
+  shuffleSeconds: number;
+}
+
+export type Stage1TrialStatus = 'pending' | 'won' | 'lost';
+
+export interface Stage1TrialState {
+  attemptsUsed: number;
+  status: Stage1TrialStatus;
+  earnedCredits: number;
+}
+
+export interface Stage1State {
+  trials: Stage1TrialState[];
 }
 
 export interface Stage2Config {
@@ -153,6 +169,7 @@ export interface Round1TeamSessionState {
   credits: number;
   stages: Record<StageId, StageProgress>;
   scoreTransactions: ScoreTransaction[];
+  stage1State: Stage1State;
   stage2State: {
     foundTargetIds: string[];
     usedHintsCount: number;
