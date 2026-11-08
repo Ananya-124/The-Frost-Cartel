@@ -9,6 +9,8 @@ import { PhotoInspectionViewer } from './PhotoInspectionViewer';
 import { Stage2BottomBar } from './Stage2BottomBar';
 import { HintModal } from './HintModal';
 import { SkipStageModal } from '../common/SkipStageModal';
+import { TargetCalibrationModal } from './TargetCalibrationModal';
+import { normalizeTargetId } from './stage2TargetsConfig';
 
 interface Stage2HauntedImageHuntProps {
   teamId: string;
@@ -34,12 +36,25 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
   const [toastNotice, setToastNotice] = useState<string | null>(null);
   const [isSkipModalOpen, setIsSkipModalOpen] = useState(false);
   const [isHintModalOpen, setIsHintModalOpen] = useState(false);
+  const [isCalibOpen, setIsCalibOpen] = useState(false);
   const [activeHintImageId, setActiveHintImageId] = useState<string | null>(null);
   const [stageCleared, setStageCleared] = useState(isCompleted);
   const [isMuted, setIsMuted] = useState(soundController.isMuted());
   const [secondsRemaining, setSecondsRemaining] = useState(() =>
     round1Service.getTimeRemainingSeconds(teamId)
   );
+
+  // Keyboard shortcut Ctrl+Shift+C to toggle calibration modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+        e.preventDefault();
+        setIsCalibOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Synchronize master round countdown every second
   useEffect(() => {
@@ -73,10 +88,17 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
   const handleHotspotClick = (hotspot: Hotspot) => {
     if (stageCleared) return;
 
-    const targetItem = config.targets.find((t) => t.id === hotspot.targetId);
+    const normTargetId = normalizeTargetId(hotspot.targetId);
+    const targetItem = config.targets.find(
+      (t) => normalizeTargetId(t.id) === normTargetId || t.id === hotspot.targetId
+    );
     const targetName = targetItem?.name ?? hotspot.name;
 
-    if (foundIds.includes(hotspot.targetId)) {
+    if (
+      foundIds.some(
+        (id) => normalizeTargetId(id) === normTargetId || id === hotspot.targetId
+      )
+    ) {
       soundController.playClick();
       showToast(`Already Discovered: ${targetName}`);
       return;
@@ -86,10 +108,10 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
     soundController.playDiscover();
     const res = round1Service.registerStage2Discovery(
       teamId,
-      hotspot.targetId,
+      normTargetId,
       activeImage?.id || ''
     );
-    const updatedFound = [...foundIds, hotspot.targetId];
+    const updatedFound = [...foundIds, hotspot.targetId, normTargetId];
     setFoundIds(updatedFound);
     showToast(`🎯 Uncovered: ${targetName} (${res.totalFound}/${config.targets.length})`);
 
@@ -121,14 +143,23 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
   // Confirm and deliver hint
   const handleConfirmHint = () => {
     setIsHintModalOpen(false);
-    const unfound = config.targets.find((t) => !foundIds.includes(t.id));
+    const unfound = config.targets.find(
+      (t) =>
+        !foundIds.some(
+          (id) => normalizeTargetId(id) === normalizeTargetId(t.id) || id === t.id
+        )
+    );
     if (!unfound) {
       showToast('All 12 cursed relics have already been found!');
       return;
     }
 
     const hostImage = config.images.find((img) =>
-      img.hotspots.some((h) => h.targetId === unfound.id)
+      img.hotspots.some(
+        (h) =>
+          normalizeTargetId(h.targetId) === normalizeTargetId(unfound.id) ||
+          h.targetId === unfound.id
+      )
     );
 
     if (hostImage) {
@@ -147,7 +178,20 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#0a0502] text-stone-100 flex flex-col justify-between font-sans overflow-x-hidden select-none">
+    <div
+      className="relative min-h-screen w-full bg-[#050302] text-stone-100 flex flex-col justify-between font-sans overflow-x-hidden select-none"
+      style={{
+        backgroundImage: "radial-gradient(ellipse at 12% 50%, rgba(245, 158, 11, 0.14) 0%, transparent 45%), radial-gradient(ellipse at 50% 15%, rgba(185, 28, 28, 0.08) 0%, transparent 55%), url('/assets/stage-02/evidence-board/detective-table-bg.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Heavy Gothic Horror Vignette & Atmospheric Shadow Layer */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.35)_0%,rgba(0,0,0,0.7)_60%,rgba(5,2,1,0.95)_100%)] pointer-events-none z-0"
+      />
       {/* 1. Header with Stage Branding & Synchronized Round HUD */}
       <Stage2HUD
         secondsRemaining={secondsRemaining}
@@ -155,6 +199,7 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         onReturnDashboard={onReturnDashboard}
+        onOpenCalibration={() => setIsCalibOpen(true)}
       />
 
       {/* Floating Ghost Toast Notification */}
@@ -221,6 +266,14 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
           setIsSkipModalOpen(false);
           onSkipStage();
         }}
+      />
+
+      {/* 8. Developer Target Calibration Tool Modal */}
+      <TargetCalibrationModal
+        images={config.images}
+        isOpen={isCalibOpen}
+        onClose={() => setIsCalibOpen(false)}
+        onTestDiscover={handleHotspotClick}
       />
     </div>
   );

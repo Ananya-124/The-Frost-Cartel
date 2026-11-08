@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { HuntImage, Hotspot } from '../../../types/round1.types';
+import { normalizeTargetId } from './stage2TargetsConfig';
+import { useInspectionZoomPan } from './useInspectionZoomPan';
 
 interface DiscoveryRipple {
   id: string;
@@ -16,6 +18,128 @@ interface PhotoInspectionViewerProps {
   onMissedClick: (e: React.MouseEvent) => void;
 }
 
+function isTargetFound(targetId: string, foundTargetIds: string[]): boolean {
+  const normId = normalizeTargetId(targetId);
+  return foundTargetIds.some(
+    (id) => normalizeTargetId(id) === normId || id === targetId
+  );
+}
+
+interface OverlayItemProps {
+  hotspot: Hotspot;
+  isAlreadyFound: boolean;
+  imgWidth: number;
+  imgHeight: number;
+  onSelect: (hotspot: Hotspot, e: React.MouseEvent) => void;
+}
+
+const DiscoveredBadge: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
+  <g transform={`translate(${cx}, ${cy})`} className="pointer-events-none">
+    <circle r="14" fill="#064e3b" stroke="#34d399" strokeWidth="2" filter="url(#gold-glow)" />
+    <text y="5" textAnchor="middle" fill="#6ee7b7" fontSize="14" fontWeight="bold">
+      ✓
+    </text>
+  </g>
+);
+
+const HotspotPathItem: React.FC<OverlayItemProps> = ({
+  hotspot,
+  isAlreadyFound,
+  imgWidth,
+  imgHeight,
+  onSelect,
+}) => {
+  const handleKeySelect = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(hotspot, e as unknown as React.MouseEvent);
+    }
+  };
+
+  const cx = (hotspot.xPercent * imgWidth) / 100 + (hotspot.widthPercent * imgWidth) / 200;
+  const cy = (hotspot.yPercent * imgHeight) / 100 + (hotspot.heightPercent * imgHeight) / 200;
+  const strokeW = isAlreadyFound ? Math.max(3, imgWidth / 400) : Math.max(12, imgWidth / 100);
+
+  return (
+    <g key={hotspot.id}>
+      <path
+        id={`path_${hotspot.id}`}
+        d={hotspot.svgPath}
+        role="button"
+        tabIndex={0}
+        aria-label={`Select ${hotspot.name}`}
+        onClick={(e) => onSelect(hotspot, e)}
+        onKeyDown={handleKeySelect}
+        fill={isAlreadyFound ? 'rgba(251, 191, 36, 0.22)' : 'rgba(0, 0, 0, 0.001)'}
+        stroke={isAlreadyFound ? '#fbbf24' : 'transparent'}
+        strokeWidth={strokeW}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        style={{ pointerEvents: 'all' }}
+        filter={isAlreadyFound ? 'url(#gold-glow)' : undefined}
+        className={`transition-all duration-300 ${
+          isAlreadyFound ? 'relic-gold-draw cursor-default' : 'opacity-0 hover:opacity-0 cursor-crosshair'
+        }`}
+      />
+      {isAlreadyFound && <DiscoveredBadge cx={cx} cy={cy} />}
+    </g>
+  );
+};
+
+const HotspotRectItem: React.FC<OverlayItemProps> = ({
+  hotspot,
+  isAlreadyFound,
+  imgWidth,
+  imgHeight,
+  onSelect,
+}) => {
+  const handleKeySelect = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(hotspot, e as unknown as React.MouseEvent);
+    }
+  };
+
+  const rx = (hotspot.xPercent * imgWidth) / 100;
+  const ry = (hotspot.yPercent * imgHeight) / 100;
+  const rw = (hotspot.widthPercent * imgWidth) / 100;
+  const rh = (hotspot.heightPercent * imgHeight) / 100;
+
+  return (
+    <g key={hotspot.id}>
+      <rect
+        id={`rect_${hotspot.id}`}
+        x={rx}
+        y={ry}
+        width={rw}
+        height={rh}
+        rx="8"
+        role="button"
+        tabIndex={0}
+        aria-label={`Select ${hotspot.name}`}
+        onClick={(e) => onSelect(hotspot, e)}
+        onKeyDown={handleKeySelect}
+        fill={isAlreadyFound ? 'rgba(251, 191, 36, 0.22)' : 'rgba(0, 0, 0, 0.001)'}
+        stroke={isAlreadyFound ? '#fbbf24' : 'transparent'}
+        strokeWidth={isAlreadyFound ? 3 : 0}
+        style={{ pointerEvents: 'all' }}
+        filter={isAlreadyFound ? 'url(#gold-glow)' : undefined}
+        className={`transition-all duration-300 ${
+          isAlreadyFound ? 'cursor-default' : 'opacity-0 hover:opacity-0 cursor-crosshair'
+        }`}
+      />
+      {isAlreadyFound && <DiscoveredBadge cx={rx + rw / 2} cy={ry + rh / 2} />}
+    </g>
+  );
+};
+
+const HotspotOverlayItem: React.FC<OverlayItemProps> = (props) => {
+  if (props.hotspot.svgPath) {
+    return <HotspotPathItem {...props} />;
+  }
+  return <HotspotRectItem {...props} />;
+};
+
 export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
   image,
   foundTargetIds,
@@ -24,13 +148,23 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
   onHotspotClick,
   onMissedClick,
 }) => {
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const {
+    zoomLevel,
+    pan,
+    isDragging,
+    containerRef,
+    cursorClass,
+    handleZoomIn,
+    handleZoomOut,
+    handleResetZoom,
+  } = useInspectionZoomPan();
+
   const [ripples, setRipples] = useState<DiscoveryRipple[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
   const rippleIdRef = useRef(1);
+
+  // Canonical dimensions from image or standard fallback
+  const imgWidth = (image as { width?: number }).width ?? 1280;
+  const imgHeight = (image as { height?: number }).height ?? 853;
 
   // Close on Escape key
   useEffect(() => {
@@ -43,58 +177,9 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev + 0.5, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel((prev) => {
-      const next = Math.max(prev - 0.5, 1);
-      if (next === 1) setPan({ x: 0, y: 0 });
-      return next;
-    });
-  };
-
-  const handleResetZoom = () => {
-    setZoomLevel(1);
-    setPan({ x: 0, y: 0 });
-  };
-
-  // Mouse drag panning when zoomed
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoomLevel > 1) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    }
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    setPan({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
-  }, [isDragging, dragStart]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
   // Click on a target hotspot
   const handleHotspotSelect = (hotspot: Hotspot, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Add golden discovery ripple effect using ref counter
     const currentId = `ripple_${rippleIdRef.current++}`;
     const newRipple: DiscoveryRipple = {
       id: currentId,
@@ -110,11 +195,10 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      open
       aria-labelledby="inspection-title"
-      className="fixed inset-0 z-50 flex flex-col justify-between bg-black/95 backdrop-blur-md p-2 sm:p-4 select-none animate-fadeIn"
+      className="fixed inset-0 z-50 m-0 p-2 sm:p-4 w-full h-full max-w-none max-h-none border-none flex flex-col justify-between bg-black/95 backdrop-blur-md text-stone-100 select-none animate-fadeIn"
     >
       {/* 1. Top Inspection HUD Bar */}
       <div className="relative z-30 flex flex-wrap items-center justify-between gap-2 border-b border-amber-600/30 pb-2.5 sm:pb-3 max-w-6xl w-full mx-auto">
@@ -186,66 +270,79 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
       {/* 2. Main High-Res Photograph Viewport */}
       <div
         ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onClick={onMissedClick}
-        className={`relative flex-1 max-w-5xl w-full mx-auto my-2 rounded-2xl overflow-hidden border-2 border-stone-800 bg-[#070503] flex items-center justify-center shadow-2xl ${
-          zoomLevel > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'
-        }`}
+        className={`relative flex-1 max-w-5xl w-full mx-auto my-2 rounded-2xl overflow-hidden border-2 border-stone-800 bg-[#070503] flex items-center justify-center shadow-2xl ${cursorClass}`}
       >
+        {/* Transform container applying zoom and pan to BOTH image and SVG overlay together */}
         <div
           style={{
             transform: `scale(${zoomLevel}) translate(${pan.x / zoomLevel}px, ${pan.y / zoomLevel}px)`,
             transformOrigin: 'center center',
             transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+            aspectRatio: `${imgWidth} / ${imgHeight}`,
+            maxHeight: '74vh',
+            maxWidth: '100%',
           }}
-          className="relative max-w-full max-h-full aspect-square sm:aspect-[4/3] flex items-center justify-center select-none"
+          className="relative w-full h-full flex items-center justify-center select-none"
         >
-          {/* High-Resolution Scene Illustration */}
+          {/* High-Resolution Scene Photograph */}
           <img
             src={image.imageUrl}
             alt={image.title}
-            className="max-h-[70vh] sm:max-h-[76vh] w-auto object-contain pointer-events-none filter contrast-105"
+            className="w-full h-full object-fill pointer-events-none filter contrast-105"
             draggable={false}
           />
 
-          {/* Invisible Hotspots Layer (Accurate Normalized % Coordinates) */}
-          {image.hotspots.map((hs) => {
-            const isAlreadyFound = foundTargetIds.includes(hs.targetId);
+          {/* Unified SVG Hotspot Overlay (Zero Pixel Drift Guarantee) */}
+          <svg
+            viewBox={`0 0 ${imgWidth} ${imgHeight}`}
+            aria-label={`Interactive evidence targets for ${image.title}`}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            preserveAspectRatio="none"
+          >
+            <title>{`Interactive evidence targets for ${image.title}`}</title>
+            <defs>
+              <filter id="gold-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <style>{`
+                @keyframes drawGoldenPath {
+                  0% { stroke-dashoffset: 1500; opacity: 0.3; }
+                  100% { stroke-dashoffset: 0; opacity: 1; }
+                }
+                .relic-gold-draw {
+                  stroke-dasharray: 1500;
+                  animation: drawGoldenPath 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+                }
+              `}</style>
+            </defs>
 
-            return (
-              <div
+            {/* Transparent background catcher for missed clicks */}
+            <rect
+              x="0"
+              y="0"
+              width={imgWidth}
+              height={imgHeight}
+              fill="transparent"
+              onClick={onMissedClick}
+              className="cursor-crosshair pointer-events-auto"
+            />
+
+            {/* Target Hotspots */}
+            {image.hotspots.map((hs) => (
+              <HotspotOverlayItem
                 key={hs.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`Select ${hs.name}`}
-                onClick={(e) => handleHotspotSelect(hs, e)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleHotspotSelect(hs, e as unknown as React.MouseEvent);
-                  }
-                }}
-                style={{
-                  left: `${hs.xPercent}%`,
-                  top: `${hs.yPercent}%`,
-                  width: `${hs.widthPercent}%`,
-                  height: `${hs.heightPercent}%`,
-                }}
-                className={`absolute select-none transition-all ${
-                  isAlreadyFound
-                    ? 'border-2 border-emerald-400/80 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.7)] bg-emerald-500/10 cursor-pointer pointer-events-auto'
-                    : 'opacity-0 hover:opacity-0 cursor-crosshair pointer-events-auto'
-                }`}
-              >
-                {/* Golden Discovered Rune Indicator */}
-                {isAlreadyFound && (
-                  <div className="absolute inset-0 flex items-center justify-center text-emerald-300 font-bold text-xs pointer-events-none drop-shadow-[0_0_6px_rgba(16,185,129,1)]">
-                    ✓
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                hotspot={hs}
+                isAlreadyFound={isTargetFound(hs.targetId, foundTargetIds)}
+                imgWidth={imgWidth}
+                imgHeight={imgHeight}
+                onSelect={handleHotspotSelect}
+              />
+            ))}
+          </svg>
 
           {/* Dynamic Expanding Discovery Ripple Effect */}
           {ripples.map((rip) => (
@@ -271,6 +368,6 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
           <span>[ESC] to return</span>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };

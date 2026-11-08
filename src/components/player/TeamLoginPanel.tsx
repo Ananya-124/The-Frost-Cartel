@@ -52,13 +52,8 @@ export const TeamLoginPanel: React.FC<TeamLoginPanelProps> = ({
       {/* 1. Ancient Gothic Altar Crest / Carved Skull Sigil */}
       <div className="flex flex-col items-center mb-2">
         <div className="relative group/skull flex items-center justify-center mb-1">
-          {/* Subtle warm amber radial glow aura */}
-          <div
-            aria-hidden="true"
-            className="absolute -inset-2 rounded-full bg-cartel-amber/20 blur-md opacity-70 group-hover/skull:opacity-100 transition-opacity duration-300 pointer-events-none"
-          />
           <img
-            src="/assets/cartel_skull_crossbones.png"
+            src="/assets/cartel_skull_crossbones_gold.png"
             alt="Frost Cartel Skull and Crossbones"
             className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain drop-shadow-[0_0_16px_rgba(246,166,58,0.65)] group-hover/skull:drop-shadow-[0_0_24px_rgba(246,166,58,0.95)] group-hover/skull:scale-105 transition-all duration-300 select-none filter brightness-105"
           />
@@ -96,7 +91,7 @@ export const TeamLoginPanel: React.FC<TeamLoginPanelProps> = ({
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="relative bg-gradient-to-b from-black/75 via-cartel-void/90 to-black/85 border border-white/10 rounded-xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-md"
+        className="relative bg-gradient-to-b from-[#0a0c10]/95 via-cartel-void/98 to-[#06080a]/95 border border-white/10 rounded-xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.9)]"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
           {/* Team Name / Login ID Input */}

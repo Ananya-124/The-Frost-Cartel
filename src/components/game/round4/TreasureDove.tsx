@@ -223,6 +223,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
               <svg
                 viewBox="0 0 160 120"
                 role="img"
+                aria-label="Flying White Dove with Scroll"
                 className="w-44 sm:w-52 h-auto drop-shadow-[0_10px_24px_rgba(255,220,110,0.7)]"
               >
                 <title>Flying White Dove with Scroll</title>
@@ -289,6 +290,7 @@ export const TreasureDove: React.FC<TreasureDoveProps> = ({
               <svg
                 viewBox="0 0 100 90"
                 role="img"
+                aria-label="Perched White Dove"
                 className="w-full h-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
               >
                 <title>Perched White Dove</title>
