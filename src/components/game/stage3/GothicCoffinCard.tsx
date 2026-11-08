@@ -34,6 +34,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
       btnText: 'text-amber-200 group-hover:text-amber-100',
       btnShadow: 'shadow-[0_0_15px_rgba(245,158,11,0.45)]',
       fragmentBadge: 'bg-amber-950/90 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.6)]',
+      hoverRing: 'ring-2 ring-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.6)]',
     },
     purple: {
       glow: 'bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.3)_0%,transparent_70%)]',
@@ -43,6 +44,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
       btnText: 'text-purple-200 group-hover:text-purple-100',
       btnShadow: 'shadow-[0_0_15px_rgba(168,85,247,0.45)]',
       fragmentBadge: 'bg-purple-950/90 border-purple-400 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.6)]',
+      hoverRing: 'ring-2 ring-purple-400/80 shadow-[0_0_20px_rgba(168,85,247,0.6)]',
     },
     teal: {
       glow: 'bg-[radial-gradient(ellipse_at_center,rgba(20,184,166,0.3)_0%,transparent_70%)]',
@@ -52,6 +54,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
       btnText: 'text-teal-200 group-hover:text-teal-100',
       btnShadow: 'shadow-[0_0_15px_rgba(20,184,166,0.45)]',
       fragmentBadge: 'bg-teal-950/90 border-teal-400 text-teal-200 shadow-[0_0_12px_rgba(20,184,166,0.6)]',
+      hoverRing: 'ring-2 ring-teal-400/80 shadow-[0_0_20px_rgba(20,184,166,0.6)]',
     },
   }[colorTheme];
 
@@ -100,7 +103,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
             handleClick();
           }}
           aria-label={accessibleGraveName}
-          className="absolute top-[84%] left-1/2 -translate-x-1/2 w-[48%] h-[7.8%] rounded-full cursor-pointer z-20 focus:outline-none flex items-center justify-center transition-all duration-200 group-hover:scale-105 active:scale-95"
+          className="absolute top-[88.4%] left-1/2 -translate-x-1/2 w-[50%] h-[8.8%] rounded-full cursor-pointer z-20 focus:outline-none flex items-center justify-center transition-all duration-200 group-hover:scale-105 active:scale-95"
         >
           {isDiscovered ? (
             <div
@@ -114,7 +117,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
             </div>
           ) : (
             <div
-              className="w-full h-full rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 ring-2 ring-amber-400/40 shadow-[0_0_15px_rgba(245,158,11,0.4)] pointer-events-none"
+              className={`w-full h-full rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${theme.hoverRing} pointer-events-none`}
             />
           )}
         </button>
