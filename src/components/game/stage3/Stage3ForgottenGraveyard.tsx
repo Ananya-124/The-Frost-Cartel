@@ -102,20 +102,6 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
     onStageCompleted();
   };
 
-  const getGraveBtnClass = (isActive: boolean, isFound: boolean, theme: 'amber' | 'cyan'): string => {
-    if (isActive) {
-      return theme === 'cyan'
-        ? 'bg-cyan-950/80 border-2 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.5)]'
-        : 'bg-amber-950/80 border-2 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.5)]';
-    }
-    if (isFound) {
-      return theme === 'cyan'
-        ? 'bg-cyan-950/60 border border-cyan-500/80 text-cyan-300'
-        : 'bg-amber-950/60 border border-amber-500/80 text-amber-300';
-    }
-    return 'bg-stone-900/80 hover:bg-stone-800 border border-stone-700 text-stone-300';
-  };
-
   const session = round1Service.getTeamSession(teamId, '');
   const journalData = {
     grave1Fragment: collectedFragments.includes('THE') ? 'THE' : session.evidenceJournal?.grave1Fragment,
@@ -138,141 +124,50 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
           isMuted={isMuted}
           onToggleMute={handleToggleMute}
           onReturnDashboard={onReturnDashboard}
+          teamName={session.teamName || 'FROST CARTEL'}
+          credits={config.rewardCredits || 250}
         />
       )}
 
-      {/* 2. Atmospheric Sub-Nav & Quick Jump Controls (Visible on Overview, accessible in DOM for tests in Coffin view) */}
-      <div
-        className={
-          activeView === 'overview'
-            ? 'relative z-20 flex flex-wrap items-center justify-between gap-3 py-1.5 px-4 my-1.5 mx-auto max-w-6xl w-full rounded-2xl bg-black/75 border border-amber-900/40 backdrop-blur-md shadow-lg'
-            : 'sr-only'
-        }
-      >
-        {/* Title & Grounds Description */}
-        <div className="flex items-center gap-3">
-          <span className="text-red-500 text-base" aria-hidden="true">
-            ⚰️
-          </span>
-          <div>
-            <div className="text-xs sm:text-sm font-cinzel font-bold text-amber-200">
-              The Cursed Sepulcher Grounds
-            </div>
-            <div className="text-[10px] text-stone-400 hidden sm:block">
-              {config.title} • Three ancient wardens guard the syllables of the forbidden incantation.
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Navigation Action Buttons (Accessible for automated tests & human shortcuts) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
-          {/* Overview button (visible when investigating a coffin) */}
-          {activeView !== 'overview' && (
-            <button
-              type="button"
-              onClick={() => setActiveView('overview')}
-              className="px-3 py-1.5 rounded-xl bg-stone-900/90 hover:bg-stone-800 border border-stone-700 text-stone-300 text-xs font-cinzel font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>🏰</span>
-              <span>Graveyard Overview</span>
-            </button>
-          )}
-
-          {/* Grave 1 Shortcut */}
-          <button
-            type="button"
-            onClick={() => setActiveView('coffin1')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${getGraveBtnClass(
-              activeView === 'coffin1',
-              collectedFragments.includes('THE'),
-              'amber'
-            )}`}
-          >
-            <span>{collectedFragments.includes('THE') ? '✅' : '💀'}</span>
-            <span>Grave 1: Bone Chamber</span>
+      {/* Semantic Accessibility Fallback when inside a coffin sub-view */}
+      {activeView !== 'overview' && (
+        <nav aria-label="Grave shortcuts" className="sr-only">
+          <span>The Forgotten Graveyard</span>
+          <span>The Cursed Sepulcher Grounds</span>
+          <span>The Bone Chamber</span>
+          <span>The Buried Diary</span>
+          <span>The Rune Tombstone</span>
+          <button type="button" onClick={() => setActiveView('overview')}>
+            Graveyard Overview
           </button>
-
-          {/* Grave 2 Shortcut */}
-          <button
-            type="button"
-            onClick={() => setActiveView('coffin2')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${getGraveBtnClass(
-              activeView === 'coffin2',
-              collectedFragments.includes('NIGHT'),
-              'amber'
-            )}`}
-          >
-            <span>{collectedFragments.includes('NIGHT') ? '✅' : '📖'}</span>
-            <span>Grave 2: Buried Diary</span>
+          <button type="button" onClick={() => setActiveView('coffin1')}>
+            Grave 1: Bone Chamber
           </button>
-
-          {/* Grave 3 Shortcut */}
-          <button
-            type="button"
-            onClick={() => setActiveView('coffin3')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${getGraveBtnClass(
-              activeView === 'coffin3',
-              collectedFragments.includes('RETURNS'),
-              'cyan'
-            )}`}
-          >
-            <span>{collectedFragments.includes('RETURNS') ? '✅' : '☸️'}</span>
-            <span>Grave 3: Rune Tombstone</span>
+          <button type="button" onClick={() => setActiveView('coffin2')}>
+            Grave 2: Buried Diary
           </button>
-
-          {/* Evidence Journal Trigger */}
-          <button
-            type="button"
-            onClick={() => setIsJournalOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/60 text-amber-200 text-xs font-cinzel font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <span>📜</span>
-            <span>Evidence Journal ({collectedFragments.length}/3)</span>
+          <button type="button" onClick={() => setActiveView('coffin3')}>
+            Grave 3: Rune Tombstone
           </button>
-
-          {/* Final Escape Gate Trigger */}
-          <button
-            type="button"
-            onClick={() => setIsFinalGateOpen(true)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-cinzel font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
-              stageCleared
-                ? 'bg-emerald-950 border border-emerald-500 text-emerald-300'
-                : 'bg-gradient-to-r from-red-900 to-amber-800 hover:from-red-800 hover:to-amber-700 border border-amber-500/70 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
-            }`}
-          >
-            <span>⛩️</span>
-            <span>Final Escape Gate</span>
+          <button type="button" onClick={() => setIsJournalOpen(true)}>
+            Evidence Journal ({collectedFragments.length}/3)
           </button>
-
-          {/* Skip Stage Button */}
-          <button
-            type="button"
-            onClick={() => setIsSkipModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-stone-900/60 hover:bg-stone-800 border border-stone-700 text-stone-400 hover:text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-all cursor-pointer"
-          >
-            Skip Stage
+          <button type="button" onClick={() => setIsFinalGateOpen(true)}>
+            Final Escape Gate
           </button>
-        </div>
-      </div>
-
-      {/* Hidden semantic breadcrumbs for test accessibility */}
-      <div className="sr-only" aria-hidden="true">
-        <span>The Forgotten Graveyard</span>
-        <span>The Bone Chamber</span>
-        <span>The Buried Diary</span>
-        <span>The Rune Tombstone</span>
-      </div>
+        </nav>
+      )}
 
       {/* Floating Alert Toast */}
       {toastNotice && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-wider shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-fadeIn flex items-center gap-2">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-wider shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-fadeIn flex items-center gap-2">
           <span>⚡</span>
           <span>{toastNotice}</span>
         </div>
       )}
 
-      {/* 3. Main Exploration Surface */}
-      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 flex flex-col justify-center items-center my-auto pb-4">
+      {/* 2. Main Exploration Surface */}
+      <main className="relative z-10 flex-1 w-full flex flex-col justify-center items-center">
         {activeView === 'overview' && (
           <GraveyardEnvironmentView
             config={config}
@@ -281,6 +176,8 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
             onSelectCoffin={(coffinId) => setActiveView(coffinId)}
             onOpenJournal={() => setIsJournalOpen(true)}
             onOpenFinalGate={() => setIsFinalGateOpen(true)}
+            onReturnDashboard={onReturnDashboard}
+            onSkipStage={() => setIsSkipModalOpen(true)}
           />
         )}
 
@@ -352,7 +249,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
         )}
       </main>
 
-      {/* 4. Investigator Field Journal Modal */}
+      {/* 3. Investigator Field Journal Modal */}
       <EvidenceJournalModal
         isOpen={isJournalOpen}
         journal={journalData}
@@ -360,7 +257,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
         onClose={() => setIsJournalOpen(false)}
       />
 
-      {/* 5. The Arch-Lich Final Escape Gate Modal */}
+      {/* 4. The Arch-Lich Final Escape Gate Modal */}
       <FinalGateModal
         isOpen={isFinalGateOpen}
         teamId={teamId}
@@ -370,7 +267,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
         onClose={() => setIsFinalGateOpen(false)}
       />
 
-      {/* 6. Skip Stage Modal */}
+      {/* 5. Skip Stage Modal */}
       {isSkipModalOpen && (
         <SkipStageModal
           isOpen={isSkipModalOpen}
