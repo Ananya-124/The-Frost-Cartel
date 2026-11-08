@@ -15,9 +15,22 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
     expect(session.credits).toBe(0);
     expect(session.totalDurationMinutes).toBe(22);
     expect(session.status).toBe('waiting');
-    expect(session.stages['stage-1'].status).toBe('not_configured');
+    expect(session.stages['stage-1'].status).toBe('available');
     expect(session.stages['stage-2'].status).toBe('available');
     expect(session.stages['stage-3'].status).toBe('available');
+  });
+
+  it('opens Stage 1 for sessions that were saved while it was still "not configured"', () => {
+    const session = service.getTeamSession('team_old', 'Old Squad');
+    session.stages['stage-1'].status = 'not_configured';
+    expect(service.getTeamSession('team_old', 'Old Squad').stages['stage-1'].status).toBe('available');
+  });
+
+  it('awards the Stage 1 reward exactly once', () => {
+    service.beginRound1('team_s1', 'S1 Squad');
+    expect(service.completeStage('team_s1', 'stage-1')).toEqual({ success: true, creditsAwarded: 100 });
+    expect(service.completeStage('team_s1', 'stage-1').success).toBe(false);
+    expect(service.getTeamSession('team_s1', 'S1 Squad').credits).toBe(100);
   });
 
   it('begins round 1 and computes exact timestamp deadline', () => {

@@ -69,7 +69,13 @@ export interface Stage1Config {
   instructions: string;
   rewardCredits: number;
   isReadyForPublication: boolean;
-  activityType: 'challenge_pending' | 'custom_riddle' | 'crypt_cipher';
+  activityType: 'challenge_pending' | 'custom_riddle' | 'crypt_cipher' | 'skull_pumpkin_shuffle';
+  /** Pumpkin Shuffle: number of pumpkins on the altar (3 to 6, default 3). */
+  pumpkinCount?: number;
+  /** Pumpkin Shuffle: how long the shuffle lasts in seconds (default 20). */
+  shuffleSeconds?: number;
+  /** Pumpkin Shuffle: how long the skull is shown before it is hidden (default 3). */
+  revealSeconds?: number;
 }
 
 export interface Stage2Config {

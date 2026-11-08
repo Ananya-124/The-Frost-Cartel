@@ -37,14 +37,17 @@ export class Round1Service {
     this.onScoreSync = callback;
   }
 
-  // Stage 1 Configuration Framework (Pending puzzle integration)
+  // Stage 1 Configuration: The Pumpkin Shuffle (skull under a pumpkin, shuffled, smash to guess)
   private stage1Config: Stage1Config = {
-    title: 'The Unknown Challenge',
-    description: 'Central organizers are finalizing the dark rites for this chamber.',
-    instructions: 'Prepare your squad operatives. When unsealed by central command, this chamber will award 100 Credits.',
+    title: 'The Pumpkin Shuffle',
+    description: 'A skull sleeps beneath one of the pumpkins. Watch it vanish, follow the shuffle, then smash the right pumpkin.',
+    instructions: 'The skull is shown once, then the pumpkins shuffle for 20 seconds. Smash the pumpkin you think hides the skull. Find it to earn 100 Credits.',
     rewardCredits: STAGE_CREDITS['stage-1'], // 100
-    isReadyForPublication: false, // Rule: cannot be marked ready until challenge finalized
-    activityType: 'challenge_pending',
+    isReadyForPublication: true,
+    activityType: 'skull_pumpkin_shuffle',
+    pumpkinCount: 3,
+    shuffleSeconds: 20,
+    revealSeconds: 3,
   };
 
   // Stage 2 Configuration: Haunted Image Hunt
@@ -193,6 +196,11 @@ export class Round1Service {
    */
   getTeamSession(teamId: string, teamName: string): Round1TeamSessionState {
     let session = this.teamStates.get(teamId);
+    // Sessions saved before Stage 1 was built still say "not configured" — open the stage for them.
+    if (session && session.stages['stage-1'].status === 'not_configured' && this.stage1Config.isReadyForPublication) {
+      session.stages['stage-1'].status = 'available';
+      this.persistToStorage();
+    }
     if (!session) {
       session = {
         teamId,

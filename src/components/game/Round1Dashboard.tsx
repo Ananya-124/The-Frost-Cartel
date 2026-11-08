@@ -5,6 +5,7 @@ import type { StageId } from '../../types/round.types';
 import { round1Service } from '../../services/round1Service';
 import { soundController } from '../../utils/soundController';
 import { Stage1Framework } from './stage1/Stage1Framework';
+import { Stage1PumpkinShuffle } from './stage1/Stage1PumpkinShuffle';
 import { Stage2HauntedImageHunt } from './stage2/Stage2HauntedImageHunt';
 import { Stage3ForgottenGraveyard } from './stage3/Stage3ForgottenGraveyard';
 import { HauntedGraveyardAtmosphere } from './haunted/HauntedGraveyardAtmosphere';
@@ -106,11 +107,22 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   if (activeStageId === 'stage-1') {
     return (
       <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
-        <Stage1Framework
-          config={stage1Config}
-          onReturnDashboard={() => setActiveStageId(null)}
-          onSkipStage={() => handleSkipStage('stage-1')}
-        />
+        {teamSession.stages['stage-1'].status === 'not_configured' ? (
+          <Stage1Framework
+            config={stage1Config}
+            onReturnDashboard={() => setActiveStageId(null)}
+            onSkipStage={() => handleSkipStage('stage-1')}
+          />
+        ) : (
+          <Stage1PumpkinShuffle
+            teamId={session.teamId}
+            config={stage1Config}
+            isCompleted={teamSession.stages['stage-1'].status === 'completed'}
+            onReturnDashboard={() => setActiveStageId(null)}
+            onSkipStage={() => handleSkipStage('stage-1')}
+            onStageCompleted={handleStageCompleted}
+          />
+        )}
       </div>
     );
   }
