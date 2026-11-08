@@ -43,7 +43,7 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
           <div className="text-[9px] sm:text-[10px] font-cinzel font-bold text-amber-400/90 tracking-widest uppercase flex items-center gap-1.5">
             <span>STAGE 02 OF 03 • 150 CREDITS</span>
             {stageCleared && (
-              <span className="px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 text-[8px] font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-[#180824] border border-purple-400/80 text-purple-200 text-[8px] font-bold shadow-[0_0_8px_rgba(168,85,247,0.5)]">
                 COMPLETED ✓
               </span>
             )}
