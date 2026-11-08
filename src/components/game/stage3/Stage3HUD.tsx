@@ -28,15 +28,15 @@ export const Stage3HUD: React.FC<Stage3HUDProps> = ({
 
   return (
     <header className="relative z-30 w-full px-4 sm:px-8 py-3 flex items-center justify-between select-none">
-      {/* 1. Left: Frost Cartel Coin Emblem, Team Name, Stage 03 of 03 & Credits */}
+      {/* 1. Left: Frost Cartel Sigil, Team Name, Stage 03 of 03 & Credits */}
       <div className="flex items-center gap-3">
-        {/* Ornate Circular Skull Medal / Emblem */}
-        <div className="relative flex items-center justify-center shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#2a1708] via-[#120a04] to-[#050201] border border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.4)] p-1.5">
+        {/* Authentic Frost Cartel Gothic Skull Sigil */}
+        <div className="relative flex items-center justify-center shrink-0">
           <img
             src="/assets/cartel_skull_crossbones_gold.png"
             alt="Frost Cartel Sigil"
             aria-hidden="true"
-            className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(245,158,11,0.7)]"
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain filter drop-shadow-[0_0_8px_rgba(245,158,11,0.7)] hover:scale-105 transition-transform select-none"
           />
         </div>
 
