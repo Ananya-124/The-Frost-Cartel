@@ -7,6 +7,7 @@ interface Stage2HUDProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onReturnDashboard: () => void;
+  onOpenCalibration?: () => void;
 }
 
 export const Stage2HUD: React.FC<Stage2HUDProps> = ({
@@ -15,6 +16,7 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
   isMuted,
   onToggleMute,
   onReturnDashboard,
+  onOpenCalibration,
 }) => {
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -26,8 +28,13 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
     <header className="relative z-30 w-full max-w-[1400px] mx-auto px-2 sm:px-4 pt-2 sm:pt-3 pb-2 flex flex-col md:flex-row items-center justify-between gap-3 border-b border-amber-900/40">
       {/* 1. Left Emblem & Subtitle */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-stone-950 border-2 border-amber-500/70 shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center justify-center text-lg">
-          💀
+        <div className="relative flex items-center justify-center shrink-0">
+          <img
+            src="/assets/cartel_skull_crossbones_gold.png"
+            alt="Frost Cartel Sigil"
+            aria-hidden="true"
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain filter drop-shadow-[0_0_8px_rgba(245,158,11,0.7)] hover:scale-105 transition-transform select-none"
+          />
         </div>
         <div>
           <div className="font-cinzel text-xs sm:text-sm font-black tracking-[0.2em] text-stone-100 uppercase">
@@ -81,6 +88,19 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
         >
           {isMuted ? '🔇' : '🔊'}
         </button>
+
+        {/* Developer Calibration Tool */}
+        {onOpenCalibration && (
+          <button
+            type="button"
+            onClick={onOpenCalibration}
+            aria-label="Developer Target Calibration Tool"
+            title="Target Calibration Tool (Ctrl+Shift+C)"
+            className="w-8 h-8 rounded-full bg-stone-950 border border-stone-700 hover:border-amber-500 text-stone-400 hover:text-amber-300 flex items-center justify-center text-xs transition-colors cursor-pointer shadow-md"
+          >
+            ⚙️
+          </button>
+        )}
 
         {/* Exit to Round Dashboard */}
         <button

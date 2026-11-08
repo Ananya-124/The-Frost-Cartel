@@ -21,20 +21,14 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({
           className="flex items-center space-x-2.5 text-left group focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin rounded p-1 cursor-pointer"
           title="Return to Frost Cartel main portal"
         >
-          {/* Subtle Haunted Cartel Skull Sigil */}
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-cartel-pumpkin/60 bg-cartel-charcoal/80 flex items-center justify-center shadow-pumpkinGlow group-hover:scale-105 transition-transform duration-300">
-            <svg
-              className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cartel-amber"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M9 10h.01M15 10h.01" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M8 16c1.5-1 3-1 4 0 1-1 2.5-1 4 0" />
-              <line x1="12" y1="12" x2="12" y2="14" />
-            </svg>
+          {/* Haunted Cartel Skull Sigil */}
+          <div className="relative flex items-center justify-center shrink-0">
+            <img
+              src="/assets/cartel_skull_crossbones_gold.png"
+              alt="Frost Cartel Sigil"
+              aria-hidden="true"
+              className="w-6 h-6 sm:w-7 sm:h-7 object-contain filter drop-shadow-[0_0_8px_rgba(246,166,58,0.7)] group-hover:scale-105 transition-transform select-none"
+            />
           </div>
 
           <div>

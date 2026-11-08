@@ -26,8 +26,13 @@ export const Stage3HUD: React.FC<Stage3HUDProps> = ({
     <header className="relative z-30 w-full px-3 sm:px-6 pt-3 pb-2 flex flex-col md:flex-row items-center justify-between gap-3 select-none">
       {/* 1. Left Emblem & Subtitle */}
       <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-full bg-black/85 border border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.4)] flex items-center justify-center text-base backdrop-blur-sm">
-          💀
+        <div className="relative flex items-center justify-center shrink-0">
+          <img
+            src="/assets/cartel_skull_crossbones_gold.png"
+            alt="Frost Cartel Sigil"
+            aria-hidden="true"
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain filter drop-shadow-[0_0_8px_rgba(245,158,11,0.7)] hover:scale-105 transition-transform select-none"
+          />
         </div>
         <div>
           <div className="font-cinzel text-xs font-black tracking-[0.2em] text-stone-100 uppercase">

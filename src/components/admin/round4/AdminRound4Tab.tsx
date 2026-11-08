@@ -123,7 +123,7 @@ export const AdminRound4Tab: React.FC = () => {
       .then((data: Round4AdminOverview | null) => {
         const effectiveData = data || createMockOverview();
         setOverview(effectiveData);
-        if (effectiveData.qualifiedTeams && effectiveData.qualifiedTeams.length > 0) {
+        if (effectiveData.qualifiedTeams?.length) {
           setAssignments(effectiveData.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
         }
       })
@@ -131,7 +131,9 @@ export const AdminRound4Tab: React.FC = () => {
         console.warn('[AdminRound4Tab] Using mock fallback:', err);
         const fallback = createMockOverview();
         setOverview(fallback);
-        setAssignments(fallback.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
+        if (fallback.qualifiedTeams?.length) {
+          setAssignments(fallback.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
+        }
       })
       .finally(() => setIsLoading(false));
   };

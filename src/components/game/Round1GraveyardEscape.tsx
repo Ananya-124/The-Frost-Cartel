@@ -142,8 +142,13 @@ export const Round1GraveyardEscape: React.FC<Round1GraveyardEscapeProps> = ({
       <header className="relative z-20 w-full bg-black/80 backdrop-blur-md border-b border-cartel-pumpkin/40 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
         {/* Squad Status */}
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full border border-cartel-pumpkin bg-cartel-charcoal flex items-center justify-center text-cartel-amber shadow-pumpkinGlow">
-            <span aria-hidden="true">💀</span>
+          <div className="relative flex items-center justify-center shrink-0">
+            <img
+              src="/assets/cartel_skull_crossbones_gold.png"
+              alt="Frost Cartel Sigil"
+              aria-hidden="true"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain filter drop-shadow-[0_0_8px_rgba(246,166,58,0.7)] select-none hover:scale-105 transition-transform"
+            />
           </div>
           <div>
             <div className="text-[10px] font-cinzel text-cartel-amber font-bold tracking-widest uppercase">

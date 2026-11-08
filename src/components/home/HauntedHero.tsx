@@ -25,21 +25,15 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center w-full my-auto">
         {/* Top Runic Medallion & Branding */}
         <div className="text-center max-w-3xl mx-auto mb-4 sm:mb-6">
-          {/* Top Skull & Astral Compass Sigil */}
-          <div className="flex justify-center mb-2">
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 rounded-full border border-cartel-amber/50 animate-spin-slow opacity-80"
-              />
-              <div
-                aria-hidden="true"
-                className="absolute inset-1 rounded-full border border-dotted border-cartel-cyan/40 animate-spin-slow-reverse opacity-75"
-              />
+          {/* Ornate Gothic Heraldic Crest */}
+          <div className="flex justify-center mb-2 sm:mb-3">
+            <div className="relative group">
+              {/* Subtle Ambient Back-Glow */}
+              <div className="absolute inset-0 bg-cartel-amber/25 blur-xl scale-75 group-hover:bg-cartel-amber/40 transition-all duration-700 pointer-events-none" />
               <img
-                src="/assets/gothic_skull_emblem.png"
-                alt=""
-                className="w-7 h-7 sm:w-8 sm:h-8 object-contain filter drop-shadow-[0_0_12px_rgba(246,166,58,0.7)]"
+                src="/assets/frost_cartel_gothic_crest.png"
+                alt="Frost Cartel Crest"
+                className="relative w-28 xs:w-32 sm:w-40 md:w-48 h-auto object-contain filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] drop-shadow-[0_0_20px_rgba(246,166,58,0.4)] hover:scale-105 transition-transform duration-500 select-none"
               />
             </div>
           </div>
@@ -71,7 +65,7 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
         {/* 3. Integrated Player Login — Ancient Haunted Access Console */}
         <div className="w-full max-w-3xl mx-auto" id="login-section">
           {session ? (
-            <div className="relative bg-gradient-to-b from-black/80 via-cartel-void/90 to-black/85 border border-cartel-pumpkin/50 rounded-xl p-4 sm:p-5 text-center shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-md">
+            <div className="relative bg-gradient-to-b from-[#0a0c10]/95 via-cartel-void/98 to-[#06080a]/95 border border-cartel-pumpkin/50 rounded-xl p-4 sm:p-5 text-center shadow-[0_20px_50px_rgba(0,0,0,0.9)]">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cartel-pumpkin/20 border border-cartel-pumpkin text-cartel-pumpkin text-xs font-cinzel font-bold mb-2 shadow-pumpkinGlow">
                 <span className="w-2 h-2 rounded-full bg-cartel-pumpkin animate-ping" aria-hidden="true" />
                 <span>ACTIVE SQUAD SESSION: {session.teamName}</span>

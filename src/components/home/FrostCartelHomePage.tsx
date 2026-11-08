@@ -120,13 +120,8 @@ export const FrostCartelHomePage: React.FC = () => {
       return;
     }
 
-    if (round.number === '02') {
-      navigateToChamber(2, '#/round-2');
-    } else if (round.number === '03') {
-      navigateToChamber(3, '#/round-3');
-    } else {
-      navigateToChamber(1, '#/round-1');
-    }
+    const targetRound = round.number === '02' ? 2 : round.number === '03' ? 3 : 1;
+    navigateToChamber(targetRound, `#/round-${targetRound}`);
   };
 
   const handleEnterRound1 = () => {

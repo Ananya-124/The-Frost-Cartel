@@ -50,18 +50,7 @@ export const HauntedAtmosphere: React.FC = () => {
         />
       </div>
 
-      {/* 5. Rolling Cobblestone Fog & Graveyard Mist */}
-      <div className="absolute inset-x-0 bottom-0 h-64 mist-overlay opacity-75 animate-fog-roll pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-44 bg-[radial-gradient(ellipse_at_50%_100%,rgba(127,229,217,0.12)_0%,rgba(8,10,15,0.75)_65%,transparent_100%)] animate-fog-roll [animation-delay:4s] pointer-events-none" />
-
-      {/* 6. Dynamic Foreground Candle & Pumpkin Flame Glow Lights */}
-      {/* Bottom-Left Warm Pumpkin Glow Field */}
-      <div className="absolute bottom-4 left-6 w-56 h-40 bg-[radial-gradient(circle_at_45%_55%,rgba(242,122,26,0.35)_0%,transparent_70%)] blur-2xl animate-pumpkin-flicker pointer-events-none" />
-
-      {/* Bottom-Right Warm Pumpkin Glow Field */}
-      <div className="absolute bottom-4 right-6 w-56 h-40 bg-[radial-gradient(circle_at_55%_55%,rgba(242,122,26,0.35)_0%,transparent_70%)] blur-2xl animate-pumpkin-flicker [animation-delay:1.6s] pointer-events-none" />
-
-      {/* 7. Subtle Floating Ash / Ember Motes */}
+      {/* 5. Subtle Floating Ash / Ember Motes */}
       <div className="absolute bottom-20 left-[18%] w-1.5 h-1.5 rounded-full bg-amber-400/60 blur-[0.5px] animate-pulse" />
       <div className="absolute bottom-32 left-[25%] w-1 h-1 rounded-full bg-orange-400/50 blur-[0.5px] animate-pulse [animation-delay:1.8s]" />
       <div className="absolute bottom-24 right-[22%] w-1.5 h-1.5 rounded-full bg-amber-400/60 blur-[0.5px] animate-pulse [animation-delay:2.6s]" />
