@@ -24,6 +24,14 @@ export class InputManager {
   }
 
   private handleDown = (event: KeyboardEvent): void => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('input, textarea, select, button, [contenteditable="true"]')) {
+      // Arrow keys navigate focused task forms and controls; they must not also
+      // move the Tracker through the world behind the panel.
+      this.down.delete(event.code);
+      this.onPress(event);
+      return;
+    }
     this.down.add(event.code);
     this.onPress(event);
   };

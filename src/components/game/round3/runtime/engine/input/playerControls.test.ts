@@ -42,14 +42,14 @@ describe('Hunt I keyboard interaction dispatch', () => {
     const state = store.state;
     state.phase = 'playing';
     state.huntIndex = 0;
-    const ledger = INTERACTABLES.find((object) => object.id === 'visitorLedger');
-    const tracks = INTERACTABLES.find((object) => object.id === 'visitorTracks');
-    if (!ledger || !tracks) throw new Error('Visitor investigation fixtures are missing.');
-    state.hunt1AvailableInteractables = [ledger.id, tracks.id];
-    state.players[0].x = ledger.x + ledger.hitbox.w / 2;
-    state.players[0].y = ledger.y + ledger.hitbox.h / 2;
-    state.players[1].x = tracks.x + tracks.hitbox.w / 2;
-    state.players[1].y = tracks.y + tracks.hitbox.h / 2;
+    const generatorLog = INTERACTABLES.find((object) => object.id === 'generatorLog');
+    const burntRelay = INTERACTABLES.find((object) => object.id === 'burntRelay');
+    if (!generatorLog || !burntRelay) throw new Error('Power Failure investigation fixtures are missing.');
+    state.hunt1AvailableInteractables = [generatorLog.id, burntRelay.id];
+    state.players[0].x = generatorLog.x + generatorLog.hitbox.w / 2;
+    state.players[0].y = generatorLog.y + generatorLog.hitbox.h / 2;
+    state.players[1].x = burntRelay.x + burntRelay.hitbox.w / 2;
+    state.players[1].y = burntRelay.y + burntRelay.hitbox.h / 2;
     const context: GameContext = { state, store, scheduler: new Scheduler(), cardEffects: {} };
     const pending = new Promise<void>(() => {});
     const onHunt1Interaction = vi.fn(() => pending);
@@ -57,16 +57,61 @@ describe('Hunt I keyboard interaction dispatch', () => {
     handleActionKey(context, new KeyboardEvent('keydown', { code: CONTROLS[0].act }), undefined, onHunt1Interaction);
     handleActionKey(context, new KeyboardEvent('keydown', { code: CONTROLS[1].act }), undefined, onHunt1Interaction);
 
-    expect(onHunt1Interaction).toHaveBeenNthCalledWith(1, 0, expect.objectContaining({ id: 'visitorLedger', timeline: 'past' }));
-    expect(onHunt1Interaction).toHaveBeenNthCalledWith(2, 1, expect.objectContaining({ id: 'visitorTracks', timeline: 'future' }));
+    expect(onHunt1Interaction).toHaveBeenNthCalledWith(1, 0, expect.objectContaining({ id: 'generatorLog', timeline: 'past' }));
+    expect(onHunt1Interaction).toHaveBeenNthCalledWith(2, 1, expect.objectContaining({ id: 'burntRelay', timeline: 'future' }));
 
-    state.players[0].x = tracks.x + tracks.hitbox.w / 2;
-    state.players[0].y = tracks.y + tracks.hitbox.h / 2;
-    state.players[1].x = ledger.x + ledger.hitbox.w / 2;
-    state.players[1].y = ledger.y + ledger.hitbox.h / 2;
+    state.players[0].x = burntRelay.x + burntRelay.hitbox.w / 2;
+    state.players[0].y = burntRelay.y + burntRelay.hitbox.h / 2;
+    state.players[1].x = generatorLog.x + generatorLog.hitbox.w / 2;
+    state.players[1].y = generatorLog.y + generatorLog.hitbox.h / 2;
     handleActionKey(context, new KeyboardEvent('keydown', { code: CONTROLS[0].act }), undefined, onHunt1Interaction);
     handleActionKey(context, new KeyboardEvent('keydown', { code: CONTROLS[1].act }), undefined, onHunt1Interaction);
 
     expect(onHunt1Interaction).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('player journal hotkeys', () => {
+  it.each([
+    ['KeyQ', 0],
+    ['KeyP', 1],
+  ] as const)('%s opens and closes its journal even when a task button has focus', (code, index) => {
+    const store = new GameStore();
+    const state = store.state;
+    state.phase = 'playing';
+    state.huntIndex = 2;
+    const context: GameContext = { state, store, scheduler: new Scheduler(), cardEffects: {} };
+    const focusedButton = document.createElement('button');
+
+    for (const expected of [true, false]) {
+      const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'target', { value: focusedButton });
+      handleActionKey(context, event);
+      expect(state.journalOpen[index]).toBe(expected);
+      expect(event.defaultPrevented).toBe(true);
+    }
+  });
+});
+
+describe('task interaction feedback', () => {
+  it.each([
+    [0, 'KeyE', 0, 'Hunt I'],
+    [1, 'Enter', 1, 'Hunt II'],
+    [2, 'KeyE', 0, 'Past task'],
+    [2, 'Enter', 1, 'Future task'],
+  ] as const)('guides player %s when no task object is nearby', (huntIndex, key, player, message) => {
+    const store = new GameStore();
+    const state = store.state;
+    state.phase = 'playing';
+    state.huntIndex = huntIndex;
+    state.hunt1AvailableInteractables = [];
+    state.hunt3Stage = 1;
+    state.players[player].x = -1000;
+    state.players[player].y = -1000;
+    state.entities = state.entities.map((entity) => ({ ...entity, gone: true }));
+    const context: GameContext = { state, store, scheduler: new Scheduler(), cardEffects: {} };
+    handleActionKey(context, new KeyboardEvent('keydown', { code: key }), undefined, vi.fn(), vi.fn(), vi.fn());
+    expect(state.messages[player]).toContain(message);
+    expect(state.dirty).toBe(true);
   });
 });

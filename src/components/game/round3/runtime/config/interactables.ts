@@ -35,11 +35,7 @@ const DEFINITIONS: readonly InteractableDefinition[] = [
   ['mirror', 'future', 'lab', 235, 70, 'mirror', 'Cracked mirror'],
   ['term', 'future', 'obs', 215, 200, 'term', 'Warden terminal'],
   ['node', 'future', 'exp', 150, 150, 'node', 'Containment node'],
-  // Hunt I — paired evidence and reconstruction stations for the incident tasks.
-  ['visitorLedger', 'past', 'rec', 75, 55, 'desk', 'Visitor ledger'],
-  ['visitorTracks', 'future', 'rec', 220, 190, 'prints', 'Visitor tracks'],
-  ['archiveIndex', 'past', 'arch', 75, 55, 'shelf', 'Incident report index'],
-  ['shreddedReport', 'future', 'arch', 220, 180, 'tape', 'Shredded report fragments'],
+  // Hunt I — incident evidence and reconstruction stations.
   ['optionalResearchNote', 'past', 'arch', 230, 60, 'crack', 'Hidden research note'],
   ['generatorLog', 'past', 'gen', 75, 55, 'term', 'Generator maintenance log'],
   ['burntRelay', 'future', 'gen', 75, 240, 'mach', 'Burned relay jumper'],
@@ -122,7 +118,7 @@ const DEFINITIONS: readonly InteractableDefinition[] = [
 
 /** Targets owned by Hunt 1; these are hidden from Hunt 2 and Hunt 3 worlds. */
 export const HUNT1_INTERACTABLE_IDS: ReadonlySet<InteractableId> = new Set([
-  'visitorLedger', 'visitorTracks', 'archiveIndex', 'shreddedReport', 'optionalResearchNote',
+  'optionalResearchNote',
   'generatorLog', 'burntRelay', 'openGround', 'observationLog', 'cameraBuffer',
   'signalChart', 'cableJunction', 'incidentBoardPast', 'incidentBoardFuture', 'optionalForgottenRecording',
 ]);

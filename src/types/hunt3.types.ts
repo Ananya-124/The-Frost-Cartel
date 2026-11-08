@@ -1,7 +1,7 @@
 export type Hunt3Actor = 'archivist' | 'tracker';
 export type Hunt3Evidence = {
   id: string; stage: 1 | 2 | 3 | 4; actor: Hunt3Actor | 'team'; title: string; location: string;
-  content: string; relatedObjective: string; verified: boolean;
+  content: string; relatedObjective: string; verified: boolean; createdAt?: string;
 };
 export type Hunt3State = {
   teamId: string; stage: 1 | 2 | 3 | 4; completed: boolean; score: number; scoreBreakdown: { stage1: number; stage2: number; stage3: number; stage4: number; optional: number };

@@ -1,6 +1,6 @@
 import { db } from '../../database/db.ts';
 import { round3GameplayAllowed } from './round3.service.ts';
-import type { Hunt1ActionResult, Hunt1Actor, Hunt1Evidence, Hunt1State, Hunt1TaskKey, IncidentConclusionPuzzle, MissingReportPuzzle, ObservationTimelinePuzzle, PowerFailurePuzzle, SignalReconstructionPuzzle } from '../../src/types/hunt1.types.ts';
+import type { Hunt1ActionResult, Hunt1Actor, Hunt1Evidence, Hunt1State, Hunt1TaskKey, IncidentConclusionPuzzle, ObservationTimelinePuzzle, PowerFailurePuzzle, SignalReconstructionPuzzle } from '../../src/types/hunt1.types.ts';
 
 db.exec(`CREATE TABLE IF NOT EXISTS round3_hunt1_sessions (
   team_id TEXT PRIMARY KEY REFERENCES teams(id) ON DELETE CASCADE,
@@ -8,39 +8,33 @@ db.exec(`CREATE TABLE IF NOT EXISTS round3_hunt1_sessions (
   updated_at TEXT NOT NULL
 );`);
 
-const MODEL_VERSION = 2;
-const MISSING_REPORT_ANSWER = ['purpose', 'apparatus', 'safeguards', 'result'];
+const MODEL_VERSION = 3;
 const POWER_FAILURE_ANSWER = ['generator-relay', 'relay-load', 'load-ground', 'ground-frame'];
 const OBSERVATION_ANSWER = ['alarm', 'lights-fail', 'subject-appears', 'observer-vanishes'];
 const SIGNAL_ANSWER = ['intake', 'ground', 'observer', 'transmit'];
 const CONCLUSION_ARCHIVIST_ANSWER = ['temporal-resonance-reconstructs-human-memories', 'resonance-limited-to-recorded-imprints'];
 const CONCLUSION_TRACKER_ANSWER = ['omitted-ground-and-relay-bypass-exceeded-limits', 'a-reconstructed-memory-became-conscious-after-transmission', 'that-consciousness-manifested-as-the-entity'];
 const TASKS: Record<Hunt1TaskKey, { number: number; title: string; points: number; submitter: Hunt1Actor | 'team'; objects: Record<string, Hunt1Actor>; required: string[]; answer: string[] }> = {
-  lastVisitor: { number: 1, title: 'The Last Visitor', points: 100, submitter: 'archivist', objects: { visitorLedger: 'archivist', visitorTracks: 'tracker' }, required: ['visitorLedger', 'visitorTracks'], answer: ['technician', 'director', 'visitor'] },
-  missingReport: { number: 2, title: 'The Missing Report', points: 150, submitter: 'team', objects: { archiveIndex: 'archivist', shreddedReport: 'tracker' }, required: ['archiveIndex', 'shreddedReport'], answer: MISSING_REPORT_ANSWER },
-  powerFailure: { number: 3, title: 'The Power Failure', points: 200, submitter: 'team', objects: { generatorLog: 'archivist', burntRelay: 'tracker', openGround: 'tracker' }, required: ['generatorLog', 'burntRelay', 'openGround'], answer: POWER_FAILURE_ANSWER },
-  observationLog: { number: 4, title: 'The Observation Log', points: 200, submitter: 'team', objects: { observationLog: 'archivist', cameraBuffer: 'tracker' }, required: ['observationLog', 'cameraBuffer'], answer: OBSERVATION_ANSWER },
-  signalReconstruction: { number: 5, title: 'The Signal Reconstruction', points: 200, submitter: 'team', objects: { signalChart: 'archivist', cableJunction: 'tracker' }, required: ['signalChart', 'cableJunction'], answer: SIGNAL_ANSWER },
-  incidentConclusion: { number: 6, title: 'The Incident Conclusion', points: 150, submitter: 'team', objects: { incidentBoardPast: 'archivist', incidentBoardFuture: 'tracker' }, required: ['incidentBoardPast', 'incidentBoardFuture'], answer: [...CONCLUSION_ARCHIVIST_ANSWER, ...CONCLUSION_TRACKER_ANSWER] },
+  powerFailure: { number: 1, title: 'The Power Failure', points: 200, submitter: 'team', objects: { generatorLog: 'archivist', burntRelay: 'tracker', openGround: 'tracker' }, required: ['generatorLog', 'burntRelay', 'openGround'], answer: POWER_FAILURE_ANSWER },
+  observationLog: { number: 2, title: 'The Observation Log', points: 200, submitter: 'team', objects: { observationLog: 'archivist', cameraBuffer: 'tracker' }, required: ['observationLog', 'cameraBuffer'], answer: OBSERVATION_ANSWER },
+  signalReconstruction: { number: 3, title: 'The Signal Reconstruction', points: 200, submitter: 'team', objects: { signalChart: 'archivist', cableJunction: 'tracker' }, required: ['signalChart', 'cableJunction'], answer: SIGNAL_ANSWER },
+  incidentConclusion: { number: 4, title: 'The Incident Conclusion', points: 150, submitter: 'team', objects: { incidentBoardPast: 'archivist', incidentBoardFuture: 'tracker' }, required: ['incidentBoardPast', 'incidentBoardFuture'], answer: [...CONCLUSION_ARCHIVIST_ANSWER, ...CONCLUSION_TRACKER_ANSWER] },
 };
 const OPTIONAL_OBJECTS: Record<string, { actor: Hunt1Actor; key: 'researchNote' | 'forgottenRecording'; title: string; content: string }> = {
-  optionalResearchNote: { actor: 'archivist', key: 'researchNote', title: 'Hidden Research Note', content: 'A pencilled note behind the archive index warns that the grounding strap was removed before the final subject observation.' },
+  optionalResearchNote: { actor: 'archivist', key: 'researchNote', title: 'Hidden Research Note', content: 'A pencilled note tucked behind a loose archive shelf warns that the grounding strap was removed before the final subject observation.' },
   optionalForgottenRecording: { actor: 'tracker', key: 'forgottenRecording', title: 'Forgotten Recording', content: 'The damaged channel preserves a quiet warning: “Keep the carrier outside the observer room.” The last tone continues after the camera feed ends.' },
 };
 const HINTS: Record<number, readonly [string, string]> = {
-  1: ['Compare the time order in the Past register with the direction of the Future tracks.', 'Place the three arrivals from earliest to latest.'],
-  2: ['The Archivist has the section order; the Tracker has the four torn headings.', 'Rebuild the document from purpose through result.'],
-  3: ['Trace current from generator output through control, load, ground, and frame.', 'The grounded return closes the circuit at the generator frame.'],
-  4: ['The printed timecodes come from two clocks. Compare their calibration marks against the room’s physical traces.', 'Trust the first alarm note, but use the lamp soot and chair marks to resolve the disputed sequence.'],
-  5: ['Use the blueprint legend to distinguish signal path from shielding and bypass marks.', 'The console’s break marks show where the damaged route must be rebuilt.'],
-  6: ['Compare the historical experiment mandate with the physical signal aftermath.', 'Each investigator holds different parts of the final explanation.'],
+  1: ['Trace current from generator output through control, load, ground, and frame.', 'The grounded return closes the circuit at the generator frame.'],
+  2: ['The printed timecodes come from two clocks. Compare their calibration marks against the room’s physical traces.', 'Trust the first alarm note, but use the lamp soot and chair marks to resolve the disputed sequence.'],
+  3: ['Use the blueprint legend to distinguish signal path from shielding and bypass marks.', 'The console’s break marks show where the damaged route must be rebuilt.'],
+  4: ['Compare the historical experiment mandate with the physical signal aftermath.', 'Each investigator holds different parts of the final explanation.'],
 };
 const isActor = (value: unknown): value is Hunt1Actor => value === 'archivist' || value === 'tracker';
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const nowIso = () => new Date().toISOString();
-const emptyTaskScores = (): Record<Hunt1TaskKey, number> => ({ lastVisitor: 0, missingReport: 0, powerFailure: 0, observationLog: 0, signalReconstruction: 0, incidentConclusion: 0 });
+const emptyTaskScores = (): Record<Hunt1TaskKey, number> => ({ powerFailure: 0, observationLog: 0, signalReconstruction: 0, incidentConclusion: 0 });
 const emptyOptionalScores = (): Hunt1State['optionalScores'] => ({ researchNote: 0, forgottenRecording: 0 });
-const emptyMissingReport = (): MissingReportPuzzle => ({ reconstructionVersion: 1, archivistOrder: null, archivistValid: false, trackerOrder: null, trackerValid: false, confirmations: {} });
 const emptyPowerFailure = (): PowerFailurePuzzle => ({ archivistConnections: null, archivistValid: false, trackerConnections: null, trackerValid: false });
 const emptyObservationTimeline = (): ObservationTimelinePuzzle => ({ archivistTimeline: null, archivistValid: false, trackerTimeline: null, trackerValid: false });
 const emptySignalReconstruction = (): SignalReconstructionPuzzle => ({ archivistRoute: null, archivistValid: false, trackerRoute: null, trackerValid: false });
@@ -49,9 +43,9 @@ const emptyIncidentConclusion = (): IncidentConclusionPuzzle => ({ archivistInte
 function freshState(teamId: string): Hunt1State {
   const state: Hunt1State = {
     modelVersion: MODEL_VERSION, teamId, currentChallenge: 1, completed: false, score: 0, penalties: 0,
-    subtasks: {}, taskCompleted: { lastVisitor: false, missingReport: false, powerFailure: false, observationLog: false, signalReconstruction: false, incidentConclusion: false },
+    subtasks: {}, taskCompleted: { powerFailure: false, observationLog: false, signalReconstruction: false, incidentConclusion: false },
     taskScores: emptyTaskScores(), optionalScores: emptyOptionalScores(), objectStates: {}, availableInteractables: [],
-    evidence: [], journal: [], failedSubmissions: [], hintUses: {}, missingReport: emptyMissingReport(), powerFailure: emptyPowerFailure(), observationTimeline: emptyObservationTimeline(), signalReconstruction: emptySignalReconstruction(), incidentConclusion: emptyIncidentConclusion(), updatedAt: nowIso(),
+    evidence: [], journal: [], failedSubmissions: [], hintUses: {}, powerFailure: emptyPowerFailure(), observationTimeline: emptyObservationTimeline(), signalReconstruction: emptySignalReconstruction(), incidentConclusion: emptyIncidentConclusion(), updatedAt: nowIso(),
   };
   refreshAvailable(state);
   return state;
@@ -69,15 +63,59 @@ function ensureRow(teamId: string): void {
   const now = nowIso();
   db.prepare('INSERT OR IGNORE INTO round3_hunt1_sessions (team_id, state_json, updated_at) VALUES (?, ?, ?)').run(teamId, JSON.stringify(freshState(teamId)), now);
   const row = db.prepare('SELECT state_json FROM round3_hunt1_sessions WHERE team_id=?').get(teamId) as { state_json: string };
-  const parsed = JSON.parse(row.state_json) as Partial<Hunt1State>;
-  if (parsed.modelVersion !== MODEL_VERSION) {
-    // The previous Hunt I was the transmitter shutdown sequence; its state cannot represent these incident tasks.
+  const parsed = JSON.parse(row.state_json) as Partial<Hunt1State> & Record<string, any>;
+  if (parsed.modelVersion === 2) {
+    const state = freshState(teamId);
+    const oldChallenge = Number(parsed.currentChallenge ?? 3);
+    state.currentChallenge = Math.max(1, Math.min(4, oldChallenge - 2)) as Hunt1State['currentChallenge'];
+    state.completed = parsed.completed === true || parsed.taskCompleted?.incidentConclusion === true;
+    if (state.completed) state.currentChallenge = 4;
+    state.taskCompleted = {
+      powerFailure: parsed.taskCompleted?.powerFailure === true,
+      observationLog: parsed.taskCompleted?.observationLog === true,
+      signalReconstruction: parsed.taskCompleted?.signalReconstruction === true,
+      incidentConclusion: parsed.taskCompleted?.incidentConclusion === true,
+    };
+    state.taskScores = {
+      powerFailure: Number(parsed.taskScores?.powerFailure ?? 0),
+      observationLog: Number(parsed.taskScores?.observationLog ?? 0),
+      signalReconstruction: Number(parsed.taskScores?.signalReconstruction ?? 0),
+      incidentConclusion: Number(parsed.taskScores?.incidentConclusion ?? 0),
+    };
+    state.optionalScores = parsed.optionalScores ?? emptyOptionalScores();
+    state.penalties = Number(parsed.penalties ?? 0);
+    const removed = new Set(['visitorLedger', 'visitorTracks', 'archiveIndex', 'shreddedReport']);
+    state.subtasks = Object.fromEntries(Object.entries(parsed.subtasks ?? {}).filter(([id]) => !removed.has(id)));
+    state.objectStates = Object.fromEntries(Object.entries(parsed.objectStates ?? {}).filter(([id]) => !removed.has(id)));
+    const isRemovedEvidence = (entry: Hunt1Evidence) => removed.has(entry.id)
+      || entry.id === 'objective-complete-lastVisitor' || entry.id === 'objective-complete-missingReport';
+    state.evidence = (parsed.evidence ?? []).filter((entry: Hunt1Evidence) => !isRemovedEvidence(entry));
+    state.journal = (parsed.journal ?? []).filter((entry: Hunt1Evidence) => !isRemovedEvidence(entry));
+    state.failedSubmissions = (parsed.failedSubmissions ?? []).flatMap((entry: string) => {
+      const [challenge, ...rest] = entry.split(':');
+      const old = Number(challenge);
+      return old >= 3 && old <= 6 ? [`${old - 2}:${rest.join(':')}`] : [];
+    });
+    state.hintUses = Object.fromEntries(Object.entries(parsed.hintUses ?? {})
+      .filter(([challenge]) => Number(challenge) >= 3 && Number(challenge) <= 6)
+      .map(([challenge, uses]) => [String(Number(challenge) - 2), uses]));
+    state.powerFailure = parsed.powerFailure ?? emptyPowerFailure();
+    state.observationTimeline = parsed.observationTimeline ?? emptyObservationTimeline();
+    state.signalReconstruction = parsed.signalReconstruction ?? emptySignalReconstruction();
+    state.incidentConclusion = parsed.incidentConclusion ?? emptyIncidentConclusion();
+    state.score = Math.max(0, Object.values(state.taskScores).reduce((sum, points) => sum + points, 0)
+      + Object.values(state.optionalScores).reduce((sum, points) => sum + points, 0) - state.penalties);
+    state.updatedAt = now;
+    refreshAvailable(state);
+    db.prepare('UPDATE round3_hunt1_sessions SET state_json=?, updated_at=? WHERE team_id=?').run(JSON.stringify(state), now, teamId);
+    db.prepare('UPDATE round3_sessions SET score=?, updated_at=? WHERE team_id=?').run(state.score, now, teamId);
+  } else if (parsed.modelVersion !== MODEL_VERSION) {
+    // Older legacy Hunt I formats cannot be mapped to the incident reconstruction tasks.
     const state = freshState(teamId);
     db.prepare('UPDATE round3_hunt1_sessions SET state_json=?, updated_at=? WHERE team_id=?').run(JSON.stringify(state), now, teamId);
-  } else if (!parsed.missingReport || !parsed.powerFailure || !parsed.observationTimeline || !parsed.signalReconstruction || !parsed.incidentConclusion) {
+  } else if (!parsed.powerFailure || !parsed.observationTimeline || !parsed.signalReconstruction || !parsed.incidentConclusion) {
     const state = {
       ...parsed,
-      missingReport: parsed.missingReport ?? emptyMissingReport(),
       powerFailure: parsed.powerFailure ?? emptyPowerFailure(),
       observationTimeline: parsed.observationTimeline ?? emptyObservationTimeline(),
       signalReconstruction: parsed.signalReconstruction ?? emptySignalReconstruction(),
@@ -96,13 +134,12 @@ export function getRound3Hunt1State(teamId: string, playerNumber?: number): Hunt
   const row = db.prepare('SELECT state_json FROM round3_hunt1_sessions WHERE team_id=?').get(teamId) as { state_json: string } | undefined;
   if (!row) return null;
   const state = JSON.parse(row.state_json) as Hunt1State;
-  state.missingReport ??= emptyMissingReport();
   state.powerFailure ??= emptyPowerFailure();
   state.observationTimeline ??= emptyObservationTimeline();
   state.signalReconstruction ??= emptySignalReconstruction();
   state.incidentConclusion ??= emptyIncidentConclusion();
   refreshAvailable(state);
-  if (state.currentChallenge === 4) {
+  if (state.currentChallenge === 2) {
     const observationTimeline = { ...state.observationTimeline };
     const archivistSubmitted = state.observationTimeline.archivistTimeline !== null;
     const trackerSubmitted = state.observationTimeline.trackerTimeline !== null;
@@ -124,7 +161,7 @@ export function getRound3Hunt1State(teamId: string, playerNumber?: number): Hunt
     // Before completion, players get comparison status but not the other role's submitted answer.
     return { ...state, observationTimeline };
   }
-  if (state.currentChallenge === 5) {
+  if (state.currentChallenge === 3) {
     const signalReconstruction = { ...state.signalReconstruction };
     if (playerNumber === 1) {
       signalReconstruction.trackerRoute = null;
@@ -134,7 +171,7 @@ export function getRound3Hunt1State(teamId: string, playerNumber?: number): Hunt
     }
     return { ...state, signalReconstruction };
   }
-  if (state.currentChallenge === 6 && !state.completed) {
+  if (state.currentChallenge === 4 && !state.completed) {
     const incidentConclusion = { ...state.incidentConclusion };
     if (playerNumber === 1) {
       incidentConclusion.trackerInterpretation = null;
@@ -162,7 +199,7 @@ function awardTask(state: Hunt1State, key: Hunt1TaskKey): void {
   state.score = Math.max(0, Object.values(state.taskScores).reduce((sum, points) => sum + points, 0)
     + Object.values(state.optionalScores).reduce((sum, points) => sum + points, 0) - state.penalties);
   if (key === 'incidentConclusion') state.completed = true;
-  else state.currentChallenge = Math.min(6, state.currentChallenge + 1) as Hunt1State['currentChallenge'];
+  else state.currentChallenge = Math.min(4, state.currentChallenge + 1) as Hunt1State['currentChallenge'];
   const task = TASKS[key];
   addEvidence(state, {
     id: `objective-complete-${key}`, title: `${task.title} reconstructed`, location: task.title,
@@ -215,7 +252,6 @@ export function applyRound3Hunt1Action(
     const state = JSON.parse(row.state_json) as Hunt1State;
     if (state.modelVersion !== MODEL_VERSION || state.completed) { db.exec('ROLLBACK'); return null; }
     const actor = input.actor;
-    state.missingReport ??= emptyMissingReport();
     state.powerFailure ??= emptyPowerFailure();
     state.observationTimeline ??= emptyObservationTimeline();
     state.signalReconstruction ??= emptySignalReconstruction();
@@ -263,7 +299,7 @@ export function applyRound3Hunt1Action(
       }
     } else if (input.type.startsWith('powerFailure') && isRecord(input.value)) {
       const puzzle = state.powerFailure;
-      const correctTask = state.currentChallenge === 3 && !state.taskCompleted.powerFailure;
+      const correctTask = state.currentChallenge === 1 && !state.taskCompleted.powerFailure;
       const evidenceReady = TASKS.powerFailure.required.every((id) => state.subtasks[id]);
       const sequence = normalizeSequence(input.value.sequence);
       if (!correctTask || !evidenceReady) { actionSuccess = false; message = 'The generator circuit is not ready for reconstruction.'; }
@@ -291,7 +327,7 @@ export function applyRound3Hunt1Action(
       } else { actionSuccess = false; message = 'This authenticated role cannot operate that generator station.'; }
     } else if (input.type.startsWith('observation') && isRecord(input.value)) {
       const puzzle = state.observationTimeline;
-      const correctTask = state.currentChallenge === 4 && !state.taskCompleted.observationLog;
+      const correctTask = state.currentChallenge === 2 && !state.taskCompleted.observationLog;
       const evidenceReady = TASKS.observationLog.required.every((id) => state.subtasks[id]);
       const sequence = normalizeSequence(input.value.sequence);
       if (!correctTask || !evidenceReady) { actionSuccess = false; message = 'Both Observation Room investigations must be opened before timelines can be compared.'; }
@@ -320,13 +356,13 @@ export function applyRound3Hunt1Action(
       } else { actionSuccess = false; message = 'This authenticated role cannot submit that Observation Room timeline.'; }
     } else if (input.type.startsWith('incidentConclusion') && isRecord(input.value)) {
       const puzzle = state.incidentConclusion;
-      const correctTask = state.currentChallenge === 6 && !state.taskCompleted.incidentConclusion && !state.completed;
+      const correctTask = state.currentChallenge === 4 && !state.taskCompleted.incidentConclusion && !state.completed;
       const priorTasksReady = Object.entries(state.taskCompleted)
         .filter(([key]) => key !== 'incidentConclusion')
         .every(([, done]) => done);
       const evidenceReady = TASKS.incidentConclusion.required.every((id) => state.subtasks[id]);
       const sequence = normalizeSequence(input.value.sequence);
-      if (!correctTask || !priorTasksReady || !evidenceReady) { actionSuccess = false; message = 'Complete the five investigations and examine both final boards before submitting the conclusion.'; }
+      if (!correctTask || !priorTasksReady || !evidenceReady) { actionSuccess = false; message = 'Complete the three earlier investigations and examine both final boards before submitting the conclusion.'; }
       else if (input.type === 'incidentConclusionArchivist' && actor === 'archivist') {
         if (!sequence) { actionSuccess = false; message = 'Arrange the historical purpose and procedure before submitting.'; }
         else {
@@ -354,7 +390,7 @@ export function applyRound3Hunt1Action(
       } else { actionSuccess = false; message = 'This authenticated role cannot submit that part of the incident conclusion.'; }
     } else if (input.type.startsWith('signal') && isRecord(input.value)) {
       const puzzle = state.signalReconstruction;
-      const correctTask = state.currentChallenge === 5 && !state.taskCompleted.signalReconstruction;
+      const correctTask = state.currentChallenge === 3 && !state.taskCompleted.signalReconstruction;
       const evidenceReady = TASKS.signalReconstruction.required.every((id) => state.subtasks[id]);
       const sequence = normalizeSequence(input.value.sequence);
       if (!correctTask || !evidenceReady) { actionSuccess = false; message = 'Both communication investigations must be opened before the signal can be restored.'; }
@@ -380,50 +416,6 @@ export function applyRound3Hunt1Action(
           }
         }
       } else { actionSuccess = false; message = 'This authenticated role cannot operate that communication station.'; }
-    } else if (input.type.startsWith('missingReport') && isRecord(input.value)) {
-      const puzzle = state.missingReport;
-      const correctTask = state.currentChallenge === 2 && !state.taskCompleted.missingReport;
-      const evidenceReady = state.subtasks.archiveIndex && state.subtasks.shreddedReport;
-      const sequence = normalizeSequence(input.value.sequence);
-      if (!correctTask || !evidenceReady) { actionSuccess = false; message = 'The report reconstruction is not ready.'; }
-      else if (input.type === 'missingReportArchivist' && actor === 'archivist') {
-        if (!sequence) { actionSuccess = false; message = 'Arrange all four index entries before submitting.'; }
-        else {
-          const changed = !sameSequence(puzzle.archivistOrder, sequence);
-          if (changed) { puzzle.reconstructionVersion += 1; puzzle.confirmations = {}; }
-          puzzle.archivistOrder = sequence;
-          puzzle.archivistValid = sameSequence(sequence, MISSING_REPORT_ANSWER);
-          if (!puzzle.archivistValid) { penalize(state, actor, sequence); actionSuccess = false; message = 'The index entries conflict with the historical filing marks. Reorder them and try again.'; }
-          else message = 'Historical index decoded and shared with the Tracker. The order is recorded for joint reconstruction.';
-        }
-      } else if (input.type === 'missingReportTracker' && actor === 'tracker') {
-        if (!sequence) { actionSuccess = false; message = 'Place all four report fragments before submitting.'; }
-        else {
-          const changed = !sameSequence(puzzle.trackerOrder, sequence);
-          if (changed) { puzzle.reconstructionVersion += 1; puzzle.confirmations = {}; }
-          puzzle.trackerOrder = sequence;
-          puzzle.trackerValid = sameSequence(sequence, MISSING_REPORT_ANSWER);
-          if (!puzzle.trackerValid) { penalize(state, actor, sequence); actionSuccess = false; message = 'The torn edges and report contents do not align. Reorder the fragments and try again.'; }
-          else message = 'Physical report reconstructed. Both investigators can now compare and confirm the arrangement.';
-        }
-      } else if (input.type === 'missingReportConfirm') {
-        const submittedVersion = input.value.reconstructionVersion;
-        const sameArrangement = sameSequence(puzzle.archivistOrder, puzzle.trackerOrder ?? []);
-        const bothCorrect = puzzle.archivistValid && puzzle.trackerValid
-          && sameSequence(puzzle.archivistOrder, MISSING_REPORT_ANSWER)
-          && sameSequence(puzzle.trackerOrder, MISSING_REPORT_ANSWER);
-        if (state.taskCompleted.missingReport) { actionSuccess = false; message = 'The Missing Report is already complete.'; }
-        else if (submittedVersion !== puzzle.reconstructionVersion) { actionSuccess = false; message = 'The reconstruction changed. Review the current arrangement before confirming.'; }
-        else if (!puzzle.archivistOrder || !puzzle.trackerOrder || !sameArrangement || !bothCorrect) { actionSuccess = false; message = 'The two reconstructions must match and be correct before confirmation.'; }
-        else if (puzzle.confirmations[actor] === puzzle.reconstructionVersion) { actionSuccess = false; message = 'Your confirmation for this reconstruction is already recorded.'; }
-        else {
-          puzzle.confirmations[actor] = puzzle.reconstructionVersion;
-          if (puzzle.confirmations.archivist === puzzle.reconstructionVersion && puzzle.confirmations.tracker === puzzle.reconstructionVersion) {
-            awardTask(state, 'missingReport');
-            message = 'Both investigators confirmed reconstruction v' + puzzle.reconstructionVersion + '. The Missing Report is complete · +150 points.';
-          } else message = 'Confirmation recorded. Waiting for the other authenticated investigator.';
-        }
-      } else { actionSuccess = false; message = 'This authenticated role cannot perform that report action.'; }
     } else if (input.type === 'submit' && isRecord(input.value)) {
       const taskKey = getTaskKey(state.currentChallenge);
       if (!taskKey) { actionSuccess = false; message = 'No incident task is currently available.'; }
@@ -434,8 +426,7 @@ export function applyRound3Hunt1Action(
           || Object.entries(state.taskCompleted).filter(([key]) => key !== 'incidentConclusion').every(([, done]) => done);
         const evidenceReady = task.required.every((id) => state.subtasks[id]) && priorTasksReady;
         const allowedSubmitter = task.submitter === 'team' ? true : actor === task.submitter;
-        if (taskKey === 'missingReport') { actionSuccess = false; message = 'Use the separate index decoding and fragment reconstruction actions.'; }
-        else if (taskKey === 'powerFailure') { actionSuccess = false; message = 'Use the wiring diagram and generator reconnection stations.'; }
+        if (taskKey === 'powerFailure') { actionSuccess = false; message = 'Use the wiring diagram and generator reconnection stations.'; }
         else if (taskKey === 'observationLog') { actionSuccess = false; message = 'Submit the separate Past and Future investigation timelines.'; }
         else if (taskKey === 'signalReconstruction') { actionSuccess = false; message = 'Use the separate blueprint decoder and console restoration stations.'; }
         else if (taskKey === 'incidentConclusion') { actionSuccess = false; message = 'Submit the separate historical and physical conclusions.'; }
@@ -464,10 +455,6 @@ export function applyRound3Hunt1Action(
 }
 
 const EVIDENCE: Record<string, { title: string; location: string; content: string; inference: string }> = {
-  visitorLedger: { title: 'Reception visitor ledger', location: 'Reception — Past', content: 'E. Marr, facilities technician, signed in first. Director S. Vale followed. At 18:21 the final line reads “visitor — no badge”; no departure was recorded.', inference: 'The unregistered visitor was the last person admitted before the incident.' },
-  visitorTracks: { title: 'Tracks beneath the reception glass', location: 'Reception — Future', content: 'One set of wet prints approaches from the generator corridor and continues toward the observation wing. No matching prints return to the entrance.', inference: 'The last visitor entered the facility and never left by the reception route.' },
-  archiveIndex: { title: 'Archive report index', location: 'Archive — Past', content: 'The index contains four damaged filing entries. The Archivist must compare their historical cues and submit the recovered order; the decoded order is shared only after that submission.', inference: 'The safeguard entry was mandatory before an observation run.' },
-  shreddedReport: { title: 'Shredded incident report', location: 'Archive — Future', content: 'Four pieces retain torn-edge symbols and headings: PURPOSE, APPARATUS, SAFEGUARDS, RESULT. The safeguards paragraph begins “ground strap must remain bonded.”', inference: 'Reassemble the four sections in the archive’s numbered order to reveal the omitted safeguard.' },
   generatorLog: { title: 'Original generator wiring diagram', location: 'Generator room — Past', content: 'The original diagram contains four labeled connection segments and a current-flow legend. The numbered endpoint marks are faded; the maintenance log notes that a stable load test preceded the R-4 bypass and ground failure.', inference: 'Decode the wiring path from source to frame before attempting to restore the damaged generator.' },
   burntRelay: { title: 'Burned relay jumper', location: 'Generator room — Future', content: 'A loose copper jumper lies beside the bypassed R-4 safety relay. The cable markers identify its two endpoints as generator output and relay input.', inference: 'Reconnect the lead to restore the first protected circuit link.' },
   openGround: { title: 'Open ground lead', location: 'Generator room — Future', content: 'The load bus and frame return are disconnected from the ground bus. The open lug is scorched from an ungrounded surge.', inference: 'The ground braid bonds the load bus to the ground bus, and the return lead meets the generator frame.' },

@@ -57,7 +57,7 @@ describe('Hunt II progress', () => {
     const state = makeState(2);
     const onSubmit = vi.fn(async (_actor: Hunt2Actor, _kind: Hunt2Input, _value: unknown): Promise<Hunt2ActionResult> => ({ success: true, message: 'saved', state }));
     render(<Hunt2Progress {...props(state, 'tracker', 'weakness-frequency', onSubmit)} />);
-    expect(screen.getByText('Hunt II · 1/4 · Hide tasks')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hunt II · 1/4 · Hide Tracker tasks' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Run a controlled experiment' })).toBeInTheDocument();
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'low' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit for verification' }));

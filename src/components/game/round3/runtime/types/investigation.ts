@@ -20,6 +20,7 @@ export interface Clue {
 
 /** An entry in the shared investigation journal. */
 export interface ClueRecord {
+  id?: string;
   title: string;
   text: string;
   huntIndex: HuntIndex;

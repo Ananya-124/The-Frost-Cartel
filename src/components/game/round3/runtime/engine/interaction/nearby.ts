@@ -17,7 +17,9 @@ function distanceToHitbox(object: InteractableObject, player: { x: number; y: nu
 /** What the player could act on right now: a manifestation (Tracker) or the closest prop. */
 export function findNearTarget(state: GameState, index: PlayerIndex): NearTarget | null {
   const player = state.players[index];
-  if (index === 1 && state.huntIndex !== 0) {
+  // Hunt 2 uses Enter to mark entities. In Hunt 3, the Tracker's Enter key
+  // must remain available for the staged evidence and containment objects.
+  if (index === 1 && state.huntIndex === 1) {
     const entity = state.entities.find((e) => !e.gone && dist(e, player) < MARK_RADIUS);
     if (entity) return { kind: 'entity', text: '[Enter] Mark this manifestation', entity };
   }

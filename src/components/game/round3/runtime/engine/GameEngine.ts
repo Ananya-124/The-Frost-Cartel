@@ -65,7 +65,10 @@ export class GameEngine {
     };
     this.renderer = new Renderer(els.menuCanvas, els.canvases);
     this.input = new InputManager((e) => {
-      if (this.gameplayEnabled) handleActionKey(this.ctx, e, (slot) => this.requestCardUse(slot), hunt1InteractionHandler, hunt2InteractionHandler, hunt3InteractionHandler);
+      const journalKey = e.code === 'KeyQ' || e.code === 'KeyP';
+      if (this.gameplayEnabled || (journalKey && this.ctx.state.phase === 'playing')) {
+        handleActionKey(this.ctx, e, (slot) => this.requestCardUse(slot), hunt1InteractionHandler, hunt2InteractionHandler, hunt3InteractionHandler);
+      }
     });
   }
 

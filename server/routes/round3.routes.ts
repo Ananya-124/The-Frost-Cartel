@@ -3,11 +3,15 @@ import { requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.t
 import { activateRound3Card, completeRound3Hunt, discoverRound3Evidence, ensureRound3Session, getRound3Run, getRound3State, loadRound3DevelopmentSample, pauseRound3Run, resumeRound3Run, round3GameplayAllowed, startRound3Run, updateRound3Progress } from '../services/round3.service.ts';
 import { applyRound3Hunt1Action, ensureRound3Hunt1State, getRound3Hunt1State } from '../services/round3-hunt1.service.ts';
 import { applyRound3Hunt2Action, ensureRound3Hunt2State, getRound3Hunt2State, round3Hunt2StateForActor } from '../services/round3-hunt2.service.ts';
-import { applyRound3Hunt3Action, ensureRound3Hunt3State, getRound3Hunt3State, round3Hunt3StateForActor } from '../services/round3-hunt3.service.ts';
+import { applyRound3Hunt3Action, ensureRound3Hunt3State, getRound3Hunt3State } from '../services/round3-hunt3.service.ts';
 
 export const round3Router = Router();
 const auth = requireTeamAuth;
 const teamOf = (req: AuthenticatedRequest) => req.team ? { id: req.team.id, teamName: req.team.teamName } : null;
+const canAccessHunt3 = (team: { id: string; teamName: string }) => {
+  if (getRound3Hunt2State(team.id)?.completed) return true;
+  return getRound3State(team)?.session.currentHunt === 'paradox-hunt-3';
+};
 
 round3Router.get('/run', auth, (req: AuthenticatedRequest, res) => {
   if (!req.team) return res.status(401).json({ success: false, message: 'Squad authentication required.' });
@@ -54,7 +58,8 @@ round3Router.post('/hunt2/session', auth, (req: AuthenticatedRequest, res) => {
   ensureRound3Session({ id: req.team.id, teamName: req.team.teamName });
   const state = ensureRound3Hunt2State(req.team.id);
   const actor = req.playerNumber === 1 ? 'archivist' : 'tracker';
-  return res.json({ success: true, state: round3Hunt2StateForActor(state, actor) });
+  const visibleState = req.body?.sharedView === true ? state : round3Hunt2StateForActor(state, actor);
+  return res.json({ success: true, state: visibleState });
 });
 
 round3Router.get('/hunt2/state', auth, (req: AuthenticatedRequest, res) => {
@@ -63,7 +68,8 @@ round3Router.get('/hunt2/state', auth, (req: AuthenticatedRequest, res) => {
   const state = getRound3Hunt2State(req.team.id);
   if (!state) return res.status(404).json({ success: false, message: 'Hunt 2 session has not been initialized.' });
   const actor = req.playerNumber === 1 ? 'archivist' : 'tracker';
-  return res.json({ success: true, state: round3Hunt2StateForActor(state, actor) });
+  const visibleState = req.query.sharedView === 'true' ? state : round3Hunt2StateForActor(state, actor);
+  return res.json({ success: true, state: visibleState });
 });
 
 round3Router.post('/hunt2/action', auth, (req: AuthenticatedRequest, res) => {
@@ -78,15 +84,17 @@ round3Router.post('/hunt2/action', auth, (req: AuthenticatedRequest, res) => {
 
 round3Router.post('/hunt3/session', auth, (req: AuthenticatedRequest, res) => {
   if (!req.team) return res.status(401).json({ success: false, message: 'Squad authentication required.' });
-  if (!getRound3Hunt2State(req.team.id)?.completed) return res.status(423).json({ success: false, message: 'Complete Hunt II before entering Hunt III.' });
-  ensureRound3Session({ id: req.team.id, teamName: req.team.teamName });
+  const team = { id: req.team.id, teamName: req.team.teamName };
+  ensureRound3Session(team);
+  if (!canAccessHunt3(team)) return res.status(423).json({ success: false, message: 'Complete Hunt II before entering Hunt III.' });
   const state = ensureRound3Hunt3State(req.team.id);
   return res.json({ success: true, state });
 });
 
 round3Router.get('/hunt3/state', auth, (req: AuthenticatedRequest, res) => {
   if (!req.team) return res.status(401).json({ success: false, message: 'Squad authentication required.' });
-  if (!getRound3Hunt2State(req.team.id)?.completed) return res.status(423).json({ success: false, message: 'Complete Hunt II before opening Hunt III.' });
+  const team = { id: req.team.id, teamName: req.team.teamName };
+  if (!canAccessHunt3(team)) return res.status(423).json({ success: false, message: 'Complete Hunt II before opening Hunt III.' });
   const state = getRound3Hunt3State(req.team.id);
   if (!state) return res.status(404).json({ success: false, message: 'Hunt III session has not been initialized.' });
   return res.json({ success: true, state });
@@ -95,7 +103,8 @@ round3Router.get('/hunt3/state', auth, (req: AuthenticatedRequest, res) => {
 round3Router.post('/hunt3/action', auth, (req: AuthenticatedRequest, res) => {
   if (!req.team) return res.status(401).json({ success: false, message: 'Squad authentication required.' });
   if (!round3GameplayAllowed(req.team.id)) return res.status(409).json({ success: false, message: 'Round 3 gameplay is not active.' });
-  if (!getRound3Hunt2State(req.team.id)?.completed) return res.status(423).json({ success: false, message: 'Complete Hunt II before taking Hunt III actions.' });
+  const team = { id: req.team.id, teamName: req.team.teamName };
+  if (!canAccessHunt3(team)) return res.status(423).json({ success: false, message: 'Complete Hunt II before taking Hunt III actions.' });
   const actor = req.body?.actor === 'tracker' ? 'tracker' : 'archivist';
   const result = applyRound3Hunt3Action(req.team.id, actor, req.body ?? {});
   if (!result) return res.status(400).json({ success: false, message: 'Invalid Hunt III action, inactive run, or session.' });

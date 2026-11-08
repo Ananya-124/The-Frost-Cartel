@@ -36,7 +36,7 @@ afterAll(() => {
 });
 
 describe('Hunt I two-player integration', () => {
-  it('validates concurrent player actions, cooperative gates, points, and refresh state for all six tasks', async () => {
+  it('validates retained investigations, cooperative gates, points, and refresh state', async () => {
     const act = async (actor: Hunt1Actor, type: string, value?: unknown, objectId?: string): Promise<Hunt1ActionResult> => {
       const result = await Promise.resolve().then(() =>
         hunt1.applyRound3Hunt1Action(teamId, { type, actor, value, objectId }),
@@ -59,37 +59,13 @@ describe('Hunt I two-player integration', () => {
     const answer = (actor: Hunt1Actor, type: string, sequence: string[]) =>
       act(actor, type, { sequence });
 
-    expect((await act('tracker', 'submit', { sequence: ['technician', 'director', 'visitor'] })).success).toBe(false);
-    await examinePair('visitorLedger', 'visitorTracks');
-    const task1 = await answer('archivist', 'submit', ['technician', 'director', 'visitor']);
-    expect(task1.state.taskCompleted.lastVisitor).toBe(true);
-    expect(task1.state.currentChallenge).toBe(2);
-    expect(task1.state.score).toBe(100);
-
-    await examinePair('archiveIndex', 'shreddedReport');
-    expect((await answer('archivist', 'missingReportArchivist', ['purpose', 'apparatus', 'safeguards', 'result'])).success).toBe(true);
-    expect(inspect('tracker').taskCompleted.missingReport).toBe(false);
-    expect((await answer('tracker', 'missingReportTracker', ['result', 'safeguards', 'apparatus', 'purpose'])).success).toBe(false);
-    expect((await answer('tracker', 'missingReportTracker', ['purpose', 'apparatus', 'safeguards', 'result'])).success).toBe(true);
-    expect(inspect('tracker').taskCompleted.missingReport).toBe(false);
-    const reportVersion = inspect('tracker').missingReport!.reconstructionVersion;
-    const task2Results = await Promise.all([
-      act('archivist', 'missingReportConfirm', { reconstructionVersion: reportVersion }),
-      act('tracker', 'missingReportConfirm', { reconstructionVersion: reportVersion }),
-    ]);
-    expect(task2Results[1].state.taskCompleted.missingReport).toBe(true);
-    const task2 = task2Results[1];
-    expect(task2.state.taskCompleted.missingReport).toBe(true);
-    expect(task2.state.currentChallenge).toBe(3);
-    expect(task2.state.score).toBe(240);
-
     await examinePair('generatorLog', 'burntRelay');
     expect((await act('tracker', 'interact', undefined, 'openGround')).success).toBe(true);
     expect((await answer('archivist', 'powerFailureArchivist', ['generator-relay', 'relay-load', 'load-ground', 'ground-frame'])).success).toBe(true);
     const task3 = await answer('tracker', 'powerFailureTracker', ['generator-relay', 'relay-load', 'load-ground', 'ground-frame']);
     expect(task3.state.taskCompleted.powerFailure).toBe(true);
-    expect(task3.state.currentChallenge).toBe(4);
-    expect(task3.state.score).toBe(440);
+    expect(task3.state.currentChallenge).toBe(2);
+    expect(task3.state.score).toBe(200);
 
     await examinePair('observationLog', 'cameraBuffer');
     const task4Results = await Promise.all([
@@ -102,16 +78,16 @@ describe('Hunt I two-player integration', () => {
     expect(task4.state.observationTimeline!.archivistTimeline).toEqual(['alarm', 'lights-fail', 'subject-appears', 'observer-vanishes']);
     expect(task4.state.observationTimeline!.trackerTimeline).toEqual(['alarm', 'lights-fail', 'subject-appears', 'observer-vanishes']);
     expect(task4.state.taskCompleted.observationLog).toBe(true);
-    expect(task4.state.currentChallenge).toBe(5);
-    expect(task4.state.score).toBe(640);
+    expect(task4.state.currentChallenge).toBe(3);
+    expect(task4.state.score).toBe(400);
 
     await examinePair('signalChart', 'cableJunction');
     expect((await answer('tracker', 'signalTracker', ['intake', 'ground', 'observer', 'transmit'])).success).toBe(false);
     expect((await answer('archivist', 'signalArchivist', ['intake', 'ground', 'observer', 'transmit'])).success).toBe(true);
     const task5 = await answer('tracker', 'signalTracker', ['intake', 'ground', 'observer', 'transmit']);
     expect(task5.state.taskCompleted.signalReconstruction).toBe(true);
-    expect(task5.state.currentChallenge).toBe(6);
-    expect(task5.state.score).toBe(840);
+    expect(task5.state.currentChallenge).toBe(4);
+    expect(task5.state.score).toBe(600);
 
     await examinePair('incidentBoardPast', 'incidentBoardFuture');
     const archiveConclusion = ['temporal-resonance-reconstructs-human-memories', 'resonance-limited-to-recorded-imprints'];
@@ -122,12 +98,12 @@ describe('Hunt I two-player integration', () => {
     const task6 = await answer('tracker', 'incidentConclusionTracker', futureConclusion);
     expect(task6.state.completed).toBe(true);
     expect(task6.state.taskCompleted.incidentConclusion).toBe(true);
-    expect(task6.state.score).toBe(990);
-    expect(task6.state.penalties).toBe(10);
+    expect(task6.state.score).toBe(750);
+    expect(task6.state.penalties).toBe(0);
 
     const refreshed = hunt1.ensureRound3Hunt1State(teamId);
     expect(refreshed.completed).toBe(true);
     expect(refreshed.taskCompleted).toEqual(task6.state.taskCompleted);
-    expect(refreshed.score).toBe(990);
+    expect(refreshed.score).toBe(750);
   });
 });

@@ -111,12 +111,49 @@
   width: min(360px, 90%);
   max-height: 60%;
   overflow: auto;
-  z-index: 6;
+  z-index: 20;
   padding: 10px 12px;
   background: var(--panel);
   border: 1px solid var(--border-soft);
   border-radius: 6px;
   font-size: 12px;
+}
+
+.journalToggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 21;
+  padding: 5px 9px;
+  color: var(--gold-bright);
+  background: #101217eF;
+  border: 1px solid var(--border-soft);
+  border-radius: 5px;
+  font: 700 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.journalToggle:hover {
+  background: #292218;
+}
+
+.pastJournal,
+.futureJournal {
+  position: fixed;
+  top: 76px;
+  width: min(360px, calc(50vw - 20px));
+  max-height: calc(100vh - 100px);
+  z-index: 20;
+}
+
+.pastJournal {
+  left: 8px;
+  right: auto;
+}
+
+.futureJournal {
+  right: 8px;
+  left: auto;
 }
 
 .journal h3 {

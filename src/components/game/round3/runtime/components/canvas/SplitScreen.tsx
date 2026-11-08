@@ -10,6 +10,7 @@ interface SplitScreenProps {
   snapshot: UiSnapshot;
   refs: EngineRefs;
   onPuzzleKey: (playerIndex: 0 | 1, key: number) => void;
+  onToggleJournal: (playerIndex: 0 | 1) => void;
   onUseCard: (slot: number) => void;
   remainingSeconds: number;
   runStatus: Round3RunStatus;
@@ -19,7 +20,7 @@ interface SplitScreenProps {
 }
 
 /** Split-screen layout: Archivist (Past) on the left, Tracker (Future) on the right. */
-export default function SplitScreen({ snapshot, refs, onPuzzleKey, onUseCard, remainingSeconds, runStatus, runBusy, canToggleRun, onToggleRun }: SplitScreenProps) {
+export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJournal, onUseCard, remainingSeconds, runStatus, runBusy, canToggleRun, onToggleRun }: SplitScreenProps) {
   const playing = snapshot.phase === 'playing';
   return (
     <>
@@ -30,6 +31,7 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onUseCard, re
           canvasRef={refs.pastCanvas}
           halfRef={refs.pastHalf}
           onPuzzleKey={(k) => onPuzzleKey(0, k)}
+          onToggleJournal={() => onToggleJournal(0)}
           hideObjective={false}
         />
         <TimelinePane
@@ -38,6 +40,7 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onUseCard, re
           canvasRef={refs.futureCanvas}
           halfRef={refs.futureHalf}
           onPuzzleKey={(k) => onPuzzleKey(1, k)}
+          onToggleJournal={() => onToggleJournal(1)}
           hideObjective={false}
         />
       </div>

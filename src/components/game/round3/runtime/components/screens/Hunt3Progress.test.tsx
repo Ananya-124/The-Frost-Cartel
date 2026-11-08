@@ -23,8 +23,10 @@ describe('Hunt III progress controls', () => {
     const state = makeState(); state.evidence.archivist = ['sighting-ledger', 'containment-observation', 'old-facility-report'];
     const onAction = vi.fn(async () => ({ success: true, message: 'waiting for Tracker', state }));
     render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={onAction} />);
-    expect(screen.getByText(/Archive and Observation room, Past/i)).toBeInTheDocument();
+    expect(screen.getByText(/Compare the three historical records in the Past/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Examine sighting-ledger/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Evidence inspected: 3\/3/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Break the Three Seals/)).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Last known wing/i), { target: { value: 'east-wing' } });
     fireEvent.click(screen.getByRole('button', { name: /Submit private trail finding/i }));
     expect(onAction).toHaveBeenCalledWith({ type: 'submit', id: 'trail-location', value: { location: 'east-wing' } });
@@ -34,16 +36,16 @@ describe('Hunt III progress controls', () => {
     const state = makeState();
     state.stage = 2;
     state.evidence.archivist = ['power-diagram'];
+    state.actions = ['power-diagram'];
     state.journal = [{
       id: 'power-diagram', stage: 2, actor: 'archivist', title: 'Power seal diagram', location: 'Archive · Past',
       content: 'The archive sketch marks a feed, a ground bond, and a return path.', relatedObjective: 'Break the Three Seals', verified: false,
     }];
     const onAction = vi.fn(async () => ({ success: true, message: 'verified', state }));
     render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={onAction} />);
-    expect(screen.getByText(/submit its three-part order/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByText(/Shared evidence journal/));
-    expect(screen.getByText(/Compare the shared evidence before either submission/i)).toBeInTheDocument();
-    expect(screen.getByText(/The archive sketch marks a feed/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Disable the three seals' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Inspect power seal diagram/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/POWER SEAL/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Connection 1'), { target: { value: 'source' } });
     fireEvent.change(screen.getByLabelText('Connection 2'), { target: { value: 'ground' } });
     fireEvent.change(screen.getByLabelText('Connection 3'), { target: { value: 'return' } });
@@ -56,6 +58,18 @@ describe('Hunt III progress controls', () => {
     render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={vi.fn()} />);
     expect(screen.getByText(/Current is arcing across the floor/)).toBeInTheDocument();
     expect(screen.getByText(/Tracker · Future/)).toBeInTheDocument();
-    expect(screen.getByText(/Your partner must operate the named control/)).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for Tracker · Future to act/)).toBeInTheDocument();
+    expect(screen.getByText(/Controls only register after the correct player/)).toBeInTheDocument();
+  });
+
+  it('counts the Archivist seal and catalogue work as a completed second task', () => {
+    const state = makeState();
+    state.stage = 3;
+    state.trail.archivist = 'east-wing';
+    state.actions = ['component-catalog'];
+    for (const seal of ['power', 'resonance', 'memory'] as const) state.seals[seal].archive = true;
+    render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={vi.fn()} />);
+    expect(screen.getByText(/ARCHIVIST TASKS COMPLETED · 2\/4/i)).toBeInTheDocument();
+    expect(screen.getByText(/Current task 3\/4 · IN PROGRESS/i)).toBeInTheDocument();
   });
 });

@@ -11,6 +11,7 @@ interface TimelinePaneProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   halfRef: RefObject<HTMLDivElement | null>;
   onPuzzleKey: (key: number) => void;
+  onToggleJournal: () => void;
   hideObjective?: boolean;
 }
 
@@ -21,12 +22,21 @@ export default function TimelinePane({
   canvasRef,
   halfRef,
   onPuzzleKey,
+  onToggleJournal,
   hideObjective = false,
 }: TimelinePaneProps) {
   const isFuture = view.timeline === 'future';
   return (
     <div className={styles.half} ref={halfRef}>
       <canvas className={styles.canvas} ref={canvasRef} />
+      <button
+        className={styles.journalToggle}
+        type="button"
+        aria-pressed={view.journalOpen}
+        onClick={onToggleJournal}
+      >
+        {view.journalOpen ? 'Close journal' : 'Open journal'} · {view.index === 0 ? 'Q' : 'P'}
+      </button>
       <div className={styles.panel}>
         <div className={`${styles.role} ${isFuture ? styles.futureRole : styles.pastRole}`}>
           <b>{view.role.toUpperCase()}</b> · {isFuture ? 'FUTURE' : 'PAST'}
@@ -39,7 +49,7 @@ export default function TimelinePane({
       </div>
       <div className={styles.prompt}>{view.prompt}</div>
       {view.message && <div className={styles.message}>{view.message}</div>}
-      {view.journalOpen && <SharedJournal entries={journal} />}
+      {view.journalOpen && <SharedJournal entries={journal} className={view.index === 0 ? styles.pastJournal : styles.futureJournal} />}
       {view.puzzle && <PuzzlePanel index={view.index} puzzle={view.puzzle} onPress={onPuzzleKey} />}
     </div>
   );

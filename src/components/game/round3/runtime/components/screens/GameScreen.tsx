@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { createEngineRefs, useGameEngine } from '../../hooks/useGameEngine';
 import { useGameSnapshot } from '../../hooks/useGameSnapshot';
 import { GameStore } from '../../engine/state/store';
@@ -10,7 +10,7 @@ import MenuScreen from './MenuScreen';
 import { CompletionToast, type ToastData } from '../hud/CompletionToast';
 import { soundFx } from '../../audio/soundfx';
 import type { Round3InventoryItem, Round3RunState } from '../../../../../../types/round3.types';
-import type { PowerCard, GameState, InteractableObject, PlayerIndex } from '../../types';
+import type { ClueRecord, PowerCard, GameState, InteractableObject, PlayerIndex } from '../../types';
 import type { Round3CardId } from '../../../../../../constants/round3.cards';
 import { round3Service } from '../../../../../../services/round3Service';
 import type { Hunt1ActionResult, Hunt1Actor, Hunt1State } from '../../../../../../types/hunt1.types';
@@ -28,7 +28,6 @@ interface GameScreenProps {
   inventory: readonly Round3InventoryItem[];
   savedGameState: unknown;
   initialRun: Round3RunState;
-  playerNumber: 1 | 2;
   onExit: () => void;
   onSaveGameState: (gameState: GameState) => Promise<unknown>;
   onComplete: () => Promise<unknown>;
@@ -42,7 +41,6 @@ export default function GameScreen({
   inventory,
   savedGameState,
   initialRun,
-  playerNumber,
   onExit,
   onSaveGameState,
   onComplete,
@@ -66,7 +64,7 @@ export default function GameScreen({
 
   const [hunt3, setHunt3] = useState<Hunt3State | null>(null);
   const [hunt3Message, setHunt3Message] = useState('');
-  const [hunt3Working, setHunt3Working] = useState(false);
+  const [hunt3Working, setHunt3Working] = useState<[boolean, boolean]>([false, false]);
 
   // HUD feedback toasts
   const [toasts, setToasts] = useState<ToastData[]>([]);
@@ -192,6 +190,22 @@ export default function GameScreen({
       prevHunt2Score.current = next.score;
     }
 
+    const hunt2Journal: ClueRecord[] = next.observations
+      .filter((entry) => entry.discoveredBy !== 'team')
+      .map((entry) => ({
+        id: `hunt2-${entry.id}`,
+        title: entry.title,
+        text: entry.content,
+        huntIndex: 1,
+        discoveredBy: entry.discoveredBy === 'tracker' ? 'Tracker' : 'Archivist',
+        timeline: entry.discoveredBy === 'tracker' ? 'future' : 'past',
+        timestamp: new Date(entry.createdAt).toLocaleTimeString(),
+      }));
+    const journal: ClueRecord[] = [
+      ...store.state.journal.filter((entry) => entry.huntIndex !== 1),
+      ...hunt2Journal,
+    ];
+
     if (store.state.huntIndex !== 1) return;
     const baseScore = store.state.score - (store.state.huntScores[1] ?? 0);
     const flags = {
@@ -213,6 +227,9 @@ export default function GameScreen({
       JSON.stringify(store.state.hunt2HiddenInteractablesUntil ?? {}) !== JSON.stringify(hidden) ||
       JSON.stringify(store.state.hunt2ObjectStates ?? {}) !== JSON.stringify(next.objectStates) ||
       JSON.stringify(store.state.hunt2Subtasks ?? {}) !== JSON.stringify(next.subtasks) ||
+      JSON.stringify(store.state.journal) !== JSON.stringify(journal) ||
+      store.state.hunt2Challenge !== next.currentChallenge ||
+      store.state.hunt2Complete !== next.completed ||
       (next.completed && store.state.entities.some((entity) => !entity.gone))
     ) {
       store.replaceState({
@@ -223,6 +240,9 @@ export default function GameScreen({
         hunt2HiddenInteractablesUntil: hidden,
         hunt2ObjectStates: next.objectStates,
         hunt2Subtasks: next.subtasks,
+        hunt2Challenge: next.currentChallenge,
+        hunt2Complete: next.completed,
+        journal,
         distortion: next.completed ? 0 : store.state.distortion,
         entities: next.completed ? store.state.entities.map((entity) => ({ ...entity, gone: true })) : store.state.entities,
       });
@@ -274,21 +294,61 @@ export default function GameScreen({
     }
 
     if (store.state.huntIndex !== 2) return;
+    const hunt3Journal: ClueRecord[] = next.journal
+      .filter((entry) => entry.actor !== 'team')
+      .map((entry) => ({
+        id: `hunt3-${entry.id}`,
+        title: entry.title,
+        text: `${entry.content}${entry.verified ? '\nVerified evidence.' : ''}`,
+        huntIndex: 2,
+        discoveredBy: entry.actor === 'tracker' ? 'Tracker' : 'Archivist',
+        timeline: entry.actor === 'tracker' ? 'future' : 'past',
+        timestamp: new Date(entry.createdAt ?? next.updatedAt).toLocaleTimeString(),
+      }));
+    // Older Hunt III saves can contain inspected evidence without journal rows.
+    // Rebuild those entries from the server-confirmed evidence lists so clues
+    // already collected before this journal sync was added are not lost.
+    for (const actor of ['archivist', 'tracker'] as const) {
+      for (const id of next.evidence[actor]) {
+        if (hunt3Journal.some((entry) => entry.id === `hunt3-${id}`)) continue;
+        const title = id
+          .split('-')
+          .map((word) => word ? word[0].toUpperCase() + word.slice(1) : word)
+          .join(' ');
+        hunt3Journal.push({
+          id: `hunt3-${id}`,
+          title,
+          text: 'This clue was inspected and recorded during the Hunt III investigation.',
+          huntIndex: 2,
+          discoveredBy: actor === 'tracker' ? 'Tracker' : 'Archivist',
+          timeline: actor === 'tracker' ? 'future' : 'past',
+          timestamp: new Date(next.updatedAt).toLocaleTimeString(),
+        });
+      }
+    }
+    const journal: ClueRecord[] = [
+      ...store.state.journal.filter((entry) => entry.huntIndex !== 2),
+      ...hunt3Journal,
+    ];
     const base = store.state.score - (store.state.huntScores[2] ?? 0);
     const entityVisible = next.trail.resolved || next.stage > 1;
     const entities = store.state.entities.map((entity) => ({ ...entity, gone: !entityVisible }));
     if (
       store.state.huntScores[2] !== next.score ||
       JSON.stringify(store.state.entities) !== JSON.stringify(entities) ||
+      JSON.stringify(store.state.journal) !== JSON.stringify(journal) ||
       store.state.hunt3Stage !== next.stage ||
+      store.state.hunt3Complete !== next.completed ||
       store.state.hunt3LureActive !== (next.weakness.lure > 0)
     ) {
       store.replaceState({
         ...store.state,
         score: base + next.score,
         huntScores: [store.state.huntScores[0], store.state.huntScores[1], next.score],
+        journal,
         entities,
         hunt3Stage: next.stage,
+        hunt3Complete: next.completed,
         hunt3EntityVisible: entityVisible,
         hunt3LureActive: next.weakness.lure > 0,
       });
@@ -299,7 +359,7 @@ export default function GameScreen({
     if (hunt3InFlight.current[index]) return;
     const actor: Hunt3Actor = index === 0 ? 'archivist' : 'tracker';
     hunt3InFlight.current[index] = true;
-    setHunt3Working(true);
+    setHunt3Working((working) => working.map((value, player) => player === index ? true : value) as [boolean, boolean]);
     soundFx.clueFound();
     try {
       const result = await round3Service.hunt3Action(actor, { type: 'interact', id: object.id });
@@ -318,7 +378,7 @@ export default function GameScreen({
       setHunt3Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt III interaction.');
     } finally {
       hunt3InFlight.current[index] = false;
-      setHunt3Working(false);
+      setHunt3Working((working) => working.map((value, player) => player === index ? false : value) as [boolean, boolean]);
     }
   }, [addToast, syncHunt3State]);
 
@@ -473,22 +533,25 @@ export default function GameScreen({
     if (snapshot.phase !== 'playing' || snapshot.huntNumber !== 3) return;
     let active = true;
     let loading = false;
-    const refresh = async (open: boolean) => {
+    let sessionReady = false;
+    const refresh = async () => {
       if (loading) return;
       loading = true;
       try {
-        const result = open ? await round3Service.openHunt3Session() : await round3Service.getHunt3State();
+        const result = sessionReady ? await round3Service.getHunt3State() : await round3Service.openHunt3Session();
+        sessionReady = true;
         if (active) syncHunt3State(result.state);
       } catch (reason) {
+        sessionReady = false;
         if (active)
           setHunt3Message(reason instanceof Error ? reason.message : 'Could not load Hunt III progress. Reconnect to restore the investigation.');
       } finally {
         loading = false;
       }
     };
-    void refresh(true);
+    void refresh();
     const interval = window.setInterval(() => {
-      void refresh(false);
+      void refresh();
     }, 2500);
     return () => {
       active = false;
@@ -617,8 +680,11 @@ export default function GameScreen({
 
   const submitHunt3 = useCallback(
     async (actor: Hunt3Actor, action: { type: string; id: string; value?: unknown }): Promise<Hunt3ActionResult> => {
-      if (hunt3Working || !hunt3) return { success: false, message: 'Hunt III progress is still loading.', state: hunt3! };
-      setHunt3Working(true);
+      const index: PlayerIndex = actor === 'archivist' ? 0 : 1;
+      if (!hunt3) return { success: false, message: 'Hunt III progress is still loading.', state: {} as Hunt3State };
+      if (hunt3InFlight.current[index]) return { success: false, message: 'That investigator already has an action in progress.', state: hunt3 };
+      hunt3InFlight.current[index] = true;
+      setHunt3Working((working) => working.map((value, player) => player === index ? true : value) as [boolean, boolean]);
       try {
         const result = await round3Service.hunt3Action(actor, action);
         syncHunt3State(result.state);
@@ -640,10 +706,11 @@ export default function GameScreen({
         setHunt3Message(message);
         return { success: false, message, state: hunt3 };
       } finally {
-        setHunt3Working(false);
+        hunt3InFlight.current[index] = false;
+        setHunt3Working((working) => working.map((value, player) => player === index ? false : value) as [boolean, boolean]);
       }
     },
-    [addToast, hunt3, hunt3Working, syncHunt3State]
+    [addToast, hunt3, syncHunt3State]
   );
 
   useEffect(() => {
@@ -721,6 +788,10 @@ export default function GameScreen({
         snapshot={snapshot}
         refs={refs}
         onPuzzleKey={(player, key) => engine?.pressPuzzle(player, key)}
+        onToggleJournal={(player) => {
+          store.state.journalOpen[player] = !store.state.journalOpen[player];
+          store.emit();
+        }}
         onUseCard={(slot) => engine?.useCardSlot(slot)}
         remainingSeconds={timer.remainingSeconds}
         runStatus={timer.run.status}
@@ -776,13 +847,22 @@ export default function GameScreen({
         />
       )}
       {snapshot.phase === 'playing' && snapshot.huntNumber === 3 && (
-        <Hunt3Progress
-          state={hunt3}
-          actor={playerNumber === 1 ? 'archivist' : 'tracker'}
-          message={hunt3Message}
-          working={hunt3Working}
-          onAction={(action) => submitHunt3((action as { actor?: Hunt3Actor }).actor ?? (playerNumber === 1 ? 'archivist' : 'tracker'), action)}
-        />
+        <Fragment key="hunt3-task-panels">
+          <Hunt3Progress
+            state={hunt3}
+            actor="archivist"
+            message={hunt3Message}
+            working={hunt3Working[0]}
+            onAction={(action) => submitHunt3('archivist', action)}
+          />
+          <Hunt3Progress
+            state={hunt3}
+            actor="tracker"
+            message={hunt3Message}
+            working={hunt3Working[1]}
+            onAction={(action) => submitHunt3('tracker', action)}
+          />
+        </Fragment>
       )}
       {snapshot.phase === 'playing' && snapshot.huntIntro && <HuntIntro intro={snapshot.huntIntro} />}
       {snapshot.phase === 'ended' && snapshot.summary && (

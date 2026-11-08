@@ -39,6 +39,8 @@ const HUNT3_EVIDENCE_LOCATIONS: Record<string, { title: string; location: string
   'recover-prism-lens': { title: 'Prism lens recovered', location: 'Examination room · Future' },
   'recover-grounding-braid': { title: 'Grounding braid recovered', location: 'Communications room · Future' },
   'recover-memory-core': { title: 'Memory core recovered', location: 'Observation room · Future' },
+  'recover-shattered-glass': { title: 'Shattered glass decoy', location: 'Main hall · Future' },
+  'recover-scorched-lattice': { title: 'Scorched lattice decoy', location: 'Main hall · Future' },
   'apparatus-blueprint': { title: 'Containment apparatus blueprint', location: 'Containment room · Past' },
   'physical-apparatus': { title: 'Reconstruction apparatus', location: 'Containment room · Future' },
   'weakness-notes': { title: 'Historical reaction notes', location: 'Experiment room · Past' },
@@ -103,7 +105,7 @@ function recordEvidence(state: Hunt3State, actor: Hunt3Actor | 'team', id: strin
   const location = HUNT3_EVIDENCE_LOCATIONS[id];
   state.journal.push({
     id, stage, actor, title: location?.title ?? id, location: location?.location ?? 'Shared investigation',
-    content, relatedObjective: HUNT3_STAGE_TITLES[stage - 1], verified,
+    content, relatedObjective: HUNT3_STAGE_TITLES[stage - 1], verified, createdAt: now(),
   });
 }
 
@@ -155,6 +157,11 @@ export function applyRound3Hunt3Action(teamId: string, actor: Hunt3Actor, input:
         const seal = id.replace('-mechanism', '') as typeof SEALS[number]; state.seals[seal].physical = ['mechanism-inspected']; state.evidence.tracker.push(id); state.actions.push(id); message = ({ power: 'The power relay has three live terminals: source, ground, return.', resonance: 'The resonator has a low-tone dial, a two-step phase wheel and a carrier mute.', memory: 'The memory seal responds to three physical beats: arrival, warning, anchor.' } as Record<string, string>)[seal];
       } else if (actor === 'archivist' && ['component-catalog', 'apparatus-blueprint'].includes(id)) {
         state.evidence.archivist.push(id); state.actions.push(id); message = id === 'component-catalog' ? 'Catalogue confirms the induction coil, prism lens, grounding braid and memory core. Shattered glass and a scorched lattice are unusable decoys.' : 'Containment placement blueprint recovered.';
+      } else if (actor === 'tracker' && ['recover-shattered-glass', 'recover-scorched-lattice'].includes(id)) {
+        state.actions.push(id); state.evidence.tracker.push(id);
+        message = id === 'recover-shattered-glass'
+          ? 'The glass is fractured beyond use. It is a decoy, not a containment component.'
+          : 'The lattice is heat-warped and cannot hold a seal. It is a decoy, not a containment component.';
       } else if (actor === 'tracker' && id.startsWith('recover-')) {
         const component = id.slice(8);
         if (!(COMPONENTS as readonly string[]).includes(component)) return { success: false, message: 'That part is too damaged or unrelated to the containment rig.', state };

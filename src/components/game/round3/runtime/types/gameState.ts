@@ -52,7 +52,10 @@ export interface GameState {
   hunt2HiddenInteractablesUntil?: Record<string, number>;
   hunt2ObjectStates?: Record<string, string>;
   hunt2Subtasks?: Record<string, boolean>;
+  hunt2Challenge?: number;
+  hunt2Complete?: boolean;
   hunt3Stage?: number;
+  hunt3Complete?: boolean;
   hunt3EntityVisible?: boolean;
   hunt3LureActive?: boolean;
   hunt1Challenge?: number;

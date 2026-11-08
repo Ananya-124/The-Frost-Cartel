@@ -1,6 +1,6 @@
 export type Hunt1Actor = 'archivist' | 'tracker';
-export type Hunt1Challenge = 1 | 2 | 3 | 4 | 5 | 6;
-export type Hunt1TaskKey = 'lastVisitor' | 'missingReport' | 'powerFailure' | 'observationLog' | 'signalReconstruction' | 'incidentConclusion';
+export type Hunt1Challenge = 1 | 2 | 3 | 4;
+export type Hunt1TaskKey = 'powerFailure' | 'observationLog' | 'signalReconstruction' | 'incidentConclusion';
 export type Hunt1EvidenceType = 'evidence' | 'observation' | 'deduction' | 'objective';
 
 export interface Hunt1Evidence {
@@ -14,15 +14,6 @@ export interface Hunt1Evidence {
   relatedObjective: string;
   verified: boolean;
   createdAt: string;
-}
-
-export interface MissingReportPuzzle {
-  reconstructionVersion: number;
-  archivistOrder: string[] | null;
-  archivistValid: boolean;
-  trackerOrder: string[] | null;
-  trackerValid: boolean;
-  confirmations: Partial<Record<Hunt1Actor, number>>;
 }
 
 export interface PowerFailurePuzzle {
@@ -74,7 +65,6 @@ export interface Hunt1State {
   journal: Hunt1Evidence[];
   failedSubmissions: string[];
   hintUses: Record<string, number>;
-  missingReport?: MissingReportPuzzle;
   powerFailure?: PowerFailurePuzzle;
   observationTimeline?: ObservationTimelinePuzzle;
   signalReconstruction?: SignalReconstructionPuzzle;

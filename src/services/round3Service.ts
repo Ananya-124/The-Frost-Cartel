@@ -48,8 +48,8 @@ export const round3Service = {
   getHunt1State: () => call<{ success: boolean; state: import('../types/hunt1.types').Hunt1State }>('/hunt1/state'),
   hunt1Action: (action: { type: string; actor: string; objectId?: string; value?: unknown }) =>
     call<Hunt1ActionResult>('/hunt1/action', 'POST', action),
-  openHunt2Session: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/session', 'POST', {}),
-  getHunt2State: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/state'),
+  openHunt2Session: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/session', 'POST', { sharedView: true }),
+  getHunt2State: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/state?sharedView=true'),
   hunt2Action: (action: { type: string; actor: string; objectId?: string; value?: unknown }) =>
     call<Hunt2ActionResult>('/hunt2/action', 'POST', action),
   openHunt3Session: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/session', 'POST', {}),

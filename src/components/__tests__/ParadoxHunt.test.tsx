@@ -6,7 +6,7 @@ import type { Round3StateResponse } from '../../types/round3.types';
 import { ParadoxHunt } from '../game/round3/ParadoxHunt';
 
 vi.mock('../game/round3/runtime/components/screens/GameScreen', () => ({
-  default: ({ teamName, playerNumber }: { teamName: string; playerNumber: number }) => <div data-testid="paradox-game" data-player-number={playerNumber}>PARADOX GAME · {teamName}</div>,
+  default: ({ teamName }: { teamName: string }) => <div data-testid="paradox-game">PARADOX GAME · {teamName}</div>,
 }));
 
 const teamSession = { teamId: 'team-r3-test', teamName: 'Paradox Team', credits: 0, currentRound: 3, gameStatus: 'active' as const, loginTime: new Date().toISOString() };
@@ -34,7 +34,7 @@ describe('Paradox Hunt foundation', () => {
     const fetchMock = vi.mocked(fetch);
     render(<ParadoxHunt session={teamSession} onReturnHome={() => {}} />);
     expect(await screen.findByTestId('paradox-game')).toHaveTextContent('Paradox Team');
-    expect(screen.getByTestId('paradox-game')).toHaveAttribute('data-player-number', '1');
+    expect(screen.getAllByTestId('paradox-game')).toHaveLength(1);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/session'), expect.objectContaining({ method: 'POST' })));
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/run'), expect.objectContaining({ method: 'GET' }));
   });

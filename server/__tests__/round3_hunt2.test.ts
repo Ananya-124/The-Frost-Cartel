@@ -60,8 +60,8 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     const hunt1Row = db.prepare('SELECT state_json FROM round3_hunt1_sessions WHERE team_id=?').get(team.id) as { state_json: string };
     const completedHunt1 = JSON.parse(hunt1Row.state_json) as { completed: boolean; currentChallenge: number; taskCompleted: Record<string, boolean> };
     completedHunt1.completed = true;
-    completedHunt1.currentChallenge = 6;
-    completedHunt1.taskCompleted = { lastVisitor: true, missingReport: true, powerFailure: true, observationLog: true, signalReconstruction: true, incidentConclusion: true };
+    completedHunt1.currentChallenge = 4;
+    completedHunt1.taskCompleted = { powerFailure: true, observationLog: true, signalReconstruction: true, incidentConclusion: true };
     db.prepare('UPDATE round3_hunt1_sessions SET state_json=? WHERE team_id=?').run(JSON.stringify(completedHunt1), team.id);
     expect((await call('archivist', '/hunt2/session', {})).status).toBe(200);
     const savedStateRow = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };
@@ -159,6 +159,11 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await call('archivist', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.brokenMemory.historical).toEqual(history);
     expect((await submit('tracker', { kind: 'broken-structure', order: ['photograph:entry', 'ledger:entry', 'recording:resonance', 'keepsake:center', 'shadow:mirror', 'name:anchor'] })).success).toBe(false);
     await submit('tracker', { kind: 'broken-structure', order: structure });
+    const privateTrackerView = (await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state;
+    expect(privateTrackerView.brokenMemory.historical).toBeNull();
+    const sharedSplitScreen = (await call('tracker', '/hunt2/state?sharedView=true').then((r) => r.json()) as { state: Hunt2State }).state;
+    expect(sharedSplitScreen.brokenMemory.historical).toEqual(history);
+    expect(sharedSplitScreen.brokenMemory.archivistEvidence).toHaveLength(3);
     expect((await act('tracker', 'brokenRestoreMechanism')).success).toBe(false);
     await act('archivist', 'brokenSyncConsole');
     const brokenRaw = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };

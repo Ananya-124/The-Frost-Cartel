@@ -21,9 +21,18 @@ export function handleActionKey(
   onHunt3Interaction?: Hunt3InteractionHandler,
 ): void {
   const { state } = ctx;
-  if (state.phase !== 'playing') return;
+  if (state.phase !== 'playing' || event.repeat) return;
+  const journalIndex = event.code === CONTROLS[0].journal ? 0 : event.code === CONTROLS[1].journal ? 1 : -1;
+  // Handle Q/P before checking focused controls: the task panels contain buttons,
+  // but those must not prevent either opening or closing a player's journal.
+  if (journalIndex > -1) {
+    event.preventDefault();
+    toggleJournal(ctx, journalIndex as PlayerIndex);
+    return;
+  }
+  const target = event.target;
+  if (target instanceof HTMLElement && target.closest('input, textarea, select, button, [contenteditable="true"]')) return;
   if (event.code.startsWith('Arrow') || event.code === 'Space') event.preventDefault();
-  if (event.repeat) return;
 
   if (event.code === CLOSE_PANEL_KEY) {
     closePuzzles(state);
@@ -38,12 +47,18 @@ export function handleActionKey(
       if (state.huntIndex === 0 && onHunt1Interaction) {
         const target = findNearTarget(state, index);
         if (target?.kind === 'object') onHunt1Interaction(index, target.object);
+        else showInteractionGuidance(state, index, 'Move beside the highlighted Hunt I evidence and press the interaction key.');
       } else if (state.huntIndex === 1 && onHunt2Interaction) {
         const target = findNearTarget(state, index);
         if (target?.kind === 'object') onHunt2Interaction(index, target.object);
+        else if (index === 1 && target?.kind === 'entity') performAction(ctx, index);
+        else showInteractionGuidance(state, index, 'Move beside the highlighted Hunt II object and press the interaction key.');
       } else if (state.huntIndex === 2 && onHunt3Interaction) {
         const target = findNearTarget(state, index);
         if (target?.kind === 'object') onHunt3Interaction(index, target.object);
+        else showInteractionGuidance(state, index, index === 0
+          ? 'Move beside a highlighted Past task object, or use the Archivist task panel.'
+          : 'Move beside a highlighted Future task object, or use the Tracker task panel.');
       } else performAction(ctx, index);
     }
     if (event.code === keys.journal) toggleJournal(ctx, index);
@@ -58,4 +73,10 @@ export function handleActionKey(
 function toggleJournal(ctx: GameContext, index: PlayerIndex): void {
   ctx.state.journalOpen[index] = !ctx.state.journalOpen[index];
   ctx.state.dirty = true;
+}
+
+function showInteractionGuidance(state: GameContext['state'], index: PlayerIndex, message: string): void {
+  state.messages[index] = message;
+  state.messageUntil[index] = state.time + 4;
+  state.dirty = true;
 }

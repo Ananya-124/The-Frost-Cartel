@@ -90,7 +90,6 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
           inventory={state.inventory}
           savedGameState={state.session.playerProgress.engine}
           initialRun={run}
-          playerNumber={playerNumber}
           externalError={error}
           onExit={onReturnHome}
           onSaveGameState={saveGameState}

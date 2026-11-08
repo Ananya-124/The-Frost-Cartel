@@ -1,8 +1,6 @@
 import type { Hunt1State } from '../../../../../../types/hunt1.types';
 
 const TASK_TITLES: Record<keyof Hunt1State['taskCompleted'], string> = {
-  lastVisitor: 'The Last Visitor',
-  missingReport: 'The Missing Report',
   powerFailure: 'The Power Failure',
   observationLog: 'The Observation Log',
   signalReconstruction: 'The Signal Reconstruction',
