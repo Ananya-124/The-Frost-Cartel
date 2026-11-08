@@ -36,6 +36,10 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
       pillBg: 'bg-black/90 text-amber-300',
       pillShadow: 'shadow-[0_0_15px_rgba(249,115,22,0.4)]',
       titleColor: 'text-stone-100 group-hover:text-amber-200',
+      completedBg: 'bg-gradient-to-r from-[#1c0b04] via-[#2f1307] to-[#1c0b04]',
+      completedBorder: 'border-amber-500/90',
+      completedText: 'text-amber-200',
+      completedShadow: 'shadow-[0_0_16px_rgba(245,158,11,0.5)]',
     },
     purple: {
       relicImg: '/assets/halloween/portals/relic_full_stage2.png',
@@ -45,6 +49,10 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
       pillBg: 'bg-black/90 text-purple-200',
       pillShadow: 'shadow-[0_0_15px_rgba(168,85,247,0.4)]',
       titleColor: 'text-stone-100 group-hover:text-purple-200',
+      completedBg: 'bg-gradient-to-r from-[#140520] via-[#260b3a] to-[#140520]',
+      completedBorder: 'border-purple-400/90',
+      completedText: 'text-purple-200',
+      completedShadow: 'shadow-[0_0_16px_rgba(168,85,247,0.6)]',
     },
     emerald: {
       relicImg: '/assets/halloween/portals/relic_full_stage3.png',
@@ -54,6 +62,10 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
       pillBg: 'bg-black/90 text-teal-200',
       pillShadow: 'shadow-[0_0_15px_rgba(20,184,166,0.4)]',
       titleColor: 'text-stone-100 group-hover:text-teal-200',
+      completedBg: 'bg-gradient-to-r from-[#031412] via-[#082822] to-[#031412]',
+      completedBorder: 'border-teal-400/90',
+      completedText: 'text-teal-200',
+      completedShadow: 'shadow-[0_0_16px_rgba(20,184,166,0.6)]',
     },
   }[colorTheme];
 
@@ -88,12 +100,16 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
           loading="eager"
         />
 
-        {/* 3. Dynamic Status Overlays (Completed badge or dynamic progress subtext) */}
+        {/* 3. Dynamic Status Overlays: Seamlessly replaces the reward button on the relic frame */}
         {status === 'completed' && (
-          <div className="absolute bottom-[13%] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-emerald-950/95 border border-emerald-400 text-emerald-300 font-cinzel text-[9px] sm:text-[10px] font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(16,185,129,0.7)]">
-              COMPLETED ✓
-            </span>
+          <div className="absolute top-[81.7%] left-1/2 -translate-x-1/2 w-[45%] h-[7.6%] z-20 pointer-events-none flex items-center justify-center">
+            <div
+              className={`w-full h-full rounded-full ${themeStyles.completedBg} border ${themeStyles.completedBorder} ${themeStyles.completedShadow} flex items-center justify-center gap-1 sm:gap-1.5 px-2`}
+            >
+              <span className={`font-cinzel text-[9px] xs:text-[9.5px] sm:text-[10.5px] font-black tracking-widest uppercase ${themeStyles.completedText} drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]`}>
+                COMPLETED ✓
+              </span>
+            </div>
           </div>
         )}
 

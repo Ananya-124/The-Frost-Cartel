@@ -79,7 +79,8 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /ENTER ROUND 03/i }));
 
-    expect(await screen.findByText('PARADOX GAME · Paradox Test Team')).toBeInTheDocument();
+    expect(await screen.findByText('PARADOX LAB')).toBeInTheDocument();
+    expect(await screen.findByText('Paradox Test Team')).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/round3/session'), expect.objectContaining({ method: 'POST' })));
     vi.unstubAllGlobals();
   });
