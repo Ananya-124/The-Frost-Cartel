@@ -1,4 +1,4 @@
-import { getInteractableForState, HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../../config/interactables';
+import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../../config/interactables';
 import { INTERACT_RADIUS, MARK_RADIUS } from '../../config/constants';
 import type { Entity, GameState, InteractableObject, PlayerIndex } from '../../types';
 import { dist } from '../../utils/math';
@@ -36,12 +36,11 @@ export function findNearTarget(state: GameState, index: PlayerIndex): NearTarget
     if ((state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0) > state.time) continue;
     if (state.hunt2ObjectStates?.[object.id] === 'hidden') continue;
     if (object.id === 'trueMemoryAnchor' && !state.hunt2Subtasks?.trueAnchorActivated) continue;
-    const currentObject = getInteractableForState(object, state);
-    if (currentObject.timeline !== player.timeline) continue;
-    const d = distanceToHitbox(currentObject, player);
+    if (object.timeline !== player.timeline) continue;
+    const d = distanceToHitbox(object, player);
     if (d < bestDist) {
       bestDist = d;
-      best = currentObject;
+      best = object;
     }
   }
   if (!best) return null;

@@ -1,6 +1,10 @@
-.taskToggle { position: absolute; z-index: 7; top: 82px; right: 10px; padding: 6px 10px!important; color: #e6cf97!important; background: rgba(7,9,11,.94)!important; border: 1px solid #625743!important; box-shadow: 0 4px 15px #0008; font: 700 9px/1.2 system-ui,sans-serif; letter-spacing: .06em; }
-.panels { position: absolute; z-index: 6; top: auto; right: 10px; bottom: 112px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; width: min(680px,calc(100% - 20px)); max-height: 56vh; overflow: auto; pointer-events: auto; }
-.panel { min-width: 0; padding: 10px 12px; color: #e9e4d8; background: rgba(8,10,12,.9); border: 1px solid rgba(180,160,120,.48); border-top: 2px solid #d1a65c; box-shadow: 0 7px 20px #0008; font: 11px/1.35 system-ui,sans-serif; }
+.taskToggle { position: fixed; z-index: 7; top: 82px; right: 10px; padding: 4px 7px!important; color: #e6cf97!important; background: rgba(7,9,11,.96)!important; border: 1px solid #625743!important; box-shadow: 0 4px 15px #0008; font: 700 9px/1.2 system-ui,sans-serif; letter-spacing: .06em; cursor:pointer; }
+.pastToggle { left: 10px; right: auto; }
+.trackerToggle { right: 10px; left: auto; }
+.panels { position: fixed; z-index: 6; top: 112px; left: 10px; right: auto; bottom: auto; display: block; width: min(380px,calc(45vw - 20px)); max-height: calc(100vh - 220px); overflow: auto; pointer-events: auto; }
+.futurePanel { left: auto; right: 10px; }
+.panel { display:grid; gap:7px; min-width:0; padding:12px; color:#e9e4d8; background:rgba(8,10,12,.96); border:1px solid rgba(180,160,120,.56); border-top:2px solid #d1a65c; box-shadow:0 8px 24px #000a; font:11px/1.35 system-ui,sans-serif; }
+.panelHide { float:right; padding:2px 6px; color:#d9c99f; background:#191a19; border:1px solid #5b5443; font:9px system-ui,sans-serif; cursor:pointer; }
 .future { border-color: rgba(108,164,181,.55); border-top-color: #78c8c9; }
 .panel header { display: flex; align-items: center; justify-content: space-between; gap: 7px; font: 700 10px/1.2 Georgia,serif; letter-spacing: .08em; }
 .panel header b { color: #f0d092; font: 700 9px system-ui,sans-serif; }
@@ -50,4 +54,4 @@
 .completed b { color: #c7e3bb; font: 600 18px Georgia,serif; }
 .completed button { justify-self: center; padding: 8px 12px; color: #12120f; background: #ddc58f; border: 0; cursor: pointer; font-weight: 700; }
 .loading { position: absolute; z-index: 10; left: 50%; bottom: 66px; transform: translateX(-50%); padding: 8px 12px; color: #d7ccb1; background: #111; border: 1px solid #625743; font: 11px system-ui,sans-serif; }
-@media(max-width:720px) { .taskToggle { top: 112px; right: 8px; } .panels { right: 8px; bottom: 160px; grid-template-columns: 1fr; gap: 5px; width: min(440px,calc(100% - 16px)); max-height: 40vh; } .panel { padding: 7px; } .panel h2 { font-size: 12px; } .panel p { font-size: 9px; } .panel ul { display: block; } .panel li { margin: 2px 0; } .panel footer { display: none; } .toolbar { bottom: 96px; flex-wrap: wrap; justify-content: center; } .toolbar span[role="status"] { max-width: 80vw; } .board { bottom: 160px; } }
+@media(max-width:720px) { .taskToggle { top: 112px; } .pastToggle { left: 8px; right:auto; } .trackerToggle { right:8px; left:auto; } .panels { top: 148px; left: 8px; right: auto; bottom: auto; width: min(380px,calc(50vw - 12px)); max-height: calc(100vh - 250px); } .futurePanel { left:auto; right:8px; } .panel { padding: 7px; } .panel h2 { font-size: 12px; } .panel p { font-size: 9px; } .panel ul { display: block; } .panel li { margin: 2px 0; } .panel footer { display: none; } .toolbar { bottom: 96px; flex-wrap: wrap; justify-content: center; } .toolbar span[role="status"] { max-width: 80vw; } .board { bottom: 160px; } }

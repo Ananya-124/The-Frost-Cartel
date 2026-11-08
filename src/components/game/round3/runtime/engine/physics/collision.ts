@@ -1,5 +1,5 @@
 import { PLAYER_HALF_SIZE } from '../../config/constants';
-import { getInteractableForState, HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../../config/interactables';
+import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../../config/interactables';
 import type { Door, GameState, Timeline } from '../../types';
 import { isDoorOpen } from '../world/doors';
 import { DOORS, WALKABLE_RECTS, pointInRect } from '../world/geometry';
@@ -38,8 +38,7 @@ export function checkPosition(
     if ((state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0) > state.time) continue;
     if (state.hunt2ObjectStates?.[object.id] === 'hidden') continue;
     if (object.id === 'trueMemoryAnchor' && !state.hunt2Subtasks?.trueAnchorActivated) continue;
-    const currentObject = getInteractableForState(object, state);
-    if (currentObject.timeline === timeline && currentObject.collision && overlapsPlayer(x, y, currentObject.collision)) {
+    if (object.timeline === timeline && object.collision && overlapsPlayer(x, y, object.collision)) {
       return { kind: 'wall' };
     }
   }

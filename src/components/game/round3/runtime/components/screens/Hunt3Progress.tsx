@@ -17,6 +17,7 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
   const [reading, setReading] = useState<'withdrawal' | 'surge'>('withdrawal');
   const [profile, setProfile] = useState(['temperature-cold', 'light-dark', 'frequency-low']);
   const [journalOpen, setJournalOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   if (!state) return <div className={styles.loading}>Restoring the shared containment investigation…</div>;
   const run = (type: string, id: string, value?: unknown) => { if (!working) void onAction({ type, id, value }); };
   const editor = (count: number, initial: string[] = []) => {
@@ -25,8 +26,8 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
   };
   const submit = (id: string, current: string[] = sequence) => run('submit', id, { sequence: current });
   const nextBossActor = state.stage === 4 ? (state.boss.step % 2 === 0 ? 'archivist' : 'tracker') : null;
-  return <section className={`${styles.root} ${actor === 'archivist' ? styles.archivistPanel : styles.trackerPanel}`} aria-label={`Hunt III ${actor} progress`}>
-    <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>{['The Entity’s Trail', 'Break the Three Seals', 'The Bait Protocol', 'Final Containment'][state.stage - 1]}</h2></div><strong>STAGE {state.stage}/4</strong></header>
+  return <>{panelOpen ? <section className={`${styles.root} ${actor === 'archivist' ? styles.archivistPanel : styles.trackerPanel}`} aria-label={`Hunt III ${actor} progress`}>
+    <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>{['The Entity’s Trail', 'Break the Three Seals', 'The Bait Protocol', 'Final Containment'][state.stage - 1]}</h2></div><strong>STAGE {state.stage}/4</strong><button className={styles.hidePanel} type="button" onClick={() => setPanelOpen(false)}>Hide</button></header>
     <div className={styles.status} aria-live="polite">{message || `Server-confirmed score: ${state.score} · Entity state: ${state.stage === 1 ? 'roaming' : state.stage === 2 ? 'safeguards active' : state.stage === 3 ? 'approaching containment' : state.boss.captured ? 'captured' : 'attacking'}`}</div>
     <div className={styles.progress}>Stage awards: {state.scoreBreakdown.stage1}/250 · {state.scoreBreakdown.stage2}/400 · {state.scoreBreakdown.stage3}/350 · {state.scoreBreakdown.stage4}/500 · Hidden evidence {state.optional.complete ? '100/100' : 'undiscovered'} · Maximum 1,600</div>
 
@@ -77,7 +78,7 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
       </article>)}
       {!state.journal?.length && <p className={styles.emptyJournal}>No evidence recorded yet. Examine the named objects in the active stage, then return here to compare findings.</p>}
     </details>
-  </section>;
+  </section> : <button className={`${styles.restorePanel} ${actor === 'archivist' ? styles.archivistPanel : styles.trackerPanel}`} type="button" onClick={() => setPanelOpen(true)}>Show {actor === 'archivist' ? 'Archivist · Past' : 'Tracker · Future'} tasks</button>}</>;
 }
 
 function SequenceSelect({ count, options, values, setValues }: { count: number; options: string[]; values: string[]; setValues: (value: string[]) => void }) {

@@ -1,5 +1,4 @@
 import type { InteractableId, InteractableObject, PropKind, RoomId, Timeline } from '../types';
-import type { GameState } from '../types';
 import type { Rect } from '../types';
 import { ROOM_BY_ID } from './rooms';
 import { ROOM_SIZE } from './constants';
@@ -52,18 +51,6 @@ const DEFINITIONS: readonly InteractableDefinition[] = [
   ['optionalForgottenRecording', 'future', 'sec', 225, 55, 'tape', 'Forgotten recording'],
   ['incidentBoardPast', 'past', 'lab', 75, 55, 'term', 'Incident reconstruction board'],
   ['incidentBoardFuture', 'future', 'lab', 225, 190, 'term', 'Physical evidence board'],
-  // Hunt II visual-deception props (mounted only while Hunt II is active).
-  ['identityPatientFile', 'past', 'arch', 150, 190, 'cab', 'Three-patient identity file'],
-  ['identityTraceA', 'future', 'arch', 55, 75, 'prints', 'Memory imprint trace'],
-  ['identityTraceB', 'future', 'arch', 150, 190, 'mach', 'Transmission signature trace'],
-  ['identityTraceC', 'future', 'arch', 245, 75, 'node', 'Autonomous presence trace'],
-  ['manifestationRecords', 'past', 'sec', 75, 55, 'shelf', 'Historical manifestation records'],
-  ['memoryDiary', 'past', 'obs', 75, 55, 'tape', 'Fragmented diary entry'],
-  ['memoryPhotograph', 'past', 'arch', 75, 210, 'crack', 'Dated incident photograph'],
-  ['memoryIncidentReport', 'past', 'obs', 225, 55, 'term', 'Incident report fragment'],
-  ['memoryEcho', 'future', 'obs', 225, 210, 'node', 'Paranormal memory echo'],
-  ['memoryReel', 'future', 'arch', 225, 75, 'tape', 'Displaced recording reel'],
-  ['memoryResidualMark', 'future', 'obs', 75, 210, 'prints', 'Residual floor mark'],
   ['weaknessArchive', 'past', 'exp', 75, 55, 'term', 'Containment experiment archive'],
   ['weaknessFrequencyStation', 'future', 'exp', 55, 220, 'mach', 'Resonance station'],
   ['weaknessLightStation', 'future', 'exp', 150, 220, 'mach', 'Light exposure station'],
@@ -80,20 +67,6 @@ const DEFINITIONS: readonly InteractableDefinition[] = [
   ['brokenRestorationBoardFuture', 'future', 'obs', 150, 145, 'term', 'Shared memory restoration board'],
   ['brokenSyncConsole', 'past', 'con', 75, 245, 'term', 'Historical memory synchronizer'],
   ['brokenRestoreMechanism', 'future', 'con', 225, 245, 'mach', 'Environmental restoration mechanism'],
-  ['memoryDoorRoom', 'past', 'hall', 150, 160, 'term', 'Original door memory'],
-  ['falseDoor1', 'future', 'hall', 55, 45, 'door', 'Door 1'],
-  ['falseDoor2', 'future', 'hall', 120, 45, 'door', 'Door 2'],
-  ['falseDoor3', 'future', 'hall', 185, 45, 'door', 'Door 3'],
-  ['falseDoor4', 'future', 'hall', 250, 45, 'door', 'Door 4'],
-  ['identityMemory', 'past', 'sec', 150, 160, 'term', 'Manifestation memory projector'],
-  ['manifestationA', 'future', 'exp', 55, 120, 'node', 'Manifestation A'],
-  ['manifestationB', 'future', 'exp', 150, 120, 'mirror', 'Manifestation B'],
-  ['manifestationC', 'future', 'exp', 245, 120, 'prints', 'Manifestation C'],
-  ['layoutMemory', 'past', 'lab', 150, 160, 'term', 'Original room projection'],
-  ['layoutChair', 'future', 'lab', 55, 125, 'bed', 'Displaced chair'],
-  ['layoutMirror', 'future', 'lab', 130, 220, 'mirror', 'Displaced mirror'],
-  ['layoutTable', 'future', 'lab', 235, 130, 'desk', 'Displaced table'],
-  ['layoutLamp', 'future', 'lab', 235, 220, 'mach', 'Experimental lamp'],
   ['anchorMemory', 'past', 'exp', 150, 150, 'node', 'Anchor experiment memory'],
   ['memoryAnchorA', 'future', 'con', 55, 100, 'node', 'Memory anchor A'],
   ['memoryAnchorB', 'future', 'con', 150, 100, 'node', 'Memory anchor B'],
@@ -154,11 +127,9 @@ export const HUNT1_INTERACTABLE_IDS: ReadonlySet<InteractableId> = new Set([
   'signalChart', 'cableJunction', 'incidentBoardPast', 'incidentBoardFuture', 'optionalForgottenRecording',
 ]);
 export const HUNT2_INTERACTABLE_IDS: ReadonlySet<InteractableId> = new Set([
-  'identityPatientFile', 'identityTraceA', 'identityTraceB', 'identityTraceC', 'manifestationRecords',
-  'memoryDiary', 'memoryPhotograph', 'memoryIncidentReport', 'memoryEcho', 'memoryReel', 'memoryResidualMark', 'weaknessArchive', 'weaknessFrequencyStation', 'weaknessLightStation', 'weaknessTemperatureStation', 'weaknessContainmentConsole', 'weaknessCalibrationConsole',
+  'weaknessArchive', 'weaknessFrequencyStation', 'weaknessLightStation', 'weaknessTemperatureStation', 'weaknessContainmentConsole', 'weaknessCalibrationConsole',
   'brokenArchivePhoto', 'brokenArchiveLedger', 'brokenArchiveRecording', 'brokenMemoryChamber', 'brokenProjectionSymbols', 'brokenKeepsakeMechanism', 'brokenRestorationBoard', 'brokenRestorationBoardFuture', 'brokenSyncConsole', 'brokenRestoreMechanism',
-  'identityMemory', 'manifestationA', 'manifestationB', 'manifestationC', 'anchorMemory',
-  'layoutMemory', 'layoutChair', 'layoutMirror', 'layoutTable', 'layoutLamp', 'memoryDoorRoom',
+  'anchorMemory',
   'memoryAnchorA', 'memoryAnchorB', 'memoryAnchorC', 'anchorNodeD', 'anchorFlowRecord', 'anchorPastControl', 'anchorFutureControl', 'anchorNodePastB', 'anchorNodePastD', 'finalSequenceMemory', 'finalMemoryConsole',
   'mechanismA', 'mechanismB', 'mechanismC', 'trueMemoryAnchor', 'optionalAnomaly',
 ]);
@@ -215,17 +186,6 @@ export const INTERACTABLES: readonly InteractableObject[] = DEFINITIONS.map(
     };
   },
 );
-
-/** Applies Hunt 2's authoritative room reconstruction to the shared world coordinates. */
-export function getInteractableForState(object: InteractableObject, state: GameState): InteractableObject {
-  if (state.huntIndex !== 1) return object;
-  const position = state.hunt2ObjectPositions?.[object.id];
-  if (!position) return object;
-  const dx = position.x - object.x;
-  const dy = position.y - object.y;
-  const shift = (rect: Rect | null) => rect ? { ...rect, x: rect.x + dx, y: rect.y + dy } : null;
-  return { ...object, x: position.x, y: position.y, hitbox: shift(object.hitbox)!, collision: shift(object.collision) };
-}
 
 /** Display names of the two terminals, which behave differently from other props. */
 export const ARCHIVE_TERMINAL_NAME = 'Archive terminal';

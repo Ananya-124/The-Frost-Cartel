@@ -50,10 +50,8 @@ export interface GameState {
   disturbanceTimer: number;
   /** Hunt 2 deception hides a false manifestation/anchor for a short local timer. */
   hunt2HiddenInteractablesUntil?: Record<string, number>;
-  hunt2ObjectPositions?: Record<string, { x: number; y: number }>;
   hunt2ObjectStates?: Record<string, string>;
   hunt2Subtasks?: Record<string, boolean>;
-  hunt2OpenedInteractables?: string[];
   hunt3Stage?: number;
   hunt3EntityVisible?: boolean;
   hunt3LureActive?: boolean;

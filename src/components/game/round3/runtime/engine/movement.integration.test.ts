@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from './state/createInitialState';
 import { updatePlayers } from './physics/movement';
 import { checkPosition } from './physics/collision';
-import { getInteractableForState, HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../config/interactables';
+import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../config/interactables';
 import { findNearTarget } from './interaction/nearby';
 import type { InputManager } from './input/InputManager';
 import { DOORS } from './world/geometry';
@@ -22,8 +22,7 @@ function solidObjectsAt(state: ReturnType<typeof createInitialState>, x: number,
     if (state.huntIndex !== 2 && HUNT3_INTERACTABLE_IDS.has(object.id)) return false;
     if (state.huntIndex === 2 && HUNT3_INTERACTABLE_IDS.has(object.id) && !isHunt3InteractableAvailable(object.id, state.hunt3Stage)) return false;
     if (object.timeline !== timeline || !object.collision) return false;
-    const current = getInteractableForState(object, state);
-    const box = current.collision;
+    const box = object.collision;
     return !!box && x + h > box.x && x - h < box.x + box.w && y + h > box.y && y - h < box.y + box.h;
   }).map((object) => object.id);
 }

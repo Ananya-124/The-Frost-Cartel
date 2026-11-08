@@ -1,7 +1,6 @@
 
 import { GLOW_RADIUS } from '../config/constants';
 import {
-  getInteractableForState,
   HUNT1_INTERACTABLE_IDS,
   HUNT2_INTERACTABLE_IDS,
   HUNT3_INTERACTABLE_IDS,
@@ -840,12 +839,7 @@ export function renderScene(p: SceneParams): void {
 
   // HUNT II INTERACTABLES.
   if (state.huntIndex === 1) {
-    for (const sourceObject of INTERACTABLES) {
-      const object = getInteractableForState(
-        sourceObject,
-        state,
-      );
-
+    for (const object of INTERACTABLES) {
       const hiddenUntil =
         state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0;
 
@@ -863,45 +857,7 @@ export function renderScene(p: SceneParams): void {
         continue;
       }
 
-      if (
-        object.id === 'falseDoor3' &&
-        state.hunt2OpenedInteractables?.includes(object.id)
-      ) {
-        ctx.fillStyle = 'rgba(8,12,18,.9)';
-
-        ctx.fillRect(
-          object.x - 17,
-          object.y - 27,
-          34,
-          54,
-        );
-
-        ctx.strokeStyle = 'rgba(121,215,208,.85)';
-        ctx.lineWidth = 2;
-
-        ctx.strokeRect(
-          object.x - 20,
-          object.y - 30,
-          40,
-          58,
-        );
-
-        ctx.fillStyle = 'rgba(118,202,198,.18)';
-
-        ctx.beginPath();
-        ctx.ellipse(
-          object.x,
-          object.y,
-          15,
-          25,
-          0,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-      } else {
-        drawProp(ctx, object, i === 1);
-      }
+      drawProp(ctx, object, i === 1);
     }
   }
 

@@ -20,7 +20,6 @@ import type { Hunt2ActionResult, Hunt2Actor, Hunt2Input, Hunt2State } from '../.
 import Hunt2Progress from './Hunt2Progress';
 import type { Hunt3ActionResult, Hunt3Actor, Hunt3State } from '../../../../../../types/hunt3.types';
 import Hunt3Progress from './Hunt3Progress';
-import { ROOM_BY_ID } from '../../config/rooms';
 import { useRound3RunTimer } from '../../hooks/useRound3RunTimer';
 
 interface GameScreenProps {
@@ -201,22 +200,9 @@ export default function GameScreen({
       shelf: next.subtasks.roomReconstructed === true,
       anchor: next.subtasks.trueAnchorActivated === true,
     };
-    const lab = ROOM_BY_ID.lab;
-    const positions = next.subtasks.roomReconstructed
-      ? {
-          layoutChair: { x: lab.x + 55, y: lab.y + 165 },
-          layoutMirror: { x: lab.x + 240, y: lab.y + 70 },
-          layoutTable: { x: lab.x + 150, y: lab.y + 145 },
-          layoutLamp: { x: lab.x + 235, y: lab.y + 235 },
-        }
-      : store.state.hunt2ObjectPositions;
     const hidden: Record<string, number> = {};
     for (const [id, objectState] of Object.entries(next.objectStates)) {
-      const until = id.startsWith('manifestation')
-        ? next.entityState.decoyHiddenUntil
-        : id.startsWith('memoryAnchor')
-          ? next.entityState.trueAnchorHiddenUntil
-          : null;
+      const until = id.startsWith('memoryAnchor') ? next.entityState.trueAnchorHiddenUntil : null;
       if (objectState === 'dispelled' && until && until > Date.now()) {
         hidden[id] = store.state.time + (until - Date.now()) / 1000;
       }
@@ -227,7 +213,6 @@ export default function GameScreen({
       JSON.stringify(store.state.hunt2HiddenInteractablesUntil ?? {}) !== JSON.stringify(hidden) ||
       JSON.stringify(store.state.hunt2ObjectStates ?? {}) !== JSON.stringify(next.objectStates) ||
       JSON.stringify(store.state.hunt2Subtasks ?? {}) !== JSON.stringify(next.subtasks) ||
-      JSON.stringify(store.state.hunt2ObjectPositions ?? {}) !== JSON.stringify(positions ?? {}) ||
       (next.completed && store.state.entities.some((entity) => !entity.gone))
     ) {
       store.replaceState({
@@ -238,8 +223,6 @@ export default function GameScreen({
         hunt2HiddenInteractablesUntil: hidden,
         hunt2ObjectStates: next.objectStates,
         hunt2Subtasks: next.subtasks,
-        hunt2ObjectPositions: positions,
-        hunt2OpenedInteractables: next.subtasks.genuineExitOpened ? ['falseDoor3'] : [],
         distortion: next.completed ? 0 : store.state.distortion,
         entities: next.completed ? store.state.entities.map((entity) => ({ ...entity, gone: true })) : store.state.entities,
       });
@@ -259,11 +242,8 @@ export default function GameScreen({
       if (result.input) setPendingHunt2Input({ actor, kind: result.input });
       if (!result.success) {
         soundFx.error();
-        const players = [...store.state.players] as GameState['players'];
-        if (index === 1 && object.id.startsWith('falseDoor')) {
-          players[1] = { ...players[1], x: ROOM_BY_ID.hall.x + 150, y: ROOM_BY_ID.hall.y + 230 };
-        }
-        store.replaceState({ ...store.state, players, distortion: Math.max(store.state.distortion, 1.5) });
+        // Hunt II reports locked or repeated interactions in the task toolbar; keep those
+        // recoverable prompts readable instead of covering them with a distortion shake.
       } else {
         addToast({
           type: 'clue',
@@ -589,14 +569,16 @@ export default function GameScreen({
         const result = await round3Service.hunt2Action({ type: 'submit', actor, value });
         syncHunt2State(result.state);
         setHunt2Message(result.message);
+        if (result.input) setPendingHunt2Input({ actor, kind: result.input });
+        else if (result.success) setPendingHunt2Input(null);
         if (result.success) {
-          soundFx.taskComplete();
-          setPendingHunt2Input(null);
-          addToast({
-            type: 'task',
-            title: 'Memory Verified',
-            message: result.message,
-          });
+          if (result.input) {
+            soundFx.clueFound();
+            addToast({ type: 'clue', title: 'Trials Recorded', message: result.message });
+          } else {
+            soundFx.taskComplete();
+            addToast({ type: 'task', title: 'Memory Verified', message: result.message });
+          }
         } else {
           soundFx.error();
           store.replaceState({ ...store.state, distortion: Math.max(store.state.distortion, 1.5) });
@@ -785,6 +767,7 @@ export default function GameScreen({
           message={hunt2Message}
           working={hunt2Working}
           onHint={requestHunt2Hint}
+          onOpenInput={(actor, kind) => setPendingHunt2Input({ actor, kind })}
           onSubmit={submitHunt2}
           onClose={() => setPendingHunt2Input(null)}
           onContinue={() => {
