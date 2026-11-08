@@ -146,3 +146,4 @@ if __name__ == '__main__':
     comp_stage1.save('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/relic_full_stage1_completed_verified.png')
 
     print('Successfully rebuilt relic_full_stage1.png and relic_full_stage1_completed.png!')
+

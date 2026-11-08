@@ -64,3 +64,4 @@ draw.text((text_x, text_y), text, font=font, fill=(254, 243, 199, 255))
 
 canvas.save('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/test_100_cr_pill.png')
 print('test_100_cr_pill saved')
+

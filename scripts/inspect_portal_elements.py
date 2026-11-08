@@ -14,3 +14,4 @@ ft2 = Image.open('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bc
 # In ft2: what is the text? It says "THE HAUNTED IMAGE HUNT".
 
 print("Loaded all images successfully")
+
