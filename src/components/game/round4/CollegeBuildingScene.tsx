@@ -41,7 +41,11 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
     }
   };
 
-  const isWindowEntering = cameraPhase === 'WINDOW_ENTERING' || cameraPhase === 'WINDOW_OPENING';
+  const isWindowEntering =
+    cameraPhase === 'APPROACHING' ||
+    cameraPhase === 'WINDOW_FOCUSED' ||
+    cameraPhase === 'WINDOW_ENTERING' ||
+    cameraPhase === 'WINDOW_OPENING';
 
   return (
     <div
@@ -87,8 +91,8 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
           {selectedFloor && isWindowEntering && (
             <WindowRevealAnimation
               windowTarget={selectedFloor.windowTarget}
-              isOpen={true}
-              isOpening={false}
+              isOpen={cameraPhase === 'WINDOW_ENTERING' || cameraPhase === 'WINDOW_OPENING'}
+              isOpening={cameraPhase === 'APPROACHING' || cameraPhase === 'WINDOW_FOCUSED'}
               reducedMotion={reducedMotion}
             />
           )}
