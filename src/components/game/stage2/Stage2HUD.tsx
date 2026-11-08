@@ -25,22 +25,22 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
   };
 
   return (
-    <header className="relative z-30 w-full max-w-[1400px] mx-auto px-2 sm:px-4 pt-2 sm:pt-3 pb-2 flex flex-col md:flex-row items-center justify-between gap-3 border-b border-amber-900/40">
+    <header className="relative z-30 w-full max-w-[1400px] mx-auto px-2 sm:px-4 pt-1 sm:pt-2 pb-1 sm:pb-1.5 flex flex-col md:flex-row items-center justify-between gap-1.5 sm:gap-2 border-b border-amber-900/40 shrink-0">
       {/* 1. Left Emblem & Subtitle */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <div className="relative flex items-center justify-center shrink-0">
           <img
             src="/assets/cartel_skull_crossbones_gold.png"
             alt="Frost Cartel Sigil"
             aria-hidden="true"
-            className="w-8 h-8 sm:w-9 sm:h-9 object-contain filter drop-shadow-[0_0_8px_rgba(245,158,11,0.7)] hover:scale-105 transition-transform select-none"
+            className="w-7 h-7 sm:w-8 sm:h-8 object-contain filter drop-shadow-[0_0_8px_rgba(245,158,11,0.7)] hover:scale-105 transition-transform select-none"
           />
         </div>
         <div>
           <div className="font-cinzel text-xs sm:text-sm font-black tracking-[0.2em] text-stone-100 uppercase">
             FROST CARTEL
           </div>
-          <div className="text-[9px] sm:text-[10px] font-cinzel font-bold text-amber-400/90 tracking-widest uppercase flex items-center gap-1.5">
+          <div className="text-[8.5px] sm:text-[9.5px] font-cinzel font-bold text-amber-400/90 tracking-widest uppercase flex items-center gap-1.5">
             <span>STAGE 02 OF 03 • 150 CREDITS</span>
             {stageCleared && (
               <span className="px-1.5 py-0.5 rounded bg-[#180824] border border-purple-400/80 text-purple-200 text-[8px] font-bold shadow-[0_0_8px_rgba(168,85,247,0.5)]">
@@ -53,13 +53,13 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
 
       {/* 2. Main Center Header Title & Tagline */}
       <div className="flex flex-col items-center text-center">
-        <div className="text-[10px] sm:text-[11px] font-cinzel font-bold tracking-[0.3em] text-amber-400 uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+        <div className="text-[9px] sm:text-[10px] font-cinzel font-bold tracking-[0.3em] text-amber-400 uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
           ✦ STAGE 02 ✦
         </div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-cinzel font-black tracking-wider text-stone-100 drop-shadow-[0_2px_12px_rgba(245,158,11,0.5)]">
+        <h1 className="text-base sm:text-xl md:text-2xl font-cinzel font-black tracking-wider text-stone-100 drop-shadow-[0_2px_12px_rgba(245,158,11,0.5)] leading-tight">
           The Haunted Image Hunt
         </h1>
-        <p className="text-[10px] sm:text-xs font-sans italic text-amber-200/80 tracking-wide mt-0.5">
+        <p className="text-[9px] sm:text-[10px] font-sans italic text-amber-200/80 tracking-wide mt-0.5">
           ✦ Search the evidence. Find the 12 cursed relics. ✦
         </p>
       </div>

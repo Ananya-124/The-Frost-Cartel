@@ -179,7 +179,7 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
 
   return (
     <div
-      className="relative min-h-screen w-full bg-[#050302] text-stone-100 flex flex-col justify-between font-sans overflow-x-hidden select-none"
+      className="relative h-screen h-[100dvh] w-full bg-[#050302] text-stone-100 flex flex-col justify-between font-sans overflow-hidden select-none min-h-0"
       style={{
         backgroundImage: "radial-gradient(ellipse at 12% 50%, rgba(245, 158, 11, 0.14) 0%, transparent 45%), radial-gradient(ellipse at 50% 15%, rgba(185, 28, 28, 0.08) 0%, transparent 55%), url('/assets/stage-02/evidence-board/detective-table-bg.jpg')",
         backgroundSize: 'cover',
@@ -215,7 +215,7 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
       )}
 
       {/* 2. Compact 12-Relic Discovery Progress Checklist */}
-      <main className="flex-1 flex flex-col justify-between max-w-[1440px] w-full mx-auto px-2 sm:px-4 py-1">
+      <main className="flex-1 min-h-0 flex flex-col justify-between max-w-[1440px] w-full mx-auto px-2 sm:px-4 py-0.5 sm:py-1 overflow-hidden">
         <RelicChecklistBar targets={config.targets} foundIds={foundIds} />
 
         {/* 3. The Central Haunted Detective Evidence Table */}

@@ -130,7 +130,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   // Active Stage 2 View
   if (activeStageId === 'stage-2') {
     return (
-      <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
+      <div className="relative h-screen h-[100dvh] w-full bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-hidden min-h-0">
         <Stage2HauntedImageHunt
           teamId={session.teamId}
           config={stage2Config}
@@ -147,7 +147,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   // Active Stage 3 View
   if (activeStageId === 'stage-3') {
     return (
-      <div className="relative min-h-screen bg-black text-cartel-bone flex flex-col font-sans overflow-x-hidden">
+      <div className="relative h-screen h-[100dvh] w-full bg-black text-cartel-bone flex flex-col font-sans overflow-hidden min-h-0">
         <Stage3ForgottenGraveyard
           teamId={session.teamId}
           config={stage3Config}

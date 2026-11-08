@@ -63,7 +63,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
   return (
     <div
       onClick={handleClick}
-      className="group relative flex flex-col items-center justify-center cursor-pointer select-none transition-all duration-300 transform hover:scale-[1.03] hover:-translate-y-1.5 focus:outline-none w-full max-w-[280px] sm:max-w-[310px] md:max-w-[330px]"
+      className="group relative flex flex-col items-center justify-center cursor-pointer select-none transition-all duration-300 transform hover:scale-[1.03] hover:-translate-y-1 focus:outline-none w-auto max-w-[240px] sm:max-w-[270px] md:max-w-[295px] lg:max-w-[320px] max-h-[min(54vh,480px)]"
     >
       {/* 1. Ambient Atmospheric Glow behind the Coffin */}
       <div
@@ -73,9 +73,9 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
 
       {/* 2. Discovered Fragment Floating Seal (if clue unsealed) */}
       {isDiscovered && discoveredFragment && (
-        <div className="absolute top-2 z-20 pointer-events-none animate-fadeIn">
+        <div className="absolute top-1 sm:top-2 z-20 pointer-events-none animate-fadeIn">
           <span
-            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-[9px] sm:text-[10px] font-cinzel font-black tracking-widest uppercase ${theme.fragmentBadge}`}
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border text-[8.5px] sm:text-[9.5px] font-cinzel font-black tracking-widest uppercase ${theme.fragmentBadge}`}
           >
             <span>📜</span>
             <span>&ldquo;{discoveredFragment}&rdquo; FOUND</span>
@@ -84,12 +84,12 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
       )}
 
       {/* 3. Freestanding Coffin Structure Artwork */}
-      <div className={`relative w-full transition-all duration-300 ${theme.borderGlow}`}>
+      <div className={`relative transition-all duration-300 max-h-[min(54vh,480px)] flex items-center justify-center ${theme.borderGlow}`}>
         <img
           src={artworkSrc}
           alt={`${romanNumber}: ${title}`}
           loading="eager"
-          className="w-full h-auto object-contain filter drop-shadow-[0_12px_30px_rgba(0,0,0,0.95)]"
+          className="max-h-[min(54vh,480px)] w-auto max-w-full object-contain filter drop-shadow-[0_12px_30px_rgba(0,0,0,0.95)]"
         />
 
         {/* 4. Interactive PLAY / INSPECT Button Slot (Seamlessly aligns with the artwork's carved action slot) */}

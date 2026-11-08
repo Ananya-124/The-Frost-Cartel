@@ -112,7 +112,13 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
   };
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col justify-between text-stone-100 font-sans select-none overflow-x-hidden animate-fadeIn">
+    <div
+      className={`relative w-full flex flex-col justify-between text-stone-100 font-sans select-none animate-fadeIn ${
+        activeView === 'overview'
+          ? 'h-screen h-[100dvh] overflow-hidden min-h-0'
+          : 'min-h-screen overflow-x-hidden'
+      }`}
+    >
       {/* 0. Full-Screen Cinematic Haunted Mansion & Cemetery Backdrop with Live Bats, Crows & Ghosts */}
       <HauntedStage3Atmosphere />
 
