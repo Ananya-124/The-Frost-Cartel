@@ -123,22 +123,15 @@ export const HauntedStage3Atmosphere: React.FC = () => {
       <FlyingCrow startYPercent={26} durationSeconds={28} delaySeconds={12} scale={0.7} flightDirection="right-to-left" />
       <FlyingCrow startYPercent={9} durationSeconds={25} delaySeconds={16} scale={0.8} flightDirection="left-to-right" />
 
-      {/* 7. Translucent Ethereal Ghosts */}
+      {/* 7. Real Photographic Ethereal Ghost Apparitions */}
       <FloatingGhost
         side="left"
-        className="top-[28%] left-[8%] opacity-45 mix-blend-screen filter drop-shadow-[0_0_25px_rgba(127,229,217,0.6)] animate-ghost-drift"
+        className="top-[20%] left-[2%] sm:left-[5%] opacity-70 animate-ghost-drift"
       />
       <FloatingGhost
         side="right"
-        className="top-[18%] right-[10%] opacity-40 mix-blend-screen filter drop-shadow-[0_0_20px_rgba(127,229,217,0.5)] animate-ghost-float"
+        className="top-[14%] right-[2%] sm:right-[5%] opacity-65 animate-ghost-float"
       />
-      <div className="absolute top-[48%] left-[45%] -translate-x-1/2 pointer-events-none opacity-30 animate-[ghostFloat_12s_ease-in-out_infinite_alternate] filter blur-[0.6px] drop-shadow-[0_0_22px_rgba(167,243,208,0.45)]">
-        <img
-          src="/assets/ghost_apparition.png"
-          alt=""
-          className="w-24 h-24 object-contain"
-        />
-      </div>
 
       {/* 8. Rolling Ground Fog & Volumetric Supernatural Mist */}
       <div
