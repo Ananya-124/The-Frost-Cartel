@@ -1,106 +1,73 @@
 import os
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-# Font resolution helper
-def get_font_path():
-    candidates = [
-        'scripts/Cinzel.ttf',
-        'C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/Cinzel.ttf',
-        'Cinzel.ttf'
-    ]
-    for p in candidates:
-        if os.path.exists(p):
-            return p
-    raise FileNotFoundError("Could not find Cinzel.ttf in expected paths.")
+def build_amber_pills():
+    """
+    Derives pixel-perfect, 3D-carved amber/gold pills for Stage 1 directly from
+    the authentic Stage 2 reliquary pill art, guaranteeing 100% identical dimensions,
+    border bevels, glass reflections, font thickness, letterforms, and checkmark glyphs.
+    """
+    # 1. Available Pill: '👑 100 CR' derived from Stage 2 '👑 150 CR'
+    s2_orig = Image.open('public/assets/halloween/portals/relic_full_stage2.png')
+    avail_raw = s2_orig.crop((120, 675, 380, 750)).convert('RGB')
+    arr_a = np.array(avail_raw)
 
-# Crown image resolution helper
-def get_crown_path():
-    candidates = [
-        'scripts/crown_clean.png',
-        'C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/crown_clean.png',
-        'crown_clean.png'
-    ]
-    for p in candidates:
-        if os.path.exists(p):
-            return p
-    raise FileNotFoundError("Could not find crown_clean.png in expected paths.")
+    # In s2_orig, '150 CR' text is at Y: 23..43. '0' glyph is at X: 144..160.
+    zero_glyph = arr_a[23:43, 144:160].copy()
+    # Inpaint/erase '5' at X: 126..142 with dark pill background [12, 2, 17]
+    arr_a[23:43, 126:142] = [12, 2, 17]
+    # Place '0' glyph to make '100 CR'
+    arr_a[23:43, 127:143] = zero_glyph
 
-def get_tracked_width(text, tracking, font):
-    total = 0
-    for i, ch in enumerate(text):
-        bb = font.getbbox(ch)
-        w = bb[2] - bb[0]
-        adv = font.getlength(ch)
-        if i == len(text) - 1:
-            total += w
-        else:
-            total += adv + tracking
-    return total
+    # Shift purple neon glow to fiery amber/gold
+    r_a, g_a, b_a = arr_a[:, :, 0], arr_a[:, :, 1], arr_a[:, :, 2]
+    text_mask_a = (r_a > 160) & (g_a > 150) & (b_a > 160)
+    crown_mask_a = (r_a > 160) & (g_a > 120) & (b_a < 100) # gold crown
+    purple_mask_a = (b_a > g_a + 5) & (r_a > 20) & (~text_mask_a) & (~crown_mask_a)
 
-def draw_tracked_text(draw, start_x, start_y, text, tracking, font, fill):
-    curr_x = start_x
-    top_offset = font.getbbox('T')[1]
-    y_pos = start_y - top_offset
-    for i, ch in enumerate(text):
-        draw.text((curr_x, y_pos), ch, font=font, fill=fill)
-        adv = font.getlength(ch)
-        curr_x += adv + tracking
+    intensity_a = np.maximum(r_a, b_a)
+    new_ra = r_a.copy()
+    new_ga = g_a.copy()
+    new_ba = b_a.copy()
 
-def build_pills(draw_text, fill_color, border_color, glow_color, is_crown=False):
-    canvas = Image.new('RGBA', (300, 90), (0, 0, 0, 0))
-    x0, y0, x1, y1 = 35, 20, 265, 70
-    radius = 25
+    new_ra[purple_mask_a] = np.clip(intensity_a[purple_mask_a] * 1.05, 0, 255)
+    new_ga[purple_mask_a] = np.clip(intensity_a[purple_mask_a] * 0.65, 0, 255)
+    new_ba[purple_mask_a] = np.clip(intensity_a[purple_mask_a] * 0.08, 0, 255)
 
-    # Outer glow
-    glow = Image.new('RGBA', (300, 90), (0, 0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow)
-    glow_draw.rounded_rectangle([x0 - 2, y0 - 2, x1 + 2, y1 + 2], radius=radius + 2, fill=glow_color)
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=4))
-    canvas = Image.alpha_composite(canvas, glow)
-    draw = ImageDraw.Draw(canvas)
+    new_ra[text_mask_a] = 255
+    new_ga[text_mask_a] = np.clip(g_a[text_mask_a] * 1.03, 0, 255)
+    new_ba[text_mask_a] = np.clip(b_a[text_mask_a] * 0.88, 0, 240)
 
-    # Pill background and border
-    draw.rounded_rectangle([x0, y0, x1, y1], radius=radius, fill=fill_color, outline=border_color, width=2)
-    # Top highlight
-    draw.rounded_rectangle([x0 + 1, y0 + 1, x1 - 1, y0 + 12], radius=radius, fill=(255, 255, 255, 25))
+    avail_amber = Image.fromarray(np.stack([new_ra, new_ga, new_ba], axis=2).astype(np.uint8))
 
-    font_path = get_font_path()
+    # 2. Completed Pill: 'COMPLETED ✓' derived from Stage 2 'COMPLETED ✓'
+    s2_comp = Image.open('public/assets/halloween/portals/relic_full_stage2_completed.png')
+    comp_raw = s2_comp.crop((120, 675, 380, 750)).convert('RGB')
+    arr_c = np.array(comp_raw)
 
-    if is_crown:
-        crown = Image.open(get_crown_path())
-        crown_arr = np.array(crown).copy()
-        gray = np.mean(crown_arr[:, :, :3], axis=2)
-        for c_idx, val in enumerate([251, 191, 36]):
-            crown_arr[:, :, c_idx] = np.clip(gray * (val / 160.0), 0, 255).astype(np.uint8)
-        gold_crown = Image.fromarray(crown_arr).resize((22, 16), Image.Resampling.LANCZOS)
+    r_c, g_c, b_c = arr_c[:, :, 0], arr_c[:, :, 1], arr_c[:, :, 2]
+    text_mask_c = (r_c > 165) & (g_c > 155) & (b_c > 165)
+    purple_mask_c = (b_c > g_c + 5) & (r_c > 20) & (~text_mask_c)
 
-        font = ImageFont.truetype(font_path, 16)
-        tw = get_tracked_width(draw_text, 1.5, font)
+    intensity_c = np.maximum(r_c, b_c)
+    new_rc = r_c.copy()
+    new_gc = g_c.copy()
+    new_bc = b_c.copy()
 
-        total_w = 22 + 8 + tw
-        start_x = (300 - total_w) // 2
+    new_rc[purple_mask_c] = np.clip(intensity_c[purple_mask_c] * 1.05, 0, 255)
+    new_gc[purple_mask_c] = np.clip(intensity_c[purple_mask_c] * 0.65, 0, 255)
+    new_bc[purple_mask_c] = np.clip(intensity_c[purple_mask_c] * 0.08, 0, 255)
 
-        crown_x = start_x
-        crown_y = 45 - 8
-        text_x = start_x + 22 + 8
-        text_y = 45
+    new_rc[text_mask_c] = 255
+    new_gc[text_mask_c] = np.clip(g_c[text_mask_c] * 1.03, 0, 255)
+    new_bc[text_mask_c] = np.clip(b_c[text_mask_c] * 0.88, 0, 240)
 
-        canvas.paste(gold_crown, (int(crown_x), int(crown_y)), gold_crown)
-        draw_tracked_text(draw, text_x + 1, text_y - 6 + 1, draw_text, 1.5, font, (0, 0, 0, 230))
-        draw_tracked_text(draw, text_x, text_y - 6, draw_text, 1.5, font, (254, 243, 199, 255))
-    else:
-        font = ImageFont.truetype(font_path, 15)
-        tw = get_tracked_width(draw_text, 2.0, font)
-        text_x = (300 - tw) // 2
-        text_y = 45
+    comp_amber = Image.fromarray(np.stack([new_rc, new_gc, new_bc], axis=2).astype(np.uint8))
 
-        draw_tracked_text(draw, text_x + 1, text_y - 6 + 1, draw_text, 2.0, font, (0, 0, 0, 240))
-        draw_tracked_text(draw, text_x, text_y - 6, draw_text, 2.0, font, (254, 243, 199, 255))
+    return avail_amber, comp_amber
 
-    return canvas
-
-def composite_relic(is_completed=False):
+def composite_relic(is_completed=False, avail_pill=None, comp_pill=None):
     # 1. Base frame and artwork
     fr = Image.open('public/assets/halloween/portals/relic_frame_stage1.png').copy()
     ps = Image.open('public/assets/halloween/portals/portal_stage1_pumpkin_shuffle.jpg')
@@ -121,63 +88,48 @@ def composite_relic(is_completed=False):
     combined = Image.alpha_composite(canvas_bg, fr)
     draw = ImageDraw.Draw(combined)
 
-    # 3. Completely erase original Title Plaque (550..645, 110..390) - 100% elimination of 'THE UNKNOWN CHALLENGE'
-    draw.rectangle([110, 550, 390, 645], fill=(10, 6, 5, 255))
+    # 3. Completely erase original Title Plaque (548..648, 105..395) - 100% elimination of 'THE UNKNOWN CHALLENGE'
+    draw.rectangle([105, 548, 395, 648], fill=(10, 6, 5, 255))
 
-    # 4. Render THE PUMPKIN SHUFFLE with identical Cinzel 25 font, tracking, ivory color, and drop shadow
-    font_path = get_font_path()
+    # 4. Render 'THE PUMPKIN SHUFFLE' with Cinzel-wght800 (ExtraBold) font, matching Stage 2 & 3 thickness
+    font_path = 'scripts/Cinzel-wght800.ttf'
+    if not os.path.exists(font_path):
+        font_path = 'C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/Cinzel-wght800.ttf'
     font_title = ImageFont.truetype(font_path, 25)
-    text1 = 'THE PUMPKIN'
-    text2 = 'SHUFFLE'
 
-    w1 = get_tracked_width(text1, 2.5, font_title)
-    w2 = get_tracked_width(text2, 4.5, font_title)
+    top_off = font_title.getbbox('T')[1]
 
-    # Center is at X = 250
-    x1 = (500 - w1) // 2
-    x2 = (500 - w2) // 2
-    y1 = 569
-    y2 = 605
+    def draw_tracked(text, start_x, start_y, tr):
+        curr_x = start_x
+        for ch in text:
+            draw.text((curr_x + 1, start_y - top_off + 1), ch, font=font_title, fill=(0, 0, 0, 240))
+            draw.text((curr_x, start_y - top_off), ch, font=font_title, fill=(255, 254, 255, 255))
+            curr_x += font_title.getlength(ch) + tr
 
-    # Draw drop shadow
-    draw_tracked_text(draw, x1 + 1, y1 + 1, text1, 2.5, font_title, (0, 0, 0, 220))
-    draw_tracked_text(draw, x2 + 1, y2 + 1, text2, 4.5, font_title, (0, 0, 0, 220))
+    # Line 1: 'THE PUMPKIN' (width 199px, centered at X=250, baseline Y=569)
+    draw_tracked('THE PUMPKIN', 150.5, 569, 0.8)
 
-    # Draw ivory lettering (255, 254, 255) matching Stage 2 & Stage 3
-    draw_tracked_text(draw, x1, y1, text1, 2.5, font_title, (255, 254, 255, 255))
-    draw_tracked_text(draw, x2, y2, text2, 4.5, font_title, (255, 254, 255, 255))
+    # Line 2: 'SHUFFLE' (width 134px, centered at X=250, baseline Y=605)
+    draw_tracked('SHUFFLE', 183.0, 605, 2.3)
 
-    # 5. Completely erase bottom button area (80..420, 675..765) - 100% elimination of candle icon, lock, and residual text
-    draw.rectangle([80, 675, 420, 765], fill=(12, 7, 5, 255))
+    # 5. Clean Button Slot: erase the entire old slot and line (Y: 668..755, X: 80..420)
+    draw.rectangle([80, 668, 420, 755], fill=(12, 7, 5, 255))
 
-    # 6. Generate and paste pill centered at X=250, Y=708 (matching Stage 2 & Stage 3 buttons to the exact pixel)
-    if is_completed:
-        pill = build_pills(
-            'COMPLETED ✓',
-            fill_color=(28, 11, 4, 245),
-            border_color=(245, 158, 11, 230),
-            glow_color=(245, 158, 11, 120),
-            is_crown=False
-        )
-    else:
-        pill = build_pills(
-            '100 CR',
-            fill_color=(24, 11, 4, 245),
-            border_color=(245, 158, 11, 230),
-            glow_color=(245, 158, 11, 120),
-            is_crown=True
-        )
+    # 6. Paste the authentic 3D carved glowing amber pill at (120, 675)
+    pill = comp_pill if is_completed else avail_pill
+    combined.paste(pill, (120, 675))
 
-    combined.paste(pill, (100, 663), pill)
     return combined
 
 if __name__ == '__main__':
-    active_stage1 = composite_relic(is_completed=False)
+    avail_pill, comp_pill = build_amber_pills()
+
+    active_stage1 = composite_relic(is_completed=False, avail_pill=avail_pill, comp_pill=comp_pill)
     active_stage1.save('public/assets/halloween/portals/relic_full_stage1.png')
     active_stage1.save('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/relic_full_stage1_verified.png')
 
-    comp_stage1 = composite_relic(is_completed=True)
+    comp_stage1 = composite_relic(is_completed=True, avail_pill=avail_pill, comp_pill=comp_pill)
     comp_stage1.save('public/assets/halloween/portals/relic_full_stage1_completed.png')
     comp_stage1.save('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/relic_full_stage1_completed_verified.png')
 
-    print('Successfully rebuilt relic_full_stage1.png and relic_full_stage1_completed.png with pixel-perfect typography and clean button pills!')
+    print('Successfully rebuilt relic_full_stage1.png and relic_full_stage1_completed.png with 100% matching typography, thickness, and design!')
