@@ -8,3 +8,4 @@ echo  When teammates push, changes will auto-pull instantly!
 echo ========================================================
 python scripts/live_auto_sync.py --interval 15 --branch main
 pause
+

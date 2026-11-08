@@ -29,7 +29,7 @@ def build_pills(draw_text, fill_color, border_color, glow_color, is_crown=False)
             crown_arr[:, :, c_idx] = np.clip(gray * (val / 160.0), 0, 255).astype(np.uint8)
         gold_crown = Image.fromarray(crown_arr).resize((24, 18), Image.Resampling.LANCZOS)
 
-        font = ImageFont.truetype('Cinzel.ttf', 18)
+        font = ImageFont.truetype('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/Cinzel.ttf', 18)
         tb = draw.textbbox((0, 0), draw_text, font=font)
         tw = tb[2] - tb[0]
         th = tb[3] - tb[1]
@@ -46,7 +46,7 @@ def build_pills(draw_text, fill_color, border_color, glow_color, is_crown=False)
         draw.text((text_x + 1, text_y + 1), draw_text, font=font, fill=(0, 0, 0, 230))
         draw.text((text_x, text_y), draw_text, font=font, fill=(254, 243, 199, 255))
     else:
-        font = ImageFont.truetype('Cinzel.ttf', 16)
+        font = ImageFont.truetype('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/Cinzel.ttf', 16)
         tb = draw.textbbox((0, 0), draw_text, font=font)
         tw = tb[2] - tb[0]
         th = tb[3] - tb[1]
@@ -60,11 +60,15 @@ def build_pills(draw_text, fill_color, border_color, glow_color, is_crown=False)
 def composite_relic(is_completed=False):
     # 1. Base frame
     fr = Image.open('public/assets/halloween/portals/relic_frame_stage1.png').copy()
-    mask_im = Image.open('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/window_mask.png')
     ps = Image.open('public/assets/halloween/portals/portal_stage1_pumpkin_shuffle.jpg')
 
-    # 2. Prepare pumpkin artwork for window (346 x 320 at X=77, Y=200)
-    target_w, target_h = 346, 320
+    # 2. Prepare pumpkin artwork for window with generous bleed behind the stone frame
+    # Window opening is X: 90..410, Y: 213..507.
+    # By sizing artwork to 360 x 330 and positioning it at X=70, Y=195,
+    # the artwork extends 20px beneath the solid carved stone frame on all sides.
+    # The stone frame naturally and organically overlaps the artwork with authentic bevel shadows,
+    # eliminating any artificial cutout border, polygon stroke, or outline effect.
+    target_w, target_h = 360, 330
     ps_w, ps_h = ps.size
     aspect = target_w / target_h
     new_h = int(ps_w / aspect)
@@ -73,12 +77,9 @@ def composite_relic(is_completed=False):
     ps_scaled = ps_cropped.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
     canvas_bg = Image.new('RGBA', (500, 857), (0, 0, 0, 0))
-    canvas_bg.paste(ps_scaled, (77, 200))
-    canvas_bg_arr = np.array(canvas_bg)
-    canvas_bg_arr[~(np.array(mask_im) > 0)] = 0
-    canvas_bg = Image.fromarray(canvas_bg_arr)
+    canvas_bg.paste(ps_scaled, (70, 195))
 
-    # Composite frame on top of artwork window
+    # Composite stone frame on top of artwork window
     combined = Image.alpha_composite(canvas_bg, fr)
 
     # 3. Overwrite Title Plaque (X: 100..400, Y: 565..660)
@@ -86,7 +87,7 @@ def composite_relic(is_completed=False):
     # Fill inner black plaque area (X: 120..380, Y: 575..650) to erase 'THE UNKNOWN CHALLENGE'
     draw.rectangle([120, 574, 380, 650], fill=(10, 6, 5, 255))
 
-    font_title = ImageFont.truetype('Cinzel.ttf', 20)
+    font_title = ImageFont.truetype('C:/Users/yashm/.gemini/antigravity/brain/8f13d18b-3772-4740-bcdd-d4869ff605fe/Cinzel.ttf', 20)
     text1 = 'THE PUMPKIN'
     text2 = 'SHUFFLE'
 
