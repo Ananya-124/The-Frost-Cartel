@@ -48,7 +48,8 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative w-full h-full max-h-[calc(100vh-60px)] aspect-[1629/965] overflow-hidden select-none flex items-center justify-center"
+      className="relative w-full h-full max-h-[calc(100vh-60px)] aspect-[1629/965] overflow-hidden select-none flex items-center justify-center outline-none focus:outline-none"
+      style={{ outline: 'none' }}
     >
       {/* Camera Drone-Style Zoom and Pan Transition Wrapper */}
       <FloorCameraTransition

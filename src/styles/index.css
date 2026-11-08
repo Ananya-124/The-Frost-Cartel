@@ -456,3 +456,17 @@
     animation: none !important;
   }
 }
+
+/* Eliminate default browser focus rectangles on SVG floor interactive elements */
+.floor-group,
+.floor-group:focus,
+.floor-group:focus-visible,
+.floor-group:active,
+.floor-group:focus-within,
+.floor-group * {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
