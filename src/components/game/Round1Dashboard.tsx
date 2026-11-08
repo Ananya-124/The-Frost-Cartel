@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Skull } from 'lucide-react';
 import type { TeamSession } from '../../types/team.types';
 import type { StageId } from '../../types/round.types';
 import { round1Service } from '../../services/round1Service';
@@ -117,10 +116,9 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
           <Stage1PumpkinShuffle
             teamId={session.teamId}
             config={stage1Config}
-            isCompleted={teamSession.stages['stage-1'].status === 'completed'}
             onReturnDashboard={() => setActiveStageId(null)}
             onSkipStage={() => handleSkipStage('stage-1')}
-            onStageCompleted={handleStageCompleted}
+            onCreditsAwarded={handleStageCompleted}
           />
         )}
       </div>
@@ -130,7 +128,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   // Active Stage 2 View
   if (activeStageId === 'stage-2') {
     return (
-      <div className="relative h-screen h-[100dvh] w-full bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-hidden min-h-0">
+      <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         <Stage2HauntedImageHunt
           teamId={session.teamId}
           config={stage2Config}
@@ -147,7 +145,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   // Active Stage 3 View
   if (activeStageId === 'stage-3') {
     return (
-      <div className="relative h-screen h-[100dvh] w-full bg-black text-cartel-bone flex flex-col font-sans overflow-hidden min-h-0">
+      <div className="relative min-h-screen bg-black text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         <Stage3ForgottenGraveyard
           teamId={session.teamId}
           config={stage3Config}
@@ -182,53 +180,34 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
         onReturnHome={onReturnHome}
       />
 
-      {/* 3. Centered Main Header & Three Gothic Reliquary Structures */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-3 sm:px-4 py-1 sm:py-2 flex flex-col justify-center items-center my-auto">
-        {/* Centered Main Heading (Shifted ~30px upward per design spec) */}
-        <div className="relative flex flex-col items-center text-center -mt-2 sm:-mt-5 md:-mt-8 mb-3 sm:mb-5 lg:mb-6 max-w-full z-20">
+      {/* 3. Centered Main Header & Three Gothic Arch Portals */}
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex flex-col justify-center items-center my-auto">
+        {/* Centered Main Heading (Highest Visual Priority) */}
+        <div className="flex flex-col items-center text-center mb-3 sm:mb-5 max-w-full">
           {/* Accessible Screen-Reader Anchor */}
           <span className="sr-only">ROUND 01 • MASTER PORTAL</span>
 
-          {/* Top Gothic Crest Ornament & ROUND 01 Label */}
-          <div className="flex flex-col items-center justify-center mb-0.5 sm:mb-1">
-            <div className="relative flex items-center justify-center mb-1">
-              <img
-                src="/assets/frost_cartel_gothic_crest.png"
-                alt="Frost Cartel Crest"
-                aria-hidden="true"
-                className="relative w-14 sm:w-18 md:w-22 h-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] drop-shadow-[0_0_14px_rgba(245,158,11,0.65)] brightness-125 select-none pointer-events-none"
-              />
-            </div>
-            <div className="flex items-center justify-center gap-2 sm:gap-3 text-[10px] sm:text-xs md:text-sm font-cinzel font-bold text-amber-300 tracking-[0.25em] sm:tracking-[0.35em] uppercase drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]">
-              <span className="text-amber-500/75 tracking-normal" aria-hidden="true">―⊰ ❖ ⊱―</span>
-              <span>ROUND 01</span>
-              <span className="text-amber-500/75 tracking-normal" aria-hidden="true">―⊰ ❖ ⊱―</span>
-            </div>
+          {/* ROUND 01 Label */}
+          <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs md:text-sm font-cinzel font-bold text-amber-400 tracking-[0.25em] sm:tracking-[0.3em] uppercase drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
+            <span className="text-amber-500/80" aria-hidden="true">―✦―</span>
+            <span>ROUND 01</span>
+            <span className="text-amber-500/80" aria-hidden="true">―✦―</span>
           </div>
 
-          {/* Heading Container with Horizontal Crimson Blood-Mist Aura */}
-          <div className="relative flex items-center justify-center px-4">
-            {/* Cinematic Crimson Blood-Mist Vapor Banner */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-[-15%] sm:inset-x-[-25%] -inset-y-3 sm:-inset-y-5 bg-[radial-gradient(ellipse_at_50%_50%,rgba(220,20,60,0.55)_0%,rgba(185,28,28,0.35)_45%,rgba(127,29,29,0.15)_70%,transparent_85%)] blur-lg sm:blur-xl pointer-events-none"
-            />
-
-            {/* Large THE GRAVEYARD ESCAPE Heading with Ivory White Lettering */}
-            <h1 className="relative text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black font-gothic tracking-wider sm:tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-b from-[#ffffff] via-[#f7f0e6] to-[#cfc0a8] drop-shadow-[0_2px_16px_rgba(220,38,38,0.75)] drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)] leading-tight text-center px-2">
-              THE GRAVEYARD ESCAPE
-            </h1>
-          </div>
+          {/* Large THE GRAVEYARD ESCAPE Heading with Blood-Red Glow */}
+          <h1 className="text-xl sm:text-4xl md:text-5xl lg:text-6xl font-black font-gothic tracking-normal sm:tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-b from-[#ffffff] via-[#f5ede3] to-[#e63946] drop-shadow-[0_4px_22px_rgba(220,38,38,0.9)] leading-tight mt-1 mb-1.5 sm:mb-2 px-2 text-center">
+            THE GRAVEYARD ESCAPE
+          </h1>
 
           {/* Ornamental Skull Divider */}
-          <div className="flex items-center justify-center gap-2 mt-1 sm:mt-1.5" aria-hidden="true">
-            <span className="w-12 sm:w-20 md:w-32 h-[1px] bg-gradient-to-r from-transparent via-red-600 to-amber-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-            <Skull className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#fae1bf] filter drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]" />
-            <span className="w-12 sm:w-20 md:w-32 h-[1px] bg-gradient-to-l from-transparent via-red-600 to-amber-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+          <div className="flex items-center justify-center gap-2 text-red-500" aria-hidden="true">
+            <span className="w-12 sm:w-20 md:w-28 h-[1.5px] bg-gradient-to-r from-transparent via-red-600 to-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+            <span className="text-xs sm:text-sm md:text-base filter drop-shadow-[0_0_8px_rgba(239,68,68,0.9)]">💀</span>
+            <span className="w-12 sm:w-20 md:w-28 h-[1.5px] bg-gradient-to-l from-transparent via-red-600 to-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
           </div>
         </div>
 
-        {/* The Three Gothic Reliquary Structures in One Centered Horizontal Row */}
+        {/* The Three Compact Gothic Portals in One Centered Horizontal Row */}
         <div className="w-full flex flex-col md:flex-row flex-nowrap md:flex-nowrap justify-center items-center gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto pb-4 md:pb-0">
           {/* PORTAL 01: The Unknown Challenge (Burnt Orange) */}
           <HauntedPortalCard
@@ -240,6 +219,11 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
             colorTheme="orange"
             artworkUrl="/assets/halloween/portals/portal_stage1_crypt.jpg"
             isExpired={isExpired}
+            progressText={
+              (teamSession.stage1State?.trials.filter((t) => t.status !== 'pending').length ?? 0) > 0
+                ? `${teamSession.stage1State.trials.filter((t) => t.status !== 'pending').length} / ${teamSession.stage1State.trials.length} TRIALS`
+                : undefined
+            }
             onEnterStage={() => handleSelectStage('stage-1')}
           />
 

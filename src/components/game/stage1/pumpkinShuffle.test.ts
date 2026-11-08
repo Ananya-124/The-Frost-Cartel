@@ -48,6 +48,13 @@ describe('pumpkin shuffle logic', () => {
     for (let i = 1; i < swaps.length; i++) expect(swaps[i]).not.toEqual(swaps[i - 1]);
   });
 
+  it('mostly swaps pumpkins that sit close together', () => {
+    const swaps = planSwaps(7, 400, seeded(21));
+    const close = swaps.filter(([a, b]) => b - a <= 2).length;
+    expect(close / swaps.length).toBeGreaterThan(0.6);
+    expect(swaps.some(([a, b]) => b - a >= 4)).toBe(true); // but some swaps still jump far
+  });
+
   it('keeps every pumpkin in exactly one position, and the skull moves with its pumpkin', () => {
     let slots = identitySlots(4);
     const skullPumpkin = 2;
@@ -58,7 +65,8 @@ describe('pumpkin shuffle logic', () => {
 
   it('keeps settings in a safe range', () => {
     expect(clampPumpkinCount(1)).toBe(3);
-    expect(clampPumpkinCount(99)).toBe(6);
+    expect(clampPumpkinCount(99)).toBe(9);
+    expect(clampPumpkinCount(7)).toBe(7);
     expect(clampPumpkinCount(undefined)).toBe(3);
     expect(clampSeconds(500, 20, 5, 60)).toBe(60);
     expect(clampSeconds(undefined, 20, 5, 60)).toBe(20);

@@ -26,11 +26,123 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
     expect(service.getTeamSession('team_old', 'Old Squad').stages['stage-1'].status).toBe('available');
   });
 
-  it('awards the Stage 1 reward exactly once', () => {
-    service.beginRound1('team_s1', 'S1 Squad');
-    expect(service.completeStage('team_s1', 'stage-1')).toEqual({ success: true, creditsAwarded: 100 });
-    expect(service.completeStage('team_s1', 'stage-1').success).toBe(false);
-    expect(service.getTeamSession('team_s1', 'S1 Squad').credits).toBe(100);
+  describe('Stage 1 — Pumpkin Shuffle trials', () => {
+    const start = (id = 'team_s1') => {
+      service.beginRound1(id, 'S1 Squad');
+      return id;
+    };
+
+    it('starts with two pending trials (5 pumpkins / 40 CR, 7 pumpkins / 60 CR, 2 tries each)', () => {
+      const id = start();
+      expect(service.getStage1Trials().map((t) => [t.pumpkins, t.tries, t.reward])).toEqual([[5, 2, 40], [7, 2, 60]]);
+      expect(service.getStage1State(id)?.trials).toEqual([
+        { attemptsUsed: 0, status: 'pending', earnedCredits: 0 },
+        { attemptsUsed: 0, status: 'pending', earnedCredits: 0 },
+      ]);
+    });
+
+    it('awards 40 credits for winning trial I and keeps the stage open for trial II', () => {
+      const id = start();
+      expect(service.beginStage1Attempt(id, 0)).toEqual({ ok: true, attemptsUsed: 1 });
+      expect(service.resolveStage1Trial(id, 0, true)).toEqual({ success: true, creditsAwarded: 40, stageFinished: false });
+      const session = service.getTeamSession(id, 'S1 Squad');
+      expect(session.credits).toBe(40);
+      expect(session.stages['stage-1'].status).toBe('in_progress');
+    });
+
+    it('awards 60 credits for trial II and completes the stage (100 in total)', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      service.resolveStage1Trial(id, 0, true);
+      service.beginStage1Attempt(id, 1);
+      expect(service.resolveStage1Trial(id, 1, true)).toEqual({ success: true, creditsAwarded: 60, stageFinished: true });
+      const session = service.getTeamSession(id, 'S1 Squad');
+      expect(session.credits).toBe(100);
+      expect(session.stages['stage-1'].status).toBe('completed');
+      expect(session.stages['stage-1'].earnedCredits).toBe(100);
+      expect(session.scoreTransactions.filter((t) => t.stageId === 'stage-1')).toHaveLength(2);
+    });
+
+    it('allows a win on the second try and pays the same', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      expect(service.resolveStage1Trial(id, 0, false).reason).toBe('tries_left'); // cannot lose with a try left
+      expect(service.beginStage1Attempt(id, 0)).toEqual({ ok: true, attemptsUsed: 2 });
+      expect(service.resolveStage1Trial(id, 0, true).creditsAwarded).toBe(40);
+    });
+
+    it('closes a trial as lost after two failed tries, with no credits, and gives no third try', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      service.beginStage1Attempt(id, 0);
+      expect(service.beginStage1Attempt(id, 0)).toEqual({ ok: false, reason: 'no_tries' });
+      expect(service.resolveStage1Trial(id, 0, false)).toEqual({ success: true, creditsAwarded: 0, stageFinished: false });
+      expect(service.getTeamSession(id, 'S1 Squad').credits).toBe(0);
+      expect(service.beginStage1Attempt(id, 0)).toEqual({ ok: false, reason: 'resolved' });
+    });
+
+    it('keeps trial II locked until trial I is closed, and never pays a trial twice', () => {
+      const id = start();
+      expect(service.beginStage1Attempt(id, 1)).toEqual({ ok: false, reason: 'locked' });
+      service.beginStage1Attempt(id, 0);
+      service.resolveStage1Trial(id, 0, true);
+      expect(service.resolveStage1Trial(id, 0, true).reason).toBe('already_resolved');
+      expect(service.getTeamSession(id, 'S1 Squad').credits).toBe(40);
+      expect(service.beginStage1Attempt(id, 1).ok).toBe(true);
+    });
+
+    it('completes the stage with partial credits when trial I is lost and trial II is won', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      service.beginStage1Attempt(id, 0);
+      service.resolveStage1Trial(id, 0, false);
+      service.beginStage1Attempt(id, 1);
+      service.resolveStage1Trial(id, 1, true);
+      const session = service.getTeamSession(id, 'S1 Squad');
+      expect(session.credits).toBe(60);
+      expect(session.stages['stage-1'].status).toBe('completed');
+    });
+
+    it('remembers used tries after a reload, so leaving the stage cannot refund them', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      const reloaded = new Round1Service();
+      expect(reloaded.getStage1State(id)?.trials[0].attemptsUsed).toBe(1);
+      expect(reloaded.beginStage1Attempt(id, 0)).toEqual({ ok: true, attemptsUsed: 2 });
+      expect(reloaded.beginStage1Attempt(id, 0)).toEqual({ ok: false, reason: 'no_tries' });
+    });
+
+    it('counts an abandoned last try as lost when the squad comes back', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      service.beginStage1Attempt(id, 0); // last try started, never answered
+      service.settleAbandonedStage1(id);
+      expect(service.getStage1State(id)?.trials[0].status).toBe('lost');
+    });
+
+    it('upgrades old saved sessions that have no Stage 1 state', () => {
+      const id = start();
+      const old = service.getTeamSession(id, 'S1 Squad') as unknown as { stage1State?: unknown };
+      delete old.stage1State;
+      expect(service.getStage1State(id)?.trials).toHaveLength(2);
+    });
+
+    it('awards nothing once the round timer has ended', () => {
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      service.getTeamSession(id, 'S1 Squad').status = 'expired';
+      expect(service.resolveStage1Trial(id, 0, true)).toMatchObject({ success: false, creditsAwarded: 0, reason: 'expired' });
+      expect(service.beginStage1Attempt(id, 0)).toEqual({ ok: false, reason: 'expired' });
+    });
+
+    it('reports progress to the score sync hook', () => {
+      const calls: unknown[][] = [];
+      service.setOnScoreSync((...a) => calls.push(a));
+      const id = start();
+      service.beginStage1Attempt(id, 0);
+      service.resolveStage1Trial(id, 0, true);
+      expect(calls[0].slice(0, 4)).toEqual([id, 40, 'stage-1', 'in_progress']);
+    });
   });
 
   it('begins round 1 and computes exact timestamp deadline', () => {

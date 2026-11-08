@@ -3,7 +3,7 @@
 export type Swap = [number, number];
 
 export const MIN_PUMPKINS = 3;
-export const MAX_PUMPKINS = 6;
+export const MAX_PUMPKINS = 9;
 
 export const clampPumpkinCount = (n: number | undefined): number =>
   Math.min(MAX_PUMPKINS, Math.max(MIN_PUMPKINS, Math.round(Number.isFinite(n) ? (n as number) : MIN_PUMPKINS)));
@@ -32,21 +32,32 @@ export function buildShufflePlan(totalMs: number, startMs = 900, endMs = 360): n
   return plan;
 }
 
-/** Pick `steps` swaps of two different positions each (never the same pair twice in a row when avoidable). */
+/**
+ * Pick `steps` swaps of two different positions each. Most swaps are between pumpkins that are close
+ * together (like a real shell game), some jump further. The same pair never repeats back to back.
+ */
 export function planSwaps(count: number, steps: number, rng: () => number): Swap[] {
   const swaps: Swap[] = [];
   if (count < 2) return swaps;
   let prev: Swap | null = null;
   for (let i = 0; i < steps; i++) {
-    let a = 0;
-    let b = 1;
+    let pair: Swap = [0, 1];
     for (let tries = 0; tries < 8; tries++) {
-      a = Math.min(count - 1, Math.floor(rng() * count));
-      b = Math.min(count - 1, Math.floor(rng() * (count - 1)));
-      if (b >= a) b += 1; // guarantees b !== a
-      if (!(prev && count > 2 && prev[0] === Math.min(a, b) && prev[1] === Math.max(a, b))) break;
+      const a = Math.min(count - 1, Math.floor(rng() * count));
+      let b: number;
+      if (rng() < 0.7) {
+        const dist = 1 + Math.floor(rng() * 2);
+        const dir = rng() < 0.5 ? -1 : 1;
+        b = a + dir * dist;
+        if (b < 0 || b >= count) b = a - dir * dist;
+        if (b < 0 || b >= count) b = (a + 1) % count;
+      } else {
+        b = Math.min(count - 2, Math.floor(rng() * (count - 1)));
+        if (b >= a) b += 1; // guarantees b !== a
+      }
+      pair = [Math.min(a, b), Math.max(a, b)];
+      if (!(prev && count > 2 && prev[0] === pair[0] && prev[1] === pair[1])) break;
     }
-    const pair: Swap = [Math.min(a, b), Math.max(a, b)];
     swaps.push(pair);
     prev = pair;
   }
