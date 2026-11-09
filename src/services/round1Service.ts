@@ -198,11 +198,9 @@ export class Round1Service {
         obj[k] = v;
       }
       const serialized = JSON.stringify(obj);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('frost_cartel_round1_sessions', serialized);
-      }
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.setItem('frost_cartel_round1_sessions', serialized);
+      if (typeof window !== 'undefined') {
+        window.localStorage?.setItem('frost_cartel_round1_sessions', serialized);
+        window.sessionStorage?.setItem('frost_cartel_round1_sessions', serialized);
       }
     } catch {
       // Storage unavailable or quota reached

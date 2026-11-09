@@ -233,7 +233,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               ACCURATE INVISIBLE INTERACTION HOTSPOTS (1024x576 Space)
              ======================================================== */}
 
-          {/* 1. ANCIENT DIARY (Resting on Skeleton's Ribcage) */}
+          {/* 1. ANCIENT DIARY (Resting on Skeleton’s Ribcage) */}
           <button
             type="button"
             aria-label="Ancient Diary: Click to Read the Keeper's Chronicle"
@@ -243,10 +243,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/10 hover:shadow-[0_0_25px_rgba(245,158,11,0.45)] group"
             style={{
-              left: '35.9%',
-              top: '31.8%',
-              width: '26.0%',
-              height: '24.3%',
+              left: '35.5%',
+              top: '31.0%',
+              width: '26.5%',
+              height: '29.0%',
             }}
           >
             <span className="sr-only">Read Ancient Diary</span>
@@ -255,7 +255,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 2. SKELETON SKULL (Cranium with Solitary Brow Mark: Roman I / II = Digit 1) */}
+          {/* 2. SKELETON SKULL (Cranium with Solitary Brow Mark: Roman I = Digit 1) */}
           <button
             type="button"
             aria-label="Cranium of the Keeper: Marked Brow (First Clue)"
@@ -265,15 +265,15 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-full transition-all duration-200 hover:bg-amber-400/10 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '36.9%',
-              top: '9.4%',
-              width: '11.0%',
-              height: '15.6%',
+              left: '42.5%',
+              top: '11.0%',
+              width: '8.5%',
+              height: '16.0%',
             }}
           >
             <span className="sr-only">Inspect Skull Brow Mark</span>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/90 border border-amber-500/80 text-[9px] font-cinzel font-bold text-amber-300 tracking-wider whitespace-nowrap shadow-md pointer-events-none">
-              💀 Inspect Brow Mark
+              💀 Inspect Brow Mark (I)
             </span>
           </button>
 
@@ -287,10 +287,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '27.0%',
-              top: '29.2%',
-              width: '8.0%',
-              height: '12.2%',
+              left: '31.8%',
+              top: '27.5%',
+              width: '8.8%',
+              height: '15.5%',
             }}
           >
             <span className="sr-only">Inspect Western Parchment 7</span>
@@ -299,7 +299,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 4. SOUTHWESTERN PARCHMENT "8" (Incidental Grave Marker) */}
+          {/* 4. SOUTHWESTERN PARCHMENT (Incidental Grave Marker - Numeral 8 Removed) */}
           <button
             type="button"
             aria-label="Southwestern Parchment 8"
@@ -309,15 +309,15 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '25.0%',
-              top: '41.3%',
-              width: '7.9%',
-              height: '12.2%',
+              left: '30.0%',
+              top: '41.5%',
+              width: '8.0%',
+              height: '15.5%',
             }}
           >
-            <span className="sr-only">Inspect Parchment 8</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
-              [8]
+            <span className="sr-only">Inspect Weathered Scrap</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-stone-500/80 text-[9px] font-mono font-bold text-stone-300 pointer-events-none">
+              📜
             </span>
           </button>
 
@@ -331,19 +331,19 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '52.0%',
-              top: '16.3%',
+              left: '55.5%',
+              top: '17.0%',
               width: '8.0%',
-              height: '11.3%',
+              height: '14.0%',
             }}
           >
-            <span className="sr-only">Inspect Eastern Parchment 4</span>
+            <span className="sr-only">Inspect Eastern Moon Parchment 4</span>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
               [4]
             </span>
           </button>
 
-          {/* 6. MID-EASTERN PARCHMENT "3" (Incidental Grave Marker) */}
+          {/* 6. MID-EASTERN PARCHMENT (Incidental Grave Marker - Numeral 3 Removed) */}
           <button
             type="button"
             aria-label="Mid-Eastern Parchment 3"
@@ -353,19 +353,19 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '60.0%',
-              top: '25.0%',
-              width: '7.0%',
-              height: '12.0%',
+              left: '61.0%',
+              top: '25.5%',
+              width: '8.0%',
+              height: '14.0%',
             }}
           >
-            <span className="sr-only">Inspect Parchment 3</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
-              [3]
+            <span className="sr-only">Inspect Weathered Scrap</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-stone-500/80 text-[9px] font-mono font-bold text-stone-300 pointer-events-none">
+              📜
             </span>
           </button>
 
-          {/* 7. EASTERN SEAL PARCHMENT "9" (Fourth Clue: 9 beside the keeper's seal) */}
+          {/* 7. EASTERN SEAL PARCHMENT "9" (Fourth Clue: 9 beside the crimson seal) */}
           <button
             type="button"
             aria-label="Eastern Seal Parchment 9 (Fourth Clue)"
@@ -375,10 +375,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '64.9%',
-              top: '37.0%',
+              left: '66.0%',
+              top: '38.0%',
               width: '8.0%',
-              height: '12.2%',
+              height: '15.5%',
             }}
           >
             <span className="sr-only">Inspect Parchment 9 Beside Seal</span>
@@ -387,7 +387,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 8. SOUTHEASTERN PARCHMENT "6" (Incidental Grave Marker) */}
+          {/* 8. SOUTHEASTERN PARCHMENT (Incidental Grave Marker - Numeral 6 Removed) */}
           <button
             type="button"
             aria-label="Southeastern Parchment 6"
@@ -397,15 +397,15 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '60.0%',
-              top: '55.2%',
-              width: '8.0%',
-              height: '11.1%',
+              left: '61.0%',
+              top: '55.0%',
+              width: '8.8%',
+              height: '14.0%',
             }}
           >
-            <span className="sr-only">Inspect Parchment 6</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
-              [6]
+            <span className="sr-only">Inspect Weathered Scrap</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-stone-500/80 text-[9px] font-mono font-bold text-stone-300 pointer-events-none">
+              📜
             </span>
           </button>
 
@@ -419,10 +419,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-red-500/15 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] group"
             style={{
-              left: '25.0%',
-              top: '56.1%',
-              width: '14.0%',
-              height: '12.0%',
+              left: '29.0%',
+              top: '55.0%',
+              width: '14.8%',
+              height: '17.5%',
             }}
           >
             <span className="sr-only">Inspect Wax-Sealed Letter</span>
@@ -449,10 +449,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/20 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] group"
             style={{
-              left: '65.9%',
+              left: '66.0%',
               top: '62.0%',
-              width: '11.0%',
-              height: '9.5%',
+              width: '13.0%',
+              height: '14.0%',
             }}
           >
             <span className="sr-only">{isCofferUnlocked ? 'Open Treasure Chest' : 'Locked Iron Coffer'}</span>
@@ -593,7 +593,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
       </footer>
 
       {/* ========================================================
-          MODAL 1: ANCIENT DIARY READING MODAL (Dual Page Spread)
+          MODAL 1: ANCIENT DIARY READING MODAL (Authentic Ancient Parchment)
          ======================================================== */}
       {isDiaryOpen && (
         <div
@@ -605,7 +605,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
         >
           <div
             role="document"
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl bg-gradient-to-b from-[#221006] via-[#140803] to-[#0a0301] border-2 border-amber-600/80 p-5 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-gradient-to-b from-[#221006] via-[#140803] to-[#0a0301] border-2 border-amber-600/80 p-5 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -636,106 +636,51 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               </button>
             </div>
 
-            {/* Dual Open Page Spread */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-2 p-4 sm:p-6 rounded-2xl bg-[#0e0603]/90 border border-amber-900/60 shadow-inner">
-              {/* Left Page: Gothic Cathedral & Lore */}
-              <div className="p-4 rounded-xl bg-[#1b0c05]/70 border border-amber-900/40 flex flex-col justify-between">
-                <div>
-                  <div className="text-[10px] font-cinzel font-bold text-amber-500 uppercase tracking-widest mb-1">
-                    FOLIO I &bull; THE BURIED VOW
-                  </div>
-                  <h4 className="font-cinzel text-sm font-bold text-amber-200 mb-2">
-                    The Cartel Exequies
-                  </h4>
-                  <p className="font-serif italic text-xs text-stone-300 leading-relaxed mb-4">
-                    Three wardens were laid beneath the frozen churchyard, each guarding a syllable of the sacred
-                    incantation. Many pages were scattered across the velvet casket when the sepulcher was disturbed, but
-                    only four true marks record the year the covenant was made.
+            {/* Ancient Vellum Folio Page */}
+            <div className="relative my-2 p-5 sm:p-8 rounded-2xl bg-gradient-to-b from-[#2a170b] via-[#1a0c05] to-[#120602] border border-amber-600/50 shadow-[inset_0_0_40px_rgba(0,0,0,0.85)] flex flex-col justify-between overflow-hidden">
+              {/* Ornate corner borders */}
+              <div className="absolute top-2 left-2 text-amber-500/40 text-lg pointer-events-none select-none">╔</div>
+              <div className="absolute top-2 right-2 text-amber-500/40 text-lg pointer-events-none select-none">╗</div>
+              <div className="absolute bottom-2 left-2 text-amber-500/40 text-lg pointer-events-none select-none">╚</div>
+              <div className="absolute bottom-2 right-2 text-amber-500/40 text-lg pointer-events-none select-none">╝</div>
+
+              <div className="max-w-2xl mx-auto text-center space-y-4">
+                <div className="text-[11px] font-cinzel font-bold text-amber-400/90 uppercase tracking-[0.25em]">
+                  ✦ TESTAMENTUM CUSTODIS • THE KEEPER’S CIPHER ✦
+                </div>
+
+                <div className="p-4 sm:p-6 rounded-xl bg-black/60 border border-amber-700/40 shadow-inner">
+                  <p className="font-serif italic text-sm sm:text-base text-amber-100/95 leading-relaxed tracking-wide">
+                    &ldquo;On the night the old covenant was sealed, four witnesses survived the keeper&rsquo;s final testimony.
+                    <br />
+                    <br />
+                    Begin with the mark that stands alone upon the crowned keeper.
+                    <br />
+                    Next, seek the scrap resting beyond the open folio, where the western hand once placed its seal.
+                    <br />
+                    Let its opposite, beneath the moonward arm, speak next.
+                    <br />
+                    Close the year with the numeral pressed beside the crimson seal beneath the remains.
+                    <br />
+                    <br />
+                    The scattered tallies elsewhere remember the dead, not the covenant.&rdquo;
                   </p>
-                </div>
 
-                {/* Cathedral Silhouette Sketch */}
-                <div className="my-2 p-3 rounded-lg bg-black/60 border border-amber-900/40 flex flex-col items-center justify-center text-center">
-                  <svg
-                    viewBox="0 0 200 80"
-                    className="w-full max-w-[200px] h-16 text-amber-600/70"
-                    fill="currentColor"
-                  >
-                    <path d="M 20,80 L 20,50 L 30,50 L 30,30 L 40,15 L 50,30 L 50,50 L 80,50 L 80,20 L 95,5 L 110,20 L 110,50 L 140,50 L 140,30 L 150,15 L 160,30 L 160,50 L 180,50 L 180,80 Z" />
-                    <rect x="90" y="55" width="10" height="25" fill="#000" />
-                    <circle cx="95" cy="35" r="7" fill="#000" />
-                  </svg>
-                  <span className="text-[9px] font-mono text-amber-400/80 mt-1">
-                    Sanctuary of the Four Keepers
-                  </span>
-                </div>
-
-                <div className="text-[10px] text-stone-400 font-mono text-center">
-                  &ldquo;Only the true year of the covenant shall loose the lock.&rdquo;
-                </div>
-              </div>
-
-              {/* Right Page: Astronomical Wheel & Exact Clue Text */}
-              <div className="p-4 rounded-xl bg-[#1b0c05]/70 border border-amber-900/40 flex flex-col justify-between">
-                <div>
-                  <div className="text-[10px] font-cinzel font-bold text-amber-500 uppercase tracking-widest mb-1">
-                    FOLIO II &bull; THE COVENANT YEAR
-                  </div>
-                  <h4 className="font-cinzel text-sm font-bold text-amber-200 mb-2">
-                    The Keeper&rsquo;s Cipher
-                  </h4>
-
-                  {/* Highlighted Exact Clue Passage */}
-                  <div className="p-3 rounded-xl bg-black/75 border border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)] mb-3">
-                    <p className="font-serif italic text-xs text-amber-100 leading-relaxed">
-                      &ldquo;On the night the old covenant was sealed, the year was recorded in four marks.
-                      <br />
-                      The solitary mark upon the keeper&rsquo;s brow opened the record.
-                      <br />
-                      Seven stood to the west, where the old parchment rested.
-                      <br />
-                      Four followed beneath the eastern moon.
-                      <br />
-                      Nine was the final mark, pressed beside the keeper&rsquo;s seal.
-                      <br />
-                      Thus was the year remembered.&rdquo;
-                    </p>
+                  <div className="mt-5 pt-3 border-t border-amber-800/40 text-amber-400 font-cinzel text-xs font-bold tracking-widest uppercase">
+                    &ldquo;Read the relics. Restore the forgotten year.&rdquo;
                   </div>
                 </div>
 
-                {/* Astronomical Dial Diagram */}
-                <div className="p-2 rounded-lg bg-black/60 border border-amber-900/40 flex items-center justify-center gap-3">
-                  <svg
-                    viewBox="0 0 60 60"
-                    className="w-12 h-12 text-amber-500/80 animate-[spin_60s_linear_infinite]"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <circle cx="30" cy="30" r="26" />
-                    <circle cx="30" cy="30" r="18" strokeDasharray="3 3" />
-                    <line x1="30" y1="4" x2="30" y2="56" />
-                    <line x1="4" y1="30" x2="56" y2="30" />
-                    <line x1="12" y1="12" x2="48" y2="48" />
-                    <line x1="12" y1="48" x2="48" y2="12" />
-                  </svg>
-                  <div className="text-[10px] font-mono text-stone-300">
-                    <div className="text-amber-300 font-bold">THE FOUR MARKS</div>
-                    <div>1 (Brow) &bull; 7 (West)</div>
-                    <div>4 (East) &bull; 9 (Seal)</div>
-                  </div>
-                </div>
-
-                <div className="text-[10px] text-amber-400/90 font-cinzel font-bold text-center mt-2">
-                  ✦ ENTER THE 4 DIGITS INTO THE COFFER TUMBLERS ✦
-                </div>
+                <p className="text-[11px] font-serif italic text-stone-400">
+                  Four signs alone reveal the covenant year. Align the four tumblers to loosen the ancient iron lock.
+                </p>
               </div>
             </div>
 
             {/* Modal Footer */}
             <div className="flex items-center justify-between border-t border-amber-900/40 pt-3 mt-2">
               <span className="text-[10px] font-mono text-stone-400">
-                Chronicle preserved in Grave II &bull; Solitary Brow (1) + West (7) + East (4) + Seal (9)
+                Preserved in Grave II &bull; Four marks forge the forgotten year
               </span>
               <button
                 type="button"
@@ -771,14 +716,14 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
                   BURIAL CHAMBER INSPECTION
                 </div>
                 <h3 className="text-base sm:text-lg font-cinzel font-black text-amber-100 tracking-wide">
-                  {inspectionItem === 'p7' && 'WESTERN MARKER — VII'}
-                  {inspectionItem === 'p8' && 'SCATTERED BURIAL PAGE — VIII'}
-                  {inspectionItem === 'p4' && 'EASTERN MOON MARKER — IV'}
-                  {inspectionItem === 'p3' && 'SCATTERED BURIAL PAGE — III'}
-                  {inspectionItem === 'p9' && 'EASTERN SEAL MARKER — IX'}
-                  {inspectionItem === 'p6' && 'SCATTERED BURIAL PAGE — VI'}
+                  {inspectionItem === 'p7' && 'WESTERN MARKER — VII (Digit 7)'}
+                  {inspectionItem === 'p8' && 'SCATTERED FOLIO SCRAP'}
+                  {inspectionItem === 'p4' && 'EASTERN MOON MARKER — IV (Digit 4)'}
+                  {inspectionItem === 'p3' && 'SCATTERED FOLIO SCRAP'}
+                  {inspectionItem === 'p9' && 'EASTERN SEAL MARKER — IX (Digit 9)'}
+                  {inspectionItem === 'p6' && 'SCATTERED FOLIO SCRAP'}
                   {inspectionItem === 'envelope' && 'WAX-SEALED CEMETERY DISPATCH'}
-                  {inspectionItem === 'skull' && 'CRANIUM OF THE SECOND KEEPER'}
+                  {inspectionItem === 'skull' && 'CRANIUM OF THE SECOND KEEPER — MARK I'}
                   {inspectionItem === 'chest_locked' && 'IRON COFFER COMBINATION LOCK'}
                 </h3>
               </div>
