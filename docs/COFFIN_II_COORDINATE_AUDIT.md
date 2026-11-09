@@ -74,3 +74,4 @@ Our geometric audit identified four specific mathematical and structural causes 
 
 **Pairwise Overlap Analysis:**
 $$\text{Total Tested Pairs} = \frac{11 \times 10}{2} = 55 \text{ pairs. Detected Overlaps} = \mathbf{0}.$$
+

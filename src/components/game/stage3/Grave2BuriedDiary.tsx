@@ -27,6 +27,7 @@ interface Grave2BuriedDiaryProps {
 export interface ImageEvidenceTarget {
   id: string;
   imageId: string;
+  points: string;
   ariaLabel: string;
   left: string;
   top: string;
@@ -45,6 +46,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'skull_mark',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1080,160 1200,150 1270,175 1310,230 1310,310 1280,370 1220,400 1150,400 1085,360 1060,300 1060,220',
     ariaLabel: 'Cranium of the Keeper: Marked Brow (First Clue)',
     left: '41.41%',
     top: '11.11%',
@@ -59,6 +61,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'number_7',
     imageId: 'coffin-02-buried-diary-master',
+    points: '680,440 885,430 905,615 695,635',
     ariaLabel: 'Western Parchment 7 (Second Clue)',
     left: '26.17%',
     top: '29.86%',
@@ -73,6 +76,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'number_4',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1495,375 1615,265 1715,315 1605,425',
     ariaLabel: 'Eastern Moon Parchment 4 (Third Clue)',
     left: '57.81%',
     top: '18.06%',
@@ -87,6 +91,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'number_3',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1565,525 1655,440 1765,490 1675,575',
     ariaLabel: 'Archival Parchment 3 (Burial Record)',
     left: '60.94%',
     top: '30.56%',
@@ -102,6 +107,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'number_9',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1615,685 1705,600 1790,650 1705,740',
     ariaLabel: 'Eastern Seal Parchment 9 (Fourth Clue)',
     left: '62.89%',
     top: '41.67%',
@@ -116,6 +122,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'ancient_diary',
     imageId: 'coffin-02-buried-diary-master',
+    points: '980,485 1230,480 1480,510 1520,770 1480,830 1225,875 960,860 925,680',
     ariaLabel: "Ancient Diary: Click to Read the Keeper's Chronicle",
     left: '35.94%',
     top: '33.33%',
@@ -130,6 +137,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'sealed_letter',
     imageId: 'coffin-02-buried-diary-master',
+    points: '760,985 1020,1030 935,1210 665,1160',
     ariaLabel: 'Folded Envelope with Red Wax Fleur-de-lis Seal',
     left: '25.78%',
     top: '68.06%',
@@ -144,6 +152,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'skeleton_key',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1275,1055 1330,960 1380,955 1460,1020 1445,1100 1370,1120 1290,1110',
     ariaLabel: 'Antique Brass Skeleton Key',
     left: '49.61%',
     top: '65.97%',
@@ -158,6 +167,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'compass_medallion',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1530,965 1610,970 1645,1040 1615,1125 1535,1135 1485,1070 1485,1010',
     ariaLabel: 'Ornate Astronomical Medallion',
     left: '57.62%',
     top: '66.67%',
@@ -172,6 +182,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'ancient_scroll',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1850,725 1960,750 2130,890 2060,930 1910,820 1805,785',
     ariaLabel: 'Ancient Rolled Scroll Tied with Scarlet Twine',
     left: '70.31%',
     top: '50.00%',
@@ -186,6 +197,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'treasure_chest',
     imageId: 'coffin-02-buried-diary-master',
+    points: '1670,980 1790,940 1950,970 1970,1100 1840,1135 1675,1090',
     ariaLabel: 'Locked Iron Coffer: Solve 4-digit covenant lock to unseal',
     left: '64.84%',
     top: '65.28%',
@@ -199,6 +211,10 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
       'A heavy iron-banded chest forged from black oak and cold steel. The four-tumbler combination mechanism locks the lid shut. Enter the four-digit covenant year below to release the tumblers.',
   },
 ];
+
+export const TARGET_REGISTRY: Record<string, ImageEvidenceTarget> = Object.fromEntries(
+  EVIDENCE_TARGETS.map((t) => [t.id, t])
+);
 
 export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   teamId,
@@ -310,27 +326,68 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
     }
   };
 
-  // Target Click & Interaction Handler (Central Typed Dispatcher)
-  const handleInteraction = (target: ImageEvidenceTarget) => {
-    soundController.playClick();
-    if (target.id === 'ancient_diary') {
+  // Authoritative typed action dictionary mapping each target ID to its exact handler (Phase 5)
+  const TARGET_ACTIONS: Record<string, () => void> = {
+    skull_mark: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['skull_mark']);
+    },
+    number_7: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_7']);
+    },
+    number_4: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_4']);
+    },
+    number_3: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_3']);
+    },
+    number_9: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_9']);
+    },
+    ancient_diary: () => {
       soundController.playParchmentOpen();
       setIsDiaryOpen(true);
-      return;
-    }
-    if (target.id === 'treasure_chest') {
+    },
+    sealed_letter: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['sealed_letter']);
+    },
+    skeleton_key: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['skeleton_key']);
+    },
+    compass_medallion: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['compass_medallion']);
+    },
+    ancient_scroll: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['ancient_scroll']);
+    },
+    treasure_chest: () => {
+      soundController.playClick();
       if (isCofferUnlocked) {
         setIsChestRewardOpen(true);
       } else {
-        setInspectedTarget(target);
+        setInspectedTarget(TARGET_REGISTRY['treasure_chest']);
       }
-      return;
+    },
+  };
+
+  const handleInteraction = (targetId: string) => {
+    const action = TARGET_ACTIONS[targetId];
+    if (action) {
+      action();
     }
-    setInspectedTarget(target);
   };
 
   // Developer calibration debug overlay (activate via ?debug=coffin2 in URL, hidden in production)
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [debugSelectedTarget, setDebugSelectedTarget] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -426,36 +483,86 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
           )}
 
           {/* ========================================================
-              ACCURATE INVISIBLE HTML CLICK INTERACTIONS (NO SVG, NO HOVER GLOWS)
-              11 Calibrated Targets (2560x1440 Master Coordinate System, 0 Overlaps)
+              CANONICAL INVISIBLE SVG INTERACTION GEOMETRY LAYER
+              Exact 2560x1440 Master Canvas Vector Space, 0 Overlaps
              ======================================================== */}
-          {EVIDENCE_TARGETS.map((target) => (
-            <button
-              key={target.id}
-              type="button"
-              data-target-id={target.id}
-              aria-label={target.ariaLabel}
-              onClick={() => handleInteraction(target)}
-              className={`absolute z-20 cursor-pointer outline-none focus:outline-none transition-none ${
-                isDebugMode
-                  ? 'border border-amber-400/80 bg-amber-400/20 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-                  : 'bg-transparent border-0 p-0 m-0'
-              }`}
-              style={{
-                left: target.left,
-                top: target.top,
-                width: target.width,
-                height: target.height,
-              }}
-            >
-              <span className="sr-only">{target.ariaLabel}</span>
-              {isDebugMode && (
-                <span className="absolute top-0.5 left-0.5 text-[9px] font-mono text-amber-200 bg-black/85 px-1 py-0.2 rounded border border-amber-500/60 leading-none pointer-events-none select-none">
-                  {target.id}
-                </span>
-              )}
-            </button>
-          ))}
+          <svg
+            viewBox="0 0 2560 1440"
+            preserveAspectRatio="none"
+            className="absolute inset-0 w-full h-full pointer-events-auto select-none"
+            aria-label="Burial chamber interactive objects"
+          >
+            {EVIDENCE_TARGETS.map((target) => {
+              const isSelectedInDebug = debugSelectedTarget === target.id;
+              return (
+                <polygon
+                  key={target.id}
+                  data-target-id={target.id}
+                  points={target.points}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={target.ariaLabel}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isDebugMode) {
+                      setDebugSelectedTarget(target.id);
+                    }
+                    handleInteraction(target.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleInteraction(target.id);
+                    }
+                  }}
+                  fill={
+                    isDebugMode
+                      ? isSelectedInDebug
+                        ? 'rgba(239, 68, 68, 0.4)'
+                        : 'rgba(245, 158, 11, 0.25)'
+                      : 'transparent'
+                  }
+                  stroke={isDebugMode ? (isSelectedInDebug ? '#ef4444' : '#f59e0b') : 'none'}
+                  strokeWidth={isDebugMode ? 3 : 0}
+                  strokeDasharray={isDebugMode ? '6 4' : undefined}
+                  pointerEvents="fill"
+                  className="cursor-pointer outline-none focus:outline-none transition-none"
+                />
+              );
+            })}
+
+            {/* Developer Calibration Overlay Badges (Hidden in Production) */}
+            {isDebugMode &&
+              EVIDENCE_TARGETS.map((target) => {
+                const firstPt = target.points.split(' ')[0].split(',');
+                const px = Number(firstPt[0]);
+                const py = Number(firstPt[1]);
+                return (
+                  <g key={`debug-label-${target.id}`} pointerEvents="none">
+                    <rect
+                      x={px - 4}
+                      y={py - 22}
+                      width={target.id.length * 11 + 16}
+                      height={20}
+                      fill="rgba(0,0,0,0.85)"
+                      stroke="#f59e0b"
+                      strokeWidth={1}
+                      rx={4}
+                    />
+                    <text
+                      x={px + 4}
+                      y={py - 8}
+                      fill="#fef08a"
+                      fontSize="12"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      {target.id}
+                    </text>
+                  </g>
+                );
+              })}
+          </svg>
         </div>
       </main>
 

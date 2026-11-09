@@ -30,3 +30,4 @@ for name, box in candidates.items():
     bw = x2 - x1
     bh = y2 - y1
     print(f"{name}: Box=({x1}, {y1}, {x2}, {y2}), Dim={bw}x{bh}, Pct=(left: {x1/w*100:.2f}%, top: {y1/h*100:.2f}%, width: {bw/w*100:.2f}%, height: {bh/h*100:.2f}%)")
+
