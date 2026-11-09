@@ -28,3 +28,4 @@ for name, (x1, y1, x2, y2) in boxes.items():
     pct_w = round(((x2 - x1) / w) * 100, 2)
     pct_h = round(((y2 - y1) / h) * 100, 2)
     print(f"'{name}': {{ left: '{pct_x}%', top: '{pct_y}%', width: '{pct_w}%', height: '{pct_h}%' }}, // crop: {crop.size}")
+

@@ -40,133 +40,161 @@ export interface ImageEvidenceTarget {
   statusBadge?: string;
 }
 
-// 10 Calibrated Image-Relative Interaction Targets (2560x1440 Master Coordinate System)
-const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
+// 11 Calibrated Image-Relative Interaction Targets (2560x1440 Master Coordinate System, 0 Overlaps)
+export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
-    id: 'skull',
+    id: 'skull_mark',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Cranium of the Keeper: Marked Brow (First Clue)',
-    left: '41.02%',
-    top: '10.42%',
-    width: '10.16%',
-    height: '18.75%',
+    left: '41.41%',
+    top: '11.11%',
+    width: '9.38%',
+    height: '15.97%',
     title: 'CRANIUM OF THE SECOND KEEPER',
     subtitle: 'Solitary Brow Marking: Roman Numeral I (First Digit: 1)',
-    imageSrc: '/assets/round-01/stage-03/inspection/skull.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/skull_mark.png',
     description:
       'Carved into the weathered frontal bone is a solitary Roman numeral "I", etched with ceremonial precision. The chronicle designates this as the mark that stands alone upon the crowned keeper—the first digit of the forgotten covenant year.',
   },
   {
-    id: 'paper_7',
+    id: 'number_7',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Western Parchment 7 (Second Clue)',
-    left: '25.78%',
-    top: '29.17%',
-    width: '10.16%',
-    height: '16.67%',
+    left: '26.17%',
+    top: '29.86%',
+    width: '8.59%',
+    height: '14.58%',
     title: 'WESTERN MARKER — VII (7)',
     subtitle: 'Western Folio Scrap (Second Digit: 7)',
-    imageSrc: '/assets/round-01/stage-03/inspection/paper_7.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/number_7.png',
     description:
       'An aged parchment slip resting beyond the open folio where the western arm was laid to rest. Inscribed with dark iron-gall ink is the numeral "7". In the keeper\'s chronicle, the western hand placed its seal directly after the solitary crown.',
   },
   {
-    id: 'paper_4',
+    id: 'number_4',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Eastern Moon Parchment 4 (Third Clue)',
-    left: '57.42%',
-    top: '17.36%',
-    width: '9.77%',
-    height: '14.58%',
+    left: '57.81%',
+    top: '18.06%',
+    width: '9.38%',
+    height: '11.81%',
     title: 'MOONWARD EASTERN SCRAP (4)',
     subtitle: 'Eastern Moon Sign (Third Digit: 4)',
-    imageSrc: '/assets/round-01/stage-03/inspection/paper_4.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/number_4.png',
     description:
       'Resting beneath the skeletal arm that points toward the nocturnal moonlit sky lies a vellum slip marked with the numeral "4". The chronicle declares that its opposite, beneath the moonward arm, speaks third.',
   },
   {
-    id: 'paper_3',
+    id: 'number_3',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Archival Parchment 3 (Burial Record)',
-    left: '60.55%',
-    top: '29.86%',
-    width: '9.77%',
-    height: '13.89%',
+    left: '60.94%',
+    top: '30.56%',
+    width: '8.59%',
+    height: '10.42%',
     title: 'ARCHIVAL GRAVE RECORD (3)',
     subtitle: 'Burial Record Scrap — Non-Covenant Distractor',
-    imageSrc: '/assets/round-01/stage-03/inspection/paper_3.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/number_3.png',
     isDistractor: true,
     description:
       'A fragmented burial tally recording three ceremonial censers buried during the second rites. A faded marginal note states: "Tally of mortuary offerings—unrecorded in the covenant of years." This scrap marks cemetery tribute rather than the four founding covenants.',
   },
   {
-    id: 'paper_9',
+    id: 'number_9',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Eastern Seal Parchment 9 (Fourth Clue)',
-    left: '61.72%',
-    top: '40.28%',
-    width: '7.81%',
-    height: '12.50%',
+    left: '62.89%',
+    top: '41.67%',
+    width: '7.23%',
+    height: '10.42%',
     title: 'CRIMSON-SEALED RECORD (9)',
     subtitle: 'Keeper\'s Seal Sign (Fourth Digit: 9)',
-    imageSrc: '/assets/round-01/stage-03/inspection/paper_9.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/number_9.png',
     description:
       'A weathered vellum fragment pinned firmly beneath the skeletal ribs beside a crimson wax seal. A bold numeral "9" is impressed upon its fiber. As the chronicle foretells: "Close the year with the numeral pressed beside the crimson seal beneath the remains." Positioned distinctly above the iron coffer.',
   },
   {
-    id: 'letter',
+    id: 'ancient_diary',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: "Ancient Diary: Click to Read the Keeper's Chronicle",
+    left: '35.94%',
+    top: '33.33%',
+    width: '23.83%',
+    height: '27.78%',
+    title: 'THE KEEPER’S CHRONICLE',
+    subtitle: 'Ancient Leather-Bound Folio',
+    imageSrc: '/assets/round-01/stage-03/inspection/ancient_diary.png',
+    description:
+      'The leather-bound diary of the Second Keeper. Within its illuminated pages lie the riddles and astronomical charts that govern the burial rites.',
+  },
+  {
+    id: 'sealed_letter',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Folded Envelope with Red Wax Fleur-de-lis Seal',
-    left: '27.34%',
-    top: '54.86%',
-    width: '16.02%',
-    height: '18.75%',
+    left: '25.78%',
+    top: '68.06%',
+    width: '14.45%',
+    height: '16.67%',
     title: 'WAX-SEALED CEMETERY DISPATCH',
     subtitle: 'Folded Vellum with Crimson Seal',
-    imageSrc: '/assets/round-01/stage-03/inspection/letter.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/sealed_letter.png',
     description:
       'A folded parchment letter secured with an unbroken crimson wax seal bearing the fleur-de-lis of the Cartel\'s founding house. The letter is addressed to the Keeper of the Graves, warning of betrayal before the winter freeze.',
   },
   {
-    id: 'key',
+    id: 'skeleton_key',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Antique Brass Skeleton Key',
     left: '49.61%',
-    top: '64.58%',
-    width: '10.94%',
-    height: '12.5%',
+    top: '65.97%',
+    width: '7.62%',
+    height: '12.50%',
     title: 'ORNATE SKELETON KEY',
     subtitle: 'Ceremonial Crypt Key',
-    imageSrc: '/assets/round-01/stage-03/inspection/key.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/skeleton_key.png',
     description:
       'An ornate brass skeleton key with intricate gothic wards. Testing the key against the iron coffer reveals that its warding is ceremonial—the coffer opens strictly via the 4-digit covenant lock mechanism.',
   },
   {
-    id: 'scroll',
+    id: 'compass_medallion',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Ornate Astronomical Medallion',
+    left: '57.62%',
+    top: '66.67%',
+    width: '6.84%',
+    height: '12.50%',
+    title: 'ASTRONOMICAL COMPASS MEDALLION',
+    subtitle: 'Engraved Celestial Talisman',
+    imageSrc: '/assets/round-01/stage-03/inspection/compass_medallion.png',
+    description:
+      'A finely wrought brass medallion depicting celestial alignments and compass cardinal bearings. An inscription around the rim honors the North Star.',
+  },
+  {
+    id: 'ancient_scroll',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Ancient Rolled Scroll Tied with Scarlet Twine',
     left: '70.31%',
     top: '50.00%',
-    width: '13.67%',
+    width: '13.28%',
     height: '14.58%',
     title: 'ANCIENT ROLLED SCROLL',
     subtitle: 'Crypt Catacomb Map',
-    imageSrc: '/assets/round-01/stage-03/inspection/scroll.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/ancient_scroll.png',
     description:
       'A parchment scroll tightly rolled and bound with scarlet twine. The seal remains intact, preserving architectural maps of the subterranean crypt network beneath the graveyard.',
   },
   {
-    id: 'chest',
+    id: 'treasure_chest',
     imageId: 'coffin-02-buried-diary-master',
     ariaLabel: 'Locked Iron Coffer: Solve 4-digit covenant lock to unseal',
-    left: '64.45%',
+    left: '64.84%',
     top: '65.28%',
-    width: '12.89%',
+    width: '12.50%',
     height: '13.89%',
     title: 'IRON-BANDED COFFER',
     subtitle: 'Locked Burial Chest',
     statusBadge: 'THE CHEST REMAINS SEALED.',
-    imageSrc: '/assets/round-01/stage-03/inspection/chest.png',
+    imageSrc: '/assets/round-01/stage-03/inspection/treasure_chest.png',
     description:
       'A heavy iron-banded chest forged from black oak and cold steel. The four-tumbler combination mechanism locks the lid shut. Enter the four-digit covenant year below to release the tumblers.',
   },
@@ -282,15 +310,36 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
     }
   };
 
-  // Target Click Handler
-  const handleTargetClick = (target: ImageEvidenceTarget) => {
+  // Target Click & Interaction Handler (Central Typed Dispatcher)
+  const handleInteraction = (target: ImageEvidenceTarget) => {
     soundController.playClick();
-    if (target.id === 'chest' && isCofferUnlocked) {
-      setIsChestRewardOpen(true);
+    if (target.id === 'ancient_diary') {
+      soundController.playParchmentOpen();
+      setIsDiaryOpen(true);
+      return;
+    }
+    if (target.id === 'treasure_chest') {
+      if (isCofferUnlocked) {
+        setIsChestRewardOpen(true);
+      } else {
+        setInspectedTarget(target);
+      }
       return;
     }
     setInspectedTarget(target);
   };
+
+  // Developer calibration debug overlay (activate via ?debug=coffin2 in URL, hidden in production)
+  const [isDebugMode, setIsDebugMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('debug') === 'coffin2' || params.get('debug') === 'true') {
+        setIsDebugMode(true);
+      }
+    }
+  }, []);
 
   // Close modals on Escape key
   useEffect(() => {
@@ -358,7 +407,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
           <img
             src="/assets/round-01/stage-03/coffin-02-buried-diary-master.png"
             alt="The Buried Diary - Pristine Coffin Environment"
-            className="w-full h-full object-contain pointer-events-none select-none"
+            className="w-full h-full object-cover pointer-events-none select-none"
           />
 
           {/* Golden Rays Effect when Coffer is Unlocked */}
@@ -366,9 +415,9 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             <div
               className="absolute z-10 pointer-events-none animate-pulse"
               style={{
-                left: '64.45%',
+                left: '64.84%',
                 top: '65.28%',
-                width: '12.89%',
+                width: '12.50%',
                 height: '13.89%',
                 background: 'radial-gradient(circle, rgba(245,158,11,0.5) 0%, rgba(245,158,11,0) 75%)',
                 filter: 'drop-shadow(0 0 25px rgba(245,158,11,0.9))',
@@ -378,35 +427,20 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
 
           {/* ========================================================
               ACCURATE INVISIBLE HTML CLICK INTERACTIONS (NO SVG, NO HOVER GLOWS)
+              11 Calibrated Targets (2560x1440 Master Coordinate System, 0 Overlaps)
              ======================================================== */}
-
-          {/* 1. ANCIENT DIARY (Opens ancient vellum reading modal) */}
-          <button
-            type="button"
-            aria-label="Ancient Diary: Click to Read the Keeper's Chronicle"
-            onClick={() => {
-              soundController.playParchmentOpen();
-              setIsDiaryOpen(true);
-            }}
-            className="absolute z-20 cursor-pointer bg-transparent border-0 p-0 m-0 outline-none focus:outline-none"
-            style={{
-              left: '35.94%',
-              top: '34.72%',
-              width: '23.83%',
-              height: '27.78%',
-            }}
-          >
-            <span className="sr-only">Ancient Diary: Click to Read the Keeper's Chronicle</span>
-          </button>
-
-          {/* 2-10. CALIBRATED EVIDENCE TARGETS (Pure HTML Click-Only Regions) */}
           {EVIDENCE_TARGETS.map((target) => (
             <button
               key={target.id}
               type="button"
+              data-target-id={target.id}
               aria-label={target.ariaLabel}
-              onClick={() => handleTargetClick(target)}
-              className="absolute z-20 cursor-pointer bg-transparent border-0 p-0 m-0 outline-none focus:outline-none"
+              onClick={() => handleInteraction(target)}
+              className={`absolute z-20 cursor-pointer outline-none focus:outline-none transition-none ${
+                isDebugMode
+                  ? 'border border-amber-400/80 bg-amber-400/20 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                  : 'bg-transparent border-0 p-0 m-0'
+              }`}
               style={{
                 left: target.left,
                 top: target.top,
@@ -415,6 +449,11 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               }}
             >
               <span className="sr-only">{target.ariaLabel}</span>
+              {isDebugMode && (
+                <span className="absolute top-0.5 left-0.5 text-[9px] font-mono text-amber-200 bg-black/85 px-1 py-0.2 rounded border border-amber-500/60 leading-none pointer-events-none select-none">
+                  {target.id}
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-Stage 03 (The Forgotten Graveyard) **Coffin II: The Buried Diary** ([`Grave2BuriedDiary.tsx`](file:///c:/Users/yashm/Downloads/winter%20arc/src/components/game/stage3/Grave2BuriedDiary.tsx)) has undergone a complete interaction overhaul:
+Stage 03 (The Forgotten Graveyard) **Coffin II: The Buried Diary** ([`Grave2BuriedDiary.tsx`](file:///c:/Users/yashm/Downloads/winter%20arc/src/components/game/stage3/Grave2BuriedDiary.tsx)) has undergone a complete interaction and coordinate overhaul:
 
 1. **Obsolete SVG & Hover System Completely Removed:**
    - Eradicated all SVG object outlines, SVG hit paths, SVG golden glow filters, animated borders, and GSAP SVG path tweens.
@@ -24,16 +24,19 @@ Stage 03 (The Forgotten Graveyard) **Coffin II: The Buried Diary** ([`Grave2Buri
      4. Middle Eastern Parchment: Inscribed numeral `3` (clearly established via inspection as an archival burial tally of offerings, distinct from the covenant year).
      5. Lower Eastern Parchment: Numeral `9` beside the crimson wax seal.
    - All numbers are authentic parts of the underlying image; zero HTML, SVG, or CSS badges are used.
-3. **Calibrated Image-Relative HTML Click Interactions:**
+3. **Calibrated Image-Relative HTML Click Interactions (11 Canonical Targets, Zero Overlaps):**
    - Replaced SVGs with transparent, accessible HTML buttons (`<button ... className="absolute z-20 cursor-pointer bg-transparent border-0 p-0 m-0 outline-none focus:outline-none">`).
    - Calibrated against the 2560 × 1440 coordinate space with normalized percentages.
-   - Zero collision/overlap between adjacent relics (e.g. Paper 9 vs Scroll vs Iron Coffer). Hovering or clicking on Paper 9 interacts strictly with Paper 9 and never targets the treasure chest.
-4. **Photographic Master Inspection Details:**
+   - Zero collision/overlap between adjacent relics across all 55 pairs. Hovering or clicking on `number_9` interacts strictly with `number_9` and never targets the treasure chest. Clicking `sealed_letter` never triggers `ancient_diary`.
+4. **Developer Calibration Debug Mode (`?debug=coffin2`):**
+   - Built-in developer overlay activated via URL query param `?debug=coffin2`.
+   - Outlines hitboxes with semi-transparent amber borders and target ID labels.
+   - Disabled/hidden in standard player production mode.
+5. **Photographic Master Inspection Details:**
    - Replaced all synthetic CSS cards/emojis with high-resolution crops from the 2560 × 1440 master artwork saved in [`public/assets/round-01/stage-03/inspection/`](file:///c:/Users/yashm/Downloads/winter%20arc/public/assets/round-01/stage-03/inspection/).
    - Inspecting the locked chest displays `"THE CHEST REMAINS SEALED."`
-5. **Clean Riddle Panel (Zero Answer Leaks):**
+6. **Clean Riddle Panel (Zero Answer Leaks):**
    - Initial tumblers set to `0000`.
-   - Removed the spoiling green success badge (`COVENANT (1749): "EMBER"`). The answer remains completely secret until the player solves it.
    - Correct covenant code is `1749`. On unlock, reveals golden particle rays, unlocks coffer, reveals syllable `EMBER`, and updates the Evidence Journal to `2/3`.
 
 ---
@@ -44,16 +47,17 @@ All coordinates are normalized to the 2560 × 1440 master coordinate system and 
 
 | Target ID | Object Description | Left | Top | Width | Height | Inspection Image | Role in Puzzle |
 |---|---|---|---|---|---|---|---|
-| `skull` | Cranium of Keeper | `41.02%` | `10.42%` | `10.16%` | `18.75%` | `inspection/skull.png` | First Clue: Roman Numeral `I` (= 1) |
-| `paper_7` | Western Folio Scrap | `25.78%` | `29.17%` | `10.16%` | `16.67%` | `inspection/paper_7.png` | Second Clue: Western Folio `7` |
-| `paper_4` | Moonward Eastern Scrap | `57.42%` | `17.36%` | `9.77%` | `14.58%` | `inspection/paper_4.png` | Third Clue: Eastern Moonward `4` |
-| `paper_3` | Archival Grave Record | `60.55%` | `29.86%` | `9.77%` | `13.89%` | `inspection/paper_3.png` | Non-Covenant Distractor: Burial Tally `3` |
-| `paper_9` | Crimson-Sealed Record | `61.72%` | `40.28%` | `7.81%` | `12.50%` | `inspection/paper_9.png` | Fourth Clue: Final Seal Numeral `9` |
-| `diary` | Open Leather-Bound Diary | `35.94%` | `34.72%` | `23.83%` | `27.78%` | `inspection/diary.png` | Keeper's Chronicle Reading Folio |
-| `letter` | Wax-Sealed Dispatch | `27.34%` | `54.86%` | `16.02%` | `18.75%` | `inspection/letter.png` | Lore: Cartel Fleur-de-lis Dispatch |
-| `key` | Antique Brass Skeleton Key | `49.61%` | `64.58%` | `10.94%` | `12.50%` | `inspection/key.png` | Lore: Ceremonial Crypt Key |
-| `scroll` | Ancient Rolled Scroll | `70.31%` | `50.00%` | `13.67%` | `14.58%` | `inspection/scroll.png` | Lore: Crypt Catacomb Map |
-| `chest` | Iron-Banded Coffer | `64.45%` | `65.28%` | `12.89%` | `13.89%` | `inspection/chest.png` | 4-Tumbler Lock / EMBER Reveal |
+| `skull_mark` | Cranium of Keeper | `41.41%` | `11.11%` | `9.38%` | `15.97%` | `inspection/skull_mark.png` | First Clue: Roman Numeral `I` (= 1) |
+| `number_7` | Western Folio Scrap | `26.17%` | `29.86%` | `8.59%` | `14.58%` | `inspection/number_7.png` | Second Clue: Western Folio `7` |
+| `number_4` | Moonward Eastern Scrap | `57.81%` | `18.06%` | `9.38%` | `11.81%` | `inspection/number_4.png` | Third Clue: Eastern Moonward `4` |
+| `number_3` | Archival Grave Record | `60.94%` | `30.56%` | `8.59%` | `10.42%` | `inspection/number_3.png` | Non-Covenant Distractor: Burial Tally `3` |
+| `number_9` | Crimson-Sealed Record | `62.89%` | `41.67%` | `7.23%` | `10.42%` | `inspection/number_9.png` | Fourth Clue: Final Seal Numeral `9` |
+| `ancient_diary` | Open Leather-Bound Diary | `35.94%` | `33.33%` | `23.83%` | `27.78%` | `inspection/ancient_diary.png` | Keeper's Chronicle Reading Folio |
+| `sealed_letter` | Wax-Sealed Dispatch | `25.78%` | `68.06%` | `14.45%` | `16.67%` | `inspection/sealed_letter.png` | Lore: Cartel Fleur-de-lis Dispatch |
+| `skeleton_key` | Ornate Brass Skeleton Key | `49.61%` | `65.97%` | `7.62%` | `12.50%` | `inspection/skeleton_key.png` | Lore: Ceremonial Crypt Key |
+| `compass_medallion` | Astronomical Medallion | `57.62%` | `66.67%` | `6.84%` | `12.50%` | `inspection/compass_medallion.png` | Lore: Astronomical Compass Medallion |
+| `ancient_scroll` | Ancient Rolled Scroll | `70.31%` | `50.00%` | `13.28%` | `14.58%` | `inspection/ancient_scroll.png` | Lore: Crypt Catacomb Map |
+| `treasure_chest` | Iron-Banded Coffer | `64.84%` | `65.28%` | `12.50%` | `13.89%` | `inspection/treasure_chest.png` | 4-Tumbler Lock / EMBER Reveal |
 
 ---
 
@@ -61,28 +65,32 @@ All coordinates are normalized to the 2560 × 1440 master coordinate system and 
 
 Each object's modal displays the true photograph crop from the master asset:
 
-1. **Skull Cranium (`skull`):**
+1. **Skull Cranium (`skull_mark`):**
    - Title: `CRANIUM OF THE SECOND KEEPER`
    - Subtitle: `Solitary Brow Marking: Roman Numeral I (First Digit: 1)`
    - Lore: *"Carved into the weathered frontal bone is a solitary Roman numeral 'I', etched with ceremonial precision. The chronicle designates this as the mark that stands alone upon the crowned keeper—the first digit of the forgotten covenant year."*
-2. **Western Parchment (`paper_7`):**
+2. **Western Parchment (`number_7`):**
    - Title: `WESTERN MARKER — VII (7)`
    - Subtitle: `Western Folio Scrap (Second Digit: 7)`
    - Lore: *"An aged parchment slip resting beyond the open folio where the western arm was laid to rest. Inscribed with dark iron-gall ink is the numeral '7'. In the keeper's chronicle, the western hand placed its seal directly after the solitary crown."*
-3. **Eastern Moonward Scrap (`paper_4`):**
+3. **Eastern Moonward Scrap (`number_4`):**
    - Title: `MOONWARD EASTERN SCRAP (4)`
    - Subtitle: `Eastern Moon Sign (Third Digit: 4)`
    - Lore: *"Resting beneath the skeletal arm that points toward the nocturnal moonlit sky lies a vellum slip marked with the numeral '4'. The chronicle declares that its opposite, beneath the moonward arm, speaks third."*
-4. **Middle Eastern Distractor Scrap (`paper_3`):**
+4. **Middle Eastern Distractor Scrap (`number_3`):**
    - Title: `ARCHIVAL GRAVE RECORD (3)`
    - Subtitle: `Burial Record Scrap — Non-Covenant Distractor`
    - Status Badge: `✦ ARCHIVAL BURIAL SCRAP • NOT PART OF THE COVENANT YEAR ✦`
    - Lore: *"A fragmented burial tally recording three ceremonial censers buried during the second rites. A faded marginal note states: 'Tally of mortuary offerings—unrecorded in the covenant of years.' This scrap marks cemetery tribute rather than the four founding covenants."*
-5. **Crimson-Sealed Scrap (`paper_9`):**
+5. **Crimson-Sealed Scrap (`number_9`):**
    - Title: `CRIMSON-SEALED RECORD (9)`
    - Subtitle: `Keeper's Seal Sign (Fourth Digit: 9)`
    - Lore: *"A weathered vellum fragment pinned firmly beneath the skeletal ribs beside a crimson wax seal. A bold numeral '9' is impressed upon its fiber. As the chronicle foretells: 'Close the year with the numeral pressed beside the crimson seal beneath the remains.' Positioned distinctly above the iron coffer."*
-6. **Locked Iron Coffer (`chest`):**
+6. **Astronomical Medallion (`compass_medallion`):**
+   - Title: `ASTRONOMICAL COMPASS MEDALLION`
+   - Subtitle: `Engraved Celestial Talisman`
+   - Lore: *"A finely wrought brass medallion depicting celestial alignments and compass cardinal bearings. An inscription around the rim honors the North Star."*
+7. **Locked Iron Coffer (`treasure_chest`):**
    - Status Badge: `THE CHEST REMAINS SEALED.`
    - Lore: *"A heavy iron-banded chest forged from black oak and cold steel. The four-tumbler combination mechanism locks the lid shut. Enter the four-digit covenant year below to release the tumblers."*
 
@@ -116,8 +124,11 @@ Full automated browser verification script executed at [`scripts/verify_coffin2_
 
 | Verification Check | Target / Action | Result | Captured Proof |
 |---|---|---|---|
+| **Debug Overlay Mode** | `?debug=coffin2` | Bounding boxes & badges visible | [`coffin2_debug_overlay_1920x1080.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_debug_overlay_1920x1080.png) |
 | **Zero SVGs in Coffin** | `div[style*="aspect-ratio"] svg` | Count: 0 (Pass) | [`coffin2_html_clean_1920x1080.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_html_clean_1920x1080.png) |
-| **Zero Hover Tooltips** | Hover all 10 targets | 0 popups / 0 glows (Pass) | Verified via Playwright hover loop |
+| **Zero Hover Tooltips** | Hover all 11 targets | 0 popups / 0 glows (Pass) | Verified via Playwright hover loop |
+| **Negative Click (9 vs Chest)** | Click in dead space (67%, 58%) | Neither 9 nor Chest opened | Passed |
+| **Negative Click (Letter vs Diary)** | Click in gap space (32%, 64%) | Neither Letter nor Diary opened | Passed |
 | **Inspect Skull** | Click skull button | Modal opens with Roman I | [`coffin2_inspect_skull.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_skull.png) |
 | **Inspect Paper 7** | Click paper 7 button | Modal opens with 7 | [`coffin2_inspect_paper7.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_paper7.png) |
 | **Inspect Paper 4** | Click paper 4 button | Modal opens with 4 | [`coffin2_inspect_paper4.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_paper4.png) |
@@ -126,6 +137,7 @@ Full automated browser verification script executed at [`scripts/verify_coffin2_
 | **Inspect Diary** | Click diary button | Opens Keeper's Chronicle folio | [`coffin2_inspect_diary.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_diary.png) |
 | **Inspect Letter** | Click letter button | Opens Fleur-de-lis dispatch | [`coffin2_inspect_letter.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_letter.png) |
 | **Inspect Key** | Click key button | Opens Skeleton Key lore | [`coffin2_inspect_key.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_key.png) |
+| **Inspect Medallion** | Click medallion button | Opens Compass Medallion lore | [`coffin2_inspect_compass_medallion.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_compass_medallion.png) |
 | **Inspect Scroll** | Click scroll button | Opens Rolled Scroll lore | [`coffin2_inspect_scroll.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_scroll.png) |
 | **Inspect Chest (Locked)** | Click chest before solve | Displays "THE CHEST REMAINS SEALED." | [`coffin2_inspect_chest_locked.png`](file:///c:/Users/yashm/Downloads/winter%20arc/docs/screenshots/coffin2_inspect_chest_locked.png) |
 | **Submit 0000** | Click UNLOCK | Displays tumbler jam toast | Verified |
@@ -141,5 +153,5 @@ Full automated browser verification script executed at [`scripts/verify_coffin2_
 
 - **TypeScript (`npx tsc -b`):** Passed with 0 errors.
 - **Vitest Suite (`Stage3ForgottenGraveyard.test.tsx`):** 5/5 tests passing.
-- **Vite Production Build (`npm run build`):** Succeeded in 4.51s.
-- **Git Commit:** Committed and ready for push.
+- **Full Vitest Suite:** 36/36 test files, 198/198 tests passing.
+- **Vite Production Build (`npm run build`):** Succeeded in 2.93s.
