@@ -62,8 +62,21 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
 
   return (
     <div
+      role="region"
+      aria-label={`${romanNumber}: ${title}`}
+      onMouseDown={(e) => {
+        // Prevent mouse click from triggering browser default focus ring / outline
+        e.preventDefault();
+      }}
       onClick={handleClick}
-      className="group relative flex flex-col items-center justify-center cursor-pointer select-none transition-all duration-300 transform hover:scale-[1.03] hover:-translate-y-1 focus:outline-none w-auto max-w-[240px] sm:max-w-[270px] md:max-w-[295px] lg:max-w-[320px] max-h-[min(54vh,480px)]"
+      className="coffin-card group relative flex flex-col items-center justify-center cursor-pointer select-none transition-all duration-300 transform hover:scale-[1.03] hover:-translate-y-1 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none w-auto max-w-[240px] sm:max-w-[270px] md:max-w-[295px] lg:max-w-[320px] max-h-[min(54vh,480px)]"
+      style={{
+        outline: 'none',
+        outlineWidth: 0,
+        outlineStyle: 'none',
+        boxShadow: 'none',
+        WebkitTapHighlightColor: 'transparent',
+      }}
     >
       {/* 1. Ambient Atmospheric Glow behind the Coffin */}
       <div
@@ -95,12 +108,24 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
         {/* 4. Interactive PLAY / INSPECT Button Slot (Seamlessly aligns with the artwork's carved action slot) */}
         <button
           type="button"
+          onMouseDown={(e) => {
+            // Prevent mouse click from triggering browser default focus ring outline
+            e.preventDefault();
+          }}
           onClick={(e) => {
             e.stopPropagation();
+            (e.currentTarget as HTMLElement).blur?.();
             handleClick();
           }}
           aria-label={accessibleGraveName}
-          className="absolute top-[88.4%] left-1/2 -translate-x-1/2 w-[50%] h-[8.8%] rounded-full cursor-pointer z-20 focus:outline-none flex items-center justify-center transition-all duration-200"
+          className="coffin-card-play-btn absolute top-[88.4%] left-1/2 -translate-x-1/2 w-[50%] h-[8.8%] rounded-full cursor-pointer z-20 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none flex items-center justify-center transition-all duration-200 select-none"
+          style={{
+            outline: 'none',
+            outlineWidth: 0,
+            outlineStyle: 'none',
+            boxShadow: 'none',
+            WebkitTapHighlightColor: 'transparent',
+          }}
         >
           {isDiscovered && (
             <div

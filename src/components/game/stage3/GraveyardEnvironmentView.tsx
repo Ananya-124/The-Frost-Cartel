@@ -136,9 +136,11 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
           {/* Evidence Journal Drawer Trigger */}
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={onOpenJournal}
             aria-label="Evidence Journal"
-            className="px-3.5 sm:px-4 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md"
+            className="px-3.5 sm:px-4 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+            style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
           >
             <span aria-hidden="true">📜</span>
             <span>Evidence Journal ({collectedFragments.length}/3)</span>
@@ -147,9 +149,11 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
           {/* Final Escape Gate Modal Trigger */}
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={onOpenFinalGate}
             aria-label="Final Escape Gate"
-            className={`px-3.5 sm:px-4 py-1.5 rounded-full font-cinzel text-xs font-black uppercase tracking-widest transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md ${getGateButtonStyles()}`}
+            className={`px-3.5 sm:px-4 py-1.5 rounded-full font-cinzel text-xs font-black uppercase tracking-widest transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none ${getGateButtonStyles()}`}
+            style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
           >
             <span aria-hidden="true">⛩️</span>
             <span>{getGateButtonText()}</span>
@@ -161,8 +165,10 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
           {onSkipStage && (
             <button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={onSkipStage}
-              className="px-3 py-1.5 rounded-full bg-stone-900/70 hover:bg-stone-800 border border-stone-700 text-stone-400 hover:text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-all cursor-pointer backdrop-blur-md"
+              className="px-3 py-1.5 rounded-full bg-stone-900/70 hover:bg-stone-800 border border-stone-700 text-stone-400 hover:text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-all cursor-pointer backdrop-blur-md outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+              style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
             >
               Skip Stage
             </button>
@@ -170,12 +176,14 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
 
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               soundController.playClick();
               onReturnDashboard();
             }}
             aria-label="Round Dashboard"
-            className="px-4 sm:px-5 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-500/80 hover:border-amber-400 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md"
+            className="px-4 sm:px-5 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-500/80 hover:border-amber-400 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+            style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
           >
             <span aria-hidden="true">🏆</span>
             <span>ROUND DASHBOARD</span>

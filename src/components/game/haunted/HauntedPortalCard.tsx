@@ -81,6 +81,10 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
     <div
       role="button"
       tabIndex={0}
+      onMouseDown={(e) => {
+        // Prevent mouse click from triggering browser default focus ring / outline
+        e.preventDefault();
+      }}
       onClick={onEnterStage}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -89,7 +93,14 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
         }
       }}
       aria-label={`Enter Stage ${stageNumber}: ${title}`}
-      className="group relative flex flex-col items-center justify-center w-[230px] xs:w-[250px] sm:w-[270px] md:w-[285px] lg:w-[305px] select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-3xl"
+      className="group relative flex flex-col items-center justify-center w-[230px] xs:w-[250px] sm:w-[270px] md:w-[285px] lg:w-[305px] select-none cursor-pointer outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none rounded-3xl"
+      style={{
+        outline: 'none',
+        outlineWidth: 0,
+        outlineStyle: 'none',
+        boxShadow: 'none',
+        WebkitTapHighlightColor: 'transparent',
+      }}
     >
       {/* 1. Supernatural Ambient Atmospheric Vapors / Back-Aura */}
       <div

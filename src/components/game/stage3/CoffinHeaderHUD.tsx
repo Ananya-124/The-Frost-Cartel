@@ -54,10 +54,12 @@ export const CoffinHeaderHUD: React.FC<CoffinHeaderHUDProps> = ({
         {/* Audio Toggle */}
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
           title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-          className="w-8 h-8 rounded-full bg-black/80 border border-amber-600/70 hover:border-amber-400 text-amber-300 flex items-center justify-center text-xs transition-colors cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.8)] backdrop-blur-sm"
+          className="w-8 h-8 rounded-full bg-black/80 border border-amber-600/70 hover:border-amber-400 text-amber-300 flex items-center justify-center text-xs transition-colors cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.8)] backdrop-blur-sm outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+          style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
         >
           {isMuted ? '🔇' : '🔊'}
         </button>
@@ -65,12 +67,14 @@ export const CoffinHeaderHUD: React.FC<CoffinHeaderHUDProps> = ({
         {/* Exit Stage */}
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             soundController.playClick();
             onReturnDashboard();
           }}
           aria-label="Exit Stage"
-          className="px-4 py-1.5 rounded-full bg-black/80 hover:bg-red-950/80 border border-stone-600 hover:border-red-500 text-stone-200 hover:text-white font-cinzel text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md backdrop-blur-sm"
+          className="px-4 py-1.5 rounded-full bg-black/80 hover:bg-red-950/80 border border-stone-600 hover:border-red-500 text-stone-200 hover:text-white font-cinzel text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md backdrop-blur-sm outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+          style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
         >
           EXIT
         </button>
