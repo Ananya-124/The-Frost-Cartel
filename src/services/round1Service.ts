@@ -418,6 +418,11 @@ export class Round1Service {
     return session;
   }
 
+  resetTeamProgress(teamId: string): void {
+    this.teamStates.delete(teamId);
+    this.persistToStorage();
+  }
+
   /**
    * Compute exact remaining time in seconds using timestamp-based deadlines.
    */

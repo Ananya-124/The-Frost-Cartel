@@ -25,6 +25,12 @@ describe('pumpkin shuffle logic', () => {
     expect(Math.min(...plan)).toBeGreaterThanOrEqual(200);
   });
 
+  it('uses a quicker shuffle cadence for a 10-second trial', () => {
+    const plan = buildShufflePlan(10000);
+    expect(plan.reduce((a, b) => a + b, 0)).toBe(10000);
+    expect(plan.length).toBeGreaterThanOrEqual(16);
+  });
+
   it('handles tiny and invalid durations', () => {
     expect(buildShufflePlan(0)).toEqual([]);
     expect(buildShufflePlan(100)).toEqual([100]);

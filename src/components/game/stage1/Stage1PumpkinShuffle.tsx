@@ -5,7 +5,8 @@ import { round1Service } from '../../../services/round1Service';
 import { soundController } from '../../../utils/soundController';
 import { SkipStageModal } from '../common/SkipStageModal';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
-import { CandleSvg, PumpkinBaseBack, PumpkinBaseFront, PumpkinSvg, S1Defs, ShardSvg, SkullSvg } from './PumpkinArt';
+import { LedClock } from './LedClock';
+import { PumpkinSvg, S1Defs, SkullSvg } from './PumpkinArt';
 import {
   buildShufflePlan,
   clampPumpkinCount,
@@ -36,16 +37,24 @@ const LEAD_MS = 700; // pause before the skull is shown, and after it is hidden 
 const SMASH_MS = 450; // how long the pumpkin shakes before it bursts
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 
-const FRAGS = [
-  { s: 0, dx: -62, up: -70, down: 30, rot: '-220deg', sz: 26, delay: '0s', dur: '1.05s' },
-  { s: 1, dx: -34, up: -96, down: 36, rot: '160deg', sz: 22, delay: '0.02s', dur: '1.15s' },
-  { s: 2, dx: -8, up: -108, down: 26, rot: '-90deg', sz: 20, delay: '0s', dur: '1.2s' },
-  { s: 3, dx: 22, up: -98, down: 34, rot: '200deg', sz: 24, delay: '0.03s', dur: '1.1s' },
-  { s: 4, dx: 52, up: -82, down: 28, rot: '-160deg', sz: 22, delay: '0.01s', dur: '1.05s' },
-  { s: 5, dx: 76, up: -54, down: 38, rot: '120deg', sz: 26, delay: '0.02s', dur: '1s' },
-  { s: 1, dx: -84, up: -40, down: 40, rot: '260deg', sz: 17, delay: '0.04s', dur: '0.95s' },
-  { s: 3, dx: 92, up: -36, down: 42, rot: '-240deg', sz: 17, delay: '0.03s', dur: '0.95s' },
+const SHARD_GRID = [
+  [[0, 0], [25, 0], [50, 0], [76, 0], [100, 0]],
+  [[0, 24], [22, 27], [52, 22], [77, 28], [100, 23]],
+  [[0, 50], [27, 47], [49, 53], [76, 48], [100, 52]],
+  [[0, 75], [23, 78], [53, 72], [75, 78], [100, 74]],
+  [[0, 100], [26, 100], [49, 100], [77, 100], [100, 100]],
 ];
+const SHELL_SHARDS = SHARD_GRID.slice(0, 4).flatMap((row, y) =>
+  row.slice(0, 4).map((_, x) => {
+    const points = [row[x], row[x + 1], SHARD_GRID[y + 1][x + 1], SHARD_GRID[y + 1][x]];
+    const polygon = points.map(([px, py]) => `${px}% ${py}%`).join(', ');
+    const dx = (x - 1.5) * 42 + (y % 2 ? 10 : -8);
+    const dy = (y - 1.5) * 36 - 28 - (x % 2) * 12;
+    const rotation = (x * 17 - y * 13) + (x % 2 ? 19 : -16);
+    return { polygon, dx, dy, rotation, delay: (x + y) * 0.012 };
+  })
+);
+
 const EMBERS = [
   { ex: -26, ey: -70, delay: '0.5s' },
   { ex: 18, ey: -84, delay: '0.65s' },
@@ -54,6 +63,16 @@ const EMBERS = [
   { ex: -34, ey: -50, delay: '1.1s' },
   { ex: 6, ey: -76, delay: '1.25s' },
 ];
+const SEEDS = Array.from({ length: 12 }, (_, i) => {
+  const angle = (i / 12) * Math.PI * 2;
+  const distance = 48 + (i % 3) * 15;
+  return {
+    dx: Math.round(Math.cos(angle) * distance),
+    dy: Math.round(Math.sin(angle) * distance - 25),
+    rotation: (i * 47) % 180,
+    delay: `${(i % 4) * 0.025}s`,
+  };
+});
 
 const NOTICE: Record<string, string> = {
   expired: 'The round timer has ended — no more credits can be earned.',
@@ -68,13 +87,10 @@ const fmt = (secs: number) => `${Math.floor(secs / 60).toString().padStart(2, '0
 const vars = (o: Record<string, string | number>) => o as unknown as React.CSSProperties;
 const cloneState = (s: Stage1State): Stage1State => ({ trials: s.trials.map((t) => ({ ...t })) });
 
-const ClockIcon = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" strokeLinecap="round" /></svg>
-);
 const SoundIcon = ({ muted }: { muted: boolean }) => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M4 10v4h4l5 4V6l-5 4H4z" />
-    {muted ? <path d="M17 9l4 6M21 9l-4 6" /> : <path d="M16.5 9a4 4 0 010 6M19 6.5a8 8 0 010 11" />}
+    {muted ? <path fill="none" d="M17 9l4 6M21 9l-4 6" /> : <path fill="none" d="M16.5 9a4 4 0 010 6M19 6.5a8 8 0 010 11" />}
   </svg>
 );
 const Pips: React.FC<{ used: number; total: number }> = ({ used, total }) => (
@@ -315,6 +331,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
   const totalEarned = state.trials.reduce((a, t) => a + t.earnedCredits, 0);
   const totalPossible = trials.reduce((a, t) => a + t.reward, 0);
   const isLastTrial = trialIdx >= trials.length - 1;
+  const allClosed = state.trials.every((t) => t.status !== 'pending');
 
   const titles: Record<Phase, { title: string; hint: string }> = {
     intro: { title: `Trial ${ROMAN[trialIdx]} — ${count} pumpkins`, hint: 'A skull rests under one pumpkin. Watch where it goes, follow the shuffle, then smash the right one.' },
@@ -332,71 +349,85 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
   return (
     <div className="relative flex-1 flex flex-col text-cartel-bone font-sans">
       <S1Defs />
+      {/* Original background, untouched */}
       <HauntedGraveyardAtmosphere />
-      <div className="absolute inset-0 bg-black/60 pointer-events-none" aria-hidden="true" />
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 55%, transparent 35%, rgba(0,0,0,0.65) 100%)' }} aria-hidden="true" />
 
-      <div className="relative z-10 flex-1 flex flex-col max-w-3xl w-full mx-auto px-4 py-4 sm:py-5">
+      <div className="relative z-10 flex-1 flex flex-col w-full max-w-6xl mx-auto px-4 py-4 sm:py-5">
         {/* Top bar */}
-        <header className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-          <div>
-            <div className="font-cinzel text-[10px] tracking-[0.22em] text-[#b88a52] uppercase">Round 1 · Stage 1</div>
-            <h1 className="font-cinzel text-lg sm:text-xl tracking-[0.12em] uppercase text-[#e6d6b6]">{config.title}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 font-mono text-xs px-2.5 py-1.5 rounded-sm border ${secondsRemaining <= 60 ? 'border-red-500/50 text-red-300' : 'border-white/15 text-cartel-silver'}`} aria-label="Round time left">
-              <ClockIcon />{fmt(Math.max(0, secondsRemaining))}
+        <header className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-start gap-x-6 gap-y-3">
+          <div className="hidden lg:block" aria-hidden="true" />
+
+          <div className="order-2 lg:order-none text-center">
+            <div className="s1-label">
+              Stage 01 of 03 <span aria-hidden="true">•</span> {totalPossible} credits
+              {allClosed && <span> <span aria-hidden="true">•</span> {totalEarned} earned <span aria-hidden="true">✓</span></span>}
             </div>
-            <button type="button" onClick={() => setIsMuted(soundController.toggleMute())} aria-label={isMuted ? 'Unmute sounds' : 'Mute sounds'} className="s1-btn-ghost !px-2.5 !py-1.5">
+            <h1 className="s1-title mt-1">{config.title}</h1>
+          </div>
+
+          <div className="order-1 lg:order-none justify-self-center lg:justify-self-end flex flex-wrap items-center justify-center gap-2.5">
+            <LedClock value={fmt(Math.max(0, secondsRemaining))} warn={secondsRemaining <= 60} label={`Round time left ${fmt(Math.max(0, secondsRemaining))}`} />
+            <button type="button" onClick={() => setIsMuted(soundController.toggleMute())} aria-label={isMuted ? 'Unmute sounds' : 'Mute sounds'} className="s1-icon-btn">
               <SoundIcon muted={isMuted} />
             </button>
-            <button type="button" onClick={() => setIsSkipModalOpen(true)} className="s1-btn-ghost !py-1.5 !px-3 !text-[10px]">Skip stage</button>
-            <button type="button" onClick={onReturnDashboard} className="s1-btn-ghost !py-1.5 !px-3 !text-[10px]">Dashboard</button>
+            <button type="button" onClick={() => setIsSkipModalOpen(true)} className="s1-btn-outline">Skip stage</button>
+            <button type="button" onClick={onReturnDashboard} className="s1-btn-outline">Round dashboard</button>
           </div>
         </header>
 
         {/* Trial progress */}
-        <nav className="flex flex-wrap items-center gap-2 mt-3" aria-label="Trials">
+        <nav className="flex flex-wrap items-center justify-center gap-2 mt-4" aria-label="Trials">
           {trials.map((t, i) => {
             const st = state.trials[i];
-            const cls = st.status === 'won' ? 's1-pill-won' : st.status === 'lost' ? 's1-pill-lost' : i === trialIdx && phase !== 'summary' ? 's1-pill-active' : '';
+            const cls = st.status === 'won' ? 's1-chip-won' : st.status === 'lost' ? 's1-chip-lost' : i === trialIdx && phase !== 'summary' ? 's1-chip-active' : '';
             const mark = st.status === 'won' ? ' ✓' : st.status === 'lost' ? ' ✕' : '';
             return (
-              <span key={i} className={`s1-pill ${cls}`}>
+              <span key={i} className={`s1-chip ${cls}`}>
                 Trial {ROMAN[i]} · {t.pumpkins} pumpkins · {t.reward} CR{mark}
               </span>
             );
           })}
           {phase !== 'summary' && (
-            <span className="ml-auto font-cinzel text-[10px] tracking-[0.16em] uppercase text-[#a89c82] flex items-center gap-2">
+            <span className="s1-chip flex items-center gap-2">
               Tries <Pips used={trialState.attemptsUsed} total={trial.tries} />
             </span>
           )}
         </nav>
 
         {/* Status */}
-        <section className="text-center mt-4 mb-1 min-h-[72px]" aria-live="polite">
-          <h2 className="font-cinzel text-base sm:text-lg tracking-[0.14em] uppercase text-[#eadcc0]">{titles[phase].title}</h2>
-          {titles[phase].hint && <p className="text-xs text-[#a89c82] mt-1 max-w-md mx-auto leading-relaxed">{titles[phase].hint}</p>}
+        <section className="text-center mt-5 mb-1 min-h-[84px]" aria-live="polite">
+          <h2 className="s1-head text-2xl sm:text-3xl">{titles[phase].title}</h2>
+          {titles[phase].hint && <p className="s1-body text-base sm:text-lg mt-1 max-w-md mx-auto leading-snug">{titles[phase].hint}</p>}
           {phase === 'shuffle' && (
-            <div className="mt-2.5 max-w-xs mx-auto">
-              <div className="flex justify-between font-cinzel text-[10px] tracking-[0.2em] text-[#b88a52] mb-1"><span>SHUFFLING</span><span className="tabular-nums">{fmt(shuffleLeft)}</span></div>
+            <div className="mt-3 max-w-xs mx-auto">
+              <div className="s1-head flex justify-between text-xs tracking-[0.2em] mb-1.5"><span>Shuffling</span><span className="tabular-nums">{fmt(shuffleLeft)}</span></div>
               <div className="s1-bar" role="progressbar" aria-label="Shuffle progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
             </div>
           )}
         </section>
 
-        {/* The table */}
+        {/* The stage: pumpkins on a mossy stone ledge */}
         {phase !== 'summary' && (
-          <div className="s1-altar" style={vars({ '--n': count })} role="group" aria-label="Pumpkins" onKeyDown={onGroupKey}>
-            <div className="s1-wall" aria-hidden="true" />
-            <div className="s1-top" aria-hidden="true" />
-            <div className="s1-front" aria-hidden="true" />
-            <div className="s1-light l" aria-hidden="true" />
-            <div className="s1-light r" aria-hidden="true" />
-            <CandleSvg className="s1-candle l" />
-            <CandleSvg className="s1-candle r" />
-
+          <div className="s1-altar w-full max-w-2xl mx-auto" style={vars({ '--n': count })} role="group" aria-label="Pumpkins" onKeyDown={onGroupKey}>
+            <div className="s1-ledge" aria-hidden="true" />
+            <div className="s1-candle s1-candle-left" aria-hidden="true">
+              <span className="s1-candle-flame" />
+              <span className="s1-candle-wick" />
+              <span className="s1-candle-body">
+                <span className="s1-wax-drip s1-wax-drip-one" />
+                <span className="s1-wax-drip s1-wax-drip-two" />
+              </span>
+              <span className="s1-candle-foot" />
+            </div>
+            <div className="s1-candle s1-candle-right" aria-hidden="true">
+              <span className="s1-candle-flame" />
+              <span className="s1-candle-wick" />
+              <span className="s1-candle-body">
+                <span className="s1-wax-drip s1-wax-drip-two" />
+                <span className="s1-wax-drip s1-wax-drip-one" />
+              </span>
+              <span className="s1-candle-foot" />
+            </div>
             <div className="s1-cells">
               {slots.map((slot, id) => {
                 const isBroken = broken === id;
@@ -408,6 +439,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
                     className={`s1-cell ${lifted === id ? 's1-lifted' : ''} ${idle ? 's1-idle' : ''} ${isBroken && !burst ? 's1-shaking' : ''}`}
                     style={vars({ '--swap-ms': `${swapMs}ms`, '--d': `${-id * 0.9}s`, transform: `translateX(${slot * 100}%)`, zIndex: front === id || isBroken ? 5 : 1 })}
                   >
+                    {!(isBroken && burst) && <span className="s1-pool" aria-hidden="true" />}
                     <span className="s1-shadow" aria-hidden="true" />
 
                     {/* the skull lies on the table only while it is meant to be seen */}
@@ -432,19 +464,51 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
                       </button>
                     )}
 
+                    {isBroken && (
+                      <span className={`s1-blast ${burst ? 's1-blast-burst' : ''}`} aria-hidden="true">
+                        <span className="s1-blast-flash" />
+                        <span className="s1-blast-core" />
+                        {Array.from({ length: 7 }, (_, i) => <span key={i} className={`s1-blast-smoke s1-blast-smoke-${i + 1}`} />)}
+                        {burst && (
+                          <span className="s1-fragment-layer">
+                            {SHELL_SHARDS.map((shard, i) => (
+                              <span
+                                key={i}
+                                className="s1-shell-shard"
+                                style={vars({
+                                  '--clip': `polygon(${shard.polygon})`,
+                                  '--dx': `${shard.dx}px`,
+                                  '--dy': `${shard.dy}px`,
+                                  '--rot': `${shard.rotation}deg`,
+                                  '--shard-delay': `${shard.delay}s`,
+                                })}
+                              >
+                                <PumpkinSvg className="s1-shard-image" />
+                              </span>
+                            ))}
+                            {SEEDS.map((seed, i) => (
+                              <span
+                                key={`seed-${i}`}
+                                className={`s1-seed s1-seed-${i + 1}`}
+                                style={vars({
+                                  '--dx': `${seed.dx}px`,
+                                  '--dy': `${seed.dy}px`,
+                                  '--rot': `${seed.rotation}deg`,
+                                  '--shard-delay': seed.delay,
+                                })}
+                              />
+                            ))}
+                          </span>
+                        )}
+                      </span>
+                    )}
+
                     {isBroken && burst && (
                       <>
                         <span className="s1-stack s1-broken">
                           {hasSkull && <span className="s1-glow" aria-hidden="true" />}
-                          <PumpkinBaseBack className="s1-layer s1-l1" />
                           {hasSkull && <span className="s1-skull-clip"><span className="s1-skull-emerge"><SkullSvg className="s1-skull-img" /></span></span>}
-                          <PumpkinBaseFront className="s1-layer s1-l3" />
                         </span>
-                        {FRAGS.map((f, i) => (
-                          <span key={i} className="s1-frag" style={vars({ '--dx': f.dx, '--up': f.up, '--down': f.down, '--rot': f.rot, '--sz': f.sz, '--delay': f.delay, '--dur': f.dur })}>
-                            <span className="s1-frag-y"><ShardSvg index={f.s} /></span>
-                          </span>
-                        ))}
                         {[0, 0.12, 0.26].map((d, i) => <span key={d} className="s1-dust" style={vars({ '--delay': `${d}s`, '--dxp': `${(i - 1) * 14}px` })} />)}
                         {hasSkull && EMBERS.map((e, i) => <span key={i} className="s1-ember" style={vars({ '--ex': e.ex, '--ey': e.ey, '--delay': e.delay })} />)}
                       </>
@@ -453,44 +517,45 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
                 );
               })}
             </div>
+            <div className="s1-fogband" aria-hidden="true" />
           </div>
         )}
 
         {/* Controls / results */}
-        <section className="mt-5 flex flex-col items-center text-center gap-3">
+        <section className="mt-6 flex flex-col items-center text-center gap-3">
           {phase === 'intro' && (
-            <div className="s1-panel px-6 py-4 max-w-md w-full">
-              <p className="font-cinzel text-xs tracking-[0.16em] uppercase text-[#d8c7a4]">
-                {trial.reward} credits · {trial.tries} tries · {Math.round(shuffleMs / 1000)}s shuffle
-              </p>
-              <p className="text-xs text-[#a89c82] mt-1.5">
-                {trialState.attemptsUsed === 0 ? 'The skull is shown once. A try is used as soon as the trial starts.' : `${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left in this trial.`}
-              </p>
-              {(expired || notice) && <p className="text-xs text-red-300 mt-2">{notice ?? NOTICE.expired}</p>}
-              <button type="button" onClick={startAttempt} disabled={expired || triesLeft <= 0} className="s1-btn-primary mt-3">
+            <div className="s1-panel px-6 py-4 max-w-lg w-full">
+              <button type="button" onClick={startAttempt} disabled={expired || triesLeft <= 0} className="s1-btn-primary">
                 {trialState.attemptsUsed === 0 ? `Begin trial ${ROMAN[trialIdx]}` : 'Take the next try'}
               </button>
+              <p className="s1-label mt-3 !text-[12px]">
+                {trial.reward} credits · {trial.tries} tries · {Math.round(shuffleMs / 1000)}s shuffle
+              </p>
+              <p className="s1-body text-base mt-1.5 leading-snug">
+                {trialState.attemptsUsed === 0 ? 'The skull is shown once. A try is used as soon as the trial starts.' : `${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left in this trial.`}
+              </p>
+              {(expired || notice) && <p className="s1-body text-sm text-red-300 mt-2">{notice ?? NOTICE.expired}</p>}
             </div>
           )}
 
           {phase === 'missed' && (
-            <div className="s1-panel px-6 py-4 max-w-md w-full">
-              <p className="font-cinzel text-xs tracking-[0.16em] uppercase text-[#d8c7a4]">One try left</p>
-              <p className="text-xs text-[#a89c82] mt-1.5">Win this trial on the last try and the {trial.reward} credits are still yours.</p>
-              <button type="button" onClick={startAttempt} disabled={expired} className="s1-btn-primary mt-3">Take the last try</button>
+            <div className="s1-panel px-6 py-4 max-w-lg w-full">
+              <button type="button" onClick={startAttempt} disabled={expired} className="s1-btn-primary">Take the last try</button>
+              <p className="s1-label mt-3 !text-[12px]">One try left</p>
+              <p className="s1-body text-base mt-1 leading-snug">Win this trial on the last try and the {trial.reward} credits are still yours.</p>
             </div>
           )}
 
           {phase === 'trial_end' && lastResult && (
-            <div className="s1-panel px-6 py-4 max-w-md w-full">
-              <p className="font-cinzel text-sm tracking-[0.14em] uppercase text-[#eadcc0]">
+            <div className="s1-panel px-6 py-4 max-w-lg w-full">
+              <p className="s1-head text-2xl">
                 {lastResult.won ? (lastResult.awarded > 0 ? `+${lastResult.awarded} credits` : 'Solved — no credits (timer ended)') : 'No credits this trial'}
               </p>
-              <p className="text-xs text-[#a89c82] mt-1.5">
+              <p className="s1-body text-base mt-1 leading-snug">
                 {lastResult.won ? `The skull was found in ${trialState.attemptsUsed} ${trialState.attemptsUsed === 1 ? 'try' : 'tries'}.` : 'Both tries are used up.'}
                 {!isLastTrial ? ` Trial ${ROMAN[trialIdx + 1]} has ${clampPumpkinCount(trials[trialIdx + 1].pumpkins)} pumpkins and is worth ${trials[trialIdx + 1].reward} credits.` : ''}
               </p>
-              <button type="button" onClick={continueAfterTrial} className="s1-btn-primary mt-3">
+              <button type="button" onClick={continueAfterTrial} className="s1-btn-primary mt-4">
                 {state.trials.some((t) => t.status === 'pending') ? `Continue to trial ${ROMAN[trialIdx + 1]}` : 'See the result'}
               </button>
             </div>
@@ -498,18 +563,18 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
 
           {phase === 'summary' && (
             <div className="s1-panel px-7 py-6 max-w-md w-full">
-              <p className="font-cinzel text-2xl text-[#eadcc0] tracking-[0.1em]">{totalEarned} <span className="text-sm text-[#a89c82]">/ {totalPossible} credits</span></p>
-              <ul className="mt-3 space-y-1.5 text-sm text-[#bfb299]">
+              <p className="s1-head text-4xl">{totalEarned} <span className="text-lg text-[#f4ede0]">/ {totalPossible} credits</span></p>
+              <ul className="mt-3 space-y-1.5">
                 {trials.map((t, i) => (
-                  <li key={i} className="flex justify-between font-cinzel text-[11px] tracking-[0.12em] uppercase">
+                  <li key={i} className="s1-label flex justify-between !text-[12px]">
                     <span>Trial {ROMAN[i]} · {t.pumpkins} pumpkins</span>
-                    <span className={state.trials[i].status === 'won' ? 'text-[#aac8a0]' : 'text-[#c49088]'}>
+                    <span className={state.trials[i].status === 'won' ? 'text-[#b6dfa8]' : 'text-[#e0a198]'}>
                       {state.trials[i].status === 'won' ? `+${state.trials[i].earnedCredits} CR` : 'lost'}
                     </span>
                   </li>
                 ))}
               </ul>
-              <button type="button" onClick={onReturnDashboard} className="s1-btn-primary mt-4">Return to round dashboard</button>
+              <button type="button" onClick={onReturnDashboard} className="s1-btn-primary mt-5">Return to round dashboard</button>
             </div>
           )}
         </section>

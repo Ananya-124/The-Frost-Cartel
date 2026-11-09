@@ -3,15 +3,20 @@ import { db } from '../../database/db.ts';
 
 export const round2Router = Router();
 
-// ---------- EDIT HERE: auction rules and the 6 cards ----------
+// ---------- EDIT HERE: auction rules and the 11 cards ----------
 const CONFIG = { minIncrement: 10, snipeSeconds: 10, maxCredits: 500 };
 const CARDS = [
-  { id: 1, name: 'Vampire Shield', description: 'Blocks one penalty in Round 3.', icon: '🧛', defaultBase: 100 },
-  { id: 2, name: 'Witch Hex', description: 'Curse a rival squad in Round 3.', icon: '🧙', defaultBase: 100 },
-  { id: 3, name: 'Ghost Pass', description: 'Skip one obstacle in Round 3.', icon: '👻', defaultBase: 150 },
-  { id: 4, name: 'Zombie Revive', description: 'Revive once after failing.', icon: '🧟', defaultBase: 150 },
-  { id: 5, name: 'Pumpkin Bomb', description: 'Explosive advantage in Round 3.', icon: '🎃', defaultBase: 200 },
-  { id: 6, name: 'Reaper Strike', description: 'A decisive final-round strike.', icon: '💀', defaultBase: 200 },
+  { id: 1, name: 'Chrono Freeze', description: 'Freeze the active task countdown for 10 seconds. Your team can continue moving, interacting and solving puzzles while time stands still.', icon: '⏳', defaultBase: 100 },
+  { id: 2, name: 'Witching Hour', description: 'Gain an additional 5 seconds during a timed synchronization challenge. Use this advantage when every second counts.', icon: '🌙', defaultBase: 100 },
+  { id: 3, name: 'Spectral Sight', description: 'Reveal one hidden clue or receive an additional hint for your current task. See what others might miss.', icon: '👁️', defaultBase: 100 },
+  { id: 4, name: "Witch's Lens", description: 'Highlight one important interactable object in your current room. Let the supernatural guide your investigation.', icon: '🔍', defaultBase: 100 },
+  { id: 5, name: 'Hexbreaker', description: 'Eliminate one incorrect option or reveal one wrong connection in an active puzzle. Break through the curse of uncertainty.', icon: '🔓', defaultBase: 100 },
+  { id: 6, name: "Mechanic's Curse", description: 'Automatically validate one correctly configured stage of a multi-stage mechanism. Skip the final confirmation and move forward.', icon: '⚙️', defaultBase: 100 },
+  { id: 7, name: "Witch's Elixir", description: 'Forgive one incorrect input that would normally trigger a mistake penalty. Every team deserves a second chance.', icon: '🧪', defaultBase: 100 },
+  { id: 8, name: "Raven's Messenger", description: 'Reveal the location of the next relevant interactable object in your timeline. Let the raven lead the way.', icon: '🐦‍⬛', defaultBase: 100 },
+  { id: 9, name: 'Phantom Shield', description: 'Protect your team from one failed synchronization penalty or one failed timed-control attempt. The spirits grant you one layer of protection.', icon: '🛡️', defaultBase: 100 },
+  { id: 10, name: 'Soul Surge', description: 'Instantly complete one correctly configured stage of a multi-stage mechanism without performing its final activation interaction. Unleash the power of the soul.', icon: '🔮', defaultBase: 100 },
+  { id: 11, name: "The Warden's Decree — Master Card", description: 'Choose one competing team and order a 2-minute gameplay pause. Present this card to the event coordinators, who will enforce the pause manually. Even time itself must obey the Warden.', icon: '👑', defaultBase: 100 },
 ];
 const ADMIN_KEY = process.env.ROUND2_ADMIN_KEY || 'frost-r2-admin';
 
@@ -27,6 +32,10 @@ const fresh = (): State => ({ cards: CARDS.map((c) => ({ ...c, status: 'pending'
 const saved = db.prepare('SELECT json FROM round2_state WHERE id = 1').get() as { json: string } | undefined;
 let S: State = saved ? (JSON.parse(saved.json) as State) : fresh();
 const save = () => db.prepare('INSERT INTO round2_state (id, json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET json = excluded.json').run(JSON.stringify(S));
+if (saved && (S.cards.length !== CARDS.length || S.cards.some((card, index) => card.id !== CARDS[index].id || card.name !== CARDS[index].name))) {
+  S = { ...S, cards: fresh().cards, live: null };
+  save();
+}
 const key = (name: string) => name.trim().toLowerCase();
 const fail = (res: Response, code: number, message: string) => res.status(code).json({ success: false, message });
 const meOf = (t: TeamRec) => ({ name: t.name, startCredits: t.startCredits, spent: t.spent, credits: t.startCredits - t.spent, cards: t.cards });

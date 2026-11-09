@@ -13,9 +13,9 @@ export const clampSeconds = (n: number | undefined, fallback: number, min: numbe
 
 /**
  * How long each swap lasts. Starts slow, speeds up, and always adds up to exactly `totalMs`.
- * Example: 20000 ms -> about 30 swaps, from 900 ms down to 360 ms each.
+ * Example: 20000 ms -> about 37 swaps, from 780 ms down to 300 ms each.
  */
-export function buildShufflePlan(totalMs: number, startMs = 900, endMs = 360): number[] {
+export function buildShufflePlan(totalMs: number, startMs = 780, endMs = 300): number[] {
   const plan: number[] = [];
   if (!(totalMs > 0)) return plan;
   let t = 0;

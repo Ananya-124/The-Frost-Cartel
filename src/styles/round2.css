@@ -9,10 +9,22 @@
   --r2-violet: #a58acb;      /* stage text (dimmed lavender) */
 }
 
+@font-face {
+  font-family: 'R2 Poster';
+  src: url('/fonts/s1-oswald-latin-600-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
 /* ================= ANIMATIONS ================= */
 @keyframes r2RiseIn {
   from { opacity: 0; transform: translateY(28px) scale(0.95); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes r2ToastIn {
+  from { opacity: 0; translate: 0 -12px; }
+  to   { opacity: 1; translate: 0 0; }
 }
 @keyframes r2Bob {
   0%, 100% { transform: translateY(0); }
@@ -101,7 +113,7 @@ button.r2-btn:hover {
 .r2-hourglass { display: inline-block; animation: r2HourFlip 6s ease-in-out infinite; }
 .r2-candle { display: inline-block; animation: r2Flicker 2.6s linear infinite; }
 
-/* ================= STAGE + YOUR CARDS ================= */
+/* ================= STAGE + EARNED CARDS ================= */
 .r2-panel {
   background:
     radial-gradient(ellipse at 50% 80%, rgba(120, 70, 185, 0.30), transparent 62%),
@@ -141,38 +153,54 @@ button.r2-btn:hover {
 }
 .r2-wait { animation: r2Pulse 2.6s ease-in-out infinite; }
 
-/* ================= AUCTION CARD ================= */
-.r2-card {
+/* ================= EARNED CARD POSTCARD ================= */
+.r2-earned-card {
   animation: r2RiseIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(var(--i, 0) * 0.12s);
 }
-.r2-card-float {
-  animation: r2Bob 5s ease-in-out infinite;
-  animation-delay: var(--d, 0s);
-}
-.r2-card-body {
+.r2-earned-poster {
   position: relative;
-  transition: transform 0.35s ease;
+  padding: 7px;
+  border: 2px solid #e2bd59;
+  border-radius: 0.55rem;
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(255, 248, 215, 0.78), transparent 37%),
+    repeating-linear-gradient(3deg, rgba(91, 62, 25, 0.045) 0 1px, transparent 1px 4px),
+    linear-gradient(135deg, #ead7a4, #c9ab6a 48%, #e1cc91);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 2px rgba(255, 235, 159, 0.7),
+    inset 0 0 0 4px rgba(113, 78, 28, 0.32),
+    inset 0 0 14px rgba(68, 43, 16, 0.3);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
-.r2-card:hover .r2-card-body { transform: translateY(-6px) scale(1.045); }
-
-/* SVG frame (outline, inner line, horns) */
-.r2-frame-svg {
-  animation: r2Breathe 3.6s ease-in-out infinite;
-  animation-delay: var(--d, 0s);
-  transition: filter 0.3s ease;
+.r2-earned-card:hover .r2-earned-paper {
+  transform: translateY(-4px);
+  box-shadow:
+    0 15px 28px rgba(0, 0, 0, 0.56),
+    inset 0 0 0 2px rgba(255, 235, 159, 0.7),
+    inset 0 0 0 4px rgba(113, 78, 28, 0.32),
+    inset 0 0 14px rgba(68, 43, 16, 0.3);
 }
-.r2-card:hover .r2-frame-svg { animation-duration: 1.4s; }
-.r2-frame-stroke,
-.r2-frame-horn { stroke: var(--c, var(--r2-orange)); }
-.r2-frame-inner { stroke: var(--c, var(--r2-orange)); stroke-opacity: 0.45; }
-
-.r2-crest {
-  background: radial-gradient(circle, #2a1608 0%, #0b0603 100%);
-  border: 2px solid var(--c, var(--r2-orange));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--c, #c4601a) 55%, transparent);
-  animation: r2Flicker 3.4s linear infinite;
-  animation-delay: var(--d, 0s);
+.r2-earned-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.28rem;
+  box-shadow: 0 2px 8px rgba(35, 22, 7, 0.45);
+}
+.r2-earned-price {
+  margin: 0.7rem 0 0;
+  color: #f3d98f;
+  font-family: 'R2 Poster', 'Arial Narrow', serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(224, 184, 82, 0.46);
+}
+.r2-toast {
+  animation: r2ToastIn 0.25s ease-out both;
 }
 
 .r2-art {
@@ -180,6 +208,15 @@ button.r2-btn:hover {
   background: radial-gradient(circle at 50% 40%, rgba(196, 96, 26, 0.18), rgba(10, 6, 3, 0.92) 75%);
   border: 2px solid color-mix(in srgb, var(--c, #c4601a) 50%, transparent);
   box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.7);
+}
+.r2-live-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .r2-art-img {
   transform-origin: 50% 85%;
@@ -209,7 +246,7 @@ button.r2-btn:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .r2-card, .r2-card-float, .r2-frame-svg, .r2-crest, .r2-art-img, .r2-shine,
+  .r2-earned-card, .r2-toast, .r2-art-img, .r2-shine,
   .r2-ghost, .r2-mist, .r2-wisp, .r2-wait, .r2-pumpkin, .r2-hourglass, .r2-candle {
     animation: none !important;
   }
@@ -239,8 +276,3 @@ button.r2-btn:hover {
   box-shadow: 0 0 8px rgba(255, 120, 30, 0.6);
   animation: r2Pulse 1.2s ease-in-out infinite;
 }
-.r2-badge-sold { color: #9fd8a8; border-color: #4f9a5c; }
-.r2-badge-unsold { color: #c9a0a0; border-color: #8a4a4a; }
-
-.r2-card-live .r2-frame-svg { animation-duration: 1.6s; }
-.r2-card-unsold { filter: grayscale(0.85); opacity: 0.6; }

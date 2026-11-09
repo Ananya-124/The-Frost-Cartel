@@ -36,11 +36,6 @@ export interface Hotspot {
   yPercent: number; // 0 - 100
   widthPercent: number; // 0 - 100
   heightPercent: number; // 0 - 100
-  svgPath?: string;
-  originalX?: number;
-  originalY?: number;
-  originalWidth?: number;
-  originalHeight?: number;
 }
 
 export interface HuntImage {
@@ -50,8 +45,6 @@ export interface HuntImage {
   orientationDeg: number;
   description: string;
   hotspots: Hotspot[];
-  width?: number;
-  height?: number;
 }
 
 export interface TargetItem {
