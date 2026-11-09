@@ -205,12 +205,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
       <main className="relative flex-1 w-full flex items-center justify-center min-h-0 px-2 sm:px-4 py-1 overflow-hidden">
         <div
           className="relative max-h-full max-w-full rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.95)] border border-amber-950/40"
-          style={{ aspectRatio: '1024 / 576' }}
+          style={{ aspectRatio: '16 / 9' }}
         >
           {/* 100% Clean Photorealistic Artwork (No HUD, No Riddle Box, No Buttons) */}
           <img
-            src="/assets/stage-3/coffins/grave2_buried_diary.jpg"
-            alt="The Buried Diary - Clean Coffin Environment"
+            src="/assets/round-01/stage-03/coffin-02-buried-diary-master.png"
+            alt="The Buried Diary - Pristine Coffin Environment"
             className="w-full h-full object-contain pointer-events-none select-none"
           />
 
@@ -219,10 +219,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             <div
               className="absolute z-10 pointer-events-none animate-pulse"
               style={{
-                left: '65.9%',
-                top: '59%',
-                width: '12%',
-                height: '14%',
+                left: '65.0%',
+                top: '59.0%',
+                width: '14.0%',
+                height: '17.0%', 
                 background: 'radial-gradient(circle, rgba(245,158,11,0.5) 0%, rgba(245,158,11,0) 75%)',
                 filter: 'drop-shadow(0 0 25px rgba(245,158,11,0.9))',
               }}
@@ -241,12 +241,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               soundController.playParchmentOpen();
               setIsDiaryOpen(true);
             }}
-            className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/10 hover:shadow-[0_0_25px_rgba(245,158,11,0.45)] group"
+            className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] group"
             style={{
-              left: '35.5%',
-              top: '31.0%',
-              width: '26.5%',
-              height: '29.0%',
+              left: '34.0%',
+              top: '32.0%',
+              width: '32.0%',
+              height: '30.0%',
             }}
           >
             <span className="sr-only">Read Ancient Diary</span>
@@ -263,12 +263,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               soundController.playClick();
               setInspectionItem('skull');
             }}
-            className="absolute z-20 cursor-pointer rounded-full transition-all duration-200 hover:bg-amber-400/10 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] group"
+            className="absolute z-20 cursor-pointer rounded-full transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] group"
             style={{
-              left: '42.5%',
-              top: '11.0%',
-              width: '8.5%',
-              height: '16.0%',
+              left: '45.0%',
+              top: '14.0%',
+              width: '10.0%',
+              height: '17.0%',
             }}
           >
             <span className="sr-only">Inspect Skull Brow Mark</span>
@@ -285,12 +285,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               soundController.playClick();
               setInspectionItem('p7');
             }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
+            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] group"
             style={{
-              left: '31.8%',
-              top: '27.5%',
-              width: '8.8%',
-              height: '15.5%',
+              left: '26.0%',
+              top: '34.0%',
+              width: '9.0%',
+              height: '16.0%',
             }}
           >
             <span className="sr-only">Inspect Western Parchment 7</span>
@@ -299,7 +299,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 4. SOUTHWESTERN PARCHMENT (Incidental Grave Marker - Numeral 8 Removed) */}
+          {/* 4. SOUTHWESTERN PARCHMENT (Weathered Folio) */}
           <button
             type="button"
             aria-label="Southwestern Parchment 8"
@@ -309,10 +309,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '30.0%',
-              top: '41.5%',
-              width: '8.0%',
-              height: '15.5%',
+              left: '27.0%',
+              top: '48.0%',
+              width: '8.5%',
+              height: '15.0%',
             }}
           >
             <span className="sr-only">Inspect Weathered Scrap</span>
@@ -321,7 +321,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 5. EASTERN MOON PARCHMENT "4" (Third Clue: 4 beneath the eastern moon) */}
+          {/* 5. EASTERN MOON PARCHMENT "4" (Third Clue: 4 beneath eastern moon) */}
           <button
             type="button"
             aria-label="Eastern Moon Parchment 4 (Third Clue)"
@@ -329,12 +329,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               soundController.playClick();
               setInspectionItem('p4');
             }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
+            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] group"
             style={{
-              left: '55.5%',
-              top: '17.0%',
-              width: '8.0%',
-              height: '14.0%',
+              left: '63.0%',
+              top: '24.0%',
+              width: '9.0%',
+              height: '15.0%',
             }}
           >
             <span className="sr-only">Inspect Eastern Moon Parchment 4</span>
@@ -343,7 +343,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 6. MID-EASTERN PARCHMENT (Incidental Grave Marker - Numeral 3 Removed) */}
+          {/* 6. MID-EASTERN PARCHMENT (Weathered Folio) */}
           <button
             type="button"
             aria-label="Mid-Eastern Parchment 3"
@@ -353,9 +353,9 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '61.0%',
-              top: '25.5%',
-              width: '8.0%',
+              left: '63.0%',
+              top: '36.0%',
+              width: '8.5%',
               height: '14.0%',
             }}
           >
@@ -365,7 +365,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 7. EASTERN SEAL PARCHMENT "9" (Fourth Clue: 9 beside the crimson seal) */}
+          {/* 7. EASTERN SEAL PARCHMENT "9" (Fourth Clue: 9 beside crimson seal) */}
           <button
             type="button"
             aria-label="Eastern Seal Parchment 9 (Fourth Clue)"
@@ -373,12 +373,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               soundController.playClick();
               setInspectionItem('p9');
             }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
+            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] group"
             style={{
               left: '66.0%',
-              top: '38.0%',
-              width: '8.0%',
-              height: '15.5%',
+              top: '46.0%',
+              width: '9.0%',
+              height: '15.0%',
             }}
           >
             <span className="sr-only">Inspect Parchment 9 Beside Seal</span>
@@ -387,7 +387,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </span>
           </button>
 
-          {/* 8. SOUTHEASTERN PARCHMENT (Incidental Grave Marker - Numeral 6 Removed) */}
+          {/* 8. SOUTHEASTERN PARCHMENT (Weathered Folio) */}
           <button
             type="button"
             aria-label="Southeastern Parchment 6"
@@ -397,9 +397,9 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
             style={{
-              left: '61.0%',
-              top: '55.0%',
-              width: '8.8%',
+              left: '58.0%',
+              top: '58.0%',
+              width: '8.5%',
               height: '14.0%',
             }}
           >
@@ -419,10 +419,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-red-500/15 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] group"
             style={{
-              left: '29.0%',
-              top: '55.0%',
-              width: '14.8%',
-              height: '17.5%',
+              left: '28.0%',
+              top: '58.0%',
+              width: '15.0%',
+              height: '16.0%',
             }}
           >
             <span className="sr-only">Inspect Wax-Sealed Letter</span>
@@ -449,18 +449,17 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             }}
             className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/20 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] group"
             style={{
-              left: '66.0%',
-              top: '62.0%',
-              width: '13.0%',
-              height: '14.0%',
+              left: '65.0%',
+              top: '60.0%',
+              width: '14.0%',
+              height: '16.0%',
             }}
           >
             <span className="sr-only">{isCofferUnlocked ? 'Open Treasure Chest' : 'Locked Iron Coffer'}</span>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -top-5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/90 border border-amber-500/80 text-[9px] font-cinzel font-bold text-amber-300 whitespace-nowrap shadow-md pointer-events-none">
               {isCofferUnlocked ? '✦ Unsealed Chest (EMBER)' : '🔒 Locked Coffer'}
             </span>
-          </button>
-        </div>
+          </button></div>
       </main>
 
       {/* 4. Single Master Riddle & 4-Digit Combination Lock Console */}

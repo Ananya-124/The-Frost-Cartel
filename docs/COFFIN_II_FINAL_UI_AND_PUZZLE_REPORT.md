@@ -85,3 +85,4 @@ $ npm run build
 - **Fullscreen UI:** Captured at `docs/screenshots/coffin2_fullscreen_clean_ui.png` showing clean scene occupying ~75% screen, zero duplicated headers, and single bottom riddle lock console.
 - **Diary Modal:** Captured at `docs/screenshots/coffin2_diary_modal.png` showing ancient vellum folio and exact narrative text without answer leaks.
 - **Unsealed Chest Reveal:** Captured at `docs/screenshots/coffin2_unlocked_reveal.png` verifying code `1749` input, golden chest rays, and `EMBER` syllable claim.
+
