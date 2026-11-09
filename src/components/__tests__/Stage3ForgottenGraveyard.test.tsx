@@ -99,6 +99,65 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     expect(screen.getAllByText(/BENEATH/i).length).toBeGreaterThanOrEqual(1);
   });
 
+  it('allows navigating to Grave 2, reading diary, inspecting clues, and unlocking coffer with 1749', () => {
+    sessionStorage.setItem('frost_cartel_coffin2_opened', 'true');
+    const config = round1Service.getStage3Config();
+    render(
+      <Stage3ForgottenGraveyard
+        teamId="test_team_s3"
+        config={config}
+        initialCollectedFragments={[]}
+        isCompleted={false}
+        onReturnDashboard={mockReturn}
+        onSkipStage={mockSkip}
+        onStageCompleted={mockComplete}
+      />
+    );
+
+    const grave2Btn = screen.getByRole('button', { name: /Grave 2: Buried Diary/i });
+    fireEvent.click(grave2Btn);
+
+    expect(screen.getByText(/Grave 2 — The Buried Diary/i)).toBeInTheDocument();
+    expect(screen.getByText("THE KEEPER'S RIDDLE")).toBeInTheDocument();
+
+    // 1. Read Ancient Diary
+    const diaryBtn = screen.getByRole('button', { name: /Ancient Diary: Click to Read/i });
+    fireEvent.click(diaryBtn);
+
+    expect(screen.getByText(/The Keeper’s Chronicle — Anno Domini/i)).toBeInTheDocument();
+    expect(screen.getByText(/On the night the old covenant was sealed/i)).toBeInTheDocument();
+
+    const closeDiaryBtn = screen.getByRole('button', { name: /Close Diary/i });
+    fireEvent.click(closeDiaryBtn);
+
+    // 2. Inspect Clues
+    const skullBtn = screen.getByRole('button', { name: /Cranium of the Keeper/i });
+    fireEvent.click(skullBtn);
+    expect(screen.getByText(/CRANIUM OF THE SECOND KEEPER/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Close Inspection/i }));
+
+    const p7Btn = screen.getByRole('button', { name: /Western Parchment 7/i });
+    fireEvent.click(p7Btn);
+    expect(screen.getByText(/WESTERN MARKER — VII/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Close Inspection/i }));
+
+    // 3. Enter Tumbler Combination 1749
+    const tumblers = screen.getAllByRole('spinbutton');
+    expect(tumblers).toHaveLength(4);
+
+    fireEvent.keyDown(tumblers[0], { key: '1' });
+    fireEvent.keyDown(tumblers[1], { key: '7' });
+    fireEvent.keyDown(tumblers[2], { key: '4' });
+    fireEvent.keyDown(tumblers[3], { key: '9' });
+
+    const unlockBtn = screen.getByRole('button', { name: /UNLOCK/i });
+    fireEvent.click(unlockBtn);
+
+    // Verify Fragment II EMBER unsealed
+    expect(screen.getByText('EMBER')).toBeInTheDocument();
+    expect(screen.getByText(/COVENANT YEAR 1749 UNLOCKED/i)).toBeInTheDocument();
+  });
+
   it('toggles evidence journal drawer', () => {
     const config = round1Service.getStage3Config();
     render(
