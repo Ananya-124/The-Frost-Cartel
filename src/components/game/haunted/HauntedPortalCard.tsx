@@ -106,19 +106,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
           loading="eager"
         />
 
-        {/* 3. Dynamic Status Overlays: Seamlessly replaces the reward button on the relic frame */}
-        {status === 'completed' && (
-          <div className="absolute top-[77.1%] left-1/2 -translate-x-1/2 w-[50%] h-[9.8%] z-20 pointer-events-none flex items-center justify-center">
-            <div
-              className={`w-full h-full rounded-full ${themeStyles.completedBg} border-2 ${themeStyles.completedBorder} ${themeStyles.completedShadow} flex items-center justify-center gap-1 sm:gap-1.5 px-2`}
-            >
-              <span className={`font-cinzel text-[9px] xs:text-[9.5px] sm:text-[10.5px] font-black tracking-widest uppercase ${themeStyles.completedText} drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]`}>
-                COMPLETED ✓
-              </span>
-            </div>
-          </div>
-        )}
-
+        {/* 3. Helper progress text if partially completed */}
         {progressText && !isNotConfigured && status !== 'completed' && (
           <div className="absolute bottom-[4%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
             <span className="text-[8px] sm:text-[9px] font-mono text-stone-300/80 tracking-wider font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
