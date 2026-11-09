@@ -73,10 +73,12 @@ export const Stage3HUD: React.FC<Stage3HUDProps> = ({
         {/* Sound Toggle */}
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
           title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-          className="w-8 h-8 rounded-full bg-black/85 border border-amber-600/70 hover:border-amber-400 text-amber-300 flex items-center justify-center text-xs transition-all cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.8)] backdrop-blur-md hover:scale-105 active:scale-95"
+          className="w-8 h-8 rounded-full bg-black/85 border border-amber-600/70 hover:border-amber-400 text-amber-300 flex items-center justify-center text-xs transition-all cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.8)] backdrop-blur-md hover:scale-105 active:scale-95 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+          style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
         >
           {isMuted ? '🔇' : '🔊'}
         </button>
@@ -84,12 +86,14 @@ export const Stage3HUD: React.FC<Stage3HUDProps> = ({
         {/* Exit Button */}
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             soundController.playClick();
             onReturnDashboard();
           }}
           aria-label="Exit Stage"
-          className="px-4 py-1.5 rounded-full bg-black/85 hover:bg-red-950/80 border border-stone-600 hover:border-red-500 text-stone-200 hover:text-white font-cinzel text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md backdrop-blur-md hover:scale-105 active:scale-95"
+          className="px-4 py-1.5 rounded-full bg-black/85 hover:bg-red-950/80 border border-stone-600 hover:border-red-500 text-stone-200 hover:text-white font-cinzel text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md backdrop-blur-md hover:scale-105 active:scale-95 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
+          style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
         >
           EXIT
         </button>

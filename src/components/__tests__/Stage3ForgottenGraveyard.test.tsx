@@ -37,7 +37,8 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     expect(screen.getByText('The Rune Tombstone')).toBeInTheDocument();
   });
 
-  it('allows navigating to Grave 1 and assembling the skeleton', () => {
+  it('allows navigating to Grave 1, reading scripture, solving riddle, and unlocking chest', () => {
+    sessionStorage.setItem('frost_cartel_coffin1_opened', 'true');
     const config = round1Service.getStage3Config();
     render(
       <Stage3ForgottenGraveyard
@@ -55,19 +56,47 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     fireEvent.click(grave1Btn);
 
     expect(screen.getByText(/Grave 1 — The Bone Chamber/i)).toBeInTheDocument();
-    expect(screen.getByText('Apex Altar')).toBeInTheDocument();
+    expect(screen.getByText('THE KEEPER’S LAST RIDDLE')).toBeInTheDocument();
 
-    // Select Cranium bone
-    const skullBone = screen.getByRole('button', { name: /Ancient Cranium/i });
-    fireEvent.click(skullBone);
+    // 1. Click Ancient Grimoire Book
+    const bookBtn = screen.getByRole('button', { name: /Ancient Grimoire: Click to Open and Read/i });
+    fireEvent.click(bookBtn);
 
-    // Place in Apex Altar
-    const apexAltar = screen.getByText('Apex Altar');
-    fireEvent.click(apexAltar);
+    expect(screen.getByText('THE CARTEL EXEQUIES')).toBeInTheDocument();
+    expect(screen.getByText('THE THREE WITNESSES')).toBeInTheDocument();
 
-    // Apex Altar now displays placed bone and badge
-    expect(screen.getAllByText('Ancient Cranium').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('(Placed)')).toBeInTheDocument();
+    // Turn to Page II
+    const nextBtn1 = screen.getByRole('button', { name: /Next Page/i });
+    fireEvent.click(nextBtn1);
+    expect(screen.getByText('THE FORGOTTEN INSTRUCTION')).toBeInTheDocument();
+
+    // Turn to Page III
+    const nextBtn2 = screen.getByRole('button', { name: /Next Page/i });
+    fireEvent.click(nextBtn2);
+    expect(screen.getByText('THE FINAL RIDDLE')).toBeInTheDocument();
+
+    // Close Book
+    const closeBookBtn = screen.getByRole('button', { name: /Close & Inspect Remains/i });
+    fireEvent.click(closeBookBtn);
+
+    // 2. Submit Riddle Answer "ASH"
+    const input = screen.getByPlaceholderText(/Type the keyword/i);
+    const unsealBtn = screen.getByRole('button', { name: /UNSEAL/i });
+
+    fireEvent.change(input, { target: { value: 'ASH' } });
+    fireEvent.click(unsealBtn);
+
+    expect(screen.getByText(/✓ RIDDLE SOLVED/i)).toBeInTheDocument();
+
+    // 3. Unlock with Skeleton Key
+    const keyBtn = screen.getByRole('button', { name: /Antique Brass Skeleton Key/i });
+    fireEvent.click(keyBtn);
+
+    // 4. Open Chest
+    const chestBtn = screen.getByRole('button', { name: /Open unlocked treasure chest/i });
+    fireEvent.click(chestBtn);
+
+    expect(screen.getAllByText(/BENEATH/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('toggles evidence journal drawer', () => {

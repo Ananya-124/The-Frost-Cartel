@@ -104,7 +104,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
 
   const session = round1Service.getTeamSession(teamId, '');
   const journalData = {
-    grave1Fragment: collectedFragments.includes('THE') ? 'THE' : session.evidenceJournal?.grave1Fragment,
+    grave1Fragment: collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : session.evidenceJournal?.grave1Fragment),
     grave2Fragment: collectedFragments.includes('NIGHT') ? 'NIGHT' : session.evidenceJournal?.grave2Fragment,
     grave3Fragment: collectedFragments.includes('RETURNS') ? 'RETURNS' : session.evidenceJournal?.grave3Fragment,
     notes: session.evidenceJournal?.notes ?? [],

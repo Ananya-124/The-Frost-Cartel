@@ -470,3 +470,23 @@
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
 }
+
+/* Eliminate default browser focus rectangles and SVG-like outlines on coffin cards, play buttons, and interactive elements */
+.coffin-card-play-btn,
+.coffin-card-play-btn:focus,
+.coffin-card-play-btn:focus-visible,
+.coffin-card-play-btn:active,
+.coffin-card-play-btn:focus-within,
+.coffin-card-play-btn *,
+.coffin-card,
+.coffin-card:focus,
+.coffin-card:focus-visible,
+.coffin-card:active,
+.coffin-card:focus-within,
+.coffin-card * {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}

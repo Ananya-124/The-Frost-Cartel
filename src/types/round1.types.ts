@@ -143,6 +143,10 @@ export interface Stage3Config {
     bones: BoneItem[];
     slots: BoneSlot[];
     isCompleted: boolean;
+    riddleTitle?: string;
+    riddleText?: string;
+    riddleAnswer?: string;
+    chestWord?: string;
   };
   grave2: {
     clueFragment: string;
@@ -183,6 +187,11 @@ export interface Round1TeamSessionState {
   };
   stage3State: {
     placedBoneSlots: Record<string, string>; // slotId -> boneId
+    grave1Completed?: boolean;
+    grave1ChestUnlocked?: boolean;
+    grave1RiddleSolved?: boolean;
+    grave1BookRead?: boolean;
+    grave1SkeletonMoved?: boolean;
     dugSoilIds: string[];
     grave2CofferUnlocked: boolean;
     grave3RingIndices: [number, number, number];
