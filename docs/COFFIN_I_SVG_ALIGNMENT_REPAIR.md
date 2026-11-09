@@ -135,6 +135,16 @@ A dedicated developer calibration HUD has been integrated into `Grave1MarkedRema
 
 ---
 
+### Visible Highlight Outlines Removal & Invisible Hit-Areas
+
+Per user request ("remove these higlightes svg thing"), all visible SVG stroke outlines, gold polygon lines, and calibration overlays have been completely removed:
+- All 10 SVG interaction paths are configured with `fill="transparent"`, `stroke="transparent"`, and `pointer-events-auto cursor-pointer`.
+- The scene presents exclusively as a pristine, photorealistic cinematic coffin image without any visible wireframe outlines, dashed polygons, or rectangular boxes.
+- Click and drag interactions (book inspection, skeleton dragging to reveal the antique "ASH" plate, key flight, and chest unlock) operate seamlessly through the invisible high-precision hit paths.
+- The calibration HUD and visible stroke animations have been cleanly eliminated.
+
+---
+
 ### Verification Results
 
 1. **TypeScript Check (`npx tsc -b`)**: 0 errors.
@@ -142,5 +152,6 @@ A dedicated developer calibration HUD has been integrated into `Grave1MarkedRema
    - `src/components/__tests__/Coffin1SvgCalibration.test.tsx`: 4/4 passed.
    - `src/components/__tests__/Stage3ForgottenGraveyard.test.tsx`: 4/4 passed.
 3. **Full Project Suite**: 36 test files, 197 tests passing (100%).
-4. **Vite Production Build (`npm run build`)**: Built in 3.07s with zero errors.
+4. **Vite Production Build (`npm run build`)**: Built in 5.52s with zero errors.
 5. **Responsive Viewport Support**: Tested across 1280×720, 1366×768, 1440×900, and 1920×1080 with zero letterbox drift.
+

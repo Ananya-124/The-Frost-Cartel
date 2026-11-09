@@ -83,9 +83,9 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     expect(yellowRectangles.length).toBe(0);
   });
 
-  it('supports developer calibration mode toggled via Alt+C', () => {
+  it('ensures all interaction paths are 100% transparent hit-areas with zero visible SVG wireframe outlines', () => {
     const config = round1Service.getStage3Config();
-    render(
+    const { container } = render(
       <Grave1MarkedRemains
         teamId="team_test_calib"
         config={config}
@@ -103,21 +103,21 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
       />
     );
 
+    // Verify all coffin interaction paths are completely invisible to the eye
+    const coffinSvg = container.querySelector('svg[viewBox="0 0 1024 576"]');
+    expect(coffinSvg).toBeInTheDocument();
+
+    const paths = coffinSvg?.querySelectorAll('path');
+    expect(paths && paths.length).toBeGreaterThanOrEqual(10);
+
+    paths?.forEach((path) => {
+      expect(path.getAttribute('fill')).toBe('transparent');
+      expect(path.getAttribute('stroke')).toBe('transparent');
+    });
+
+    // Ensure no calibration panel or visible gold wireframes exist in the scene
     expect(screen.queryByText(/✦ SVG CALIBRATION MODE ✦/i)).not.toBeInTheDocument();
-
-    // Trigger Alt+C
-    fireEvent.keyDown(window, { key: 'c', altKey: true });
-    expect(screen.getByText(/✦ SVG CALIBRATION MODE ✦/i)).toBeInTheDocument();
-    expect(screen.getByText(/1024 × 576/i)).toBeInTheDocument();
-
-    // Toggle zoom level
-    const zoomBtn = screen.getByRole('button', { name: '2x' });
-    fireEvent.click(zoomBtn);
-    expect(zoomBtn).toHaveClass('bg-amber-600');
-
-    // Close calibration
-    const closeBtn = screen.getByRole('button', { name: /✕ Close/i });
-    fireEvent.click(closeBtn);
-    expect(screen.queryByText(/✦ SVG CALIBRATION MODE ✦/i)).not.toBeInTheDocument();
+    expect(container.querySelectorAll('svg path[stroke="#d4af37"]').length).toBe(0);
+    expect(container.querySelectorAll('svg path[stroke="rgba(245,158,11,1)"]').length).toBe(0);
   });
 });
