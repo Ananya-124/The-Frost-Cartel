@@ -1,5 +1,9 @@
+import { useEffect, useState } from 'react';
 import type { UiSnapshot } from '../../engine/state/snapshot';
 import type { Round3RunStatus } from '../../../../../../types/round3.types';
+import { getAudioPreferences, saveAudioPreferences } from '../../audio/preferences';
+import { applyAmbientPreferences } from '../../audio/sound';
+import { soundFx } from '../../audio/soundfx';
 import styles from '../canvas/Game.module.css';
 
 const READINESS_LABELS = ['Weakness', 'Entity', 'Past node', 'Future node'] as const;
@@ -13,6 +17,12 @@ interface TeamHudProps {
 }
 
 export default function TeamHud({ snapshot, remainingSeconds, runStatus, runBusy, onToggleRun }: TeamHudProps) {
+  const [audio, setAudio] = useState(getAudioPreferences);
+  useEffect(() => {
+    applyAmbientPreferences(audio);
+    soundFx.setAudioPreferences(audio.volume, audio.muted);
+  }, [audio]);
+  const updateAudio = (next: typeof audio) => { setAudio(next); saveAudioPreferences(next); };
   const time = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
   const terminal = runStatus === 'completed' || runStatus === 'expired';
   return (
@@ -47,6 +57,12 @@ export default function TeamHud({ snapshot, remainingSeconds, runStatus, runBusy
           {runBusy ? '…' : runStatus === 'paused' ? 'RESUME' : 'PAUSE'}
         </button>}
       </div>
+      <details className={styles.soundControls}>
+        <summary>{audio.muted || audio.volume === 0 ? 'SOUND OFF' : 'SOUND'}</summary>
+        <label htmlFor="r3-volume">AMBIENCE & EFFECTS <span>{Math.round(audio.volume * 100)}%</span></label>
+        <input id="r3-volume" type="range" min="0" max="1" step="0.05" value={audio.volume} onChange={(event) => updateAudio({ ...audio, volume: Number(event.target.value), muted: false })} />
+        <button type="button" onClick={() => updateAudio({ ...audio, muted: !audio.muted })}>{audio.muted ? 'UNMUTE' : 'MUTE'}</button>
+      </details>
     </div>
   );
 }

@@ -44,4 +44,90 @@
 @media(max-width:760px){.playerProgress ol{grid-template-columns:1fr}}
 .optional{background:#171b19;border-radius:7px;padding:.65rem!important}
 .optional button{border-color:#678775;color:#c5e1d4}
+.trackerPanel {
+  color:#eee8db;
+  background:linear-gradient(145deg,rgba(24,27,24,.99),rgba(11,13,12,.99) 58%,rgba(30,29,24,.99));
+  border-color:#756c57;
+  box-shadow:0 14px 38px #000d,inset 0 0 28px rgba(183,151,89,.045);
+}
+.trackerPanel header small,.trackerPanel header strong,.trackerPanel h2,.trackerPanel h3,.trackerPanel .task>b { color:#ead6ae; }
+.trackerPanel .status,.trackerPanel .playerProgress,.trackerPanel .nextAction,.trackerPanel .task,.trackerPanel .seals>div,.trackerPanel .trial,.trackerPanel .journal article { color:#eee8db; background:#1d201c; border-color:#6d654f; }
+.trackerPanel .task p,.trackerPanel .task small,.trackerPanel .inspectList li,.trackerPanel .journal article p { color:#e1ded4; }
+.trackerPanel .playerProgress>b,.trackerPanel .nextAction>b,.trackerPanel .seals>div>b { color:#e6d2a9; }
+.trackerPanel .taskToggle,.trackerToggle { color:#eee2c9!important; background:linear-gradient(#242621,#111310)!important; border-color:#817556!important; }
 @media(max-width:760px){.root{bottom:8.5rem;max-height:calc(100vh - 11rem);font-size:11px}.actionList{grid-template-columns:1fr}}
+
+/* Investigation folders: paper edges, worn ink colours, and warmer reading surfaces. */
+.root {
+  color:#eee5d2;
+  background:linear-gradient(145deg,rgba(48,41,29,.98),rgba(24,24,20,.98) 58%,rgba(34,35,31,.98));
+  border-color:#9b855e;
+  box-shadow:0 14px 38px #000b,inset 0 0 28px rgba(183,151,89,.07);
+  font-family:Georgia,'Times New Roman',serif;
+}
+.root header small,.root header strong { color:#e0c184; }
+.root h2,.task h3,.journal article>b { color:#f0d7a1; }
+.task p,.task small,.journal article p { color:#e0d9ca; }
+.status,.playerProgress,.nextAction,.journal article,.emptyJournal { background-color:#26271f; border-color:#75694e; }
+
+/* ==========================================================================
+   CINEMATIC HORROR SKIN (visual only; selectors/logic untouched)
+   ========================================================================== */
+.root {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(140,40,25,.18), transparent 46%),
+    radial-gradient(ellipse at 100% 100%, rgba(0,0,0,.5), transparent 58%),
+    linear-gradient(145deg, #30271b, #17140f 60%, #201c15);
+  border: 1px solid #7a5f3a;
+  border-top: 3px solid #8c2a1f;
+  border-radius: 2px;
+  box-shadow: 0 14px 38px #000d, inset 0 0 42px #000b, inset 0 0 0 1px #ffffff07;
+}
+.root h2, .task h3 { font-family: Cinzel, Georgia, serif; letter-spacing: .05em; color: #f3d9a5; text-shadow: 0 0 10px #8c2a1f66, 0 2px 4px #000; }
+.status, .playerProgress, .nextAction, .journal article, .emptyJournal, .seals>div, .trial { border-radius: 1px; box-shadow: inset 0 0 18px #0009; }
+.nextAction { border-left-color: #d6402e; background-color: #1c1512; }
+.nextAction>b { color: #ffbf9a; }
+.playerProgress { border-left-color: #d6402e; }
+.playerProgress>b { color: #ffcf8a; }
+.journal { background: linear-gradient(135deg, #1d1710, #0d0b08); border-color: #7a5f3a; }
+.journal summary { color: #ffd9a0; }
+.journal summary::after { color: #d6402e; }
+.journal[open] summary::after { color: #d6402e; }
+.complete { background: #11200f; border-color: #6fb66f; text-shadow: 0 0 12px #4f9a5d66; }
+
+/* TRACKER: cold CCTV dossier with the strongest text contrast. */
+.trackerPanel {
+  font-size: 14px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 90% 0%, rgba(60,200,190,.12), transparent 50%),
+    linear-gradient(145deg, #0e1618, #060a0b 62%, #0b1213);
+  border: 1px solid #4f7e84;
+  border-top: 3px solid #3fb7ae;
+  color: #eaf5f2;
+  box-shadow: 0 14px 38px #000, 0 0 18px #3fb7ae1c, inset 0 0 36px #000c;
+}
+.trackerPanel header small, .trackerPanel header strong, .trackerPanel h2, .trackerPanel h3, .trackerPanel .task>b { color: #bff5ec; text-shadow: 0 0 10px #3fb7ae55; }
+.trackerPanel .status, .trackerPanel .playerProgress, .trackerPanel .nextAction, .trackerPanel .task, .trackerPanel .seals>div, .trackerPanel .trial, .trackerPanel .journal article { background: #0f1819; border-color: #3f7a7a; color: #eaf5f2; }
+.trackerPanel .task p, .trackerPanel .task small, .trackerPanel .inspectList li, .trackerPanel .journal article p { color: #e4efec; font-size: 13px; }
+.trackerPanel .nextAction, .trackerPanel .playerProgress { border-left-color: #3fb7ae; }
+.trackerPanel .playerProgress>b, .trackerPanel .nextAction>b, .trackerPanel .seals>div>b { color: #8ff0e2; }
+.trackerPanel .journal { background: linear-gradient(135deg, #0c1819, #050a0b); border-color: #3f7a7a; }
+
+.root button, .root select, .restorePanel, .hidePanel {
+  background: linear-gradient(#2c2016, #120c08);
+  color: #f3dfb0;
+  border: 1px solid #7a5a36;
+  box-shadow: inset 0 1px #ffffff12, 0 2px 6px #000a;
+}
+.root button:hover:not(:disabled), .restorePanel:hover { background: linear-gradient(#4a1a12, #200b08); border-color: #d6402e; box-shadow: 0 0 12px #d6402e55; }
+.trackerPanel button { background: linear-gradient(#10221f, #08100f); border-color: #3f9a92; color: #d8fbf4; }
+.trackerPanel button:hover:not(:disabled) { background: linear-gradient(#17413b, #0a1a18); border-color: #6ff0e0; box-shadow: 0 0 12px #3fb7ae66; }
+.taskToggle, .trackerToggle, .hidePanel {
+  background: linear-gradient(#2c2016, #120c08) !important;
+  color: #f3dfb0 !important;
+  border: 1px solid #7a5a36 !important;
+  letter-spacing: .06em;
+}
+.trackerToggle, .trackerPanel .taskToggle { background: linear-gradient(#10221f, #08100f) !important; color: #d8fbf4 !important; border-color: #3fb7ae !important; box-shadow: 0 0 12px #3fb7ae33, 0 4px 14px #000b; }
+.loading { background: #0d0907; border-color: #7a5f3a; }

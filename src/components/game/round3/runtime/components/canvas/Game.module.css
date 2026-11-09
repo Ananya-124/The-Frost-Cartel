@@ -19,12 +19,16 @@
   border-left: 2px solid #000;
 }
 
+.futureHalf {
+  background: #171815;
+}
+
 .half::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 140px #000c;
+  box-shadow: inset 0 0 92px #0008;
 }
 
 .canvas {
@@ -97,8 +101,10 @@
   z-index: 4;
   max-width: 88%;
   padding: 8px 14px;
-  background: #000c;
-  border: 1px solid var(--border-soft);
+  color: #f1e7cf;
+  background: linear-gradient(130deg, rgba(43,35,24,.97), rgba(18,18,16,.97));
+  border: 1px solid #a58d63;
+  box-shadow: 0 7px 24px #000b;
   border-radius: 5px;
   text-align: center;
   pointer-events: none;
@@ -226,8 +232,8 @@
   gap: 7px;
   padding: 5px 9px;
   overflow: hidden;
-  background: #090b0ddd;
-  border: 1px solid #80683fbb;
+  background: linear-gradient(135deg, rgba(35,31,24,.97), rgba(12,14,14,.97));
+  border: 1px solid #88724e;
   border-radius: 7px;
   box-shadow: 0 4px 14px #0008, inset 0 1px #fff1;
   backdrop-filter: blur(5px);
@@ -245,7 +251,7 @@
 
 .readiness {
   flex: 0 0 auto;
-  border-color: #427477aa;
+  border-color: #7e806f;
 }
 
 .runTimer {
@@ -300,6 +306,15 @@
 .teamName {
   max-width: 130px;
 }
+
+.soundControls { position: fixed; z-index: 15; top: 43px; right: 10px; color: #e0d7c4; font: 9px/1.3 Georgia,serif; pointer-events: auto; }
+.soundControls summary { width: max-content; margin-left: auto; padding: 4px 8px; color: #e5d8bb; background: rgba(21,20,17,.94); border: 1px solid #79694c; cursor: pointer; letter-spacing: .1em; list-style: none; }
+.soundControls summary::-webkit-details-marker { display:none; }
+.soundControls[open] { width: 205px; padding: 9px 10px; background: rgba(18,18,16,.97); border: 1px solid #8c7957; box-shadow: 0 8px 25px #000a; }
+.soundControls[open] summary { margin: -4px -5px 8px auto; border: 0; padding: 0; background: transparent; }
+.soundControls label { display:flex; justify-content:space-between; color:#c8b78e; font-size:8px; letter-spacing:.1em; }
+.soundControls input { width:100%; accent-color:#c0a877; }
+.soundControls button { display:block; margin-left:auto; padding:3px 7px; color:#e0d2b3; background:#26231c; border:1px solid #665a43; font:700 8px system-ui,sans-serif; cursor:pointer; }
 
 .huntTitle {
   min-width: 0;
@@ -370,9 +385,10 @@
   align-items: center;
   gap: 14px;
   padding: 8px 14px;
-  background: linear-gradient(90deg, #090a0beF, #12110fF2 50%, #090a0beF);
-  border-top: 1px solid #a68a58;
-  box-shadow: 0 -8px 26px #0009;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  text-shadow: 0 1px 4px #000, 0 0 8px #000;
   font: 10px/1.5 system-ui, sans-serif;
 }
 
@@ -414,7 +430,7 @@
 }
 
 .futureControls > b {
-  color: #91d7d8;
+  color: #c5bd9f;
 }
 
 .controlGroup > div {
@@ -450,6 +466,36 @@
   opacity: 0.35;
   cursor: default;
 }
+
+.cards button { color:#e8ddc6; background:linear-gradient(#29271f,#171715); border-color:#8a7654; }
+.cards button:disabled { color:#aaa08c; }
+.role,.room,.objective,.prompt { text-shadow:0 2px 5px #000,0 0 12px #000; }
+.room { display:inline; margin-top:4px; padding:0; color:#e2d2aa; background:transparent; border:0; }
+.futureRole b { color:#d5cdb8!important; }
+.readiness .on { background:#b5c294; border-color:#d0d9b1; box-shadow:0 0 5px #d0d9b155; }
+
+/* The Tracker's ruined timeline keeps its interface dark, with field-note contrast. */
+.futureHalf .panel {
+  width: auto;
+  max-width: min(470px, calc(100% - 16px));
+  padding: 0;
+  color: #eee7d5;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.futureHalf .futureRole,
+.futureHalf .futureRole b { color: #e7d5ad !important; }
+.futureHalf .room { color: #ded3ba; background: transparent; border: 0; opacity: 1; }
+.futureHalf .objective { color: #f0eadb; }
+.futureHalf .journalToggle { color: #eee3cb; background: #171917f5; border-color: #897959; box-shadow: 0 3px 12px #0009; }
+.futureHalf .prompt { color: #f0d8a5; background: rgba(16,17,15,.86); border: 1px solid #8a7655; padding: 7px 10px; }
+.futureHalf .message { background: linear-gradient(130deg,rgba(20,22,19,.98),rgba(9,10,9,.98)); border-color: #a78e60; }
+.futureControls { padding: 5px 10px; color: #eee6d5; background: transparent; border: 0; }
+.futureControls > b { color: #e3d1ac; }
+.futureControls kbd { color: #f0e4ca; background: #292a24; border-color: #71664e; }
+.futureControls > div { color: #ddd6c7; }
+.futureHalf .futureJournal { color: #eee7d5; background: linear-gradient(145deg,#191b18,#0d0f0d); border-color: #74684f; box-shadow: 0 10px 30px #000c; }
 
 @media (max-width: 900px) {
   .bar {

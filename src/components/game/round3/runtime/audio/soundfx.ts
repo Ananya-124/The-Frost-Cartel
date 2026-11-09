@@ -6,7 +6,9 @@
 
 class SoundFx {
   private ctx: AudioContext | null = null;
+  private master: GainNode | null = null;
   private enabled = true;
+  private volume = 0.28;
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -14,6 +16,9 @@ class SoundFx {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = this.enabled ? this.volume : 0;
+        this.master.connect(this.ctx.destination);
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -24,11 +29,18 @@ class SoundFx {
 
   public toggleMute(): boolean {
     this.enabled = !this.enabled;
+    if (this.ctx && this.master) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime, .08);
     return this.enabled;
   }
 
   public isEnabled(): boolean {
     return this.enabled;
+  }
+
+  public setAudioPreferences(volume: number, muted: boolean): void {
+    this.volume = Math.max(0, Math.min(1, volume));
+    this.enabled = !muted;
+    if (this.ctx && this.master) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime, .08);
   }
 
   /** Subtle chime when interacting with a clue or evidence */
@@ -49,7 +61,7 @@ class SoundFx {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(this.master ?? ctx.destination);
 
     osc.start(now);
     osc.stop(now + 0.35);
@@ -74,7 +86,7 @@ class SoundFx {
       gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.master ?? ctx.destination);
 
       osc.start(start);
       osc.stop(start + 0.45);
@@ -99,7 +111,7 @@ class SoundFx {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(this.master ?? ctx.destination);
 
       osc.start(now);
       osc.stop(now + 1.2);
@@ -124,7 +136,7 @@ class SoundFx {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(this.master ?? ctx.destination);
 
     osc.start(now);
     osc.stop(now + 0.28);
@@ -147,7 +159,7 @@ class SoundFx {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(this.master ?? ctx.destination);
 
     osc.start(now);
     osc.stop(now + 0.05);

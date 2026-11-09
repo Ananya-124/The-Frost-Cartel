@@ -6,7 +6,7 @@ const FUTURE_POWERED_ROOMS = ['hall', 'sec', 'gen', 'con'];
 export function lampLevel(state: GameState, room: Room, timeline: Timeline): number {
   if (state.brownout > 0) return 0;
   if (timeline === 'future') {
-    return state.flags.power && FUTURE_POWERED_ROOMS.includes(room.id) ? 1 : 0.5;
+    return state.flags.power && FUTURE_POWERED_ROOMS.includes(room.id) ? 1 : 0.72;
   }
   return state.flags.power ? 1.05 : 0.8;
 }

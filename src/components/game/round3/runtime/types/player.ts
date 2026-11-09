@@ -13,3 +13,11 @@ export interface Player {
   /** Game time at which this player armed the capture, or null. */
   syncArmedAt: number | null;
 }
+
+/** Render-only pose data calculated by Renderer from consecutive positions. */
+export interface CharacterPose {
+  facingX: number;
+  facingY: number;
+  moving: boolean;
+  phase: number;
+}

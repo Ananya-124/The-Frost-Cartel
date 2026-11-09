@@ -64,3 +64,104 @@
   color: #ffd0d0;
   border-radius: 4px;
 }
+
+/* ==========================================================================
+   CINEMATIC HORROR LAYER (visual only)
+   Palette: bone, dried-blood red, nicotine amber (Past) / cold teal (Future)
+   ========================================================================== */
+.ph-game-root {
+  --bg: #030304;
+  --text: #ddd3bd;
+  --gold: #e6c58a;
+  --gold-bright: #ffd48a;
+  --border: #5e432a;
+  --border-soft: #7a5a36;
+  --panel: #0b0806ee;
+  --button-bg: #1a130d;
+  --button-hover: #3a150f;
+  --past-amber: #f0a43a;
+  --future-teal: #46c9bd;
+  --blood: #9c2b1f;
+  --blood-bright: #d6402e;
+  --danger: #ff6b5a;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* Film grain: animated noise laid over both screens, under every UI panel. */
+.ph-game-root::before {
+  content: '';
+  position: absolute;
+  inset: -80px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: .13;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  animation: phGrain .9s steps(6) infinite;
+}
+/* Dread vignette with a slow blood-red heartbeat at the edges. */
+.ph-game-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 8px #000, inset 0 0 90px #5a0a0a55;
+  animation: phHeartbeat 5.5s ease-in-out infinite;
+}
+@keyframes phGrain {
+  0% { transform: translate(0, 0); }
+  17% { transform: translate(-40px, 22px); }
+  33% { transform: translate(30px, -50px); }
+  50% { transform: translate(-60px, -20px); }
+  67% { transform: translate(52px, 40px); }
+  83% { transform: translate(-18px, 60px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes phHeartbeat {
+  0%, 100% { box-shadow: inset 0 0 120px 8px #000, inset 0 0 90px #4a0808aa; }
+  12% { box-shadow: inset 0 0 130px 10px #000, inset 0 0 120px #8a1010bb; }
+  24% { box-shadow: inset 0 0 120px 8px #000, inset 0 0 90px #4a080866; }
+}
+
+/* Make the canvases feel like different surveillance feeds. */
+.ph-game-root canvas { image-rendering: auto; }
+.ph-game-root canvas { filter: contrast(1.1) saturate(.95) sepia(.16); }
+/* CSS-module class names are hashed, so match the Future half by substring. */
+.ph-game-root [class*="futureHalf"] canvas { filter: contrast(1.12) saturate(.95) brightness(1.3); }
+
+.ph-game-root button {
+  font-family: Cinzel, Georgia, serif;
+  letter-spacing: .05em;
+  background: linear-gradient(#2a1e14, #140e09);
+  border-color: #6e4e2c;
+  box-shadow: inset 0 1px #ffffff12, 0 2px 6px #000a;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+}
+.ph-game-root button:hover:not(:disabled) {
+  background: linear-gradient(#4a1a12, #200b08);
+  border-color: var(--blood-bright);
+  box-shadow: 0 0 12px #d6402e55, inset 0 1px #ffffff18;
+}
+.ph-game-root input, .ph-game-root textarea { background: #070504; border-color: #5e432a; color: #eadfc6; }
+.ph-game-root input:focus, .ph-game-root textarea:focus { outline: none; border-color: var(--blood-bright); box-shadow: 0 0 10px #d6402e44; }
+.ph-game-root .ph-exit {
+  background: rgba(10, 5, 4, .94);
+  color: #ffd9a0;
+  border-color: #8c2a1f;
+  box-shadow: 0 0 14px #9c2b1f33;
+  position: fixed;
+  z-index: 100;
+}
+.ph-game-root .ph-card-error { background: #2c0907; border-color: #d6402e; box-shadow: 0 0 20px #d6402e44; }
+.ph-game-root ::selection { background: #9c2b1f; color: #fff; }
+.ph-game-root ::-webkit-scrollbar { width: 8px; height: 8px; }
+.ph-game-root ::-webkit-scrollbar-track { background: #0a0705; }
+.ph-game-root ::-webkit-scrollbar-thumb { background: #5e432a; border-radius: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-game-root::before, .ph-game-root::after { animation: none; }
+}
+
+/* Tracker screen: lighter edge shading so the haunted Future stays readable. */
+.ph-game-root [class*="futureHalf"]::after { box-shadow: inset 0 0 70px #00080d99; }

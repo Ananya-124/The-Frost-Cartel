@@ -27,7 +27,7 @@ export default function TimelinePane({
 }: TimelinePaneProps) {
   const isFuture = view.timeline === 'future';
   return (
-    <div className={styles.half} ref={halfRef}>
+    <div className={`${styles.half} ${isFuture ? styles.futureHalf : ''}`} ref={halfRef}>
       <canvas className={styles.canvas} ref={canvasRef} />
       <button
         className={styles.journalToggle}

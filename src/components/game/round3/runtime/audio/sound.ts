@@ -1,14 +1,25 @@
+import { getAudioPreferences, type AudioPreferences } from './preferences';
+
 let audio: AudioContext | null = null;
-let drone: { osc: OscillatorNode; lfo: OscillatorNode } | null = null;
+let master: GainNode | null = null;
+let drone: { oscs: OscillatorNode[]; lfo: OscillatorNode; noise: AudioBufferSourceNode } | null = null;
 
 function ensureContext(): AudioContext | null {
   if (audio) return audio;
   try {
     audio = new AudioContext();
+    master = audio.createGain();
+    applyAmbientPreferences(getAudioPreferences());
+    master.connect(audio.destination);
   } catch {
     audio = null;
   }
   return audio;
+}
+
+export function applyAmbientPreferences(preferences: AudioPreferences): void {
+  if (!audio || !master) return;
+  master.gain.setTargetAtTime(preferences.muted ? 0 : preferences.volume, audio.currentTime, .08);
 }
 
 /** Short synthesized tone. Failures (no audio support) are ignored, as in the original. */
@@ -29,7 +40,7 @@ export function playTone(
     gain.gain.value = volume;
     gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
     osc.connect(gain);
-    gain.connect(ac.destination);
+    gain.connect(master ?? ac.destination);
     osc.start();
     osc.stop(ac.currentTime + duration);
   } catch {
@@ -44,21 +55,36 @@ export function startDrone(): void {
   if (!ac) return;
   try {
     const osc = ac.createOscillator();
+    const low = ac.createOscillator();
     const lfo = ac.createOscillator();
     const gain = ac.createGain();
     const lfoGain = ac.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.value = 48;
-    lfo.frequency.value = 0.13;
-    lfoGain.gain.value = 0.012;
-    gain.gain.value = 0.02;
+    const filter = ac.createBiquadFilter();
+    const wind = ac.createBufferSource();
+    const windGain = ac.createGain();
+    const buffer = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    const channel = buffer.getChannelData(0);
+    for (let i = 0; i < channel.length; i++) channel[i] = (Math.random() * 2 - 1) * .22;
+    wind.buffer = buffer;
+    wind.loop = true;
+    filter.type = 'lowpass'; filter.frequency.value = 175; filter.Q.value = .45;
+    osc.type = 'triangle'; osc.frequency.value = 43;
+    low.type = 'sine'; low.frequency.value = 56;
+    lfo.frequency.value = 0.075;
+    lfoGain.gain.value = 0.006;
+    gain.gain.value = 0.022;
+    windGain.gain.value = 0.055;
     lfo.connect(lfoGain);
     lfoGain.connect(gain.gain);
     osc.connect(gain);
-    gain.connect(ac.destination);
+    low.connect(gain);
+    gain.connect(master ?? ac.destination);
+    wind.connect(filter); filter.connect(windGain); windGain.connect(master ?? ac.destination);
     osc.start();
+    low.start();
     lfo.start();
-    drone = { osc, lfo };
+    wind.start();
+    drone = { oscs: [osc, low], lfo, noise: wind };
   } catch {
     drone = null;
   }
@@ -67,12 +93,14 @@ export function startDrone(): void {
 /** Stops the drone and releases the audio context. */
 export function disposeAudio(): void {
   try {
-    drone?.osc.stop();
+    drone?.oscs.forEach((osc) => osc.stop());
     drone?.lfo.stop();
+    drone?.noise.stop();
   } catch {
     /* already stopped */
   }
   drone = null;
+  master = null;
   if (audio) {
     void audio.close().catch(() => undefined);
     audio = null;
