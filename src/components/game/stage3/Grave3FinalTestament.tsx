@@ -668,10 +668,6 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
           <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
         </button>
 
-        {/* Bottom-Center: Cinematic Tagline */}
-        <div className="hidden md:flex items-center gap-2 text-stone-400 font-serif italic text-xs tracking-wider">
-          <span>✦ EXAMINE • ROTATE • MOVE OBJECTS TO REVEAL CLUES ✦</span>
-        </div>
 
         {/* Bottom-Right: Return to Cemetery */}
         <button

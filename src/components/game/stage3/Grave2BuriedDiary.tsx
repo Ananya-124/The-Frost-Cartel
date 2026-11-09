@@ -765,10 +765,6 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
           <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
         </button>
 
-        {/* Bottom-Center: Tagline */}
-        <div className="hidden md:flex items-center gap-2 text-stone-400 font-serif italic text-xs tracking-wider">
-          <span>✦ Open the diary • Turn pages • Move objects to uncover clues ✦</span>
-        </div>
 
         {/* Bottom-Right: Return to Cemetery */}
         <button
