@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import gsap from 'gsap';
 import type { HuntImage, Hotspot } from '../../../types/round1.types';
 import { normalizeTargetId } from './stage2TargetsConfig';
 import { useInspectionZoomPan } from './useInspectionZoomPan';
@@ -33,14 +34,31 @@ interface OverlayItemProps {
   onSelect: (hotspot: Hotspot, e: React.MouseEvent) => void;
 }
 
-const DiscoveredBadge: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
-  <g transform={`translate(${cx}, ${cy})`} className="pointer-events-none">
-    <circle r="14" fill="#064e3b" stroke="#34d399" strokeWidth="2" filter="url(#gold-glow)" />
-    <text y="5" textAnchor="middle" fill="#6ee7b7" fontSize="14" fontWeight="bold">
-      ✓
-    </text>
-  </g>
-);
+const DiscoveredBadge: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => {
+  const badgeRef = useRef<SVGGElement | null>(null);
+
+  useEffect(() => {
+    if (!badgeRef.current) return;
+    const el = badgeRef.current;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { scale: 0, opacity: 0, transformOrigin: 'center center' },
+        { scale: 1, opacity: 1, duration: 0.5, delay: 0.35, ease: 'back.out(1.7)' }
+      );
+    });
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <g ref={badgeRef} transform={`translate(${cx}, ${cy})`} className="pointer-events-none">
+      <circle r="14" fill="#064e3b" stroke="#34d399" strokeWidth="2" filter="url(#gold-glow)" />
+      <text y="5" textAnchor="middle" fill="#6ee7b7" fontSize="14" fontWeight="bold">
+        ✓
+      </text>
+    </g>
+  );
+};
 
 const HotspotPathItem: React.FC<OverlayItemProps> = ({
   hotspot,
@@ -49,6 +67,8 @@ const HotspotPathItem: React.FC<OverlayItemProps> = ({
   imgHeight,
   onSelect,
 }) => {
+  const visualPathRef = useRef<SVGPathElement | null>(null);
+
   const handleKeySelect = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -58,86 +78,89 @@ const HotspotPathItem: React.FC<OverlayItemProps> = ({
 
   const cx = (hotspot.xPercent * imgWidth) / 100 + (hotspot.widthPercent * imgWidth) / 200;
   const cy = (hotspot.yPercent * imgHeight) / 100 + (hotspot.heightPercent * imgHeight) / 200;
-  const strokeW = isAlreadyFound ? Math.max(3, imgWidth / 400) : Math.max(12, imgWidth / 100);
+  const strokeW = Math.max(2.5, imgWidth / 450);
+  const hitToleranceStroke = Math.max(16, Math.round(imgWidth / 60));
 
-  return (
-    <g key={hotspot.id}>
-      <path
-        id={`path_${hotspot.id}`}
-        d={hotspot.svgPath}
-        role="button"
-        tabIndex={0}
-        aria-label={`Select ${hotspot.name}`}
-        onClick={(e) => onSelect(hotspot, e)}
-        onKeyDown={handleKeySelect}
-        fill={isAlreadyFound ? 'rgba(251, 191, 36, 0.22)' : 'rgba(0, 0, 0, 0.001)'}
-        stroke={isAlreadyFound ? '#fbbf24' : 'transparent'}
-        strokeWidth={strokeW}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        style={{ pointerEvents: 'all' }}
-        filter={isAlreadyFound ? 'url(#gold-glow)' : undefined}
-        className={`transition-all duration-300 ${
-          isAlreadyFound ? 'relic-gold-draw cursor-default' : 'opacity-0 hover:opacity-0 cursor-crosshair'
-        }`}
-      />
-      {isAlreadyFound && <DiscoveredBadge cx={cx} cy={cy} />}
-    </g>
-  );
-};
-
-const HotspotRectItem: React.FC<OverlayItemProps> = ({
-  hotspot,
-  isAlreadyFound,
-  imgWidth,
-  imgHeight,
-  onSelect,
-}) => {
-  const handleKeySelect = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect(hotspot, e as unknown as React.MouseEvent);
+  // GSAP 3 SVG outline drawing and golden reveal
+  useEffect(() => {
+    if (!isAlreadyFound || !visualPathRef.current) return;
+    const el = visualPathRef.current;
+    let totalLen = 1200;
+    try {
+      totalLen = el.getTotalLength() || 1200;
+    } catch {
+      totalLen = 1200;
     }
-  };
 
-  const rx = (hotspot.xPercent * imgWidth) / 100;
-  const ry = (hotspot.yPercent * imgHeight) / 100;
-  const rw = (hotspot.widthPercent * imgWidth) / 100;
-  const rh = (hotspot.heightPercent * imgHeight) / 100;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        {
+          strokeDasharray: totalLen,
+          strokeDashoffset: totalLen,
+          opacity: 0.2,
+          fill: 'rgba(251, 191, 36, 0.0)',
+        },
+        {
+          strokeDashoffset: 0,
+          opacity: 1,
+          fill: 'rgba(251, 191, 36, 0.22)',
+          duration: 1.2,
+          ease: 'power2.out',
+        }
+      );
+    });
+
+    return () => ctx.revert();
+  }, [isAlreadyFound]);
 
   return (
     <g key={hotspot.id}>
-      <rect
-        id={`rect_${hotspot.id}`}
-        x={rx}
-        y={ry}
-        width={rw}
-        height={rh}
-        rx="8"
-        role="button"
-        tabIndex={0}
-        aria-label={`Select ${hotspot.name}`}
-        onClick={(e) => onSelect(hotspot, e)}
-        onKeyDown={handleKeySelect}
-        fill={isAlreadyFound ? 'rgba(251, 191, 36, 0.22)' : 'rgba(0, 0, 0, 0.001)'}
-        stroke={isAlreadyFound ? '#fbbf24' : 'transparent'}
-        strokeWidth={isAlreadyFound ? 3 : 0}
-        style={{ pointerEvents: 'all' }}
-        filter={isAlreadyFound ? 'url(#gold-glow)' : undefined}
-        className={`transition-all duration-300 ${
-          isAlreadyFound ? 'cursor-default' : 'opacity-0 hover:opacity-0 cursor-crosshair'
-        }`}
-      />
-      {isAlreadyFound && <DiscoveredBadge cx={rx + rw / 2} cy={ry + rh / 2} />}
+      {/* 1. Invisible Interaction Hit Path (Phase 4A: Follows exact silhouette, generous fair hit detection) */}
+      {!isAlreadyFound && (
+        <path
+          id={`hit_${hotspot.id}`}
+          d={hotspot.svgPath}
+          role="button"
+          tabIndex={0}
+          aria-label={`Select ${hotspot.name}`}
+          onClick={(e) => onSelect(hotspot, e)}
+          onKeyDown={handleKeySelect}
+          fill="rgba(0, 0, 0, 0.001)"
+          stroke="transparent"
+          strokeWidth={hitToleranceStroke}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          style={{ pointerEvents: 'all' }}
+          className="opacity-0 hover:opacity-0 cursor-crosshair outline-none focus:outline-none"
+        />
+      )}
+
+      {/* 2. Visible Discovery Path (Phase 4B & Phase 6: Animated antique-gold outline with GSAP) */}
+      {isAlreadyFound && (
+        <>
+          <path
+            ref={visualPathRef}
+            id={`visual_${hotspot.id}`}
+            d={hotspot.svgPath}
+            fill="rgba(251, 191, 36, 0.22)"
+            stroke="#fbbf24"
+            strokeWidth={strokeW}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            style={{ pointerEvents: 'none' }}
+            filter="url(#gold-glow)"
+            className="cursor-default"
+          />
+          <DiscoveredBadge cx={cx} cy={cy} />
+        </>
+      )}
     </g>
   );
 };
 
 const HotspotOverlayItem: React.FC<OverlayItemProps> = (props) => {
-  if (props.hotspot.svgPath) {
-    return <HotspotPathItem {...props} />;
-  }
-  return <HotspotRectItem {...props} />;
+  return <HotspotPathItem {...props} />;
 };
 
 export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({

@@ -1,6 +1,5 @@
 import type { StageId } from '../types/round.types';
 import type {
-  HuntImage,
   Round1TeamSessionState,
   ScoreTransaction,
   Stage1Config,
@@ -12,6 +11,7 @@ import type {
 } from '../types/round1.types';
 import { DEFAULT_STAGE1_TRIALS } from '../constants/stage1.constants';
 import { STAGE_CREDITS } from '../constants/credits.constants';
+import { STAGE2_CANONICAL_IMAGES, STAGE2_CANONICAL_TARGETS } from '../components/game/stage2/stage2TargetsConfig';
 
 export type ScoreSyncCallback = (
   teamId: string,
@@ -31,110 +31,6 @@ export interface Stage1ResolveResult {
   stageFinished: boolean;
   reason?: 'unknown_team' | 'bad_trial' | 'not_started' | 'tries_left' | 'already_resolved' | 'expired';
 }
-
-// Initial 8 Configured Illustrated Horror Scenes for Stage 2 Haunted Image Hunt
-const INITIAL_HUNT_IMAGES: HuntImage[] = [
-  {
-    id: 'img_01',
-    title: 'The Ancestral Study',
-    imageUrl: '/assets/stage-2/photographs/moonlit-cemetery.jpg',
-    orientationDeg: -4,
-    description: 'A shadowy cemetery at midnight littered with weathered tombstones and a carved pumpkin.',
-    hotspots: [
-      { id: 'hs_01', name: 'Carved Jack-o\'-Lantern', targetId: 'target_pumpkin', xPercent: 16, yPercent: 76, widthPercent: 14, heightPercent: 16 },
-    ],
-  },
-  {
-    id: 'img_02',
-    title: 'The Alchemist\'s Crypt',
-    imageUrl: '/assets/stage-2/photographs/witches-laboratory.jpg',
-    orientationDeg: 2,
-    description: 'Stone shelves holding occult concoctions, bubbling cauldrons, and venom potion bottles.',
-    hotspots: [
-      { id: 'hs_05', name: 'Venom Potion Bottle', targetId: 'target_potion', xPercent: 68, yPercent: 68, widthPercent: 10, heightPercent: 14 },
-    ],
-  },
-  {
-    id: 'img_03',
-    title: 'The Mausoleum Vault',
-    imageUrl: '/assets/stage-2/photographs/ancient-crypt.jpg',
-    orientationDeg: -1.5,
-    description: 'An ancient resting place holding an ornate stone coffin and an ancestral skull.',
-    hotspots: [
-      { id: 'hs_02', name: 'Ancestral Skull', targetId: 'target_skull', xPercent: 28, yPercent: 44, widthPercent: 10, heightPercent: 12 },
-      { id: 'hs_07', name: 'Carved Coffin', targetId: 'target_coffin', xPercent: 50, yPercent: 62, widthPercent: 24, heightPercent: 24 },
-    ],
-  },
-  {
-    id: 'img_04',
-    title: 'The Witch\'s Belfry',
-    imageUrl: '/assets/stage-2/photographs/gothic-chapel.jpg',
-    orientationDeg: 3,
-    description: 'Moonlit chapel rafters where bats roost and ritual altar candles flicker.',
-    hotspots: [
-      { id: 'hs_04', name: 'Nocturnal Bat', targetId: 'target_bat', xPercent: 74, yPercent: 16, widthPercent: 10, heightPercent: 10 },
-      { id: 'hs_09', name: 'Candle of the Dead', targetId: 'target_candle', xPercent: 46, yPercent: 62, widthPercent: 8, heightPercent: 15 },
-    ],
-  },
-  {
-    id: 'img_05',
-    title: 'The Haunted Mansion',
-    imageUrl: '/assets/stage-2/photographs/haunted-mansion.jpg',
-    orientationDeg: -2.5,
-    description: 'A grand decaying foyer with cobwebs draping the arches and a floating ghost apparition.',
-    hotspots: [
-      { id: 'hs_11', name: 'Pale Ghost Apparition', targetId: 'target_ghost', xPercent: 35, yPercent: 46, widthPercent: 14, heightPercent: 22 },
-      { id: 'hs_03', name: 'Woven Cobweb', targetId: 'target_web', xPercent: 82, yPercent: 8, widthPercent: 14, heightPercent: 16 },
-    ],
-  },
-  {
-    id: 'img_06',
-    title: 'The Cursed Attic',
-    imageUrl: '/assets/stage-2/photographs/cursed-attic.jpg',
-    orientationDeg: 1.5,
-    description: 'Dusty storage trunks holding a pointed witch hat, forgotten dolls, and a crawling spider.',
-    hotspots: [
-      { id: 'hs_10', name: 'Pointed Witch Hat', targetId: 'target_witch_hat', xPercent: 48, yPercent: 64, widthPercent: 12, heightPercent: 14 },
-      { id: 'hs_06', name: 'Crawling Arachnid', targetId: 'target_spider', xPercent: 68, yPercent: 24, widthPercent: 8, heightPercent: 9 },
-    ],
-  },
-  {
-    id: 'img_07',
-    title: 'The Haunted Village',
-    imageUrl: '/assets/stage-2/photographs/haunted-village.jpg',
-    orientationDeg: -3,
-    description: 'A rain-slicked cobblestone street where a black cat prowls in the moonlight.',
-    hotspots: [
-      { id: 'hs_12', name: 'Obsidian Black Cat', targetId: 'target_black_cat', xPercent: 42, yPercent: 68, widthPercent: 10, heightPercent: 12 },
-    ],
-  },
-  {
-    id: 'img_08',
-    title: 'The Forest Bridge',
-    imageUrl: '/assets/stage-2/photographs/forest-bridge.jpg',
-    orientationDeg: 2.5,
-    description: 'An ancient mossy stone bridge hiding an iron skeleton key beside an ominous lantern.',
-    hotspots: [
-      { id: 'hs_08', name: 'Ornate Skeleton Key', targetId: 'target_key', xPercent: 58, yPercent: 72, widthPercent: 9, heightPercent: 12 },
-    ],
-  },
-];
-
-// Initial 12 Configured Halloween Targets
-const INITIAL_TARGET_ITEMS = [
-  { id: 'target_pumpkin', name: 'Pumpkin', icon: '🎃', isFound: false },
-  { id: 'target_skull', name: 'Skull', icon: '💀', isFound: false },
-  { id: 'target_ghost', name: 'Ghost', icon: '👻', isFound: false },
-  { id: 'target_bat', name: 'Bat', icon: '🦇', isFound: false },
-  { id: 'target_witch_hat', name: 'Witch Hat', icon: '🧙‍♀️', isFound: false },
-  { id: 'target_spider', name: 'Spider', icon: '🕷️', isFound: false },
-  { id: 'target_web', name: 'Spider Web', icon: '🕸️', isFound: false },
-  { id: 'target_coffin', name: 'Coffin', icon: '⚰️', isFound: false },
-  { id: 'target_black_cat', name: 'Black Cat', icon: '🐈‍⬛', isFound: false },
-  { id: 'target_potion', name: 'Potion Bottle', icon: '🧪', isFound: false },
-  { id: 'target_candle', name: 'Candle', icon: '🕯️', isFound: false },
-  { id: 'target_key', name: 'Skeleton Key', icon: '🗝️', isFound: false },
-];
 
 export class Round1Service {
   // Global Admin Settings
@@ -164,8 +60,8 @@ export class Round1Service {
     title: 'The Haunted Image Hunt',
     description: 'Inspect scattered antique photographs to identify 12 occult Halloween relics.',
     rewardCredits: STAGE_CREDITS['stage-2'], // 150
-    images: [...INITIAL_HUNT_IMAGES],
-    targets: [...INITIAL_TARGET_ITEMS],
+    images: [...STAGE2_CANONICAL_IMAGES],
+    targets: [...STAGE2_CANONICAL_TARGETS],
     hintDeduction: 15, // Configurable deduction for hint usage
     incorrectClickPenalty: 0, // Configurable deduction for wrong clicks (default 0)
   };
