@@ -76,7 +76,7 @@ export class Round1Service {
     description: 'Explore 3 open graves, arrange skeletal remains, decipher a buried diary, and align rune rings to escape.',
     rewardCredits: STAGE_CREDITS['stage-3'], // 250
     grave1: {
-      clueFragment: 'THE',
+      clueFragment: 'BENEATH',
       bones: [
         { id: 'bone_skull', name: 'Ancient Cranium', symbol: '💀', description: 'Carved with the Mark of the North.' },
         { id: 'bone_rib', name: 'Thoracic Ribcage', symbol: '🦴', description: 'Inscribed with cemetery wardings.' },
@@ -88,6 +88,10 @@ export class Round1Service {
         { slotId: 'slot_legs', name: 'Base Pedestal', acceptedBoneId: 'bone_femur', placedBoneId: null },
       ],
       isCompleted: false,
+      riddleTitle: "The Keeper's Last Riddle",
+      riddleText: 'Born when flame is spent, pale when all light has fled; I am the last trace of fire, yet I hold no heat. What am I?',
+      riddleAnswer: 'ASH',
+      chestWord: 'BENEATH',
     },
     grave2: {
       clueFragment: 'NIGHT',
@@ -758,6 +762,54 @@ export class Round1Service {
     return { allPlaced };
   }
 
+  // Stage 3: Grave 1 Riddle & Treasure Chest Interaction
+  solveGrave1Riddle(teamId: string, answer: string): { success: boolean; message: string } {
+    const session = this.teamStates.get(teamId);
+    if (!session) return { success: false, message: 'Squad session invalid.' };
+
+    const normalized = answer.trim().toUpperCase();
+    const expected = (this.stage3Config.grave1.riddleAnswer || 'ASH').trim().toUpperCase();
+
+    if (normalized === expected) {
+      session.stage3State.grave1Completed = true;
+      session.stage3State.grave1RiddleSolved = true;
+      const note = 'Grave 1: The Keeper\'s Last Riddle solved — Inscription "ASH" unsealed the relic chest.';
+      if (!session.evidenceJournal.notes.includes(note)) {
+        session.evidenceJournal.notes.push(note);
+      }
+      this.persistToStorage();
+      return { success: true, message: 'The ancient warding shatters! The hidden chest awakens.' };
+    }
+
+    this.recordPenalty(teamId, 'stage-3', `Incorrect grave 1 riddle attempt "${answer}"`);
+    return { success: false, message: 'The tomb rejects your answer. The silence remains unbroken.' };
+  }
+
+  unlockGrave1Chest(teamId: string): { success: boolean; fragment: string } {
+    const session = this.teamStates.get(teamId);
+    const fragment = this.stage3Config.grave1.chestWord || this.stage3Config.grave1.clueFragment || 'BENEATH';
+    if (!session) return { success: false, fragment };
+
+    session.stage3State.grave1ChestUnlocked = true;
+    if (!session.stage3State.collectedFragments.includes(fragment)) {
+      session.stage3State.collectedFragments.push(fragment);
+    }
+    // Also include 'BENEATH' and 'THE' for universal compatibility
+    if (!session.stage3State.collectedFragments.includes('BENEATH')) {
+      session.stage3State.collectedFragments.push('BENEATH');
+    }
+    if (!session.stage3State.collectedFragments.includes('THE')) {
+      session.stage3State.collectedFragments.push('THE');
+    }
+    session.evidenceJournal.grave1Fragment = fragment;
+    const note = `Grave 1: Ancient Relic Chest unlocked with the Skeleton Key. Secret Fragment I revealed: "${fragment}"`;
+    if (!session.evidenceJournal.notes.includes(note)) {
+      session.evidenceJournal.notes.push(note);
+    }
+    this.persistToStorage();
+    return { success: true, fragment };
+  }
+
   // Stage 3: Grave 2 Digging & Coffer Code Unlock
   digSoil(teamId: string, soilId: string): { year: number } {
     const session = this.teamStates.get(teamId);
@@ -835,7 +887,7 @@ export class Round1Service {
     const normalized = answer.trim().toUpperCase().replace(/\s+/g, ' ');
     const expected = this.stage3Config.finalGate.acceptedAnswer.trim().toUpperCase().replace(/\s+/g, ' ');
 
-    if (normalized === expected) {
+    if (normalized === expected || normalized === 'BENEATH NIGHT RETURNS' || normalized === 'THE NIGHT RETURNS') {
       session.stage3State.isGateUnlocked = true;
       this.completeStage(teamId, 'stage-3');
       this.persistToStorage();

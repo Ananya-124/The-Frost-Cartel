@@ -85,17 +85,17 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
       {/* 2. The Three Freestanding Gothic Coffin Structures */}
       <div className="w-full max-w-5xl mx-auto flex-1 min-h-0 flex items-center justify-center py-1">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6 lg:gap-8 w-full justify-items-center items-center h-full max-h-full">
-          {/* COFFIN I: The Lost Chamber / Bone Chamber (Amber Theme) */}
+          {/* COFFIN I: The Marked Remains (Amber Theme) */}
           <GothicCoffinCard
             coffinId="coffin1"
             romanNumber="COFFIN I"
-            title="THE LOST CHAMBER"
+            title="THE MARKED REMAINS"
             accessibleGraveName="Grave 1: Bone Chamber"
             chamberAltTitle="The Bone Chamber"
             colorTheme="amber"
             artworkSrc="/assets/stage-3/coffins/coffin_hd_1.png"
-            isDiscovered={collectedFragments.includes('THE')}
-            discoveredFragment="THE"
+            isDiscovered={collectedFragments.includes('BENEATH') || collectedFragments.includes('THE')}
+            discoveredFragment={collectedFragments.includes('BENEATH') ? 'BENEATH' : 'THE'}
             onSelect={() => onSelectCoffin('coffin1')}
           />
 
