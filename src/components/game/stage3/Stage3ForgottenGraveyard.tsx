@@ -105,7 +105,9 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
   const session = round1Service.getTeamSession(teamId, '');
   const journalData = {
     grave1Fragment: collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : session.evidenceJournal?.grave1Fragment),
-    grave2Fragment: collectedFragments.includes('NIGHT') ? 'NIGHT' : session.evidenceJournal?.grave2Fragment,
+    grave2Fragment: collectedFragments.includes('EMBER')
+      ? 'EMBER'
+      : (collectedFragments.includes('NIGHT') ? 'NIGHT' : session.evidenceJournal?.grave2Fragment),
     grave3Fragment: collectedFragments.includes('RETURNS') ? 'RETURNS' : session.evidenceJournal?.grave3Fragment,
     notes: session.evidenceJournal?.notes ?? [],
     unlockedCodes: session.evidenceJournal?.unlockedCodes ?? [],
@@ -114,7 +116,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
   return (
     <div
       className={`relative w-full flex flex-col justify-between text-stone-100 font-sans select-none animate-fadeIn ${
-        activeView === 'overview'
+        activeView === 'overview' || activeView === 'coffin2'
           ? 'h-screen h-[100dvh] overflow-hidden min-h-0'
           : 'min-h-screen overflow-x-hidden'
       }`}

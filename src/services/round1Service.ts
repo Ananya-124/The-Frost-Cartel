@@ -94,14 +94,14 @@ export class Round1Service {
       chestWord: 'BENEATH',
     },
     grave2: {
-      clueFragment: 'NIGHT',
-      diaryExcerpt: 'Read the final digit of each marked year, from oldest to newest.',
+      clueFragment: 'EMBER',
+      diaryExcerpt: 'On the night the old covenant was sealed, the year was recorded in four marks.',
       soilLocations: [
         { id: 'soil_1', name: 'Overgrown Mound', inscriptionYear: 1891, isDug: false },
         { id: 'soil_2', name: 'Crumbling Pedestal', inscriptionYear: 1904, isDug: false },
         { id: 'soil_3', name: 'Weeping Willow Roots', inscriptionYear: 1927, isDug: false },
       ],
-      correctCode: '147', // Final digits of 1891, 1904, 1927 in chronological order
+      correctCode: '1749', // The Covenant Year: 1 (brow mark) - 7 (west) - 4 (east) - 9 (seal)
       isCompleted: false,
     },
     grave3: {
@@ -840,21 +840,32 @@ export class Round1Service {
     return { year };
   }
 
-  unlockGrave2Coffer(teamId: string, enteredCode: string): { success: boolean } {
+  unlockGrave2Coffer(teamId: string, enteredCode: string): { success: boolean; fragment?: string } {
     const session = this.teamStates.get(teamId);
     if (!session) return { success: false };
 
-    const correct = this.stage3Config.grave2.correctCode.trim();
-    if (enteredCode.trim() === correct) {
+    const cleanCode = enteredCode.trim();
+    const isCorrect =
+      cleanCode === '1749' ||
+      cleanCode === '147' ||
+      cleanCode === this.stage3Config.grave2.correctCode.trim();
+
+    if (isCorrect) {
       session.stage3State.grave2CofferUnlocked = true;
-      if (!session.stage3State.collectedFragments.includes('NIGHT')) {
-        session.stage3State.collectedFragments.push('NIGHT');
-        session.evidenceJournal.grave2Fragment = 'NIGHT';
-        session.evidenceJournal.unlockedCodes.push(`Coffer Key: ${correct}`);
-        session.evidenceJournal.notes.push('Grave 2: Lock tumblers released. Parchment unsealed: "NIGHT"');
+      const fragment = cleanCode === '147' ? 'NIGHT' : 'EMBER';
+      if (!session.stage3State.collectedFragments.includes(fragment)) {
+        session.stage3State.collectedFragments.push(fragment);
       }
+      if (cleanCode === '147' && !session.stage3State.collectedFragments.includes('NIGHT')) {
+        session.stage3State.collectedFragments.push('NIGHT');
+      }
+      session.evidenceJournal.grave2Fragment = fragment;
+      session.evidenceJournal.unlockedCodes.push(`Coffer Key: ${cleanCode}`);
+      session.evidenceJournal.notes.push(
+        `Grave II unsealed: The Covenant Year (${cleanCode}) unlocked the iron coffer. Syllable revealed: "${fragment}"`
+      );
       this.persistToStorage();
-      return { success: true };
+      return { success: true, fragment };
     }
 
     this.recordPenalty(teamId, 'stage-3', 'Incorrect coffer combination attempt');
@@ -902,7 +913,13 @@ export class Round1Service {
     const normalized = answer.trim().toUpperCase().replace(/\s+/g, ' ');
     const expected = this.stage3Config.finalGate.acceptedAnswer.trim().toUpperCase().replace(/\s+/g, ' ');
 
-    if (normalized === expected || normalized === 'BENEATH NIGHT RETURNS' || normalized === 'THE NIGHT RETURNS') {
+    if (
+      normalized === expected ||
+      normalized === 'BENEATH NIGHT RETURNS' ||
+      normalized === 'THE NIGHT RETURNS' ||
+      normalized === 'BENEATH EMBER RETURNS' ||
+      normalized === 'THE EMBER RETURNS'
+    ) {
       session.stage3State.isGateUnlocked = true;
       this.completeStage(teamId, 'stage-3');
       this.persistToStorage();
