@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { soundController } from '../../../utils/soundController';
-import { ScrollGraphic, CompassGraphic, LetterGraphic, KeyGraphic, SkullGraphic, RibcageGraphic } from './CoffinGraphics';
+import { ScrollGraphic, CompassGraphic, LetterGraphic, KeyGraphic } from './CoffinGraphics';
 
 export type ArtifactType = 'scroll' | 'compass' | 'parchment' | 'key' | 'skull' | 'ribcage';
 
@@ -85,8 +85,20 @@ export const ArtifactInspectionModal: React.FC<ArtifactInspectionModalProps> = (
             {artifactType === 'compass' && <CompassGraphic className="w-32 h-32 sm:w-36 sm:h-36" />}
             {artifactType === 'parchment' && <LetterGraphic className="w-36 h-28 sm:w-40 sm:h-32" />}
             {artifactType === 'key' && <KeyGraphic className="w-36 h-20 sm:w-44 sm:h-24" />}
-            {artifactType === 'skull' && <SkullGraphic romanNumeral="I" className="w-32 h-36 sm:w-36 sm:h-40" />}
-            {artifactType === 'ribcage' && <RibcageGraphic className="w-36 h-40 sm:w-40 sm:h-44" />}
+            {artifactType === 'skull' && (
+              <img
+                src="/assets/stage-3/coffins/relic_skull_realistic.png"
+                alt="Ancient Cranium of the First Warden"
+                className="w-48 h-52 sm:w-56 sm:h-60 object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.95)]"
+              />
+            )}
+            {artifactType === 'ribcage' && (
+              <img
+                src="/assets/stage-3/coffins/relic_ribcage_realistic.png"
+                alt="Thoracic Ribcage with Sun Medallion"
+                className="w-52 h-56 sm:w-60 sm:h-64 object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.95)]"
+              />
+            )}
           </div>
 
           {/* Interactive Inspection Controls */}
