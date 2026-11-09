@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { TeamSession } from '../../../types/team.types';
 import { round2Service, type R2Card, type R2View } from '../../../services/round2Service';
-import { CARD_COLOR, STAGE_GHOST } from '../../../constants/auction.constants';
+import { STAGE_GHOST } from '../../../constants/auction.constants';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
 import { AuctionCard, CardArt } from './AuctionCard';
 import '../../../styles/round2.css';
@@ -227,9 +227,8 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
             {live && liveCard ? (
               <div className="relative z-10">
                 <div className="flex flex-col sm:flex-row gap-5">
-                  <div className="r2-art w-36 sm:w-44 shrink-0 mx-auto sm:mx-0 aspect-[4/5] rounded-xl overflow-hidden flex items-center justify-center" style={{ '--c': CARD_COLOR } as React.CSSProperties}>
-                    <CardArt card={liveCard} className="h-[88%] w-auto object-contain r2-art-img" />
-                    <span aria-hidden="true" className="r2-shine" />
+                  <div className="r2-live-art w-36 sm:w-44 shrink-0 mx-auto sm:mx-0 aspect-[4/5]">
+                    <CardArt card={liveCard} className="h-full w-full object-contain" />
                     <span className="r2-badge r2-badge-live">LIVE</span>
                   </div>
                   <div className="min-w-0 flex-1">

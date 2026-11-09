@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { round2Service, type R2Overview, type R2Result } from '../../../services/round2Service';
+import { CardArt } from '../../game/round2/AuctionCard';
 
 export const AdminAuctionTab: React.FC = () => {
   const [key, setKey] = useState(() => round2Service.getAdminKey());
@@ -51,9 +52,12 @@ export const AdminAuctionTab: React.FC = () => {
         <h3 className="font-cinzel tracking-widest text-cartel-silver/70 text-xs mb-2">LIVE CARD</h3>
         {live && liveCard ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="font-cinzel text-xl text-cartel-amber">{liveCard.icon} {liveCard.name} <span className="text-xs text-cartel-silver/60">base {live.base}</span></div>
+            <div className="flex items-center gap-4">
+              <CardArt card={liveCard} className="h-28 w-auto rounded border border-amber-400/60" />
+              <div>
+                <div className="font-cinzel text-xl text-cartel-amber">{liveCard.name} <span className="text-xs text-cartel-silver/60">base {live.base}</span></div>
               <div className="text-sm">High bid: <b>{live.highBidder ? `${live.highBid} by ${live.highBidder}` : 'none yet'}</b>{live.endsAt ? ` · ${Math.max(0, Math.ceil((live.endsAt - (data?.now ?? 0)) / 1000))}s left` : ' · manual end'}</div>
+              </div>
             </div>
             <button className={`${btnCls} bg-red-600 text-white`} onClick={() => void act(round2Service.admin.end(key))}>END BIDDING</button>
           </div>
@@ -65,7 +69,8 @@ export const AdminAuctionTab: React.FC = () => {
         <ul className="space-y-2">
           {data?.cards.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-2">
-              <span className="w-48 font-cinzel">{c.icon} {c.name}</span>
+              <CardArt card={c} className="h-20 w-16 rounded border border-amber-400/50 object-cover" />
+              <span className="w-48 font-cinzel">{c.name}</span>
               <span className="w-40 text-xs uppercase text-cartel-silver/70">{c.status}{c.winner ? ` → ${c.winner} @ ${c.price}` : ''}</span>
               {(c.status === 'pending' || c.status === 'unsold') && (
                 <>

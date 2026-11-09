@@ -66,6 +66,10 @@ describe('Round2Auction (player screen)', () => {
     expect(await screen.findByRole('button', { name: /PLACE BID/i }, { timeout: 4000 })).toBeEnabled();
     expect(screen.getByText(/ROUND 2 • BIDDING OPEN/)).toBeInTheDocument();
     expect(screen.getAllByText('Chrono Freeze')).toHaveLength(1);
+    const liveCardArt = document.querySelector('.r2-live-art');
+    expect(liveCardArt).toBeInTheDocument();
+    expect(liveCardArt).not.toHaveClass('r2-art');
+    expect(liveCardArt?.querySelector('img')).toHaveAttribute('src', '/assets/round2/cards/1.jpg');
   });
 
   it('places a bid at the minimum and reflects the lead', async () => {
@@ -124,9 +128,8 @@ describe('Round2Auction (player screen)', () => {
     expect(screen.getByText('120')).toBeInTheDocument(); // credits left in the header
     const earnedCards = screen.getByRole('region', { name: 'Cards earned in bidding' });
     expect(earnedCards.querySelectorAll('article')).toHaveLength(1);
-    expect(earnedCard).toHaveTextContent('Witching Hour');
-    expect(earnedCard.querySelector('.r2-earned-scene svg')).toBeInTheDocument();
-    expect(earnedCard.querySelector('.r2-earned-emoji')).toBeNull();
+    expect(earnedCard).toHaveAccessibleName('Witching Hour, purchased for 130 credits');
+    expect(earnedCard.querySelector('.r2-earned-art')).toHaveAttribute('src', '/assets/round2/cards/2.jpg');
     expect(earnedCard.querySelector('.r2-earned-paper')).toHaveClass('r2-earned-paper');
     expect(earnedCard).toHaveTextContent('WON FOR 130 CR');
     expect(earnedCard).not.toHaveTextContent('Witching Hour power');
