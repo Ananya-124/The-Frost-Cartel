@@ -159,10 +159,6 @@ const HotspotPathItem: React.FC<OverlayItemProps> = ({
   );
 };
 
-const HotspotOverlayItem: React.FC<OverlayItemProps> = (props) => {
-  return <HotspotPathItem {...props} />;
-};
-
 export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
   image,
   foundTargetIds,
@@ -331,16 +327,6 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
-              <style>{`
-                @keyframes drawGoldenPath {
-                  0% { stroke-dashoffset: 1500; opacity: 0.3; }
-                  100% { stroke-dashoffset: 0; opacity: 1; }
-                }
-                .relic-gold-draw {
-                  stroke-dasharray: 1500;
-                  animation: drawGoldenPath 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-                }
-              `}</style>
             </defs>
 
             {/* Transparent background catcher for missed clicks */}
@@ -356,7 +342,7 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
 
             {/* Target Hotspots */}
             {image.hotspots.map((hs) => (
-              <HotspotOverlayItem
+              <HotspotPathItem
                 key={hs.id}
                 hotspot={hs}
                 isAlreadyFound={isTargetFound(hs.targetId, foundTargetIds)}

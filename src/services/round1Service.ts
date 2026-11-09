@@ -25,16 +25,20 @@ export type Stage1AttemptResult =
   | { ok: true; attemptsUsed: number }
   | { ok: false; reason: 'unknown_team' | 'bad_trial' | 'locked' | 'resolved' | 'no_tries' | 'expired' };
 
+export type Stage1FailReason = 'unknown_team' | 'bad_trial' | 'not_started' | 'tries_left' | 'already_resolved' | 'expired';
+
+export type Round1LifecycleStatus = 'not_started' | 'running' | 'paused' | 'completed';
+
 export interface Stage1ResolveResult {
   success: boolean;
   creditsAwarded: number;
   stageFinished: boolean;
-  reason?: 'unknown_team' | 'bad_trial' | 'not_started' | 'tries_left' | 'already_resolved' | 'expired';
+  reason?: Stage1FailReason;
 }
 
 export class Round1Service {
   // Global Admin Settings
-  private round1Status: 'not_started' | 'running' | 'paused' | 'completed' = 'running';
+  private round1Status: Round1LifecycleStatus = 'running';
   private roundReleaseTimestamp: string | null = '2026-11-03T00:15:00.000Z';
   private durationMinutes = 22; // Default 22 minutes (admin configurable 20–25)
   private onScoreSync?: ScoreSyncCallback;
@@ -114,7 +118,7 @@ export class Round1Service {
   };
 
   // In-Memory Team Game States (keyed by teamId)
-  private teamStates: Map<string, Round1TeamSessionState> = new Map();
+  private readonly teamStates: Map<string, Round1TeamSessionState> = new Map();
 
   // Load from persistent/session storage if available
   constructor() {
@@ -126,7 +130,7 @@ export class Round1Service {
     if (typeof window !== 'undefined' && window.addEventListener) {
       window.addEventListener('storage', (e) => {
         if (e.key === 'frost_cartel_round1_status' && e.newValue) {
-          const s = e.newValue as 'not_started' | 'running' | 'paused' | 'completed';
+          const s = e.newValue as Round1LifecycleStatus;
           if (['not_started', 'running', 'paused', 'completed'].includes(s)) {
             this.round1Status = s;
           }
@@ -144,35 +148,40 @@ export class Round1Service {
     }
   }
 
+  private hydrateAdminSettings(): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    const storedStatus = window.localStorage.getItem('frost_cartel_round1_status');
+    if (storedStatus && ['not_started', 'running', 'paused', 'completed'].includes(storedStatus)) {
+      this.round1Status = storedStatus as Round1LifecycleStatus;
+    }
+    const storedDuration = window.localStorage.getItem('frost_cartel_round1_duration');
+    if (storedDuration) {
+      const d = Number(storedDuration);
+      if (d >= 20 && d <= 25) {
+        this.durationMinutes = d;
+      }
+    }
+  }
+
+  private hydrateTeamSessions(): void {
+    let stored: string | null = null;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      stored = window.localStorage.getItem('frost_cartel_round1_sessions');
+    }
+    if (!stored && typeof window !== 'undefined' && window.sessionStorage) {
+      stored = window.sessionStorage.getItem('frost_cartel_round1_sessions');
+    }
+    if (!stored) return;
+    const parsed = JSON.parse(stored);
+    for (const [key, val] of Object.entries(parsed)) {
+      this.teamStates.set(key, val as Round1TeamSessionState);
+    }
+  }
+
   private hydrateFromStorage(): void {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const storedStatus = window.localStorage.getItem('frost_cartel_round1_status');
-        if (storedStatus && ['not_started', 'running', 'paused', 'completed'].includes(storedStatus)) {
-          this.round1Status = storedStatus as 'not_started' | 'running' | 'paused' | 'completed';
-        }
-        const storedDuration = window.localStorage.getItem('frost_cartel_round1_duration');
-        if (storedDuration) {
-          const d = Number(storedDuration);
-          if (d >= 20 && d <= 25) {
-            this.durationMinutes = d;
-          }
-        }
-      }
-
-      let stored: string | null = null;
-      if (typeof window !== 'undefined' && window.localStorage) {
-        stored = window.localStorage.getItem('frost_cartel_round1_sessions');
-      }
-      if (!stored && typeof window !== 'undefined' && window.sessionStorage) {
-        stored = window.sessionStorage.getItem('frost_cartel_round1_sessions');
-      }
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        for (const [key, val] of Object.entries(parsed)) {
-          this.teamStates.set(key, val as Round1TeamSessionState);
-        }
-      }
+      this.hydrateAdminSettings();
+      this.hydrateTeamSessions();
     } catch {
       // Ignore parse failure, use fresh state
     }
@@ -202,7 +211,7 @@ export class Round1Service {
   getTeamSession(teamId: string, teamName: string): Round1TeamSessionState {
     let session = this.teamStates.get(teamId);
     // Sessions saved before Stage 1 was built still say "not configured" — open the stage for them.
-    if (session && session.stages['stage-1'].status === 'not_configured' && this.stage1Config.isReadyForPublication) {
+    if (session?.stages['stage-1'].status === 'not_configured' && this.stage1Config.isReadyForPublication) {
       session.stages['stage-1'].status = 'available';
       this.persistToStorage();
     }
@@ -324,7 +333,7 @@ export class Round1Service {
    */
   getTimeRemainingSeconds(teamId: string): number {
     const session = this.teamStates.get(teamId);
-    if (!session || !session.roundDeadline) {
+    if (!session?.roundDeadline) {
       return this.durationMinutes * 60;
     }
     if (this.round1Status === 'paused' || session.status === 'paused') {
@@ -554,24 +563,9 @@ export class Round1Service {
     this.getTimeRemainingSeconds(teamId); // lets the timer flag an expired round
     if (session.status === 'expired') return { success: false, creditsAwarded: 0, stageFinished: false, reason: 'expired' };
 
-    const stage = session.stages['stage-1'];
     let awarded = 0;
     if (won) {
-      awarded = cfg.reward;
-      trial.status = 'won';
-      trial.earnedCredits = awarded;
-      stage.earnedCredits += awarded;
-      session.credits = Math.min(500, session.credits + awarded);
-      session.scoreTransactions.push({
-        id: `tx_${Date.now()}_stage-1_t${trialIndex + 1}`,
-        teamId,
-        stageId: 'stage-1',
-        type: 'stage_completion',
-        deltaCredits: awarded,
-        balanceAfter: session.credits,
-        reason: `Stage 1 trial ${trialIndex + 1} solved in ${trial.attemptsUsed} ${trial.attemptsUsed === 1 ? 'try' : 'tries'} (${awarded} Credits)`,
-        timestamp: new Date().toISOString(),
-      });
+      awarded = this.applyTrialWin(session, trial, trialIndex, cfg, teamId);
     } else {
       trial.status = 'lost';
     }
@@ -588,6 +582,31 @@ export class Round1Service {
       );
     }
     return { success: true, creditsAwarded: awarded, stageFinished };
+  }
+
+  private applyTrialWin(
+    session: Round1TeamSessionState,
+    trial: Stage1TrialState,
+    trialIndex: number,
+    cfg: Stage1TrialConfig,
+    teamId: string
+  ): number {
+    const awarded = cfg.reward;
+    trial.status = 'won';
+    trial.earnedCredits = awarded;
+    session.stages['stage-1'].earnedCredits += awarded;
+    session.credits = Math.min(500, session.credits + awarded);
+    session.scoreTransactions.push({
+      id: `tx_${Date.now()}_stage-1_t${trialIndex + 1}`,
+      teamId,
+      stageId: 'stage-1',
+      type: 'stage_completion',
+      deltaCredits: awarded,
+      balanceAfter: session.credits,
+      reason: `Stage 1 trial ${trialIndex + 1} solved in ${trial.attemptsUsed} ${trial.attemptsUsed === 1 ? 'try' : 'tries'} (${awarded} Credits)`,
+      timestamp: new Date().toISOString(),
+    });
+    return awarded;
   }
 
   /** Marks Stage 1 completed once no trial is pending. Returns true when it is finished. */
@@ -828,11 +847,11 @@ export class Round1Service {
   }
 
   // Admin Getters & Configuration Setters
-  getRound1Status(): 'not_started' | 'running' | 'paused' | 'completed' {
+  getRound1Status(): Round1LifecycleStatus {
     return this.round1Status;
   }
 
-  setRound1Status(status: 'not_started' | 'running' | 'paused' | 'completed'): void {
+  setRound1Status(status: Round1LifecycleStatus): void {
     this.round1Status = status;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {

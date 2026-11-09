@@ -46,3 +46,5 @@ scratch/
 *.njsproj
 *.sln
 *.sw?
+__pycache__/
+*.pyc
