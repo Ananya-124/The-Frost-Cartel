@@ -668,3 +668,6 @@
   }
 
 }
+.cluesReady { display:grid; gap:3px; margin:.65rem 0; padding:.6rem .7rem; color:#e8e0cd; background:#17201b; border:1px solid #8eb39a88; border-left:3px solid #9bd0a5; border-radius:4px; }
+.cluesReady b { color:#bce8c5; font:700 9px/1.3 system-ui,sans-serif; letter-spacing:.08em; }
+.cluesReady span { font:11px/1.45 system-ui,sans-serif; }

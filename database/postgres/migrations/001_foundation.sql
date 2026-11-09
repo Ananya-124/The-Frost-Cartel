@@ -1,8 +1,6 @@
 -- PostgreSQL foundation for the Frost Cartel tournament.
 -- Existing SQLite gameplay remains the active application store until the
 -- repositories and services are migrated in a later phase.
-BEGIN;
-
 CREATE TABLE IF NOT EXISTS admins (
   id text PRIMARY KEY,
   username text NOT NULL UNIQUE,
@@ -127,4 +125,3 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   version text PRIMARY KEY,
   applied_at timestamptz NOT NULL DEFAULT now()
 );
-COMMIT;

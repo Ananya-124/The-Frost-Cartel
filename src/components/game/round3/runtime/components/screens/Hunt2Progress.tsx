@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Hunt2ActionResult, Hunt2Actor, Hunt2Challenge, Hunt2Input, Hunt2State } from '../../../../../../types/hunt2.types';
 import styles from './Hunt2Progress.module.css';
 
@@ -38,18 +38,68 @@ const TASKS: Record<Hunt2Challenge, Record<Hunt2Actor, readonly [string, string]
   5: { archivist: [['finalMemoryViewed', 'Final memory reviewed'], ['finalSequenceValidated', 'Event sequence verified'], ['memoryMaintained', 'Original memory stabilized'], ['archivistReady', 'Past control prepared']], tracker: [['containmentMechanismsReady', 'Three mechanisms activated'], ['trackerReady', 'Future control prepared']] },
 };
 function isDone(state: Hunt2State, key: string): boolean { if (key === 'anchorPastRecords') return state.memoryAnchor.archivistEvidence.includes('diagram') && state.memoryAnchor.archivistEvidence.includes('flow'); if (key === 'anchorNodesMapped') return state.memoryAnchor.trackerEvidence.length === 4; if (key === 'weaknessTrialsComplete') return state.hiddenWeakness.experiments.length >= 4; if (key === 'weaknessArchiveReviewed') return state.hiddenWeakness.archiveEvidence.includes('contradictions'); if (key === 'brokenArchiveEvidence') return state.brokenMemory.archivistEvidence.length === 3; if (key === 'brokenFutureEvidence') return state.brokenMemory.trackerEvidence.length === 3; return state.subtasks[key] === true; }
+function requiredCluesCollected(state: Hunt2State, actor: Hunt2Actor): boolean {
+  if (state.currentChallenge === 2) return actor === 'archivist' ? isDone(state, 'weaknessArchiveReviewed') : isDone(state, 'weaknessTrialsComplete');
+  if (state.currentChallenge === 3) return actor === 'archivist' ? isDone(state, 'brokenArchiveEvidence') : isDone(state, 'brokenFutureEvidence');
+  if (state.currentChallenge === 4) return actor === 'archivist' ? isDone(state, 'anchorPastRecords') : isDone(state, 'anchorNodesMapped');
+  return actor === 'archivist' ? isDone(state, 'finalMemoryViewed') : isDone(state, 'containmentMechanismsReady');
+}
+function nextAction(state: Hunt2State, challenge: Hunt2Challenge, actor: Hunt2Actor): string | null {
+  if (challenge === 2) {
+    if (actor === 'archivist' && isDone(state, 'weaknessArchiveReviewed') && !state.subtasks.weaknessHistoricalSubmitted) return 'Your required archive clues are collected. Submit the historical conclusion from the task panel.';
+    if (actor === 'tracker' && isDone(state, 'weaknessTrialsComplete') && !state.subtasks.weaknessExperimentalSubmitted) return 'Your required trial readings are recorded. Submit the three-part experimental profile from the task panel.';
+    if (actor === 'archivist' && state.subtasks.weaknessHistoricalSubmitted && !state.subtasks.hiddenWeaknessComplete) return 'The historical conclusion is submitted. Wait for the Tracker to arm containment, then press E at the Past Historical Calibration Console within 10 seconds.';
+    if (actor === 'tracker' && state.subtasks.weaknessExperimentalSubmitted && !state.subtasks.hiddenWeaknessComplete) return 'The profile is submitted. Arm containment at the Future control, then have the Archivist calibrate the Past console within 10 seconds.';
+  }
+  if (challenge === 3) {
+    if (actor === 'archivist' && isDone(state, 'brokenArchiveEvidence') && !state.subtasks.brokenHistoricalSubmitted) return 'All three Past records are collected. Arrange their original relationships and submit the historical reconstruction.';
+    if (actor === 'tracker' && isDone(state, 'brokenFutureEvidence') && !state.subtasks.brokenStructureSubmitted) return 'All three Future traces are collected. Arrange the six chamber components and submit the physical restoration.';
+    if (actor === 'archivist' && state.subtasks.brokenHistoricalSubmitted && !state.subtasks.brokenMemoryComplete) return 'Your Past reconstruction is submitted. Coordinate with the Tracker to synchronize the restoration.';
+    if (actor === 'tracker' && state.subtasks.brokenStructureSubmitted && !state.subtasks.brokenMemoryComplete) return 'Your Future placements are submitted. Coordinate with the Archivist to synchronize the restoration.';
+  }
+  if (challenge === 4) {
+    if (actor === 'archivist' && isDone(state, 'anchorPastRecords') && !state.subtasks.anchorArchivistConfigured) return 'The diagram and flow clues are collected. Arrange the four historical anchor paths and submit them.';
+    if (actor === 'tracker' && isDone(state, 'anchorNodesMapped') && !state.subtasks.anchorTrackerConfigured) return 'All four live node readings are collected. Configure the repairs in node order and submit them.';
+    if (actor === 'archivist' && state.subtasks.anchorArchivistConfigured && !state.subtasks.memoryAnchorComplete) return 'Your Past alignment is submitted. When synchronization begins, operate the Past control in the prompted cadence.';
+    if (actor === 'tracker' && state.subtasks.anchorTrackerConfigured && !state.subtasks.memoryAnchorComplete) return 'Your Future repairs are submitted. Begin the Future–Past–Future–Past cadence when prompted.';
+  }
+  if (challenge === 5) {
+    if (actor === 'archivist' && isDone(state, 'finalMemoryViewed') && !state.subtasks.finalSequenceValidated) return 'The final memory clue is collected. Arrange the original event sequence and verify it.';
+    if (actor === 'tracker' && isDone(state, 'containmentMechanismsReady') && !state.subtasks.trackerReady) return 'All three containment mechanisms are active. Prepare the Future control for synchronized activation.';
+    if (actor === 'archivist' && state.subtasks.finalSequenceValidated && !state.subtasks.archivistReady) return 'The sequence is verified. Stabilize the original memory and prepare the Past control.';
+    if (actor === 'tracker' && state.subtasks.archivistReady && !state.subtasks.trackerReady) return 'The Archivist has prepared the Past control. Prepare your Future control, then activate together within the window.';
+  }
+  return null;
+}
 function status(state: Hunt2State, actor: Hunt2Actor): string { if (state.completed) return 'COMPLETED'; return TASKS[state.currentChallenge][actor].every(([key]) => isDone(state, key)) ? 'WAITING FOR PARTNER' : 'ACTIVE'; }
 function totalScore(state: Hunt2State): number { return state.score; }
 
 export default function Hunt2Progress({ state, pending, message, working, onHint, onOpenInput, onSubmit, onClose, onContinue }: Props) {
-  const [tasksOpen, setTasksOpen] = useState<Record<Hunt2Actor, boolean>>({ archivist: true, tracker: true });
-  const [panelOpen, setPanelOpen] = useState<Record<Hunt2Actor, boolean>>({ archivist: true, tracker: true });
+  const [tasksOpen, setTasksOpen] = useState<Record<Hunt2Actor, boolean>>({ archivist: false, tracker: false });
+  const [panelOpen, setPanelOpen] = useState<Record<Hunt2Actor, boolean>>({ archivist: false, tracker: false });
   const [boardOpen, setBoardOpen] = useState(false); const [boardActor, setBoardActor] = useState<Hunt2Actor>('archivist');
   const [clockNow, setClockNow] = useState(0); const [single, setSingle] = useState(''); const [order, setOrder] = useState(['', '', '', '', '', '']);
   const [profile, setProfile] = useState({ frequency: '', light: '', temperature: '' });
+  const panelReadiness = useRef<{ challenge: Hunt2Challenge | null; archivist: boolean; tracker: boolean }>({ challenge: null, archivist: false, tracker: false });
   const hasState = state !== null; const stateCompleted = state?.completed ?? false;
   useEffect(() => { if (!hasState || stateCompleted) return; const initialize = window.setTimeout(() => setClockNow(Date.now()), 0); const timer = window.setInterval(() => setClockNow(Date.now()), 500); return () => { window.clearTimeout(initialize); window.clearInterval(timer); }; }, [hasState, stateCompleted]);
   useEffect(() => { const reset = window.setTimeout(() => { setSingle(''); setOrder(['', '', '', '', '', '']); setProfile({ frequency: '', light: '', temperature: '' }); }, 0); return () => window.clearTimeout(reset); }, [pending?.kind, pending?.actor, state?.currentChallenge]);
+  useEffect(() => {
+    if (!state || state.completed) return;
+    const challengeChanged = panelReadiness.current.challenge !== state.currentChallenge;
+    const wasReady = challengeChanged ? { archivist: false, tracker: false } : panelReadiness.current;
+    const ready = {
+      archivist: requiredCluesCollected(state, 'archivist'),
+      tracker: requiredCluesCollected(state, 'tracker'),
+    };
+    for (const actor of ['archivist', 'tracker'] as const) {
+      if (ready[actor] && !wasReady[actor]) {
+        setTasksOpen((open) => ({ ...open, [actor]: true }));
+        setPanelOpen((open) => ({ ...open, [actor]: true }));
+      }
+    }
+    panelReadiness.current = { challenge: state.currentChallenge, ...ready };
+  }, [state]);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!pending) return;
     let value: Record<string, unknown>;
@@ -89,6 +139,7 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
       <header><span>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'}</span><b>{status(state, actor)}</b></header>
       <small>HUNT II · THE FALSE MEMORY · TASK {progressNumber}/4</small><h2>{title}</h2><p>{OBJECTIVES[challenge][actor]}</p>
       <p className={styles.fieldGuide}><b>FIELD GUIDE · </b>{fieldGuide(challenge, actor)} Walk to each named object and press {actor === 'archivist' ? 'E' : 'Enter'}. Read the shared memory board to compare findings; submit in the prompted form or at the indicated control. Collecting evidence alone does not resolve a challenge.</p>
+      {nextAction(state, challenge, actor) && <aside className={styles.nextAction} role="status"><b>CLUES READY · NEXT ACTION</b><span>{nextAction(state, challenge, actor)}</span></aside>}
       <ul>{TASKS[challenge][actor].map(([key, label]) => <li className={isDone(state, key) ? styles.done : ''} key={key}><span>{isDone(state, key) ? '✓' : '○'}</span>{label}</li>)}</ul>
       {challenge === 2 && actor === 'tracker' && state.hiddenWeakness.experiments.length >= 4 && !state.hiddenWeakness.experimentalValid && (
         <button type="button" className={styles.hint} onClick={() => onOpenInput('tracker', 'weakness-conclusion')}>

@@ -41,6 +41,10 @@ export interface GameState {
   entityMarked: boolean;
   shields: number;
   chronoSandTimer: number;
+  syncWindowBonus: number;
+  highlightedObjectId: string | null;
+  highlightTimer: number;
+  forgiveness: number;
   revealTimer: number;
   surgeTimer: number;
   contactCooldown: number;

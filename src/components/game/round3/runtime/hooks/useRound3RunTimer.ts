@@ -79,6 +79,10 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
     return current;
   }, [transition]);
 
+  const start = useCallback(() => transition('start'), [transition]);
+  const pause = useCallback(() => transition('pause'), [transition]);
+  const resume = useCallback(() => transition('resume'), [transition]);
+
   useEffect(() => {
     const timer = window.setInterval(() => setTick((value) => value + 1), 250);
     const sync = () => { void refresh(); };
@@ -101,9 +105,9 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
     run, remainingMs, remainingSeconds, busy, error, refreshVersion,
     gameplayEnabled: run.status === 'running' && remainingMs > 0 && !busy,
     refresh,
-    start: () => transition('start'),
-    pause: () => transition('pause'),
-    resume: () => transition('resume'),
+    start,
+    pause,
+    resume,
     ensureRunning,
     setError,
   };

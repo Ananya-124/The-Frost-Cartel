@@ -19,6 +19,18 @@ function makeState(): Hunt3State {
 }
 
 describe('Hunt III progress controls', () => {
+  it('reopens the Archivist panel when all three trail clues are collected', () => {
+    const state = makeState();
+    const view = render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hunt III · 1\/4 · Show Archivist tasks/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
+    expect(screen.queryByText('CLUES READY · NEXT ACTION')).not.toBeInTheDocument();
+    state.evidence.archivist = ['sighting-ledger', 'containment-observation', 'old-facility-report'];
+    view.rerender(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={vi.fn()} />);
+    expect(screen.getByText(/All three Past records are collected/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide' })).toBeInTheDocument();
+  });
+
   it('shows timeline-specific field-investigation instructions and submits its location finding', async () => {
     const state = makeState(); state.evidence.archivist = ['sighting-ledger', 'containment-observation', 'old-facility-report'];
     const onAction = vi.fn(async () => ({ success: true, message: 'waiting for Tracker', state }));
@@ -56,6 +68,7 @@ describe('Hunt III progress controls', () => {
   it('shows the current server warning and partner responsibility during final capture', () => {
     const state = makeState(); state.stage = 4; state.boss.step = 1; state.boss.warning = 'Current is arcing across the floor. Ground the chamber.';
     render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hunt III · 4\/4 · Show Archivist tasks/i }));
     expect(screen.getByText(/Current is arcing across the floor/)).toBeInTheDocument();
     expect(screen.getByText(/Tracker · Future/)).toBeInTheDocument();
     expect(screen.getByText(/Waiting for Tracker · Future to act/)).toBeInTheDocument();
@@ -69,6 +82,7 @@ describe('Hunt III progress controls', () => {
     state.actions = ['component-catalog'];
     for (const seal of ['power', 'resonance', 'memory'] as const) state.seals[seal].archive = true;
     render(<Hunt3Progress state={state} actor="archivist" message="" working={false} onAction={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hunt III · 3\/4 · Show Archivist tasks/i }));
     expect(screen.getByText(/ARCHIVIST TASKS COMPLETED · 2\/4/i)).toBeInTheDocument();
     expect(screen.getByText(/Current task 3\/4 · IN PROGRESS/i)).toBeInTheDocument();
   });

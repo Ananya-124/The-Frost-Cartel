@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Hunt3ActionResult, Hunt3Actor, Hunt3State } from '../../../../../../types/hunt3.types';
 import styles from './Hunt3Progress.module.css';
 
@@ -38,6 +38,37 @@ function completedTasksFor(state: Hunt3State, actor: Hunt3Actor): boolean[] {
     ? state.apparatus.archive !== null && state.weakness.archive && state.weakness.discovered && state.weakness.lure > 0
     : state.apparatus.configured && EXPECTED_TRIALS.every((trial) => state.weakness.trials.includes(trial)) && state.weakness.weakened >= 3;
   return [trailSubmitted, stageTwoComplete, stageThreeComplete, state.completed];
+}
+
+function nextClueAction(state: Hunt3State, actor: Hunt3Actor): string | null {
+  if (state.stage === 1) {
+    const clues = actor === 'archivist'
+      ? ['sighting-ledger', 'containment-observation', 'old-facility-report']
+      : ['cold-ash', 'drag-marks', 'shattered-compass'];
+    if (clues.every((id) => state.evidence[actor].includes(id)) && !state.trail[actor]) {
+      return `All three ${actor === 'archivist' ? 'Past records' : 'Future traces'} are collected. Submit your ${actor === 'archivist' ? 'last-known wing' : 'physical trace signature'} using the selector below.`;
+    }
+  }
+  if (state.stage === 2) {
+    if (actor === 'archivist') {
+      const ready = SEALS.find((seal) => state.evidence.archivist.includes(`${seal}-diagram`) && !state.seals[seal].archive);
+      if (ready) return `The ${ready} seal diagram is collected. Arrange its three connections and submit the Past interpretation below.`;
+      if (SEALS.every((seal) => state.seals[seal].archive) && !state.actions.includes('component-catalog')) return 'All three seal interpretations are verified. Inspect the component catalogue in the Past Archive.';
+    } else {
+      const ready = SEALS.find((seal) => state.seals[seal].physical.length > 0 && !state.seals[seal].disabled);
+      if (ready && state.seals[ready].archive) return `The ${ready} seal mechanism and its verified Past interpretation are ready. Arrange the three connections and disable it below.`;
+      if (SEALS.every((seal) => state.seals[seal].disabled) && state.components.length < 4) return 'All seals are disabled. Recover the four catalogue-confirmed components in the Future.';
+    }
+  }
+  if (state.stage === 3) {
+    if (actor === 'archivist' && state.evidence.archivist.includes('apparatus-blueprint') && state.apparatus.archive === null) return 'The Past blueprint is collected. Arrange the four placement steps and verify the interpretation below.';
+    if (actor === 'tracker' && state.actions.includes('physical-apparatus') && state.apparatus.archive && !state.apparatus.configured) return 'The apparatus and verified blueprint are ready. Place the four recovered parts in order and configure the rig below.';
+    if (actor === 'tracker' && state.actions.includes('test-station') && state.apparatus.configured) return 'The test station is inspected and the apparatus is configured. Record the response for each of the three required conditions below.';
+    if (actor === 'archivist' && state.weakness.archive && EXPECTED_TRIALS.every((trial) => state.weakness.trials.includes(trial)) && !state.weakness.discovered) return 'The historical notes and all three Tracker readings are ready. Arrange the weakness profile and verify it below.';
+    if (actor === 'archivist' && state.weakness.discovered && state.weakness.lure === 0) return 'The weakness profile is verified. Activate the chamber lure in the Containment room.';
+    if (actor === 'tracker' && state.weakness.lure > 0 && state.weakness.weakened < 3) return `The lure is active and the weakness is verified. Apply three pulses at the Containment disruptor (${state.weakness.weakened}/3 complete).`;
+  }
+  return null;
 }
 
 type TaskObject = { id: string; label: string; name: string };
@@ -97,8 +128,9 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
   const [condition, setCondition] = useState('');
   const [reading, setReading] = useState<'' | 'withdrawal' | 'surge'>('');
   const [profile, setProfile] = useState(['', '', '']);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const previousNextAction = useRef<string | null>(null);
 
   useEffect(() => {
     const deadlineAt = state?.boss.deadlineAt ?? null;
@@ -107,6 +139,12 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
     const interval = window.setInterval(update, 250);
     return () => window.clearInterval(interval);
   }, [state?.boss.deadlineAt]);
+
+  const nextAction = state ? nextClueAction(state, actor) : null;
+  useEffect(() => {
+    if (nextAction && nextAction !== previousNextAction.current) setPanelOpen(true);
+    previousNextAction.current = nextAction;
+  }, [nextAction]);
 
   if (!state) return <>
     <button className={`${styles.taskToggle} ${actor === 'archivist' ? styles.pastToggle : styles.trackerToggle}`} type="button" aria-expanded={panelOpen} onClick={() => setPanelOpen((open) => !open)}>
@@ -151,6 +189,7 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
       <b>{actor === 'archivist' ? 'ARCHIVIST' : 'TRACKER'} TASKS COMPLETED · {completedTaskCount}/4</b>
       <span>Current task {state.stage}/4{playerTasks[state.stage - 1] ? ' · COMPLETE' : ' · IN PROGRESS'}</span>
     </div>
+    {nextAction && <aside className={styles.nextAction} role="status"><b>CLUES READY · NEXT ACTION</b><span>{nextAction}</span></aside>}
     <div className={styles.progress}>Stage awards: {state.scoreBreakdown.stage1}/250 · {state.scoreBreakdown.stage2}/400 · {state.scoreBreakdown.stage3}/350 · {state.scoreBreakdown.stage4}/500 · Hidden evidence {state.optional.complete ? '100/100' : '0/100'} · Maximum 1,600</div>
 
     {state.stage < 4 && <section className={styles.task}>

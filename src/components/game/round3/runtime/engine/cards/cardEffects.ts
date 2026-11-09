@@ -7,6 +7,10 @@ import type { GameContext } from '../context';
 import { announce } from '../state/messages';
 import { isDoorOpen } from '../world/doors';
 import { DOORS } from '../world/geometry';
+import { getHunt } from '../../config/hunts';
+import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../../config/interactables';
+import { ROOMS } from '../../config/rooms';
+import { pointInRect } from '../world/geometry';
 
 /** Return 1 to leave the card unspent (as in the original). */
 export type CardEffect = (state: GameState) => number | void;
@@ -68,6 +72,70 @@ const bind: CardEffect = (state) => {
   announce(state, 'Soul Binding Sigil absorbs the next penalty.');
 };
 
+const chronoFreeze: CardEffect = (state) => {
+  announce(state, 'Chrono Freeze activated: the team task clock is paused for 10 seconds; movement and actions remain available.');
+};
+const witchingHour: CardEffect = (state) => {
+  if (state.players.every((player) => player.syncArmedAt === null)) {
+    announce(state, 'Witching Hour needs an active synchronization window. The card was not spent.');
+    return 1;
+  }
+  state.syncWindowBonus = 5;
+  announce(state, 'Witching Hour: 5 seconds added to the active capture synchronization window.');
+};
+const spectralSight: CardEffect = (state) => {
+  const candidates = getHunt(state.huntIndex).clues.filter((clue) => {
+    const player = state.players.find((candidate) => candidate.timeline === clue.timeline);
+    const key = `${state.huntIndex}${clue.timeline === 'future' ? 'f' : 'p'}:${clue.objectId}`;
+    return player && !state.completed[key] && (!clue.requires || state.flags[clue.requires]);
+  });
+  const clue = candidates[0];
+  if (!clue) { announce(state, 'No unrevealed clue is available in this hunt. The card was not spent.'); return 1; }
+  announce(state, `Spectral Sight reveals ${clue.title}: ${clue.text}`);
+};
+const highlightNearby: CardEffect = (state) => {
+  const object = visibleObjects(state).find((candidate) => state.players.some((player) => player.timeline === candidate.timeline && pointInRect(candidate.x, candidate.y, ROOMS.find((room) => room.id === candidate.roomId)!)));
+  if (!object) { announce(state, 'No important interactable is available in either current room. The card was not spent.'); return 1; }
+  state.highlightedObjectId = object.id;
+  state.highlightTimer = 10;
+  announce(state, `Witch’s Lens highlights ${object.name} in this room.`);
+};
+const hexbreaker: CardEffect = (state) => {
+  const puzzle = state.puzzles.find((item) => item?.kind === 'verification');
+  if (!puzzle || puzzle.kind !== 'verification') { announce(state, 'Hexbreaker requires an open verification puzzle. The card was not spent.'); return 1; }
+  const wrongOption = puzzle.question.options.findIndex((_, index) => index !== puzzle.question.correctIndex && !puzzle.eliminatedOptions?.includes(index));
+  if (wrongOption < 0) { announce(state, 'No incorrect option remains to eliminate. The card was not spent.'); return 1; }
+  puzzle.eliminatedOptions = [...(puzzle.eliminatedOptions ?? []), wrongOption];
+  announce(state, `Hexbreaker removes one incorrect option (${wrongOption + 1}) from the open puzzle.`);
+};
+const elixir: CardEffect = (state) => {
+  state.forgiveness++;
+  announce(state, 'Witch’s Elixir is ready: the next incorrect puzzle input will not cause a score penalty or surge.');
+};
+const raven: CardEffect = (state) => {
+  const timeline = state.players[0].timeline;
+  const object = visibleObjects(state).find((candidate) => candidate.timeline === timeline);
+  if (!object) { announce(state, `No next interactable is available in the ${timeline} timeline. The card was not spent.`); return 1; }
+  state.highlightedObjectId = object.id;
+  state.highlightTimer = 15;
+  announce(state, `Raven’s Messenger marks the next ${timeline} interactable: ${object.name}.`);
+};
+
+function visibleObjects(state: GameState) {
+  return INTERACTABLES.filter((object) => {
+    const inHunt = state.huntIndex === 0 ? HUNT1_INTERACTABLE_IDS.has(object.id)
+      : state.huntIndex === 1 ? HUNT2_INTERACTABLE_IDS.has(object.id)
+        : HUNT3_INTERACTABLE_IDS.has(object.id) && isHunt3InteractableAvailable(object.id, state.hunt3Stage);
+    const hidden = state.hunt2ObjectStates?.[object.id] === 'hidden' || object.id === 'trueMemoryAnchor' && !state.hunt2Subtasks?.trueAnchorActivated;
+    return inHunt && !hidden && (state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0) <= state.time;
+  });
+}
+const master: CardEffect = (state) => announce(state, 'The Warden’s Decree: contact an event coordinator and request a two-minute pause for a competing team. Coordinators approve and apply any pause manually.');
+const unavailableMechanism: CardEffect = (state) => {
+  announce(state, 'This mechanism card applies to Hunt task-panel stages. It is unavailable in the canvas puzzle; open the relevant Hunt task panel first. The card was not spent.');
+  return 1;
+};
+
 function centre(r: { x: number; y: number; w: number; h: number }): { x: number; y: number } {
   return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
 }
@@ -81,7 +149,13 @@ export const BUILT_IN_EFFECTS: Record<BuiltInCardEffect, CardEffect> = {
 
 /** Registry that custom effects can be added to (exposed as `PARADOX.effects`). */
 export function createCardEffects(): Record<string, CardEffect> {
-  return { ...BUILT_IN_EFFECTS, echo, decode, power, bind };
+  return { ...BUILT_IN_EFFECTS, echo, decode, power, bind,
+    'chrono-freeze': chronoFreeze, 'witching-hour': witchingHour,
+    'spectral-sight': spectralSight, 'witchs-lens': highlightNearby,
+    hexbreaker, 'mechanics-curse': unavailableMechanism,
+    'witchs-elixir': elixir, 'ravens-messenger': raven,
+    'phantom-shield': shield, 'soul-surge': unavailableMechanism,
+    'wardens-decree': master };
 }
 
 /** Uses the card at a slot (Z, X, C, V). */

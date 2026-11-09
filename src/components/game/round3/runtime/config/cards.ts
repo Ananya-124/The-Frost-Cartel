@@ -23,7 +23,7 @@ export function normalizeCards(input: unknown): PowerCard[] {
       uses: Number.isFinite(uses) ? uses : 1,
       ...(typeof c.cardId === 'string' ? { cardId: c.cardId } : {}),
       ...(c.consumption === 'retained' || c.consumption === 'consume-one' ? { consumption: c.consumption } : {}),
-      ...(c.source === 'auction' || c.source === 'development' ? { source: c.source } : {}),
+      ...(c.source === 'auction' || c.source === 'development' || c.source === 'testing' ? { source: c.source } : {}),
     };
   });
 }

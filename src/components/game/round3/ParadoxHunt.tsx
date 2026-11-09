@@ -7,6 +7,7 @@ import { authService } from '../../../services/authService';
 import { inventoryToPowerCards } from './runtime/inventoryCards';
 import GameScreen from './runtime/components/screens/GameScreen';
 import './runtime/styles/game.css';
+import { cardsFromTestingInventory, markTestingCardUsed, readTestingInventory, readUsedTestingCards, writeTestingInventory, writeUsedTestingCards, type TestPowerCardId } from './runtime/testingCards';
 
 interface ParadoxHuntProps {
   session: TeamSession;
@@ -50,6 +51,8 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
   const [run, setRun] = useState<Round3RunState | null>(null);
   const [playerNumber, setPlayerNumber] = useState<1 | 2 | null>(session.playerNumber ?? null);
   const [error, setError] = useState('');
+  const [testCardIds, setTestCardIds] = useState<TestPowerCardId[]>(() => readTestingInventory(session.teamName));
+  const [usedTestCards, setUsedTestCards] = useState<TestPowerCardId[]>(() => readUsedTestingCards(session.teamName));
 
   const connect = useCallback(async () => {
     setError('');
@@ -80,13 +83,28 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
 
   const saveGameState = useCallback((gameState: unknown) => round3Service.saveGameState(gameState), []);
   const completeHunt = useCallback(() => round3Service.completeHunt(), []);
+  const handleTestingCardUsed = useCallback((id: TestPowerCardId) => {
+    setUsedTestCards(markTestingCardUsed(session.teamName, id));
+  }, [session.teamName]);
 
   if (state && run && playerNumber) {
     return (
       <div className="ph-game-root">
         <GameScreen
           teamName={session.teamName}
-          cards={inventoryToPowerCards(state.inventory)}
+          cards={testCardIds.length ? cardsFromTestingInventory(testCardIds, usedTestCards) : inventoryToPowerCards(state.inventory)}
+          testingCardIds={testCardIds}
+          onTestingCardUsed={handleTestingCardUsed}
+          onToggleTestingCard={(id) => setTestCardIds((current) => {
+            const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
+            if (!next.includes(id)) setUsedTestCards((used) => {
+              const nextUsed = used.filter((value) => value !== id);
+              writeUsedTestingCards(session.teamName, nextUsed);
+              return nextUsed;
+            });
+            writeTestingInventory(session.teamName, next);
+            return next;
+          })}
           inventory={state.inventory}
           savedGameState={state.session.playerProgress.engine}
           initialRun={run}

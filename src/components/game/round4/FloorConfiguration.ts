@@ -127,8 +127,8 @@ export const COLLEGE_FLOORS: FloorDefinition[] = [
     hitAreaPaths: [
       'M 65.0,424.0 C 364.6,403.5 551.9,383.0 814.0,383.0 C 1069.8,383.0 1252.6,404.5 1545.0,426.0 L 1545.0,518.0 C 1252.6,499.0 1069.8,480.0 814.0,480.0 C 551.9,480.0 364.6,499.0 65.0,518.0 Z',
     ],
-    windowTarget: { x: 380, y: 425, width: 100, height: 60 },
-    cameraTarget: { x: 430, y: 455, scale: 3.8 },
+    windowTarget: { x: 685, y: 435, width: 100, height: 60 },
+    cameraTarget: { x: 735, y: 465, scale: 3.8 },
     badgePosition: { x: 1180, y: 440 },
     enabled: true,
     interiorTitle: "FOURTH FLOOR — THE CARTOGRAPHER'S GUILD",
@@ -149,8 +149,8 @@ export const COLLEGE_FLOORS: FloorDefinition[] = [
     hitAreaPaths: [
       'M 65.0,518.0 C 364.6,499.0 551.9,480.0 814.0,480.0 C 1069.8,480.0 1252.6,499.0 1545.0,518.0 L 1545.0,610.0 C 1252.6,592.5 1069.8,575.0 814.0,575.0 C 551.9,575.0 364.6,592.5 65.0,610.0 Z',
     ],
-    windowTarget: { x: 1030, y: 515, width: 100, height: 60 },
-    cameraTarget: { x: 1080, y: 545, scale: 3.8 },
+    windowTarget: { x: 380, y: 512, width: 100, height: 62 },
+    cameraTarget: { x: 430, y: 543, scale: 3.8 },
     badgePosition: { x: 1180, y: 535 },
     enabled: true,
     interiorTitle: 'THIRD FLOOR — THE GRAND LIBRARY & RARE MANUSCRIPTS',
@@ -171,8 +171,8 @@ export const COLLEGE_FLOORS: FloorDefinition[] = [
     hitAreaPaths: [
       'M 66.5,610.0 C 365.5,592.5 552.4,575.0 814.0,575.0 C 1069.3,575.0 1251.7,592.5 1543.5,610.0 L 1543.5,702.0 C 1251.7,686.0 1069.3,670.0 814.0,670.0 C 552.4,670.0 365.5,686.0 66.5,702.0 Z',
     ],
-    windowTarget: { x: 180, y: 560, width: 100, height: 60 },
-    cameraTarget: { x: 230, y: 590, scale: 3.8 },
+    windowTarget: { x: 990, y: 605, width: 100, height: 64 },
+    cameraTarget: { x: 1040, y: 637, scale: 3.8 },
     badgePosition: { x: 1180, y: 630 },
     enabled: true,
     interiorTitle: 'SECOND FLOOR — THE CHRONOMETER HALL',
@@ -193,8 +193,8 @@ export const COLLEGE_FLOORS: FloorDefinition[] = [
     hitAreaPaths: [
       'M 70.0,702.0 C 367.6,686.0 553.6,670.0 814.0,670.0 C 1068.5,670.0 1250.2,686.0 1541.0,702.0 L 1541.0,792.0 C 1250.2,777.0 1068.5,762.0 814.0,762.0 C 553.6,762.0 367.6,777.0 70.0,792.0 Z',
     ],
-    windowTarget: { x: 1255, y: 725, width: 100, height: 60 },
-    cameraTarget: { x: 1305, y: 755, scale: 3.8 },
+    windowTarget: { x: 1215, y: 712, width: 100, height: 64 },
+    cameraTarget: { x: 1265, y: 744, scale: 3.8 },
     badgePosition: { x: 1180, y: 725 },
     enabled: true,
     interiorTitle: 'FIRST FLOOR — THE ASSEMBLY CHAMBER & RELIQUARY',

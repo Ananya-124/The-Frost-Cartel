@@ -34,6 +34,7 @@
 .emptyJournal{padding:.65rem;background:#151d1c;border:1px dashed #536660;border-radius:5px}
 .playerProgress{margin:.6rem 0;padding:.55rem .65rem;background:#111918;border:1px solid #536a60;border-left:3px solid #8ec2a1;border-radius:6px;color:#d6e5d9}.playerProgress>b{font-size:10px;letter-spacing:.08em;color:#b8e4c7}.playerProgress ol{display:grid;grid-template-columns:1fr 1fr;gap:.25rem .65rem;margin:.45rem 0 0;padding:0;list-style:none}.playerProgress li{color:#a9b0aa;font-size:9px}.playerProgress li span{display:inline-block;width:15px;color:#d2a45b}.playerProgress .playerTaskDone{color:#bce8c5}
 .playerProgress>span{display:block;margin-top:.2rem;color:#c7d4ca;font-size:10px}
+.nextAction{display:grid;gap:.2rem;margin:.55rem 0;padding:.55rem .65rem;color:#e8e0cd;background:#17201b;border:1px solid #8eb39a88;border-left:3px solid #9bd0a5;border-radius:5px}.nextAction>b{color:#bce8c5;font-size:9px;letter-spacing:.08em}.nextAction>span{font-size:10px;line-height:1.45}
 .inspectList{display:grid;gap:.25rem;margin:.4rem 0 .65rem;padding:0;list-style:none}
 .inspectList li{color:#bbb7aa;font-size:11px}
 .inspectList li span{display:inline-block;width:18px;color:#d2a45b}

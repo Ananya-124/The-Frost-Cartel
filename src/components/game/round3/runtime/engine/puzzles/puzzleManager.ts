@@ -86,6 +86,7 @@ export function pressPuzzleKey(state: GameState, index: PlayerIndex, key: number
 
   if (puzzle.kind === 'verification') {
     if (key > 2) return;
+    if (puzzle.eliminatedOptions?.includes(key)) return;
     if (key === puzzle.question.correctIndex) {
       state.puzzles[index] = null;
       state.flags[VERIFIED_FLAG[index]] = true;
@@ -93,9 +94,14 @@ export function pressPuzzleKey(state: GameState, index: PlayerIndex, key: number
       showMessage(state, index, 'Verified. The weakness comes into focus.');
       playTone(520, 0.3);
     } else {
-      addScore(state, SCORE.wrongAnswer, 'wrong evidence selection');
-      triggerSurge(state);
-      showMessage(state, index, 'Wrong. The facility seems to lean closer.');
+      if (state.forgiveness > 0) {
+        state.forgiveness--;
+        showMessage(state, index, 'Witch’s Elixir forgives that incorrect input. No score penalty or surge.');
+      } else {
+        addScore(state, SCORE.wrongAnswer, 'wrong evidence selection');
+        triggerSurge(state);
+        showMessage(state, index, 'Wrong. The facility seems to lean closer.');
+      }
     }
     state.dirty = true;
     return;
@@ -112,9 +118,14 @@ export function pressPuzzleKey(state: GameState, index: PlayerIndex, key: number
       playTone(440, 0.4);
     } else {
       puzzle.input = [];
-      addScore(state, SCORE.wrongSequence, 'wrong sequence');
-      triggerSurge(state);
-      showMessage(state, index, 'Wrong sequence! The panel shrieks and something answers.');
+      if (state.forgiveness > 0) {
+        state.forgiveness--;
+        showMessage(state, index, 'Witch’s Elixir forgives that incorrect sequence. No score penalty or surge.');
+      } else {
+        addScore(state, SCORE.wrongSequence, 'wrong sequence');
+        triggerSurge(state);
+        showMessage(state, index, 'Wrong sequence! The panel shrieks and something answers.');
+      }
     }
   }
   state.dirty = true;

@@ -45,25 +45,12 @@ export const FloorCameraTransition: React.FC<FloorCameraTransitionProps> = ({
   const originYPercent =
     ((selectedFloor.windowTarget.y + selectedFloor.windowTarget.height / 2) / BUILDING_VIEWBOX.height) * 100;
 
-  let currentScale = 1;
-  let transitionDuration: string;
-  let easing = 'cubic-bezier(0.22, 1, 0.36, 1)'; // Drone ascent deceleration curve
+  // Single continuous, unbroken cinematic camera flight directly into the window aperture (no mid-flight pauses)
+  const targetScale = selectedFloor.cameraTarget.scale * 1.85;
+  const transitionDuration = '1470ms';
+  const easing = 'cubic-bezier(0.25, 0.1, 0.25, 1.0)';
 
-  if (phase === 'APPROACHING' || phase === 'WINDOW_FOCUSED') {
-    // Stage B & C: Upward drone approach towards the open window (1050ms continuous movement)
-    currentScale = selectedFloor.cameraTarget.scale;
-    transitionDuration = '1050ms';
-  } else if (phase === 'WINDOW_ENTERING' || phase === 'WINDOW_OPENING') {
-    // Stage D: Continuous forward push straight through the open window aperture into the interior (420ms)
-    currentScale = selectedFloor.cameraTarget.scale * 1.85;
-    transitionDuration = '420ms';
-    easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
-  } else {
-    // phase === 'COMPLETED'
-    currentScale = selectedFloor.cameraTarget.scale * 2.1;
-    transitionDuration = '300ms';
-    easing = 'ease-out';
-  }
+  const currentScale = targetScale;
 
   const transformStyle: React.CSSProperties = reducedMotion
     ? {

@@ -336,12 +336,13 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
       </aside>
 
       {/* 3. Main Stage: College Building Artwork & Interactive SVG Floors (~75% Visual Composition) */}
-      <main className="relative z-10 w-full h-full flex items-center justify-center overflow-hidden">
+      <main className="relative z-10 w-full h-full flex items-center justify-center overflow-hidden outline-none focus:outline-none" style={{ outline: 'none' }}>
         <section
           aria-label="College Building Façade Map"
-          className="relative w-full h-full flex items-center justify-center overflow-hidden"
+          className="relative w-full h-full flex items-center justify-center overflow-hidden outline-none focus:outline-none"
+          style={{ outline: 'none' }}
         >
-          <div className="relative h-full aspect-[1629/965] max-w-none flex items-center justify-center translate-x-[2%] sm:translate-x-[4%] lg:translate-x-[5%] filter drop-shadow-[0_12px_36px_rgba(95,70,35,0.22)]">
+          <div className="relative h-full aspect-[1629/965] max-w-none flex items-center justify-center translate-x-[2%] sm:translate-x-[4%] lg:translate-x-[5%] filter drop-shadow-[0_12px_36px_rgba(95,70,35,0.22)] outline-none focus:outline-none" style={{ outline: 'none' }}>
             <CollegeBuildingScene
               floors={COLLEGE_FLOORS}
               hoveredFloorId={hoveredFloorId}

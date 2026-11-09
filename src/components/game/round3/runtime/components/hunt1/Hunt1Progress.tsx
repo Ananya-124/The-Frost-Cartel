@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Hunt1ActionResult, Hunt1Actor, Hunt1Challenge, Hunt1State, Hunt1TaskKey } from '../../../../../../types/hunt1.types';
 import styles from './Hunt1Progress.module.css';
 
@@ -47,12 +47,15 @@ function movePiece(sequence: string[], from: number, to: number): string[] {
 }
 
 export default function Hunt1Progress({ state, playerNumber, showOverview = true, message, working, onHint, onSubmit, onSpecialAction, onContinue }: Hunt1ProgressProps) {
-  const [tasksOpen, setTasksOpen] = useState(true);
-  const [briefOpen, setBriefOpen] = useState(true);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
   const [sequence, setSequence] = useState<string[]>([]);
   const [workingSubmit, setWorkingSubmit] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const briefWasReady = useRef(false);
   const actor: Hunt1Actor = playerNumber === 1 ? 'archivist' : 'tracker';
+  const activeTask = state ? TASKS[state.currentChallenge] : null;
+  const cluesReady = !!state && !!activeTask && activeTask.required.every((id) => state.subtasks[id]);
   const sequenceSyncData = state ? JSON.stringify({
     challenge: state.currentChallenge,
     playerNumber,
@@ -77,6 +80,11 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
     const roleDefault = challenge === 4 ? (role === 1 ? CONCLUSION_ARCHIVE : CONCLUSION_FUTURE) : TASKS[challenge].initial;
     setSequence(savedOrder ?? roleDefault);
   }, [sequenceSyncData]);
+
+  useEffect(() => {
+    if (cluesReady && !briefWasReady.current) setBriefOpen(true);
+    briefWasReady.current = cluesReady;
+  }, [cluesReady, state?.currentChallenge]);
 
   if (!state) return <div className={styles.loading}>Connecting to the shared Hunt I investigation…</div>;
   const challenge = state.currentChallenge;
@@ -156,6 +164,7 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
         {unlockedObjects.length === 0 ? <span>Both investigators’ evidence is needed before reconstruction.</span> : unlockedObjects.map((id) => <span key={id}>{OBJECT_LABELS[id] ?? id}</span>)}
         {state.availableInteractables.some((id) => id.startsWith('optional')) && <span>Optional evidence may also be hidden in this hunt.</span>}
       </div>
+      {evidenceReady && <aside className={styles.cluesReady} role="status"><b>CLUES READY · NEXT ACTION</b><span>{challenge === 1 ? actor === 'archivist' ? 'Arrange the four wiring connections in the order shown by the Past diagram, then submit the decoded wiring.' : 'Use the Archivist’s decoded wiring to arrange the four leads, then reconnect and test the generator.' : challenge === 2 ? `Arrange the four ${actor === 'archivist' ? 'historical events' : 'physical events'} in order and submit your ${actor === 'archivist' ? 'Past' : 'Future'} timeline.` : challenge === 3 ? actor === 'archivist' ? 'Arrange the four routing stations from INTAKE to TRANSMIT and submit the decoded route for the Tracker.' : 'Use the Archivist’s verified route to arrange the console stations, then reconnect and restore the signal.' : actor === 'archivist' ? 'Arrange the two historical findings from the experiment’s purpose to its intended limit, then submit your conclusion.' : 'Arrange the physical cause and aftermath, then submit your conclusion.'}</span></aside>}
       {challenge === 1 && evidenceReady ? <section className={styles.reportCoop} aria-label="Power Failure circuit reconstruction">
         <header><span>PAST WIRING DIAGRAM ↔ FUTURE GENERATOR</span><b>200 POINTS</b></header>
         {actor === 'archivist' ? <>

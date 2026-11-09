@@ -27,7 +27,7 @@ function disarm(state: GameState): void {
 /** Resolves the synchronized capture once both players have armed, or one has waited too long. */
 export function resolveSync(ctx: GameContext): void {
   const { state } = ctx;
-  const window_ = state.chronoSandTimer > 0 ? SYNC_WINDOW_WIDE : SYNC_WINDOW;
+  const window_ = (state.chronoSandTimer > 0 ? SYNC_WINDOW_WIDE : SYNC_WINDOW) + state.syncWindowBonus;
   const a = state.players[0].syncArmedAt;
   const b = state.players[1].syncArmedAt;
 

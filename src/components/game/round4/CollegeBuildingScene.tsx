@@ -41,14 +41,19 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
     }
   };
 
-  const isWindowEntering = cameraPhase === 'WINDOW_ENTERING' || cameraPhase === 'WINDOW_OPENING';
+  const isWindowEntering =
+    cameraPhase === 'APPROACHING' ||
+    cameraPhase === 'WINDOW_FOCUSED' ||
+    cameraPhase === 'WINDOW_ENTERING' ||
+    cameraPhase === 'WINDOW_OPENING';
 
   return (
     <div
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative w-full h-full max-h-[calc(100vh-60px)] aspect-[1629/965] overflow-hidden select-none flex items-center justify-center"
+      className="relative w-full h-full max-h-[calc(100vh-60px)] aspect-[1629/965] overflow-hidden select-none flex items-center justify-center outline-none focus:outline-none"
+      style={{ outline: 'none' }}
     >
       {/* Camera Drone-Style Zoom and Pan Transition Wrapper */}
       <FloorCameraTransition
@@ -86,8 +91,8 @@ export const CollegeBuildingScene: React.FC<CollegeBuildingSceneProps> = ({
           {selectedFloor && isWindowEntering && (
             <WindowRevealAnimation
               windowTarget={selectedFloor.windowTarget}
-              isOpen={true}
-              isOpening={false}
+              isOpen={cameraPhase === 'WINDOW_ENTERING' || cameraPhase === 'WINDOW_OPENING'}
+              isOpening={cameraPhase === 'APPROACHING' || cameraPhase === 'WINDOW_FOCUSED'}
               reducedMotion={reducedMotion}
             />
           )}
