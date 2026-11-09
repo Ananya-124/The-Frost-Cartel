@@ -80,8 +80,8 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     fireEvent.click(closeBookBtn);
 
     // 2. Submit Riddle Answer "ASH"
-    const input = screen.getByPlaceholderText(/Type the keyword/i);
-    const unsealBtn = screen.getByRole('button', { name: /UNSEAL/i });
+    const input = screen.getByPlaceholderText(/Enter your answer|Type the keyword/i);
+    const unsealBtn = screen.getByRole('button', { name: /SUBMIT|UNSEAL/i });
 
     fireEvent.change(input, { target: { value: 'ASH' } });
     fireEvent.click(unsealBtn);

@@ -212,3 +212,4 @@ export const TreasureChestRelic: React.FC<TreasureChestRelicProps> = ({
     </div>
   );
 };
+

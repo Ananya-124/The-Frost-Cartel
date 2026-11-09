@@ -762,6 +762,21 @@ export class Round1Service {
     return { allPlaced };
   }
 
+  // Stage 3: Grave 1 Investigation Milestones
+  markGrave1BookRead(teamId: string): void {
+    const session = this.teamStates.get(teamId);
+    if (!session) return;
+    session.stage3State.grave1BookRead = true;
+    this.persistToStorage();
+  }
+
+  shiftGrave1Skeleton(teamId: string): void {
+    const session = this.teamStates.get(teamId);
+    if (!session) return;
+    session.stage3State.grave1SkeletonMoved = true;
+    this.persistToStorage();
+  }
+
   // Stage 3: Grave 1 Riddle & Treasure Chest Interaction
   solveGrave1Riddle(teamId: string, answer: string): { success: boolean; message: string } {
     const session = this.teamStates.get(teamId);
