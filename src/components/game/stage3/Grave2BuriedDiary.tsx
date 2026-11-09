@@ -24,16 +24,153 @@ interface Grave2BuriedDiaryProps {
   onOpenJournal: () => void;
 }
 
-type InspectionType =
-  | 'p7'
-  | 'p8'
-  | 'p4'
-  | 'p3'
-  | 'p9'
-  | 'p6'
-  | 'envelope'
-  | 'skull'
-  | 'chest_locked';
+export interface ImageEvidenceTarget {
+  id: string;
+  imageId: string;
+  ariaLabel: string;
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+  title: string;
+  subtitle?: string;
+  imageSrc: string;
+  description: string;
+  isDistractor?: boolean;
+  statusBadge?: string;
+}
+
+// 10 Calibrated Image-Relative Interaction Targets (2560x1440 Master Coordinate System)
+const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
+  {
+    id: 'skull',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Cranium of the Keeper: Marked Brow (First Clue)',
+    left: '41.02%',
+    top: '10.42%',
+    width: '10.16%',
+    height: '18.75%',
+    title: 'CRANIUM OF THE SECOND KEEPER',
+    subtitle: 'Solitary Brow Marking: Roman Numeral I (First Digit: 1)',
+    imageSrc: '/assets/round-01/stage-03/inspection/skull.png',
+    description:
+      'Carved into the weathered frontal bone is a solitary Roman numeral "I", etched with ceremonial precision. The chronicle designates this as the mark that stands alone upon the crowned keeper—the first digit of the forgotten covenant year.',
+  },
+  {
+    id: 'paper_7',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Western Parchment 7 (Second Clue)',
+    left: '25.78%',
+    top: '29.17%',
+    width: '10.16%',
+    height: '16.67%',
+    title: 'WESTERN MARKER — VII (7)',
+    subtitle: 'Western Folio Scrap (Second Digit: 7)',
+    imageSrc: '/assets/round-01/stage-03/inspection/paper_7.png',
+    description:
+      'An aged parchment slip resting beyond the open folio where the western arm was laid to rest. Inscribed with dark iron-gall ink is the numeral "7". In the keeper\'s chronicle, the western hand placed its seal directly after the solitary crown.',
+  },
+  {
+    id: 'paper_4',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Eastern Moon Parchment 4 (Third Clue)',
+    left: '57.42%',
+    top: '17.36%',
+    width: '9.77%',
+    height: '14.58%',
+    title: 'MOONWARD EASTERN SCRAP (4)',
+    subtitle: 'Eastern Moon Sign (Third Digit: 4)',
+    imageSrc: '/assets/round-01/stage-03/inspection/paper_4.png',
+    description:
+      'Resting beneath the skeletal arm that points toward the nocturnal moonlit sky lies a vellum slip marked with the numeral "4". The chronicle declares that its opposite, beneath the moonward arm, speaks third.',
+  },
+  {
+    id: 'paper_3',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Archival Parchment 3 (Burial Record)',
+    left: '60.55%',
+    top: '29.86%',
+    width: '9.77%',
+    height: '13.89%',
+    title: 'ARCHIVAL GRAVE RECORD (3)',
+    subtitle: 'Burial Record Scrap — Non-Covenant Distractor',
+    imageSrc: '/assets/round-01/stage-03/inspection/paper_3.png',
+    isDistractor: true,
+    description:
+      'A fragmented burial tally recording three ceremonial censers buried during the second rites. A faded marginal note states: "Tally of mortuary offerings—unrecorded in the covenant of years." This scrap marks cemetery tribute rather than the four founding covenants.',
+  },
+  {
+    id: 'paper_9',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Eastern Seal Parchment 9 (Fourth Clue)',
+    left: '61.72%',
+    top: '40.28%',
+    width: '7.81%',
+    height: '12.50%',
+    title: 'CRIMSON-SEALED RECORD (9)',
+    subtitle: 'Keeper\'s Seal Sign (Fourth Digit: 9)',
+    imageSrc: '/assets/round-01/stage-03/inspection/paper_9.png',
+    description:
+      'A weathered vellum fragment pinned firmly beneath the skeletal ribs beside a crimson wax seal. A bold numeral "9" is impressed upon its fiber. As the chronicle foretells: "Close the year with the numeral pressed beside the crimson seal beneath the remains." Positioned distinctly above the iron coffer.',
+  },
+  {
+    id: 'letter',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Folded Envelope with Red Wax Fleur-de-lis Seal',
+    left: '27.34%',
+    top: '54.86%',
+    width: '16.02%',
+    height: '18.75%',
+    title: 'WAX-SEALED CEMETERY DISPATCH',
+    subtitle: 'Folded Vellum with Crimson Seal',
+    imageSrc: '/assets/round-01/stage-03/inspection/letter.png',
+    description:
+      'A folded parchment letter secured with an unbroken crimson wax seal bearing the fleur-de-lis of the Cartel\'s founding house. The letter is addressed to the Keeper of the Graves, warning of betrayal before the winter freeze.',
+  },
+  {
+    id: 'key',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Antique Brass Skeleton Key',
+    left: '49.61%',
+    top: '64.58%',
+    width: '10.94%',
+    height: '12.5%',
+    title: 'ORNATE SKELETON KEY',
+    subtitle: 'Ceremonial Crypt Key',
+    imageSrc: '/assets/round-01/stage-03/inspection/key.png',
+    description:
+      'An ornate brass skeleton key with intricate gothic wards. Testing the key against the iron coffer reveals that its warding is ceremonial—the coffer opens strictly via the 4-digit covenant lock mechanism.',
+  },
+  {
+    id: 'scroll',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Ancient Rolled Scroll Tied with Scarlet Twine',
+    left: '70.31%',
+    top: '50.00%',
+    width: '13.67%',
+    height: '14.58%',
+    title: 'ANCIENT ROLLED SCROLL',
+    subtitle: 'Crypt Catacomb Map',
+    imageSrc: '/assets/round-01/stage-03/inspection/scroll.png',
+    description:
+      'A parchment scroll tightly rolled and bound with scarlet twine. The seal remains intact, preserving architectural maps of the subterranean crypt network beneath the graveyard.',
+  },
+  {
+    id: 'chest',
+    imageId: 'coffin-02-buried-diary-master',
+    ariaLabel: 'Locked Iron Coffer: Solve 4-digit covenant lock to unseal',
+    left: '64.45%',
+    top: '65.28%',
+    width: '12.89%',
+    height: '13.89%',
+    title: 'IRON-BANDED COFFER',
+    subtitle: 'Locked Burial Chest',
+    statusBadge: 'THE CHEST REMAINS SEALED.',
+    imageSrc: '/assets/round-01/stage-03/inspection/chest.png',
+    description:
+      'A heavy iron-banded chest forged from black oak and cold steel. The four-tumbler combination mechanism locks the lid shut. Enter the four-digit covenant year below to release the tumblers.',
+  },
+];
 
 export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   teamId,
@@ -52,17 +189,17 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   onFragmentUnlocked,
   onOpenJournal,
 }) => {
-  // 4-Digit Combination Lock: 0-9
+  // 4-Digit Combination Lock: Initialized to 0-0-0-0
   const [digits, setDigits] = useState<[number, number, number, number]>([0, 0, 0, 0]);
   const [cofferError, setCofferError] = useState(false);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
   // Modals & Overlays
   const [isDiaryOpen, setIsDiaryOpen] = useState(false);
-  const [inspectionItem, setInspectionItem] = useState<InspectionType | null>(null);
+  const [inspectedTarget, setInspectedTarget] = useState<ImageEvidenceTarget | null>(null);
   const [isChestRewardOpen, setIsChestRewardOpen] = useState(false);
 
-  // Keyboard navigation refs
+  // Keyboard navigation refs for tumblers
   const tumblerInputsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const showToast = (msg: string) => {
@@ -128,7 +265,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
     const code = digits.join('');
     const { success } = round1Service.unlockGrave2Coffer(teamId, code);
 
-    if (success || code === '1749' || code === '147') {
+    if (success || code === '1749') {
       soundController.playDiscover();
       onCofferUnlocked();
       if (!collectedFragments.includes('EMBER')) {
@@ -145,12 +282,22 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
     }
   };
 
+  // Target Click Handler
+  const handleTargetClick = (target: ImageEvidenceTarget) => {
+    soundController.playClick();
+    if (target.id === 'chest' && isCofferUnlocked) {
+      setIsChestRewardOpen(true);
+      return;
+    }
+    setInspectedTarget(target);
+  };
+
   // Close modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsDiaryOpen(false);
-        setInspectionItem(null);
+        setInspectedTarget(null);
         setIsChestRewardOpen(false);
       }
     };
@@ -201,7 +348,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
         </div>
       )}
 
-      {/* 3. Central Stage: Pure Clean Artwork with Zero Baked-in UI & Accurate Invisible Hotspots */}
+      {/* 3. Central Stage: Pure Clean Artwork with Zero Baked-in UI & Invisible HTML Click Regions */}
       <main className="relative flex-1 w-full flex items-center justify-center min-h-0 px-2 sm:px-4 py-1 overflow-hidden">
         <div
           className="relative max-h-full max-w-full rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.95)] border border-amber-950/40"
@@ -219,10 +366,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             <div
               className="absolute z-10 pointer-events-none animate-pulse"
               style={{
-                left: '65.0%',
-                top: '59.0%',
-                width: '14.0%',
-                height: '17.0%', 
+                left: '64.45%',
+                top: '65.28%',
+                width: '12.89%',
+                height: '13.89%',
                 background: 'radial-gradient(circle, rgba(245,158,11,0.5) 0%, rgba(245,158,11,0) 75%)',
                 filter: 'drop-shadow(0 0 25px rgba(245,158,11,0.9))',
               }}
@@ -230,10 +377,10 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
           )}
 
           {/* ========================================================
-              ACCURATE INVISIBLE INTERACTION HOTSPOTS (1024x576 Space)
+              ACCURATE INVISIBLE HTML CLICK INTERACTIONS (NO SVG, NO HOVER GLOWS)
              ======================================================== */}
 
-          {/* 1. ANCIENT DIARY (Resting on Skeleton’s Ribcage) */}
+          {/* 1. ANCIENT DIARY (Opens ancient vellum reading modal) */}
           <button
             type="button"
             aria-label="Ancient Diary: Click to Read the Keeper's Chronicle"
@@ -241,225 +388,36 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
               soundController.playParchmentOpen();
               setIsDiaryOpen(true);
             }}
-            className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] group"
+            className="absolute z-20 cursor-pointer bg-transparent border-0 p-0 m-0 outline-none focus:outline-none"
             style={{
-              left: '34.0%',
-              top: '32.0%',
-              width: '32.0%',
-              height: '30.0%',
+              left: '35.94%',
+              top: '34.72%',
+              width: '23.83%',
+              height: '27.78%',
             }}
           >
-            <span className="sr-only">Read Ancient Diary</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/90 border border-amber-500/80 text-[10px] font-cinzel font-bold text-amber-300 tracking-wider whitespace-nowrap shadow-md pointer-events-none">
-              📖 Read Ancient Diary
-            </span>
+            <span className="sr-only">Ancient Diary: Click to Read the Keeper's Chronicle</span>
           </button>
 
-          {/* 2. SKELETON SKULL (Cranium with Solitary Brow Mark: Roman I = Digit 1) */}
-          <button
-            type="button"
-            aria-label="Cranium of the Keeper: Marked Brow (First Clue)"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('skull');
-            }}
-            className="absolute z-20 cursor-pointer rounded-full transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] group"
-            style={{
-              left: '45.0%',
-              top: '14.0%',
-              width: '10.0%',
-              height: '17.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Skull Brow Mark</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/90 border border-amber-500/80 text-[9px] font-cinzel font-bold text-amber-300 tracking-wider whitespace-nowrap shadow-md pointer-events-none">
-              💀 Inspect Brow Mark (I)
-            </span>
-          </button>
-
-          {/* 3. WESTERN PARCHMENT "7" (Second Clue: 7 to the west) */}
-          <button
-            type="button"
-            aria-label="Western Parchment 7 (Second Clue)"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('p7');
-            }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] group"
-            style={{
-              left: '26.0%',
-              top: '34.0%',
-              width: '9.0%',
-              height: '16.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Western Parchment 7</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
-              [7]
-            </span>
-          </button>
-
-          {/* 4. SOUTHWESTERN PARCHMENT (Weathered Folio) */}
-          <button
-            type="button"
-            aria-label="Southwestern Parchment 8"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('p8');
-            }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
-            style={{
-              left: '27.0%',
-              top: '48.0%',
-              width: '8.5%',
-              height: '15.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Weathered Scrap</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-stone-500/80 text-[9px] font-mono font-bold text-stone-300 pointer-events-none">
-              📜
-            </span>
-          </button>
-
-          {/* 5. EASTERN MOON PARCHMENT "4" (Third Clue: 4 beneath eastern moon) */}
-          <button
-            type="button"
-            aria-label="Eastern Moon Parchment 4 (Third Clue)"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('p4');
-            }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] group"
-            style={{
-              left: '63.0%',
-              top: '24.0%',
-              width: '9.0%',
-              height: '15.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Eastern Moon Parchment 4</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
-              [4]
-            </span>
-          </button>
-
-          {/* 6. MID-EASTERN PARCHMENT (Weathered Folio) */}
-          <button
-            type="button"
-            aria-label="Mid-Eastern Parchment 3"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('p3');
-            }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
-            style={{
-              left: '63.0%',
-              top: '36.0%',
-              width: '8.5%',
-              height: '14.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Weathered Scrap</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-stone-500/80 text-[9px] font-mono font-bold text-stone-300 pointer-events-none">
-              📜
-            </span>
-          </button>
-
-          {/* 7. EASTERN SEAL PARCHMENT "9" (Fourth Clue: 9 beside crimson seal) */}
-          <button
-            type="button"
-            aria-label="Eastern Seal Parchment 9 (Fourth Clue)"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('p9');
-            }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] group"
-            style={{
-              left: '66.0%',
-              top: '46.0%',
-              width: '9.0%',
-              height: '15.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Parchment 9 Beside Seal</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-amber-500/80 text-[9px] font-mono font-bold text-amber-300 pointer-events-none">
-              [9]
-            </span>
-          </button>
-
-          {/* 8. SOUTHEASTERN PARCHMENT (Weathered Folio) */}
-          <button
-            type="button"
-            aria-label="Southeastern Parchment 6"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('p6');
-            }}
-            className="absolute z-20 cursor-pointer rounded-lg transition-all duration-200 hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] group"
-            style={{
-              left: '58.0%',
-              top: '58.0%',
-              width: '8.5%',
-              height: '14.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Weathered Scrap</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 border border-stone-500/80 text-[9px] font-mono font-bold text-stone-300 pointer-events-none">
-              📜
-            </span>
-          </button>
-
-          {/* 9. WAX-SEALED LETTER (Crimson Fleur-de-lis Dispatch) */}
-          <button
-            type="button"
-            aria-label="Folded Envelope with Red Wax Fleur-de-lis Seal"
-            onClick={() => {
-              soundController.playClick();
-              setInspectionItem('envelope');
-            }}
-            className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-red-500/15 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] group"
-            style={{
-              left: '28.0%',
-              top: '58.0%',
-              width: '15.0%',
-              height: '16.0%',
-            }}
-          >
-            <span className="sr-only">Inspect Wax-Sealed Letter</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/90 border border-red-500/80 text-[9px] font-cinzel font-bold text-red-200 whitespace-nowrap shadow-md pointer-events-none">
-              ✉️ Wax-Sealed Letter
-            </span>
-          </button>
-
-          {/* 10. TREASURE CHEST (Iron-Banded Coffer at Lower Right) */}
-          <button
-            type="button"
-            aria-label={
-              isCofferUnlocked
-                ? 'Unsealed Treasure Chest: View Fragment II "EMBER"'
-                : 'Locked Iron Coffer: Solve 4-digit covenant lock to unseal'
-            }
-            onClick={() => {
-              soundController.playClick();
-              if (isCofferUnlocked) {
-                setIsChestRewardOpen(true);
-              } else {
-                setInspectionItem('chest_locked');
-              }
-            }}
-            className="absolute z-20 cursor-pointer rounded-xl transition-all duration-200 hover:bg-amber-400/20 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] group"
-            style={{
-              left: '65.0%',
-              top: '60.0%',
-              width: '14.0%',
-              height: '16.0%',
-            }}
-          >
-            <span className="sr-only">{isCofferUnlocked ? 'Open Treasure Chest' : 'Locked Iron Coffer'}</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -top-5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/90 border border-amber-500/80 text-[9px] font-cinzel font-bold text-amber-300 whitespace-nowrap shadow-md pointer-events-none">
-              {isCofferUnlocked ? '✦ Unsealed Chest (EMBER)' : '🔒 Locked Coffer'}
-            </span>
-          </button></div>
+          {/* 2-10. CALIBRATED EVIDENCE TARGETS (Pure HTML Click-Only Regions) */}
+          {EVIDENCE_TARGETS.map((target) => (
+            <button
+              key={target.id}
+              type="button"
+              aria-label={target.ariaLabel}
+              onClick={() => handleTargetClick(target)}
+              className="absolute z-20 cursor-pointer bg-transparent border-0 p-0 m-0 outline-none focus:outline-none"
+              style={{
+                left: target.left,
+                top: target.top,
+                width: target.width,
+                height: target.height,
+              }}
+            >
+              <span className="sr-only">{target.ariaLabel}</span>
+            </button>
+          ))}
+        </div>
       </main>
 
       {/* 4. Single Master Riddle & 4-Digit Combination Lock Console */}
@@ -481,83 +439,76 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
             </p>
           </div>
 
-          {/* Combination Lock Controls (Right) */}
+          {/* Combination Lock Controls (Right) — Zero Spoilers Before Solving */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {isCofferUnlocked ? (
-              <button
-                type="button"
-                onClick={() => setIsChestRewardOpen(true)}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-950 via-amber-950 to-emerald-950 border border-emerald-500 text-amber-200 font-cinzel text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.35)] cursor-pointer hover:border-amber-400 transition-all"
+            <form onSubmit={handleUnlock} className="flex items-center gap-2 sm:gap-2.5">
+              {/* 4 Digit Tumblers */}
+              <div
+                className={`flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-xl bg-black/80 border transition-all ${
+                  cofferError
+                    ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.7)] animate-shake'
+                    : isCofferUnlocked
+                    ? 'border-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+                    : 'border-amber-700/60 shadow-inner'
+                }`}
               >
-                <span>🔓</span>
-                <span>COVENANT (1749): &ldquo;EMBER&rdquo;</span>
-                <span className="text-[10px] text-emerald-400">✦ VIEW</span>
-              </button>
-            ) : (
-              <form onSubmit={handleUnlock} className="flex items-center gap-2 sm:gap-2.5">
-                {/* 4 Digit Tumblers */}
-                <div
-                  className={`flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-xl bg-black/80 border transition-all ${
-                    cofferError
-                      ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.7)] animate-shake'
-                      : 'border-amber-700/60 shadow-inner'
-                  }`}
-                >
-                  {digits.map((digit, idx) => (
-                    <div key={idx} className="flex flex-col items-center">
-                      {/* Increment Up Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDigitChange(idx, 1)}
-                        aria-label={`Increment tumbler ${idx + 1}`}
-                        className="px-2 py-0.5 rounded-t bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
-                      >
-                        ▲
-                      </button>
+                {digits.map((digit, idx) => (
+                  <div key={idx} className="flex flex-col items-center">
+                    {/* Increment Up Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDigitChange(idx, 1)}
+                      aria-label={`Increment tumbler ${idx + 1}`}
+                      className="px-2 py-0.5 rounded-t bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
+                    >
+                      ▲
+                    </button>
 
-                      {/* Digit Box */}
-                      <div
-                        ref={(el) => {
-                          tumblerInputsRef.current[idx] = el;
-                        }}
-                        tabIndex={0}
-                        role="spinbutton"
-                        aria-valuenow={digit}
-                        aria-valuemin={0}
-                        aria-valuemax={9}
-                        aria-label={`Tumbler ${idx + 1}`}
-                        onKeyDown={(e) => handleTumblerKeyDown(e, idx)}
-                        className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-b from-stone-950 via-[#120703] to-black border border-amber-600/80 text-amber-200 font-mono font-black text-base sm:text-lg flex items-center justify-center shadow-inner cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 select-none"
-                      >
-                        {digit}
-                      </div>
-
-                      {/* Decrement Down Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDigitChange(idx, -1)}
-                        aria-label={`Decrement tumbler ${idx + 1}`}
-                        className="px-2 py-0.5 rounded-b bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
-                      >
-                        ▼
-                      </button>
+                    {/* Digit Box */}
+                    <div
+                      ref={(el) => {
+                        tumblerInputsRef.current[idx] = el;
+                      }}
+                      tabIndex={0}
+                      role="spinbutton"
+                      aria-valuenow={digit}
+                      aria-valuemin={0}
+                      aria-valuemax={9}
+                      aria-label={`Tumbler ${idx + 1}`}
+                      onKeyDown={(e) => handleTumblerKeyDown(e, idx)}
+                      className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-b from-stone-950 via-[#120703] to-black border border-amber-600/80 text-amber-200 font-mono font-black text-base sm:text-lg flex items-center justify-center shadow-inner cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 select-none"
+                    >
+                      {digit}
                     </div>
-                  ))}
-                </div>
 
-                {/* UNLOCK Submit Button */}
-                <button
-                  type="submit"
-                  className={`px-4 sm:px-5 py-2.5 rounded-xl font-cinzel text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
-                    cofferError
-                      ? 'bg-red-900 border-2 border-red-500 text-white animate-shake'
-                      : 'bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 hover:from-amber-600 hover:to-amber-800 border-2 border-amber-400 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.45)] active:scale-95'
-                  }`}
-                >
-                  UNLOCK
-                </button>
-              </form>
-            )}
+                    {/* Decrement Down Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDigitChange(idx, -1)}
+                      aria-label={`Decrement tumbler ${idx + 1}`}
+                      className="px-2 py-0.5 rounded-b bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* UNLOCK Submit Button */}
+              <button
+                type="submit"
+                aria-label="UNLOCK"
+                className={`px-4 sm:px-5 py-2.5 rounded-xl font-cinzel text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+                  cofferError
+                    ? 'bg-red-900 border-2 border-red-500 text-white animate-shake'
+                    : isCofferUnlocked
+                    ? 'bg-gradient-to-r from-emerald-950 via-amber-950 to-emerald-950 border-2 border-emerald-500 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                    : 'bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 hover:from-amber-600 hover:to-amber-800 border-2 border-amber-400 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.45)] active:scale-95'
+                }`}
+              >
+                {isCofferUnlocked ? 'UNLOCKED' : 'UNLOCK'}
+              </button>
+            </form>
           </div>
         </div>
       </section>
@@ -671,7 +622,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
                 </div>
 
                 <p className="text-[11px] font-serif italic text-stone-400">
-                  Four signs alone reveal the covenant year. Align the four tumblers to loosen the ancient iron lock.
+                  Four marks alone reveal the covenant year. Align the four tumblers to loosen the ancient iron lock.
                 </p>
               </div>
             </div>
@@ -694,18 +645,18 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
       )}
 
       {/* ========================================================
-          MODAL 2: PARCHMENT & ARTIFACT INSPECTION MODAL
+          MODAL 2: HIGH-DEFINITION PHOTOGRAPHIC ARTIFACT INSPECTION MODAL
          ======================================================== */}
-      {inspectionItem && (
+      {inspectedTarget && (
         <div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
-          onClick={() => setInspectionItem(null)}
+          onClick={() => setInspectedTarget(null)}
         >
           <div
             role="document"
-            className="relative w-full max-w-md overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
+            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -715,114 +666,62 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
                   BURIAL CHAMBER INSPECTION
                 </div>
                 <h3 className="text-base sm:text-lg font-cinzel font-black text-amber-100 tracking-wide">
-                  {inspectionItem === 'p7' && 'WESTERN MARKER — VII (Digit 7)'}
-                  {inspectionItem === 'p8' && 'SCATTERED FOLIO SCRAP'}
-                  {inspectionItem === 'p4' && 'EASTERN MOON MARKER — IV (Digit 4)'}
-                  {inspectionItem === 'p3' && 'SCATTERED FOLIO SCRAP'}
-                  {inspectionItem === 'p9' && 'EASTERN SEAL MARKER — IX (Digit 9)'}
-                  {inspectionItem === 'p6' && 'SCATTERED FOLIO SCRAP'}
-                  {inspectionItem === 'envelope' && 'WAX-SEALED CEMETERY DISPATCH'}
-                  {inspectionItem === 'skull' && 'CRANIUM OF THE SECOND KEEPER — MARK I'}
-                  {inspectionItem === 'chest_locked' && 'IRON COFFER COMBINATION LOCK'}
+                  {inspectedTarget.title}
                 </h3>
+                {inspectedTarget.subtitle && (
+                  <div className="text-[11px] font-mono text-stone-400 mt-0.5">
+                    {inspectedTarget.subtitle}
+                  </div>
+                )}
               </div>
               <button
                 type="button"
-                onClick={() => setInspectionItem(null)}
-                aria-label="Close Inspection"
+                onClick={() => setInspectedTarget(null)}
+                aria-label="Close"
                 className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
               >
                 ✕ Close
               </button>
             </div>
 
-            {/* Visual Center */}
-            <div className="flex flex-col items-center justify-center p-6 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-900/50 shadow-inner text-center">
-              {/* Numbered Parchments (7, 8, 4, 3, 9, 6) */}
-              {['p7', 'p8', 'p4', 'p3', 'p9', 'p6'].includes(inspectionItem) && (
-                <div className="w-28 h-36 rounded-xl bg-gradient-to-b from-[#e3caa5] to-[#c29f6d] border-2 border-[#8b5a2b] shadow-[0_0_25px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center p-3 relative">
-                  <div className="absolute inset-1 border border-[#8b5a2b]/40 rounded-lg pointer-events-none" />
-                  <span className="text-[10px] font-cinzel font-bold text-[#5c3a21] uppercase tracking-widest">
-                    ANNO
-                  </span>
-                  <span className="text-5xl font-mono font-black text-[#3a1f0d] my-1">
-                    {inspectionItem === 'p7' && '7'}
-                    {inspectionItem === 'p8' && '8'}
-                    {inspectionItem === 'p4' && '4'}
-                    {inspectionItem === 'p3' && '3'}
-                    {inspectionItem === 'p9' && '9'}
-                    {inspectionItem === 'p6' && '6'}
-                  </span>
-                  <span className="text-[9px] font-serif italic text-[#6e462b]">
-                    {inspectionItem === 'p7' && 'Western Covenant Sign'}
-                    {inspectionItem === 'p8' && 'Incidental Folio'}
-                    {inspectionItem === 'p4' && 'Eastern Moon Sign'}
-                    {inspectionItem === 'p3' && 'Incidental Folio'}
-                    {inspectionItem === 'p9' && "Keeper's Seal Sign"}
-                    {inspectionItem === 'p6' && 'Incidental Folio'}
-                  </span>
+            {/* High-Resolution Photographic Master Artwork Crop */}
+            <div className="flex flex-col items-center justify-center p-4 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-900/50 shadow-inner text-center">
+              <div className="relative w-full max-h-56 flex items-center justify-center overflow-hidden rounded-xl border border-amber-950/80 bg-black/70 p-2 shadow-2xl">
+                <img
+                  src={inspectedTarget.imageSrc}
+                  alt={inspectedTarget.title}
+                  className="max-h-52 w-auto object-contain rounded-lg drop-shadow-[0_0_15px_rgba(0,0,0,0.9)]"
+                />
+              </div>
+
+              {/* Status Badge (e.g., "THE CHEST REMAINS SEALED.") */}
+              {inspectedTarget.statusBadge && (
+                <div className="mt-3 px-3 py-1 rounded-full bg-red-950/90 border border-red-600 text-red-200 font-cinzel text-[11px] font-black uppercase tracking-widest shadow-md">
+                  {inspectedTarget.statusBadge}
                 </div>
               )}
 
-              {/* Skull */}
-              {inspectionItem === 'skull' && (
-                <div className="w-28 h-28 rounded-full bg-gradient-to-b from-stone-800 to-black border-2 border-amber-500/80 shadow-[0_0_30px_rgba(245,158,11,0.3)] flex flex-col items-center justify-center relative">
-                  <span className="text-4xl filter drop-shadow">💀</span>
-                  <span className="text-red-500 font-cinzel font-black text-xs tracking-widest mt-1">
-                    MARK: I (Digit: 1)
-                  </span>
+              {/* Distractor Tag */}
+              {inspectedTarget.isDistractor && (
+                <div className="mt-2 text-[10px] font-cinzel font-bold text-stone-400 tracking-widest uppercase">
+                  ✦ ARCHIVAL BURIAL SCRAP • NOT PART OF THE COVENANT YEAR ✦
                 </div>
               )}
 
-              {/* Sealed Envelope */}
-              {inspectionItem === 'envelope' && (
-                <div className="w-36 h-24 rounded-lg bg-gradient-to-b from-[#d9be9b] to-[#bfa075] border-2 border-[#8b5a2b] shadow-xl flex items-center justify-center relative">
-                  <div className="w-10 h-10 rounded-full bg-red-900 border-2 border-red-600 shadow-md flex items-center justify-center text-red-200 text-sm font-bold">
-                    ⚜️
-                  </div>
-                </div>
-              )}
-
-              {/* Locked Chest */}
-              {inspectionItem === 'chest_locked' && (
-                <div className="w-32 h-24 rounded-xl bg-gradient-to-b from-stone-900 to-stone-950 border-2 border-amber-600 shadow-xl flex flex-col items-center justify-center">
-                  <span className="text-3xl">🔒</span>
-                  <span className="text-xs font-cinzel font-bold text-amber-300 mt-1">
-                    4-TUMBLER COFFER
-                  </span>
-                </div>
-              )}
-
-              {/* Description */}
-              <p className="mt-4 font-serif italic text-xs text-stone-200 leading-relaxed max-w-xs">
-                {inspectionItem === 'p7' &&
-                  '“Seven stood to the west, where the old parchment rested.” Inscribed on aged vellum west of the keeper’s diary (Second mark: 7).'}
-                {inspectionItem === 'p8' &&
-                  'A weathered page resting near the lower velvet fold of the casket. An incidental fragment with no covenant seal.'}
-                {inspectionItem === 'p4' &&
-                  '“Four followed beneath the eastern moon.” Placed high on the eastern wall of the coffin beneath the moonlit spire (Third mark: 4).'}
-                {inspectionItem === 'p3' &&
-                  'An aged parchment marker placed beside the eastern ribcage. An incidental fragment with no covenant seal.'}
-                {inspectionItem === 'p9' &&
-                  '“Nine was the final mark, pressed beside the keeper’s seal.” Resting directly above the rolled scroll and iron coffer (Final mark: 9).'}
-                {inspectionItem === 'p6' &&
-                  'Tucked low in the coffin beside the skeletal phalanges and ancient coffer. An incidental fragment with no covenant seal.'}
-                {inspectionItem === 'envelope' &&
-                  'Addressed to the High Inquisitor. The crimson wax seal remains unbroken, preserving centuries of forgotten vows.'}
-                {inspectionItem === 'skull' &&
-                  '“The solitary mark upon the keeper’s brow opened the record.” The single scarlet mark begins the reckoning (First mark: 1).'}
-                {inspectionItem === 'chest_locked' &&
-                  'The iron coffer is held by a four-tumbler lock. Solve the keeper’s riddle to open it and claim the sacred syllable.'}
+              {/* Detailed Description */}
+              <p className="mt-4 font-serif italic text-xs sm:text-sm text-stone-200 leading-relaxed max-w-sm">
+                &ldquo;{inspectedTarget.description}&rdquo;
               </p>
             </div>
 
             {/* Close Button */}
             <button
               type="button"
-              onClick={() => setInspectionItem(null)}
+              onClick={() => setInspectedTarget(null)}
+              aria-label="Close Inspection"
               className="mt-2 w-full py-2 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-500/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
             >
-              Close
+              Close Inspection
             </button>
           </div>
         </div>
