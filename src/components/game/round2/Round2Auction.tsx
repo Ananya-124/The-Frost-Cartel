@@ -43,7 +43,7 @@ const StageGhost: React.FC = () => {
   return broken ? (
     <span aria-hidden="true" className="r2-ghost text-7xl inline-block">👻</span>
   ) : (
-    <img src={STAGE_GHOST} alt="" onError={() => setBroken(true)} className="r2-ghost w-28 sm:w-36 h-auto" />
+    <img src={STAGE_GHOST} alt="" onError={() => setBroken(true)} className="r2-ghost h-44 sm:h-52 w-auto" />
   );
 };
 
@@ -87,12 +87,12 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
       round2Service.saveInventory(r.me);
     }
 
-    // Announce a card that has just been sold or has gone unsold.
+    // Announce auction results to every team as they receive the updated state.
     const prev = prevStatus.current;
     for (const c of r.cards) {
       const before = prev[c.id];
       if (before && before !== c.status) {
-        if (c.status === 'sold') showBanner(`${c.icon} ${c.name} sold to ${c.winner} for ${c.price} CR`);
+        if (c.status === 'sold') showBanner(`${c.winner ?? 'A team'} won ${c.name} for ${c.price ?? c.defaultBase} CR`);
         else if (c.status === 'unsold') showBanner(`💀 ${c.name} went unsold`);
       }
       prev[c.id] = c.status;
@@ -173,6 +173,10 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   };
 
   const won = view?.me?.cards ?? [];
+  const earnedCards = won.flatMap((earned) => {
+    const card = view?.cards.find((candidate) => candidate.id === earned.id);
+    return card ? [{ card, paidPrice: earned.price }] : [];
+  });
   const allSold = !!view && view.cards.every((c) => c.status === 'sold');
   let footer = 'ROUND 2 • WAITING FOR THE NEXT CARD';
   if (live) footer = 'ROUND 2 • BIDDING OPEN';
@@ -207,13 +211,13 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
           </div>
         )}
         {banner && (
-          <div role="status" aria-live="polite" className="mb-4 text-center font-cinzel text-amber-200 border border-orange-700/50 bg-black/70 rounded-lg py-2">
+          <div role="status" aria-live="polite" className="r2-toast fixed top-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 rounded-xl border border-orange-500/70 bg-[#100c19]/95 px-5 py-3 text-center font-cinzel font-bold tracking-wide text-amber-100 shadow-[0_0_24px_rgba(224,144,47,0.5)] backdrop-blur">
             {banner}
           </div>
         )}
 
-        {/* Stage + your cards */}
-        <div className="grid lg:grid-cols-[2.3fr_1fr] gap-5">
+        {/* Auction stage */}
+        <div>
           <section className="r2-panel relative rounded-2xl p-5 min-h-[260px] overflow-hidden" aria-label="Card on the block">
             <CobWeb />
             <CobWeb flip />
@@ -303,7 +307,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
               </div>
             ) : (
               <div className="relative z-10 flex flex-col items-center justify-center text-center py-6 min-h-[220px]">
-                <div className="relative flex items-end justify-center h-40 w-72 max-w-full">
+                <div className="relative flex items-end justify-center h-48 sm:h-56 w-72 max-w-full">
                   <div aria-hidden="true" className="r2-mist absolute left-1/2 bottom-0 w-72 h-16 rounded-[50%] blur-xl" />
                   {[
                     { l: '28%', wx: '-18px', wd: '0s' },
@@ -322,46 +326,21 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
             )}
           </section>
 
-          <aside className="r2-panel relative rounded-2xl p-4" aria-label="Your cards">
-            <div className="flex items-center gap-2 border-b border-orange-700/40 pb-2">
-              <span aria-hidden="true" className="r2-pumpkin text-3xl">🎃</span>
-              <h2 className="font-cinzel text-xl tracking-wider text-amber-200/90">Your Cards</h2>
-            </div>
-            <div className="relative mt-3 rounded-lg bg-[#0b0614]/70 border border-orange-800/40 p-3 min-h-[150px]">
-              {won.length === 0 ? (
-                <>
-                  <p className="font-garamond italic text-lg text-[#9a84c0]">None yet...</p>
-                  <div aria-hidden="true" className="absolute right-3 bottom-3 flex -space-x-8 opacity-30">
-                    {[-12, 0, 12].map((r) => (
-                      <div key={r} className="w-16 h-24 rounded-md border border-violet-300/15 bg-gradient-to-b from-[#1b1230] to-[#0a0714]" style={{ transform: `rotate(${r}deg)` }} />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <ul className="text-sm space-y-1.5">
-                  {won.map((c) => {
-                    const full = view?.cards.find((x) => x.id === c.id);
-                    return (
-                      <li key={c.id} className="flex items-center gap-3 border-b border-white/5 pb-1.5">
-                        <span className="r2-art w-10 h-10 rounded-md overflow-hidden flex items-center justify-center shrink-0">
-                          {full ? <CardArt card={full} className="h-full w-full object-contain" /> : <span aria-hidden="true">🃏</span>}
-                        </span>
-                        <span className="flex-1 font-cinzel">{c.name}</span>
-                        <b className="text-amber-200/90">{c.price} CR</b>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </aside>
         </div>
 
-        {/* All auction cards */}
-        <section className="mt-9 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-6" aria-label="All auction cards">
-          {view
-            ? view.cards.map((c, i) => <AuctionCard key={c.id} card={c} index={i} live={live?.cardId === c.id} />)
-            : Array.from({ length: 11 }, (_, i) => <div key={i} className="r2-panel rounded-2xl h-72 animate-pulse" />)}
+        <section className="mt-9" aria-label="Cards earned in bidding">
+          <h2 className="mb-5 text-center font-cinzel text-xl tracking-widest text-amber-200/90">CARDS EARNED IN BIDDING</h2>
+          {earnedCards.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">
+              {earnedCards.map(({ card, paidPrice }, index) => (
+                <AuctionCard key={card.id} card={card} paidPrice={paidPrice} index={index} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center font-garamond italic text-lg text-[#9a84c0]">
+              {view ? 'Cards you win at auction will appear here.' : 'Connecting to the auction...'}
+            </p>
+          )}
         </section>
 
         {/* Footer banner */}

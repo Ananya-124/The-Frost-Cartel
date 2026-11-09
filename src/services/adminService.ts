@@ -730,6 +730,65 @@ class AdminService {
     };
   }
 
+  resetTeamProgress(teamId: string): { success: boolean; message: string } {
+    const team = this.teams.find((t) => t.id === teamId);
+    if (!team) {
+      return { success: false, message: 'Team not found.' };
+    }
+
+    const now = new Date().toISOString();
+    team.currentRound = 'Round 1';
+    team.currentStage = 'stage-1';
+    team.status = 'waiting';
+    team.roundStartTime = null;
+    team.roundEndTime = null;
+    team.stageStartTime = null;
+    team.credits = 0;
+    team.stages = createInitialStageRecords();
+    team.activityHistory.unshift({
+      id: `act_${crypto.randomUUID().substring(0, 8)}`,
+      teamId: team.id,
+      type: 'admin_movement',
+      description: 'Team progress reset to the beginning of Round 1 by administrator',
+      timestamp: now,
+    });
+
+    round1Service.resetTeamProgress(teamId);
+    this.saveTeams();
+
+    return { success: true, message: `"${team.name}" progress reset to Round 1, Stage 1.` };
+  }
+
+  demoteTeamToPreviousRound(teamId: string): { success: boolean; message: string } {
+    const team = this.teams.find((t) => t.id === teamId);
+    if (!team) {
+      return { success: false, message: 'Team not found.' };
+    }
+    if (team.currentRound === 'Round 1') {
+      return { success: false, message: `"${team.name}" is already in the first round.` };
+    }
+
+    const now = new Date().toISOString();
+    team.currentRound = 'Round 1';
+    team.currentStage = 'stage-3';
+    team.stageStartTime = now;
+    team.roundEndTime = null;
+    if (team.stages['stage-3'].status !== 'completed') {
+      team.stages['stage-3'].status = 'in_progress';
+      team.stages['stage-3'].startTime = now;
+    }
+    team.activityHistory.unshift({
+      id: `act_${crypto.randomUUID().substring(0, 8)}`,
+      teamId: team.id,
+      type: 'admin_movement',
+      description: 'Demoted from Round 2 to the final stage of Round 1 by administrator',
+      timestamp: now,
+    });
+    this.saveTeams();
+
+    return { success: true, message: `"${team.name}" demoted to Round 1, Stage 3.` };
+  }
+
   /**
    * Delete team from repository.
    */
@@ -834,4 +893,3 @@ export const adminService = new AdminService();
 round1Service.setOnScoreSync((teamId, credits, stageId, stageStatus, activityDesc) => {
   adminService.syncTeamProgress(teamId, credits, stageId, stageStatus, activityDesc);
 });
-

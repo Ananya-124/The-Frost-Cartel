@@ -118,7 +118,10 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
     fireEvent.click(pumpkin(2));
     await advance(700);
     expect(container.querySelector('.s1-skull-emerge')).not.toBeNull();
-    expect(container.querySelectorAll('.s1-frag').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.s1-shell-shard')).toHaveLength(16);
+    expect(container.querySelectorAll('.s1-seed')).toHaveLength(12);
+    expect(container.querySelector('.s1-blast-flash')).not.toBeNull();
+    expect(container.querySelectorAll('.s1-blast-smoke')).toHaveLength(7);
 
     await advance(2000);
     expect(screen.getByText('Trial I cleared')).toBeInTheDocument();

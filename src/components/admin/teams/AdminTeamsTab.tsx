@@ -4,7 +4,7 @@ import { adminService } from '../../../services/adminService';
 import { CreateTeamModal } from './CreateTeamModal';
 import { TeamDetailsModal } from './TeamDetailsModal';
 import { EditTeamNameModal } from './EditTeamNameModal';
-import { ResetPasswordModal } from './ResetPasswordModal';
+import { ConfirmationModal } from '../shared/ConfirmationModal';
 
 interface AdminTeamsTabProps {
   onRefreshMetrics: () => void;
@@ -48,7 +48,8 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
   const [selectedTeam, setSelectedTeam] = useState<AdminTeam | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
-  const [isResetPassOpen, setIsResetPassOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ team: AdminTeam; action: 'reset' | 'demote' } | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Fetch data
   const { teams, totalCount, totalPages } = adminService.getTeams(
@@ -62,13 +63,26 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
     onRefreshMetrics();
   };
 
-  const handleTogglePause = (teamId: string) => {
-    adminService.toggleTeamPause(teamId);
+  const confirmTeamAction = () => {
+    if (!pendingAction) return;
+    const result = pendingAction.action === 'reset'
+      ? adminService.resetTeamProgress(pendingAction.team.id)
+      : adminService.demoteTeamToPreviousRound(pendingAction.team.id);
+    setPendingAction(null);
+    setActionNotice(result.message);
     handleRefresh();
   };
 
   return (
     <div className="space-y-4">
+      {actionNotice && (
+        <output
+          aria-live="polite"
+          className="block rounded-lg border border-cartel-amber/40 bg-cartel-midnight/80 px-4 py-2 text-xs font-cinzel text-cartel-amber"
+        >
+          {actionNotice}
+        </output>
+      )}
       {/* Action and Filter Header */}
       <div className="stone-panel rounded-xl p-4 border border-cartel-frostBorder/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 flex-1">
@@ -199,14 +213,6 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleTogglePause(team.id)}
-                          className="px-2 py-1 rounded bg-cartel-charcoal hover:bg-white/10 text-cartel-amber font-cinzel text-[10px] font-bold border border-cartel-amber/30 cursor-pointer"
-                          title={team.status === 'paused' ? 'Resume squad' : 'Pause squad'}
-                        >
-                          {team.status === 'paused' ? 'Resume' : 'Pause'}
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => {
                             setSelectedTeam(team);
                             setIsEditNameOpen(true);
@@ -218,14 +224,20 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedTeam(team);
-                            setIsResetPassOpen(true);
-                          }}
-                          className="px-2 py-1 rounded bg-cartel-charcoal hover:bg-white/10 text-cartel-silver font-cinzel text-[10px] font-bold border border-white/20 cursor-pointer"
-                          title="Reset passkey"
+                          onClick={() => setPendingAction({ team, action: 'reset' })}
+                          className="px-2 py-1 rounded bg-red-950/60 hover:bg-red-900/70 text-red-200 font-cinzel text-[10px] font-bold border border-red-500/30 cursor-pointer"
+                          title="Reset all progress and credits to the beginning of Round 1"
                         >
-                          Key
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingAction({ team, action: 'demote' })}
+                          disabled={team.currentRound === 'Round 1'}
+                          className="px-2 py-1 rounded bg-cartel-charcoal hover:bg-white/10 text-cartel-amber font-cinzel text-[10px] font-bold border border-cartel-amber/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          title={team.currentRound === 'Round 1' ? 'Already in the first round' : 'Move back one round'}
+                        >
+                          Demote
                         </button>
                         <button
                           type="button"
@@ -298,16 +310,17 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
         onSuccess={handleRefresh}
       />
 
-      <ResetPasswordModal
-        team={selectedTeam}
-        isOpen={isResetPassOpen}
-        onClose={() => {
-          setIsResetPassOpen(false);
-          setSelectedTeam(null);
-        }}
-        onSuccess={handleRefresh}
+      <ConfirmationModal
+        isOpen={pendingAction !== null}
+        title={pendingAction?.action === 'reset' ? 'RESET TEAM PROGRESS' : 'DEMOTE TEAM'}
+        message={pendingAction?.action === 'reset'
+          ? `Reset ${pendingAction.team.name} to Round 1, Stage 1? This clears its stage progress, earned credits, and Round 1 game state.`
+          : `Move ${pendingAction?.team.name} back to Round 1, Stage 3? Earned credits and completed-stage records will be preserved.`}
+        confirmLabel={pendingAction?.action === 'reset' ? 'Reset Progress' : 'Demote'}
+        isDanger={pendingAction?.action === 'reset'}
+        onConfirm={confirmTeamAction}
+        onCancel={() => setPendingAction(null)}
       />
     </div>
   );
 };
-
