@@ -22,9 +22,19 @@ const renderPanel = (value: Hunt1State, playerNumber: 1 | 2, onSpecialAction = v
 );
 
 describe('Hunt I renumbered task interface', () => {
+  it('reopens the task brief when the required clues become ready', () => {
+    const incomplete = { ...state, subtasks: { generatorLog: false, burntRelay: true, openGround: true } };
+    const view = renderPanel(incomplete, 1);
+    expect(screen.getByRole('button', { name: 'TASK BRIEF · The Power Failure' })).toBeInTheDocument();
+    view.rerender(<Hunt1Progress state={state} playerNumber={1} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={() => {}} />);
+    expect(screen.getByLabelText('archivist The Power Failure reconstruction')).toBeInTheDocument();
+    expect(screen.getByText(/Arrange the four wiring connections/)).toBeInTheDocument();
+  });
+
   it('starts at The Power Failure, shows four tasks, and removes the first two tasks', () => {
     renderPanel(state, 1);
-    expect(screen.getByText('HUNT I · 1/4 · Hide progress')).toBeInTheDocument();
+    expect(screen.getByText('HUNT I · 1/4 · Investigation progress')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('HUNT I · 1/4 · Investigation progress'));
     expect(screen.getByText('TASK 1 · THE POWER FAILURE')).toBeInTheDocument();
     expect(screen.getByText('TASK 4 · THE INCIDENT CONCLUSION')).toBeInTheDocument();
     expect(screen.queryByText(/Last Visitor|Missing Report|visitor ledger|shredded report/i)).not.toBeInTheDocument();
@@ -57,7 +67,7 @@ describe('Hunt I renumbered task interface', () => {
     };
     const onSpecialAction = vi.fn().mockResolvedValue({ success: true, message: 'saved', state: observationState });
     renderPanel(observationState, 1, onSpecialAction);
-    expect(screen.getByText('HUNT I · 2/4 · Hide progress')).toBeInTheDocument();
+    expect(screen.getByText('HUNT I · 2/4 · Investigation progress')).toBeInTheDocument();
     expect(screen.getByText(/18:23/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Submit Past timeline' }));
     expect(onSpecialAction).toHaveBeenCalledWith('archivist', 'observationArchivist', { sequence: ['subject-appears', 'alarm', 'observer-vanishes', 'lights-fail'] });
@@ -75,6 +85,7 @@ describe('Hunt I renumbered task interface', () => {
     };
     const onSpecialAction = vi.fn().mockResolvedValue({ success: true, message: 'restored', state: signalState });
     renderPanel(signalState, 2, onSpecialAction);
+    fireEvent.click(screen.getByText('HUNT I · 3/4 · Investigation progress'));
     expect(screen.getByText('TASK 3 · THE SIGNAL RECONSTRUCTION')).toBeInTheDocument();
     expect(screen.getByText(/ARCHIVIST’S DECODED ROUTE/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Reconnect and restore signal' }));
@@ -93,6 +104,7 @@ describe('Hunt I renumbered task interface', () => {
     };
     const onContinue = vi.fn();
     render(<Hunt1Progress state={finished} playerNumber={2} message="" working={false} onHint={() => {}} onSubmit={vi.fn()} onSpecialAction={vi.fn()} onContinue={onContinue} />);
+    fireEvent.click(screen.getByText('HUNT I · 4/4 · Investigation progress'));
     expect(screen.getByText('TASK 4 · THE INCIDENT CONCLUSION')).toBeInTheDocument();
     expect(screen.queryByText(/TASK 5/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'FINAL INCIDENT REPORT' })).toBeInTheDocument();

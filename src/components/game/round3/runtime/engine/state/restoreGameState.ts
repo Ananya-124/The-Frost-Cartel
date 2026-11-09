@@ -13,6 +13,10 @@ export function restoreGameState(saved: unknown, teamName: string, cards: readon
   const huntIndex = Number.isInteger(candidate.huntIndex) && Number(candidate.huntIndex) >= 0 && Number(candidate.huntIndex) <= 2
     ? Number(candidate.huntIndex) as GameState['huntIndex'] : 0;
   const restored: GameState = { ...base, ...candidate, teamName, cards: cards.map((card) => ({ ...card })), phase, huntIndex };
+  restored.syncWindowBonus ??= 0;
+  restored.highlightedObjectId ??= null;
+  restored.highlightTimer ??= 0;
+  restored.forgiveness ??= 0;
   if (phase === 'playing') {
     restored.freezeTimer = 0;
     restored.huntIntro = null;

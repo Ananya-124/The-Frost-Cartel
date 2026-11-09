@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import type { PowerCard } from '../../types';
 import type { Round3InventoryItem } from '../../../../../../types/round3.types';
 import styles from './Menu.module.css';
+import { TEST_POWER_CARDS, type TestPowerCardId } from '../../testingCards';
 
 interface MenuScreenProps {
   visible: boolean;
@@ -12,9 +13,11 @@ interface MenuScreenProps {
   onStart: () => void;
   onExit: () => void;
   onLoadDevelopmentSample: () => void;
+  testingCardIds: readonly TestPowerCardId[];
+  onToggleTestingCard: (id: TestPowerCardId) => void;
 }
 
-export default function MenuScreen({ visible, canvasRef, teamName, cards, inventory, onStart, onExit, onLoadDevelopmentSample }: MenuScreenProps) {
+export default function MenuScreen({ visible, canvasRef, teamName, cards, inventory, onStart, onExit, onLoadDevelopmentSample, testingCardIds, onToggleTestingCard }: MenuScreenProps) {
 
   return (
     <div className={visible ? styles.menu : styles.hidden}>
@@ -64,6 +67,16 @@ export default function MenuScreen({ visible, canvasRef, teamName, cards, invent
             const card = cards.find((entry) => entry.cardId === item.cardId && entry.source === item.source);
             return <span key={`${item.source}-${item.cardId}`}>{card?.name ?? item.cardId} · {item.source === 'development' ? 'DEVELOPMENT SAMPLE' : 'ROUND 2 AUCTION'} ×{item.quantity}</span>;
           })}
+        </div>
+        <div className={styles.inventory}>
+          <b>TEMPORARY ROUND 3 TEST INVENTORY · SHARED BY BOTH PLAYERS</b>
+          {TEST_POWER_CARDS.map((card) => (
+            <label key={card.id}>
+              <input type="checkbox" checked={testingCardIds.includes(card.id)} onChange={() => onToggleTestingCard(card.id)} />
+              {card.name}
+            </label>
+          ))}
+          <small>Selected cards replace the live inventory for this local test session. Selection is saved per team in this browser.</small>
         </div>
         {import.meta.env.DEV && <button className={styles.devSample} onClick={onLoadDevelopmentSample}>Load development-only sample inventory</button>}
         <button className={styles.start} onClick={onStart}>

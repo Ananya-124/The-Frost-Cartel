@@ -833,6 +833,7 @@ export function renderScene(p: SceneParams): void {
         object.timeline === (i ? 'future' : 'past')
       ) {
         drawProp(ctx, object, i === 1);
+        if (state.highlightTimer > 0 && state.highlightedObjectId === object.id) drawCardHighlight(ctx, object);
       }
     }
   }
@@ -858,6 +859,7 @@ export function renderScene(p: SceneParams): void {
       }
 
       drawProp(ctx, object, i === 1);
+      if (state.highlightTimer > 0 && state.highlightedObjectId === object.id) drawCardHighlight(ctx, object);
     }
   }
 
@@ -873,6 +875,7 @@ export function renderScene(p: SceneParams): void {
         object.timeline === (i ? 'future' : 'past')
       ) {
         drawProp(ctx, object, i === 1);
+        if (state.highlightTimer > 0 && state.highlightedObjectId === object.id) drawCardHighlight(ctx, object);
       }
     }
   }
@@ -1034,4 +1037,16 @@ export function renderScene(p: SceneParams): void {
   // Apply lighting and environmental atmosphere.
   drawLighting(p, ox, oy);
   drawAtmosphere(p);
+}
+
+function drawCardHighlight(ctx: CanvasRenderingContext2D, object: (typeof INTERACTABLES)[number]): void {
+  ctx.save();
+  ctx.strokeStyle = '#8dffff';
+  ctx.shadowColor = '#8dffff';
+  ctx.shadowBlur = 18;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(object.x, object.y, 34, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }

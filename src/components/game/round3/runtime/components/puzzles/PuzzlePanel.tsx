@@ -26,8 +26,8 @@ export default function PuzzlePanel({ index, puzzle, onPress }: PuzzlePanelProps
         <p>{puzzle.question.prompt}</p>
         {puzzle.question.options.map((option, k) => (
           <div className={styles.option} key={option}>
-            <button onClick={() => onPress(k)}>
-              {labels[k]} · {option}
+            <button disabled={puzzle.eliminatedOptions?.includes(k)} onClick={() => onPress(k)}>
+              {puzzle.eliminatedOptions?.includes(k) ? 'ELIMINATED' : `${labels[k]} · ${option}`}
             </button>
           </div>
         ))}

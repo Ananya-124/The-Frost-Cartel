@@ -21,6 +21,7 @@ import Hunt2Progress from './Hunt2Progress';
 import type { Hunt3ActionResult, Hunt3Actor, Hunt3State } from '../../../../../../types/hunt3.types';
 import Hunt3Progress from './Hunt3Progress';
 import { useRound3RunTimer } from '../../hooks/useRound3RunTimer';
+import type { TestPowerCardId } from '../../testingCards';
 
 interface GameScreenProps {
   teamName: string;
@@ -33,6 +34,9 @@ interface GameScreenProps {
   onComplete: () => Promise<unknown>;
   onLoadDevelopmentSample: () => void;
   externalError?: string;
+  testingCardIds: readonly TestPowerCardId[];
+  onToggleTestingCard: (id: TestPowerCardId) => void;
+  onTestingCardUsed: (id: TestPowerCardId) => void;
 }
 
 export default function GameScreen({
@@ -46,11 +50,16 @@ export default function GameScreen({
   onComplete,
   onLoadDevelopmentSample,
   externalError = '',
+  testingCardIds,
+  onToggleTestingCard,
+  onTestingCardUsed,
 }: GameScreenProps) {
   const [store] = useState(() => new GameStore());
   const [refs] = useState(createEngineRefs);
   const [initialState] = useState(() => restoreGameState(savedGameState, teamName, cards));
   const [cardError, setCardError] = useState('');
+  const [chronoFreezeActive, setChronoFreezeActive] = useState(false);
+  const chronoTimeout = useRef<number | null>(null);
 
   // Hunt states
   const [hunt1, setHunt1] = useState<Hunt1State | null>(null);
@@ -77,6 +86,8 @@ export default function GameScreen({
   }, []);
 
   const timer = useRound3RunTimer(initialRun);
+  const timerStatusRef = useRef(timer.run.status);
+  timerStatusRef.current = timer.run.status;
 
   // Independent in-flight trackers per player so neither player ever blocks the other!
   const hunt1InFlight = useRef<[boolean, boolean]>([false, false]);
@@ -98,14 +109,31 @@ export default function GameScreen({
   const cardUseHandler = useCallback((slot: number, execute: () => boolean) => {
     const card = store.state.cards[slot];
     const before = JSON.parse(JSON.stringify(store.state)) as GameState;
+    if (card?.effect === 'chrono-freeze') {
+      if (timerStatusRef.current !== 'running') { setCardError('Chrono Freeze requires a running Round 3 task timer.'); return; }
+      void timer.pause().then(() => {
+        if (!execute()) { void timer.resume(); return; }
+        setCardError('');
+        setChronoFreezeActive(true);
+        chronoTimeout.current = window.setTimeout(() => {
+          void timer.resume().finally(() => setChronoFreezeActive(false));
+          chronoTimeout.current = null;
+        }, 10_000);
+      }).catch(() => setCardError('Chrono Freeze could not pause the task timer. The card was not spent.'));
+      return;
+    }
     if (!execute()) return;
+    if (card?.source === 'testing') {
+      if (card.cardId) onTestingCardUsed(card.cardId as TestPowerCardId);
+      return;
+    }
     if (!card?.cardId) return;
     setCardError('');
     void round3Service.activateCard(card.cardId as Round3CardId, card.source).catch((reason: unknown) => {
       store.replaceState(before);
       setCardError(reason instanceof Error ? reason.message : 'Could not confirm card activation.');
     });
-  }, [store]);
+  }, [onTestingCardUsed, store, timer.pause, timer.resume]);
 
   const syncHunt1State = useCallback((next: Hunt1State) => {
     const previous = hunt1StateRef.current;
@@ -386,8 +414,12 @@ export default function GameScreen({
   const snapshot = useGameSnapshot(store);
 
   useEffect(() => {
-    engine?.setGameplayEnabled(snapshot.phase === 'playing' && !snapshot.huntIntro && timer.gameplayEnabled);
-  }, [engine, snapshot.phase, snapshot.huntIntro, timer.gameplayEnabled]);
+    engine?.setGameplayEnabled(snapshot.phase === 'playing' && !snapshot.huntIntro && (timer.gameplayEnabled || chronoFreezeActive));
+  }, [engine, snapshot.phase, snapshot.huntIntro, timer.gameplayEnabled, chronoFreezeActive]);
+
+  useEffect(() => () => {
+    if (chronoTimeout.current !== null) window.clearTimeout(chronoTimeout.current);
+  }, []);
 
   const enterGameplay = useCallback(async () => {
     try {
@@ -776,6 +808,8 @@ export default function GameScreen({
         teamName={teamName}
         cards={cards}
         inventory={inventory}
+        testingCardIds={testingCardIds}
+        onToggleTestingCard={onToggleTestingCard}
         onStart={() => {
           void startGame();
         }}

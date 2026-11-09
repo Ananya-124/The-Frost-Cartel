@@ -25,7 +25,7 @@ export default function CardTray({ cards, onUse }: CardTrayProps) {
               title={card.desc}
               onClick={() => onUse(slot)}
             >
-              [{CARD_KEYS[slot]?.replace('Key', '') ?? slot + 1}] {card.name} ×{card.uses}
+              {CARD_KEYS[slot] ? `[${CARD_KEYS[slot].replace('Key', '')}] ` : ''}{card.name} · {card.uses > 0 ? 'READY' : 'USED'}
             </button>
           ))}
         </div>

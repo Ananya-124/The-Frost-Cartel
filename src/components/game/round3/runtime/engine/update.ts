@@ -27,6 +27,9 @@ export function updateGame(ctx: GameContext, input: InputManager, dt: number): v
   state.distortion = Math.max(0, state.distortion - dt);
   state.revealTimer = Math.max(0, state.revealTimer - dt);
   state.chronoSandTimer = Math.max(0, state.chronoSandTimer - dt);
+  state.syncWindowBonus = Math.max(0, state.syncWindowBonus - dt);
+  state.highlightTimer = Math.max(0, state.highlightTimer - dt);
+  if (state.highlightTimer === 0) state.highlightedObjectId = null;
   state.surgeTimer = Math.max(0, state.surgeTimer - dt);
   state.contactCooldown -= dt;
   if (state.freezeTimer > 0) return;

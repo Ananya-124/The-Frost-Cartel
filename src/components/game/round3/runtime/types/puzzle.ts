@@ -29,5 +29,5 @@ export type Puzzle = VerificationPuzzle | SequencePuzzle;
 
 /** Puzzle panel currently open for a player. */
 export type ActivePuzzle =
-  | { kind: 'verification'; question: Question }
+  | { kind: 'verification'; question: Question; eliminatedOptions?: number[] }
   | { kind: 'sequence'; length: number; input: number[] };
