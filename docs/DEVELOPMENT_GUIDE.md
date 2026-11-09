@@ -53,11 +53,7 @@ npm run dev
 ### Player Portal (`http://127.0.0.1:5173/`)
 | Squad Name | Ritual Password | Assigned Role |
 | :--- | :--- | :--- |
-| `TEAM AI` | `SQUAD@AI9` | Player 1 / Player 2 |
-| `TEAM1` | `TEAM1@2026` | Player 1 / Player 2 |
-| `Shadow Syndicate` | `SHADOW#88` | Player 1 / Player 2 |
-| `Grave Walkers` | `GRAVE#44` | Player 1 / Player 2 |
-| `Cursed Alchemists` | `ALCHEMY!22` | Player 1 / Player 2 |
+| r | Player 1 / Player 2 |
 
 ### Hardened Admin Vault (`http://127.0.0.1:5173/#/admin` or `http://127.0.0.1:5173/admin`)
 | Username | Temporary Password | Note |
