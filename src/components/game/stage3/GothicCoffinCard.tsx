@@ -123,65 +123,63 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
         />
 
         {/* 4. Action Button Slot (PLAY before completion, COMPLETED when solved) */}
-        <div className="coffin-card-play-slot absolute top-[88.4%] left-1/2 -translate-x-1/2 w-[52%] h-[9%] z-20 flex items-center justify-center pointer-events-none">
-          {isCompleted ? (
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              tabIndex={-1}
-              aria-label={`${accessibleGraveName} completed and permanently sealed`}
-              className="coffin-card-play-btn w-full h-full rounded-full cursor-default z-20 outline-none focus:outline-none flex items-center justify-center select-none pointer-events-none"
-              style={{
-                outline: 'none',
-                outlineWidth: 0,
-                outlineStyle: 'none',
-                boxShadow: 'none',
-                WebkitTapHighlightColor: 'transparent',
-              }}
+        {isCompleted ? (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            tabIndex={-1}
+            aria-label={`${accessibleGraveName} completed and permanently sealed`}
+            className="coffin-card-play-btn absolute top-[88.4%] left-1/2 -translate-x-1/2 w-[56%] h-[9%] rounded-full cursor-default z-20 outline-none focus:outline-none flex items-center justify-center select-none pointer-events-none"
+            style={{
+              outline: 'none',
+              outlineWidth: 0,
+              outlineStyle: 'none',
+              boxShadow: 'none',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <div className="w-full h-full rounded-full bg-[#0a1410] border-2 border-emerald-500/70 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.4)] flex items-center justify-center gap-1.5 px-2.5">
+              <span className="text-emerald-400 text-xs" aria-hidden="true">
+                ✓
+              </span>
+              <span className="font-cinzel text-[9.5px] sm:text-[10.5px] font-black tracking-[0.16em] uppercase text-emerald-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                COMPLETED
+              </span>
+            </div>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              (e.currentTarget as HTMLElement).blur?.();
+              handleClick();
+            }}
+            aria-label={`Enter ${accessibleGraveName}`}
+            className="coffin-card-play-btn absolute top-[88.4%] left-1/2 -translate-x-1/2 w-[52%] h-[9%] rounded-full cursor-pointer z-20 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none flex items-center justify-center transition-all duration-200 select-none"
+            style={{
+              outline: 'none',
+              outlineWidth: 0,
+              outlineStyle: 'none',
+              boxShadow: 'none',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <div
+              className={`w-full h-full rounded-full ${theme.btnBg} border-2 ${theme.btnBorder} ${theme.btnShadow} flex items-center justify-center gap-1.5 px-3 transform group-hover:scale-105 transition-transform duration-200`}
             >
-              <div className="w-full h-full rounded-full bg-[#0a1410] border-2 border-emerald-500/70 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.4)] flex items-center justify-center gap-1.5 px-3">
-                <span className="text-emerald-400 text-xs" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="font-cinzel text-[10px] sm:text-[11px] font-black tracking-[0.18em] uppercase text-emerald-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                  COMPLETED
-                </span>
-              </div>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                (e.currentTarget as HTMLElement).blur?.();
-                handleClick();
-              }}
-              aria-label={`Enter ${accessibleGraveName}`}
-              className="coffin-card-play-btn w-full h-full rounded-full cursor-pointer z-20 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none flex items-center justify-center transition-all duration-200 select-none pointer-events-auto"
-              style={{
-                outline: 'none',
-                outlineWidth: 0,
-                outlineStyle: 'none',
-                boxShadow: 'none',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <div
-                className={`w-full h-full rounded-full ${theme.btnBg} border-2 ${theme.btnBorder} ${theme.btnShadow} flex items-center justify-center gap-1.5 px-3 transform group-hover:scale-105 transition-transform duration-200`}
+              <span
+                className={`font-cinzel text-[10.5px] sm:text-xs font-black tracking-[0.22em] uppercase ${theme.btnText} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]`}
               >
-                <span
-                  className={`font-cinzel text-[10.5px] sm:text-xs font-black tracking-[0.22em] uppercase ${theme.btnText} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]`}
-                >
-                  PLAY ›
-                </span>
-              </div>
-            </button>
-          )}
-        </div>
+                PLAY ›
+              </span>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* 5. Accessible Semantic Content for Screen Readers & Automated Tests */}

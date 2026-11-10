@@ -20,26 +20,26 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
   onSelectRound,
 }) => {
   return (
-    <section className="relative z-10 w-full min-h-screen flex flex-col justify-between py-4 sm:py-6 lg:py-8">
+    <section className="relative z-10 w-full min-h-screen flex flex-col justify-between py-3 sm:py-5 lg:py-6">
       {/* 1. Main Hero Content Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center w-full my-auto">
         {/* Top Runic Medallion & Branding */}
-        <div className="text-center max-w-3xl mx-auto mb-4 sm:mb-6">
+        <div className="text-center max-w-3xl mx-auto mb-3 sm:mb-4 lg:mb-5">
           {/* Ornate Gothic Heraldic Crest */}
-          <div className="flex justify-center mb-2 sm:mb-3">
+          <div className="flex justify-center mb-1.5 sm:mb-2">
             <div className="relative group">
               {/* Subtle Ambient Back-Glow */}
               <div className="absolute inset-0 bg-cartel-amber/25 blur-xl scale-75 group-hover:bg-cartel-amber/40 transition-all duration-700 pointer-events-none" />
               <img
                 src="/assets/frost_cartel_gothic_crest.png"
                 alt="Frost Cartel Crest"
-                className="relative w-28 xs:w-32 sm:w-40 md:w-48 h-auto object-contain filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] drop-shadow-[0_0_20px_rgba(246,166,58,0.4)] hover:scale-105 transition-transform duration-500 select-none"
+                className="relative w-20 xs:w-24 sm:w-32 md:w-36 h-auto object-contain filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] drop-shadow-[0_0_20px_rgba(246,166,58,0.4)] hover:scale-105 transition-transform duration-500 select-none"
               />
             </div>
           </div>
 
           {/* Main Display Title */}
-          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black font-gothic tracking-wider sm:tracking-widest silver-metallic-text leading-none mb-1.5 drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black font-gothic tracking-wider sm:tracking-widest silver-metallic-text leading-none mb-1.5 drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]">
             FROST CARTEL
           </h1>
 
@@ -49,13 +49,13 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
           </p>
 
           {/* Supporting line */}
-          <p className="text-[10px] xs:text-[11px] sm:text-xs font-cinzel text-cartel-amber font-semibold tracking-wider sm:tracking-[0.2em] uppercase mb-4 sm:mb-6 drop-shadow-[0_2px_8px_rgba(242,122,26,0.5)]">
+          <p className="text-[10px] xs:text-[11px] sm:text-xs font-cinzel text-cartel-amber font-semibold tracking-wider sm:tracking-[0.2em] uppercase mb-3 sm:mb-4 drop-shadow-[0_2px_8px_rgba(242,122,26,0.5)]">
             Three rounds. One haunted world.
           </p>
         </div>
 
         {/* 2. The Four Circular Magical Portals (Horizontal on desktop, no box cards) */}
-        <div className="w-full mb-6 sm:mb-8 lg:mb-10">
+        <div className="w-full mb-4 sm:mb-6 lg:mb-8">
           <RoundPortalSection
             rounds={rounds}
             onSelectRound={onSelectRound}
