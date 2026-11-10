@@ -65,4 +65,14 @@ describe('admin team progress actions', () => {
     expect(team.currentRound).toBe('Round 1');
     expect(team.currentStage).toBe(originalStage);
   });
+
+  it('deletes a team from the admin team list', () => {
+    const team = adminService.getTeams().teams[0];
+
+    const result = adminService.deleteTeam(team.id);
+
+    expect(result.success).toBe(true);
+    expect(adminService.getTeams().teams.some((candidate) => candidate.id === team.id)).toBe(false);
+    expect(adminService.deleteTeam(team.id).success).toBe(false);
+  });
 });
