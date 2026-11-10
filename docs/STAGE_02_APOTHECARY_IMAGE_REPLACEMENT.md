@@ -98,3 +98,4 @@ Browser automation testing was performed across the 4 required standard viewport
 - **Unit & Integration Tests**: 39 test suites / 216 tests passed cleanly.
 - **Production Build**: `npm run build` completed successfully.
 - **Other 7 Photographs**: Completely untouched (`ancestral-study.jpg`, `cursed-attic.jpg`, `forest-bridge.jpg`, `haunted-mansion.jpg`, `haunted-village.jpg`, `mausoleum-vault.jpg`, `witch-belfry.jpg`).
+
