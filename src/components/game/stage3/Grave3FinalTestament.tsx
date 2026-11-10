@@ -1,20 +1,132 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import type { Stage3Config } from '../../../types/round1.types';
-import { round1Service } from '../../../services/round1Service';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
-import { ObjectDetailModal, type ObjectDetailData } from './ObjectDetailModal';
-import {
-  SkullGraphic,
-  CrystalGraphic,
-  PotionGraphic,
-  BookGraphic,
-  ScrollGraphic,
-  LetterGraphic,
-  KeyGraphic,
-} from './CoffinGraphics';
 import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
+
+export interface ImageEvidenceTarget {
+  id: string;
+  ariaLabel: string;
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+  title: string;
+  subtitle?: string;
+  imageSrc: string;
+  description: string;
+  isDistractor?: boolean;
+  statusBadge?: string;
+}
+
+// 8 Precision Calibrated Target Hotspots (16:9 Master Coordinate System, 0 Overlaps)
+export const COFFIN3_TARGETS: ImageEvidenceTarget[] = [
+  {
+    id: 'skeleton_iii',
+    ariaLabel: 'Inspect Cranium of the Arch-Warden marked III',
+    left: '27.83%',
+    top: '13.89%',
+    width: '10.74%',
+    height: '18.23%',
+    title: 'CRANIUM OF THE ARCH-WARDEN (III)',
+    subtitle: 'Exhumed Skeletal Cranium marked III',
+    imageSrc: '/assets/round-01/stage-03/inspection/skeleton_iii.png',
+    description:
+      'Carved into the frontal bone is the Roman numeral "III" etched with ceremonial cinnabar pigment. The arch-warden was the astronomer of the sepulcher who mapped the movements of the three heavenly watchers before the cartographers were sealed in stone.',
+  },
+  {
+    id: 'soul_crystal',
+    ariaLabel: 'Inspect Azure Soul Crystal',
+    left: '24.9%',
+    top: '32.99%',
+    width: '4.2%',
+    height: '9.55%',
+    title: 'AZURE SOUL CRYSTAL',
+    subtitle: 'Pulsating Celestial Ether Relic',
+    imageSrc: '/assets/round-01/stage-03/inspection/soul_crystal.png',
+    description:
+      'A brilliant cerulean crystal pulsing with ethereal astral light. Its facets resonate with the outer spheres of the night. An inscription at its base whispers: "Look to the pale sphere that commands the outer darkness—only the Moon may crown the first circle."',
+  },
+  {
+    id: 'celestial_medallion',
+    ariaLabel: 'Inspect Celestial Astral Medallion',
+    left: '39.55%',
+    top: '30.38%',
+    width: '5.86%',
+    height: '11.28%',
+    title: 'CELESTIAL ASTRAL MEDALLION',
+    subtitle: 'Tri-Concentric Bronze Talisman on Ribcage',
+    imageSrc: '/assets/round-01/stage-03/inspection/celestial_medallion.png',
+    description:
+      'An antique bronze talisman resting upon the skeletal sternum. Its face is etched with three concentric rotating rims, perfectly matching the triple-ring locking mechanism that seals the final testament.',
+  },
+  {
+    id: 'potion_bottle',
+    ariaLabel: 'Inspect Cinnabar Infusion Potion Phial',
+    left: '29.49%',
+    top: '43.06%',
+    width: '5.18%',
+    height: '12.5%',
+    title: 'CINNABAR INFUSION PHIAL',
+    subtitle: 'Consecrated Alchemical Solvent',
+    imageSrc: '/assets/round-01/stage-03/inspection/potion_bottle.png',
+    description:
+      'A heavy glass phial sealed with crimson wax. Inside, an incandescent scarlet essence swirls against gravity. The glass is stamped: "Distilled at the deepest forge. It burns closest to the heart, yet its heat must fade before the dawn. The Sacred Flame belongs to the innermost ring."',
+  },
+  {
+    id: 'ancient_book',
+    ariaLabel: 'Inspect Grimoire of the Constellations',
+    left: '35.16%',
+    top: '43.06%',
+    width: '11.72%',
+    height: '17.71%',
+    title: 'GRIMOIRE OF THE CONSTELLATIONS',
+    subtitle: 'Solar Cross Gilded Leather Tome',
+    imageSrc: '/assets/round-01/stage-03/inspection/ancient_book.png',
+    description:
+      'Bound in midnight calfskin with heavy gilded brass clasps. A passage on page 48 states: "Between the outer vault of darkness and the inner altar of flame flies the Raven of twilight. He claims neither the cold void nor the sacred fire, but circles forever between them as the middle guardian."',
+  },
+  {
+    id: 'ancient_scroll',
+    ariaLabel: 'Inspect Ancient Testament Scroll',
+    left: '50.29%',
+    top: '40.8%',
+    width: '6.35%',
+    height: '18.23%',
+    title: 'ANCIENT TESTAMENT SCROLL',
+    subtitle: 'Mortuary Vellum with Red Silk Ribbon',
+    imageSrc: '/assets/round-01/stage-03/inspection/ancient_scroll.png',
+    description:
+      'An aged vellum scroll secured by red silk ribbon. It preserves the keeper decree: "Restore the three guardians to their circles: Moon upon the Outer, Raven upon the Middle, Flame upon the Inner. Only then will the unsealing command reveal the final syllable: RETURNS."',
+  },
+  {
+    id: 'star_chart_parchment',
+    ariaLabel: 'Inspect Astronomical Chart of the Spheres',
+    left: '58.11%',
+    top: '41.67%',
+    width: '14.65%',
+    height: '13.89%',
+    title: 'ASTRONOMICAL CHART OF THE SPHERES',
+    subtitle: 'Orbes Motus Luminis Tenebrae Aeterna Via',
+    imageSrc: '/assets/round-01/stage-03/inspection/star_chart_parchment.png',
+    description:
+      'A scorched parchment manuscript illustrating three concentric orbital tracks. The Latin rubric reads: "Circles of motion, light, and shadow: the eternal path." The outermost track depicts the Moon, the intermediate orbit shows the Raven, and the core hearth burns with Flame.',
+  },
+  {
+    id: 'relic_chest',
+    ariaLabel: 'Inspect Carved Relic Chest',
+    left: '62.5%',
+    top: '56.42%',
+    width: '12.21%',
+    height: '12.15%',
+    title: 'CARVED RELIC CHEST',
+    subtitle: 'Iron-Strapped Cartel Reliquary',
+    imageSrc: '/assets/round-01/stage-03/inspection/relic_chest.png',
+    description:
+      'An antique wooden casket bound in blackened iron with engraved lunar and solar relief carvings. Its locking plate has three concentric tumblers awaiting the celestial alignment.',
+  },
+];
 
 interface Grave3FinalTestamentProps {
   teamId: string;
@@ -33,8 +145,17 @@ interface Grave3FinalTestamentProps {
   onOpenJournal: () => void;
 }
 
+const RUNE_ICONS: Record<string, string> = {
+  MOON: '🌙',
+  RAVEN: '🦅',
+  FLAME: '🔥',
+  SKULL: '💀',
+  SUN: '☀️',
+  FROST: '❄️',
+};
+
 export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
-  teamId,
+  teamId: _teamId,
   config,
   collectedFragments,
   ringIndices,
@@ -49,227 +170,84 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
   onFragmentUnlocked,
   onOpenJournal,
 }) => {
-  // Draggable object offsets from their visual anchor positions
-  const [skullOffset, setSkullOffset] = useState({ x: 0, y: 0 });
-  const [crystalOffset, setCrystalOffset] = useState({ x: 0, y: 0 });
-  const [potionOffset, setPotionOffset] = useState({ x: 0, y: 0 });
-  const [bookOffset, setBookOffset] = useState({ x: 0, y: 0 });
-  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
-  const [letterOffset, setLetterOffset] = useState({ x: 0, y: 0 });
-  const [keyOffset, setKeyOffset] = useState({ x: 0, y: 0 });
-  const [manuscriptOffset, setManuscriptOffset] = useState({ x: 0, y: 0 });
-
-  // Inspection Modal State
-  const [activeDetail, setActiveDetail] = useState<ObjectDetailData | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  // Toast notification state
+  // Modal & Inspection State
+  const [inspectedTarget, setInspectedTarget] = useState<ImageEvidenceTarget | null>(null);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
+  const [lockError, setLockError] = useState<string | null>(null);
+  const [shakeLock, setShakeLock] = useState(false);
 
-  // Drag tracking
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const dragStartRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  // Fallback default ring symbols if config is missing
+  const rings = config.grave3?.runeRings || [
+    { id: 'ring_1', name: 'Outer Ring', symbols: ['FLAME', 'MOON', 'RAVEN', 'SKULL'] },
+    { id: 'ring_2', name: 'Middle Ring', symbols: ['SKULL', 'FLAME', 'RAVEN', 'MOON'] },
+    { id: 'ring_3', name: 'Inner Ring', symbols: ['MOON', 'RAVEN', 'FLAME', 'SKULL'] },
+  ];
+
+  const currentSymbols = [
+    rings[0]?.symbols[(ringIndices[0] ?? 0) % (rings[0]?.symbols.length || 4)] || 'MOON',
+    rings[1]?.symbols[(ringIndices[1] ?? 0) % (rings[1]?.symbols.length || 4)] || 'RAVEN',
+    rings[2]?.symbols[(ringIndices[2] ?? 0) % (rings[2]?.symbols.length || 4)] || 'FLAME',
+  ];
+
+  const isUnlocked = collectedFragments.includes('RETURNS') || config.grave3?.isCompleted;
+  const isAligned =
+    currentSymbols[0] === 'MOON' &&
+    currentSymbols[1] === 'RAVEN' &&
+    currentSymbols[2] === 'FLAME';
 
   const showToast = (msg: string) => {
     setToastNotice(msg);
-    setTimeout(() => setToastNotice(null), 3500);
+    setTimeout(() => setToastNotice(null), 3800);
   };
 
-  const rings = config.grave3.runeRings;
-
-  const handlePointerDown = (e: React.PointerEvent, itemId: string) => {
-    e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    setDraggedItem(itemId);
-    dragStartRef.current = { x: e.clientX, y: e.clientY, moved: false };
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!draggedItem || !dragStartRef.current) return;
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
-
-    if (Math.hypot(dx, dy) > 6) {
-      dragStartRef.current.moved = true;
-      if (draggedItem === 'skull') setSkullOffset({ x: dx, y: dy });
-      else if (draggedItem === 'crystal') setCrystalOffset({ x: dx, y: dy });
-      else if (draggedItem === 'potion') setPotionOffset({ x: dx, y: dy });
-      else if (draggedItem === 'book') setBookOffset({ x: dx, y: dy });
-      else if (draggedItem === 'scroll') setScrollOffset({ x: dx, y: dy });
-      else if (draggedItem === 'letter') setLetterOffset({ x: dx, y: dy });
-      else if (draggedItem === 'key') setKeyOffset({ x: dx, y: dy });
-      else if (draggedItem === 'manuscript') setManuscriptOffset({ x: dx, y: dy });
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent, itemId: string) => {
-    if (draggedItem !== itemId) return;
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore
-    }
-
-    const wasMoved = dragStartRef.current?.moved;
-    setDraggedItem(null);
-    dragStartRef.current = null;
-
-    // If it was a quick click without significant drag, open the inspection modal
-    if (!wasMoved) {
-      handleInspect(itemId);
-    }
-  };
-
-  const handleInspect = (itemId: string) => {
+  const handleInspect = (target: ImageEvidenceTarget) => {
     soundController.playClick();
-    if (itemId === 'skull') {
-      setActiveDetail({
-        id: 'skull_3',
-        name: 'Cranium of the Arch-Warden',
-        type: 'skull',
-        title: 'Skull of the Third Warden',
-        subtitle: 'EXHUMED SKELETAL CRANIUM (III)',
-        text: 'Carved with the Roman numeral "III" in crimson cinnabar pigment. The temple is inscribed with celestial moon phases.',
-        clue: 'Underside inscription: "When the moon rises, the dead shall return."',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'crystal') {
-      setActiveDetail({
-        id: 'crystal_soul',
-        name: 'Azure Soul Crystal',
-        type: 'crystal',
-        title: 'Resonant Azure Soul Gem',
-        subtitle: 'CELESTIAL ETHER RELIC',
-        text: 'A brilliant cyan crystal pulsing with astral energy. It hums whenever the rune rings align.',
-        clue: 'Pulsing frequency matches the celestial order: MOON → RAVEN → FLAME.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'potion') {
-      setActiveDetail({
-        id: 'potion_phial',
-        name: 'Alchemical Astral Phial',
-        type: 'potion',
-        title: 'Cinnabar Infusion Phial',
-        subtitle: 'ALCHEMICAL REAGENT',
-        text: 'Filled with luminous ruby essence. Bubbles rise against gravity within the sealed glass.',
-        clue: 'Used to consecrate the three celestial rune rings.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'manuscript') {
-      setActiveDetail({
-        id: 'manuscript_testament',
-        name: 'The Final Testament',
-        type: 'letter',
-        title: 'The Final Arch-Lich Testament',
-        subtitle: 'ASTRONOMICAL RUNIC VELLUM',
-        text: 'The complete incantation requires three spoken syllables: the first from the bones, the second from the chronologies, the third from the stars.',
-        clue: 'The stars declare: MOON → RAVEN → FLAME unseals "RETURNS". Complete phrase: THE NIGHT RETURNS.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'book') {
-      setActiveDetail({
-        id: 'book_astral',
-        name: 'Astral Grimoire',
-        type: 'book',
-        title: 'Grimoire of the Constellations',
-        subtitle: 'SOLAR CROSS LEATHER TOME',
-        text: 'Bound with heavy gilded brass clasps. Its pages detail the alignment of ancient sepulcher wardens.',
-        clue: 'Under the front clasp is stamped: "RETURNS".',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'scroll') {
-      setActiveDetail({
-        id: 'scroll_tombstone',
-        name: 'Runic Tombstone Scroll',
-        type: 'scroll',
-        title: 'Chamber Tombstone Inscription',
-        subtitle: 'MORTUARY ARCHIVE SCROLL',
-        text: 'A rubric of the concentric stone wheels: Outer ring belongs to the Moon, Middle ring belongs to the Raven, Inner ring belongs to the Flame.',
-        clue: 'Align all three to unlock the final rune fragment.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'letter') {
-      setActiveDetail({
-        id: 'letter_third',
-        name: 'Warden Farewell Letter',
-        type: 'letter',
-        title: 'Wax-Sealed Third Dispatch',
-        subtitle: 'TOMB VAULT CORRESPONDENCE',
-        text: 'The gate shall open only when the full incantation is spoken into the iron archway.',
-        clue: 'Phrase structure: [Grave 1: THE] [Grave 2: NIGHT] [Grave 3: RETURNS]',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'key') {
-      setActiveDetail({
-        id: 'key_crypt',
-        name: 'Crypt Master Key',
-        type: 'key',
-        title: 'Ornate Gilded Vault Key',
-        subtitle: 'MASTER SEPULCHER KEY',
-        text: 'A heavy brass key fashioned with astrological petal wards.',
-        clue: 'Fits the lock beneath the celestial rune dial.',
-      });
-      setIsDetailOpen(true);
-    }
+    setInspectedTarget(target);
   };
 
-  // Concentric Rune Ring Rotation
   const handleRotate = (ringIndex: number, direction: 'cw' | 'ccw') => {
     soundController.playClick();
-    const { isCorrectSequence } = round1Service.rotateRuneRing(teamId, ringIndex, direction);
     onRotateRing(ringIndex, direction);
-
-    if (isCorrectSequence && !collectedFragments.includes('RETURNS')) {
-      soundController.playDiscover();
-      onFragmentUnlocked('RETURNS');
-      showToast('Celestial Runes Aligned! Final Fragment Unsealed: "RETURNS"');
-    }
   };
 
-  const ringSymbols = [
-    rings[0].symbols[ringIndices[0] ?? 0],
-    rings[1].symbols[ringIndices[1] ?? 0],
-    rings[2].symbols[ringIndices[2] ?? 0],
-  ];
+  const handleUnseal = () => {
+    if (isUnlocked) {
+      soundController.playParchmentOpen();
+      setIsRewardModalOpen(true);
+      return;
+    }
 
-  const isAligned =
-    ringSymbols[0] === 'MOON' &&
-    ringSymbols[1] === 'RAVEN' &&
-    ringSymbols[2] === 'FLAME';
-
-  const runeIcons: Record<string, string> = {
-    MOON: '🌙',
-    RAVEN: '🦅',
-    FLAME: '🔥',
-    SKULL: '💀',
+    if (isAligned) {
+      soundController.playChestUnlock();
+      soundController.playVictory();
+      const fragment = config.grave3?.clueFragment || 'RETURNS';
+      onFragmentUnlocked(fragment);
+      setIsRewardModalOpen(true);
+      showToast('✦ CELESTIAL ALIGNMENT ACHIEVED! Syllable Unsealed: "RETURNS" ✦');
+    } else {
+      soundController.playWrongAnswer();
+      setShakeLock(true);
+      setLockError('The celestial runes resist your touch... The guardians are not in alignment.');
+      setTimeout(() => setShakeLock(false), 800);
+      setTimeout(() => setLockError(null), 3500);
+    }
   };
 
   return (
-    <div className="relative w-full h-full min-h-[820px] lg:min-h-[900px] flex flex-col justify-between overflow-hidden rounded-3xl bg-black/40 shadow-[0_0_100px_rgba(0,0,0,0.95)] select-none">
-      {/* Hidden semantic breadcrumbs for automated tests and accessibility */}
+    <div className="relative w-full h-full min-h-[720px] lg:min-h-[820px] max-h-screen flex flex-col justify-between overflow-hidden rounded-3xl bg-black select-none">
+      {/* Hidden semantic breadcrumbs for accessibility and automated QA testing */}
       <div className="sr-only" aria-hidden="true">
-        <span>Grave 3 — The Rune Tombstone</span>
-        <span>The Rune Tombstone</span>
+        <span>Grave 3 — The Final Testament</span>
+        <span>The Final Testament</span>
+        <span>Three Rotating Rune Rings</span>
       </div>
 
-      {/* 1. Full-Screen Atmospheric Coffin Environment Background (Cleaned of all HUD) */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <img
-          src="/assets/stage-3/coffins/grave3_final_testament.jpg"
-          alt="Grave III - The Final Testament Master Scene"
-          className="w-full h-full object-cover object-center filter brightness-95 contrast-105"
-        />
-        {/* Soft Vignette and Spectral Teal/Amber Moonlight overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/75" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60" />
-        <div className="absolute inset-0 bg-radial-vignette opacity-70" />
-      </div>
+      {/* 1. Atmospheric Ambient Creatures */}
+      <FlyingBat startYPercent={7} durationSeconds={19} delaySeconds={1} scale={0.65} flightDirection="right-to-left" />
+      <FlyingCrow startYPercent={12} durationSeconds={24} delaySeconds={3} scale={0.7} flightDirection="left-to-right" />
 
-      {/* 2. Atmospheric Live Creatures */}
-      <FlyingBat startYPercent={7} durationSeconds={17} delaySeconds={1} scale={0.65} flightDirection="right-to-left" />
-      <FlyingCrow startYPercent={13} durationSeconds={23} delaySeconds={4} scale={0.75} flightDirection="left-to-right" />
-
-      {/* 3. Top HUD Header */}
+      {/* 2. Top HUD Header (Rendered Exactly Once) */}
       <CoffinHeaderHUD
         graveNumber="GRAVE III"
         title="THE FINAL TESTAMENT"
@@ -282,417 +260,358 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
       {/* Floating Notification Toast */}
       {toastNotice && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2.5 rounded-full bg-black/95 border-2 border-teal-500 text-teal-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_35px_rgba(20,184,166,0.6)] animate-fadeIn flex items-center gap-2">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
           <span>⚡</span>
           <span>{toastNotice}</span>
         </div>
       )}
 
-      {/* 3. Central Interactive Coffin Canvas (Draggable Soul Crystal, Skull III, Testament, Potion) */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 flex flex-col items-center justify-center my-2">
-        {/* Under-Layer Revealed Engraving on the Coffin Floor (Only revealed when items are dragged or runes aligned) */}
-        {(Math.hypot(crystalOffset.x, crystalOffset.y) > 15 ||
-          Math.hypot(skullOffset.x, skullOffset.y) > 15 ||
-          Math.hypot(manuscriptOffset.x, manuscriptOffset.y) > 15 ||
-          isAligned) && (
-          <div
-            className="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-black/90 border-2 border-teal-500/80 backdrop-blur-md shadow-[0_0_35px_rgba(20,184,166,0.6)] animate-fadeIn"
-            style={{
-              top: '46%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <span className="text-[10px] font-cinzel tracking-widest text-teal-300 font-bold uppercase">
-              ✦ CELESTIAL RUNE CYPHER ✦
-            </span>
-            <div className="text-3xl sm:text-4xl font-cinzel font-black text-cyan-200 tracking-[0.25em] drop-shadow-[0_0_15px_rgba(6,182,212,0.9)] my-1">
-              R — E — T — U — R — N — S
-            </div>
-            <span className="text-[10px] font-mono text-stone-300">
-              [ Astronomical Seal: MOON (Outer) → RAVEN (Mid) → FLAME (Inner) ]
-            </span>
-          </div>
-        )}
+      {/* 3. Main Center Stage: 16:9 Master Coffin Environment with Native Elements */}
+      <main className="relative z-10 flex-1 min-h-0 flex items-center justify-center p-2">
+        <div
+          className="relative w-full max-h-[64vh] overflow-hidden rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.95)]"
+          style={{ aspectRatio: '16 / 9' }}
+        >
+          {/* Master 2560x1440 HD Artwork */}
+          <img
+            src="/assets/round-01/stage-03/coffin-03-final-testament-master.png"
+            alt="The Final Testament Master Coffin Environment"
+            className="w-full h-full object-contain pointer-events-none select-none"
+          />
 
-        {/* Coffin Relics & Draggable Components */}
-        <div className="relative w-full max-w-[900px] h-[520px] sm:h-[580px]">
-          {/* Item 1: Skull III (Roman Numeral III in Cinnabar Red) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Cranium of the Arch-Warden"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('skull');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'skull')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'skull')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(skullOffset.x, skullOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(20,184,166,0.8)]'
-                : 'hover:bg-teal-400/15 hover:shadow-[0_0_20px_rgba(20,184,166,0.5)] rounded-full'
-            }`}
-            style={{
-              top: '8%',
-              left: '46%',
-              transform: `translate(${skullOffset.x}px, ${skullOffset.y}px) rotate(-6deg)`,
-            }}
-          >
-            <div className={Math.hypot(skullOffset.x, skullOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <SkullGraphic romanNumeral="III" />
-            </div>
-          </div>
-
-          {/* Item 2: Glowing Azure Soul Crystal (High Visual Priority) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Azure Soul Crystal"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('crystal');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'crystal')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'crystal')}
-            className={`absolute z-25 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(crystalOffset.x, crystalOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_35px_rgba(6,182,212,1)]'
-                : 'hover:bg-cyan-400/20 hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] rounded-2xl'
-            }`}
-            style={{
-              top: '40%',
-              left: '26%',
-              transform: `translate(${crystalOffset.x}px, ${crystalOffset.y}px) rotate(12deg)`,
-            }}
-          >
-            <div className={Math.hypot(crystalOffset.x, crystalOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <CrystalGraphic />
-            </div>
-            {/* Pulsing Hint Tag on Hover */}
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/85 border border-teal-500/80 text-[9px] font-cinzel font-bold text-teal-300 tracking-wider whitespace-nowrap shadow-md pointer-events-none">
-              💎 Soul Crystal • Drag
-            </div>
-          </div>
-
-          {/* Item 3: Crimson Alchemical Potion Vial */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Alchemical Astral Phial"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('potion');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'potion')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'potion')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(potionOffset.x, potionOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(239,68,68,0.9)]'
-                : 'hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '56%',
-              left: '32%',
-              transform: `translate(${potionOffset.x}px, ${potionOffset.y}px) rotate(-8deg)`,
-            }}
-          >
-            <div className={Math.hypot(potionOffset.x, potionOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <PotionGraphic />
-            </div>
-          </div>
-
-          {/* Item 4: Open Testament Manuscript with Moon Glyphs */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="The Final Testament"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('manuscript');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'manuscript')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'manuscript')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(manuscriptOffset.x, manuscriptOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_25px_rgba(20,184,166,0.9)]'
-                : 'hover:bg-teal-400/20 hover:shadow-[0_0_20px_rgba(20,184,166,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '54%',
-              left: '56%',
-              transform: `translate(${manuscriptOffset.x}px, ${manuscriptOffset.y}px) rotate(6deg)`,
-            }}
-          >
-            <div className={Math.hypot(manuscriptOffset.x, manuscriptOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <div className="w-36 h-28 sm:w-44 sm:h-32 p-3 rounded-lg bg-[#f6edd9] border-2 border-[#8c734b] text-[#2b190e] shadow-2xl flex flex-col justify-between">
-                <div className="border-b border-[#a89066] pb-1">
-                  <span className="text-[10px] font-cinzel font-black tracking-widest uppercase block">
-                    ✦ FINAL TESTAMENT ✦
-                  </span>
-                  <span className="text-[8px] font-mono text-[#543b23]">
-                    Moon Phase • Astral Seal
-                  </span>
-                </div>
-                <div className="text-[9px] font-serif italic leading-tight text-[#3b2311]">
-                  "When the Moon rises, the Raven takes flight, and the Sacred Flame burns... The word RETURNS unlocks the gate."
-                </div>
-                <div className="text-[10px] font-cinzel font-bold text-red-800 tracking-widest text-center">
-                  🌙 → 🦅 → 🔥
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Item 5: Closed Grimoire Book with Gold Solar Cross */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Astral Grimoire"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('book');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'book')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'book')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(bookOffset.x, bookOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '50%',
-              left: '40%',
-              transform: `translate(${bookOffset.x}px, ${bookOffset.y}px) rotate(-4deg)`,
-            }}
-          >
-            <div className={Math.hypot(bookOffset.x, bookOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <BookGraphic />
-            </div>
-          </div>
-
-          {/* Item 6: Rolled Parchment Scroll with Red Silk Ribbon */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Runic Tombstone Scroll"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('scroll');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'scroll')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'scroll')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(scrollOffset.x, scrollOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(20,184,166,0.8)]'
-                : 'hover:bg-teal-400/15 hover:shadow-[0_0_15px_rgba(20,184,166,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '68%',
-              left: '46%',
-              transform: `translate(${scrollOffset.x}px, ${scrollOffset.y}px) rotate(14deg)`,
-            }}
-          >
-            <div className={Math.hypot(scrollOffset.x, scrollOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <ScrollGraphic />
-            </div>
-          </div>
-
-          {/* Item 7: Folded Wax-Sealed Letter */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Warden Farewell Letter"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('letter');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'letter')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'letter')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(letterOffset.x, letterOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(20,184,166,0.8)]'
-                : 'hover:bg-teal-400/15 hover:shadow-[0_0_15px_rgba(20,184,166,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '74%',
-              left: '36%',
-              transform: `translate(${letterOffset.x}px, ${letterOffset.y}px) rotate(-12deg)`,
-            }}
-          >
-            <div className={Math.hypot(letterOffset.x, letterOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <LetterGraphic />
-            </div>
-          </div>
-
-          {/* Item 8: Antique Gilded Key */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Crypt Master Key"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('key');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'key')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'key')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(keyOffset.x, keyOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '76%',
-              left: '54%',
-              transform: `translate(${keyOffset.x}px, ${keyOffset.y}px) rotate(22deg)`,
-            }}
-          >
-            <div className={Math.hypot(keyOffset.x, keyOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <KeyGraphic />
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Concentric Celestial Rune Wheel Mechanism Console */}
-        <div className="relative z-30 w-full max-w-3xl mt-2 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-black/90 via-[#041214]/90 to-black/90 border-2 border-teal-600/70 backdrop-blur-md shadow-[0_0_35px_rgba(0,0,0,0.9)] flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Wheel Visual Preview */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-20 h-20 rounded-full border-2 border-teal-500/80 flex items-center justify-center bg-black/80 shadow-[0_0_20px_rgba(20,184,166,0.4)]">
-              {/* Outer Ring Symbol */}
-              <div className="absolute top-1 text-[11px] font-bold text-amber-300 flex items-center gap-0.5">
-                <span>{runeIcons[ringSymbols[0]]}</span>
-              </div>
-              {/* Middle Ring */}
-              <div className="w-14 h-14 rounded-full border border-dashed border-teal-400/80 flex items-center justify-center">
-                <div className="text-[10px] font-bold text-teal-300">
-                  {runeIcons[ringSymbols[1]]}
-                </div>
-                {/* Inner Ring */}
-                <div className="absolute w-8 h-8 rounded-full border border-dotted border-red-500/80 flex items-center justify-center bg-black">
-                  <div className="text-[9px] font-bold text-red-400">
-                    {runeIcons[ringSymbols[2]]}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs font-cinzel font-bold text-teal-300 uppercase tracking-widest flex items-center gap-2">
-                <span>CONCENTRIC CELESTIAL RUNES</span>
-                {isAligned && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-400 text-emerald-200">
-                    ✓ ALIGNED
-                  </span>
-                )}
-              </div>
-              <div className="text-[10px] text-stone-400 font-sans">
-                Align celestial rings in the required astronomical order:
-              </div>
-              <div className="text-xs font-mono font-bold text-cyan-300 mt-0.5">
-                MOON (Outer) → RAVEN (Mid) → FLAME (Inner)
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Ring Steppers */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {rings.map((ring, idx) => (
-              <div
-                key={ring.id}
-                className="flex flex-col items-center p-2 rounded-xl bg-black/70 border border-teal-700/60"
-              >
-                <div className="text-[9px] font-cinzel text-stone-400 uppercase tracking-wider mb-1">
-                  Ring {idx + 1}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleRotate(idx, 'ccw')}
-                    className="w-6 h-6 rounded bg-stone-800 hover:bg-teal-900 border border-stone-700 text-teal-200 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
-                    aria-label={`Rotate Ring ${idx + 1} Counter-Clockwise`}
-                  >
-                    ↺
-                  </button>
-                  <div className="w-14 h-8 rounded bg-teal-950/80 border border-teal-500/80 text-teal-200 text-xs font-mono font-black flex items-center justify-center gap-1 shadow-inner">
-                    <span>{runeIcons[ringSymbols[idx]]}</span>
-                    <span className="text-[10px]">{ringSymbols[idx]}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRotate(idx, 'cw')}
-                    className="w-6 h-6 rounded bg-stone-800 hover:bg-teal-900 border border-stone-700 text-teal-200 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
-                    aria-label={`Rotate Ring ${idx + 1} Clockwise`}
-                  >
-                    ↻
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* 8 Calibrated Invisible HTML Hotspots (0 Overlap, Cursor Pointer, Keyboard Accessible) */}
+          {COFFIN3_TARGETS.map((target) => (
+            <button
+              key={target.id}
+              type="button"
+              onClick={() => handleInspect(target)}
+              aria-label={target.ariaLabel}
+              className="absolute z-20 cursor-pointer rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/80"
+              style={{
+                left: target.left,
+                top: target.top,
+                width: target.width,
+                height: target.height,
+              }}
+            >
+              <span className="sr-only">{target.title}</span>
+            </button>
+          ))}
         </div>
       </main>
 
-      {/* 5. Bottom Controls: Evidence Journal, Tagline, Return to Cemetery */}
-      <footer className="relative z-30 px-3 sm:px-6 pb-3 pt-2 flex items-center justify-between select-none">
-        {/* Bottom-Left: Evidence Journal */}
+      {/* 4. Center-Bottom Console: The Keeper's Final Testament Riddle & 3 Large Circular Rotating Rings */}
+      <section className="relative z-30 w-full px-2 sm:px-4 py-1.5 flex flex-col items-center">
+        <div className="w-full max-w-5xl rounded-2xl bg-gradient-to-r from-black/95 via-[#120a04]/95 to-black/95 border-2 border-amber-600/70 p-2.5 sm:p-3 shadow-[0_0_40px_rgba(0,0,0,0.95)] backdrop-blur-md flex flex-col lg:flex-row items-center justify-between gap-3">
+          {/* Left: The Riddle Verse */}
+          <div className="flex-1 text-center lg:text-left px-2 sm:px-4">
+            <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
+              <span className="text-amber-400 text-xs">✦</span>
+              <h3 className="font-cinzel text-xs sm:text-sm font-black tracking-widest text-amber-200 uppercase drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                THE KEEPER&rsquo;S FINAL TESTAMENT
+              </h3>
+              <span className="text-amber-400 text-xs">✦</span>
+            </div>
+            <p className="font-serif italic text-[11px] sm:text-xs text-stone-300 leading-relaxed max-w-xl">
+              &ldquo;Three guardians watch the heavens through the endless night. One wears the pale face that commands
+              the outer darkness. Another travels between the heavens and the final fire, never claiming either throne.
+              The last burns closest to the heart, yet fades before the dawn. Read the keeper&rsquo;s chart, listen to the
+              relics, and restore their rightful circles. Only when each guardian finds its destined place shall the
+              final testament awaken.&rdquo;
+            </p>
+            {lockError && (
+              <div className="mt-1 text-[11px] font-cinzel font-bold text-red-400 tracking-wider animate-fadeIn">
+                ⚠ {lockError}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Three Prominent Antique-Gold Circular Rotating Ring Selectors */}
+          <div
+            className={`flex flex-col sm:flex-row items-center gap-3 sm:gap-4 flex-shrink-0 transition-transform ${
+              shakeLock ? 'animate-shake' : ''
+            }`}
+          >
+            {/* Ring Selectors */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {rings.map((ring, idx) => {
+                const ringLabel =
+                  idx === 0 ? 'RING I — OUTER' : idx === 1 ? 'RING II — MIDDLE' : 'RING III — INNER';
+                const activeSymbol = currentSymbols[idx];
+                const activeIcon = RUNE_ICONS[activeSymbol] || '✨';
+
+                return (
+                  <div key={ring.id} className="flex flex-col items-center">
+                    {/* Ring Label */}
+                    <span className="text-[9px] sm:text-[10px] font-cinzel font-bold text-amber-300/90 tracking-wider uppercase mb-1">
+                      {ringLabel}
+                    </span>
+
+                    {/* Circular Selector Box */}
+                    <div className="flex flex-col items-center p-1.5 rounded-2xl bg-black/85 border border-amber-700/60 shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+                      {/* Rotate Up Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRotate(idx, 'ccw')}
+                        aria-label={`Rotate ${ringLabel} Counter-Clockwise`}
+                        className="w-7 h-6 sm:w-8 sm:h-7 rounded-lg bg-stone-900/90 hover:bg-amber-950/80 border border-amber-800/60 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+                      >
+                        ▲
+                      </button>
+
+                      {/* Prominent Circular Dial Display */}
+                      <div
+                        className={`w-16 h-16 sm:w-20 sm:h-20 my-1 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-300 ${
+                          isUnlocked
+                            ? 'border-emerald-400 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.5)]'
+                            : isAligned
+                            ? 'border-cyan-400 bg-cyan-950/80 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                            : 'border-amber-500/80 bg-gradient-to-b from-[#261609] via-[#120703] to-[#040201] shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                        }`}
+                      >
+                        <span className="text-xl sm:text-2xl drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
+                          {activeIcon}
+                        </span>
+                        <span className="text-[9px] sm:text-[10px] font-cinzel font-black tracking-widest text-amber-100 uppercase mt-0.5">
+                          {activeSymbol}
+                        </span>
+                      </div>
+
+                      {/* Rotate Down Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRotate(idx, 'cw')}
+                        aria-label={`Rotate ${ringLabel} Clockwise`}
+                        className="w-7 h-6 sm:w-8 sm:h-7 rounded-lg bg-stone-900/90 hover:bg-amber-950/80 border border-amber-800/60 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Unlock Button */}
+            <div className="flex flex-col items-center sm:ml-2">
+              <button
+                type="button"
+                onClick={handleUnseal}
+                aria-label="Unseal the Final Testament"
+                className={`px-5 sm:px-6 py-3.5 rounded-2xl border-2 font-cinzel text-xs sm:text-sm font-black uppercase tracking-widest shadow-xl transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                  isUnlocked
+                    ? 'bg-emerald-950/90 hover:bg-emerald-900 border-emerald-400 text-emerald-100 shadow-[0_0_25px_rgba(16,185,129,0.5)]'
+                    : 'bg-gradient-to-r from-amber-900 via-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-600 border-amber-400 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.55)]'
+                }`}
+              >
+                <span>{isUnlocked ? '✓' : '✦'}</span>
+                <span>{isUnlocked ? 'TESTAMENT UNSEALED' : 'UNSEAL THE FINAL TESTAMENT'}</span>
+              </button>
+              {isUnlocked && (
+                <span className="text-[9px] font-mono text-emerald-300 tracking-wider uppercase mt-1">
+                  Fragment &ldquo;RETURNS&rdquo; Unsealed
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Bottom Navigation Controls: Evidence Journal & Return to Cemetery */}
+      <footer className="relative z-30 px-3 sm:px-6 pb-2.5 pt-1 flex items-center justify-between select-none">
+        {/* Evidence Journal Progress */}
         <button
           type="button"
           onClick={onOpenJournal}
-          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-teal-950/80 border border-teal-500/70 text-teal-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_18px_rgba(20,184,166,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          aria-label="Open Evidence Journal"
+          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
         >
           <span>📖</span>
           <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
         </button>
 
-
-        {/* Bottom-Right: Return to Cemetery */}
+        {/* Return to Cemetery */}
         <button
           type="button"
           onClick={onReturnCemetery}
-          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-950 via-[#0a191b] to-cyan-950 hover:from-teal-900 hover:to-cyan-900 border-2 border-teal-400 text-teal-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(20,184,166,0.4)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          aria-label="Return to Cemetery"
+          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950 via-[#180a04] to-amber-950 hover:from-amber-900 hover:to-amber-800 border-2 border-amber-500/80 text-amber-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
         >
           <span>←</span>
           <span>RETURN TO CEMETERY</span>
         </button>
       </footer>
 
-      {/* 6. Object Detail Inspection Modal (Grimoire reader, 360-degree rotation of skull, crystal, potion) */}
-      <ObjectDetailModal
-        isOpen={isDetailOpen}
-        data={activeDetail}
-        onClose={() => setIsDetailOpen(false)}
-        onDiscoverClue={(clue) => {
-          if (clue === 'RETURNS') {
-            if (!collectedFragments.includes('RETURNS')) {
-              onFragmentUnlocked('RETURNS');
-            }
-          }
-        }}
-      />
+      {/* ========================================================
+          MODAL 1: PHOTOGRAPHIC ARTIFACT INSPECTION MODAL
+         ======================================================== */}
+      {inspectedTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="artifact-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
+          onClick={() => setInspectedTarget(null)}
+        >
+          <div
+            role="document"
+            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
+              <div>
+                <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                  BURIAL VAULT ARTIFACT INSPECTION
+                </div>
+                <h3
+                  id="artifact-modal-title"
+                  className="text-base sm:text-lg font-cinzel font-black text-amber-100 tracking-wide"
+                >
+                  {inspectedTarget.title}
+                </h3>
+                {inspectedTarget.subtitle && (
+                  <div className="text-[11px] font-mono text-stone-400 mt-0.5">
+                    {inspectedTarget.subtitle}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectedTarget(null)}
+                aria-label="Close Inspection Modal"
+                className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* High-Resolution Photographic Master Artwork Crop */}
+            <div className="flex flex-col items-center justify-center p-4 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-900/50 shadow-inner text-center">
+              <div className="relative w-full max-h-56 flex items-center justify-center overflow-hidden rounded-xl border border-amber-950/80 bg-black/70 p-2 shadow-2xl">
+                <img
+                  src={inspectedTarget.imageSrc}
+                  alt={inspectedTarget.title}
+                  className="max-h-52 w-auto object-contain rounded-lg drop-shadow-[0_0_15px_rgba(0,0,0,0.9)]"
+                />
+              </div>
+
+              {/* Status Badge */}
+              {inspectedTarget.statusBadge && (
+                <div className="mt-3 px-3 py-1 rounded-full bg-red-950/90 border border-red-600 text-red-200 font-cinzel text-[11px] font-black uppercase tracking-widest shadow-md">
+                  {inspectedTarget.statusBadge}
+                </div>
+              )}
+
+              {/* Detailed Lore Description */}
+              <p className="mt-4 font-serif italic text-xs sm:text-sm text-stone-200 leading-relaxed max-w-sm">
+                &ldquo;{inspectedTarget.description}&rdquo;
+              </p>
+            </div>
+
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setInspectedTarget(null)}
+              aria-label="Close Inspection"
+              className="mt-2 w-full py-2.5 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-500/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
+            >
+              Close Inspection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 2: FINAL TESTAMENT UNSEALED REWARD MODAL ("RETURNS")
+         ======================================================== */}
+      {isRewardModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="testament-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
+          onClick={() => setIsRewardModalOpen(false)}
+        >
+          <div
+            role="document"
+            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
+              <div>
+                <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                  ✦ CELESTIAL CODEX UNSEALED ✦
+                </div>
+                <h3
+                  id="testament-modal-title"
+                  className="text-lg sm:text-xl font-cinzel font-black text-amber-100 tracking-wide"
+                >
+                  The Keeper&rsquo;s Final Testament
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRewardModalOpen(false)}
+                aria-label="Close Reward Modal"
+                className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Revealed Secret Syllable & Full Incantation */}
+            <div className="flex flex-col items-center justify-center p-5 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-500/80 shadow-2xl text-center">
+              <span className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                ✦ CEMETERY INCANTATION: THIRD & FINAL FRAGMENT ✦
+              </span>
+
+              {/* Glowing Syllable */}
+              <div className="text-3xl sm:text-4xl font-cinzel font-black text-amber-300 tracking-[0.25em] drop-shadow-[0_0_20px_rgba(245,158,11,0.9)] my-2">
+                R — E — T — U — R — N — S
+              </div>
+
+              {/* Full 3-Part Cipher Structure */}
+              <div className="my-2 p-2.5 rounded-xl bg-black/80 border border-amber-800/60 text-[11px] font-cinzel font-bold text-stone-300">
+                <span className="text-amber-400">[Grave I: THE]</span> &bull;{' '}
+                <span className="text-amber-400">[Grave II: NIGHT]</span> &bull;{' '}
+                <span className="text-cyan-300">[Grave III: RETURNS]</span>
+              </div>
+
+              <p className="mt-3 font-serif italic text-xs sm:text-sm text-stone-300 leading-relaxed max-w-sm">
+                &ldquo;The three concentric celestial circles lock into eternal alignment. As the final glyph turns, the
+                heavy stone crypt shifts. The third secret syllable &lsquo;RETURNS&rsquo; has been inscribed into your
+                Evidence Journal. The ancient cemetery iron gate is now accessible.&rdquo;
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRewardModalOpen(false);
+                  onOpenJournal();
+                }}
+                className="w-full sm:flex-1 py-2.5 rounded-xl bg-black/80 hover:bg-amber-950 border border-amber-600/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
+              >
+                📖 View Evidence Journal (3/3)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRewardModalOpen(false);
+                  onReturnCemetery();
+                }}
+                className="w-full sm:flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-900 to-amber-700 hover:from-amber-800 hover:to-amber-600 border border-amber-400 text-amber-100 font-cinzel text-xs font-black uppercase tracking-wider cursor-pointer shadow-lg transition-colors"
+              >
+                Return to Cemetery Gate →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,7 +12,7 @@ interface CoffinHeaderHUDProps {
 }
 
 export const CoffinHeaderHUD: React.FC<CoffinHeaderHUDProps> = ({
-  graveNumber: _graveNumber,
+  graveNumber,
   title,
   secondsRemaining,
   stageCleared: _stageCleared,
@@ -45,6 +45,9 @@ export const CoffinHeaderHUD: React.FC<CoffinHeaderHUDProps> = ({
 
       {/* 2. Top-Center: Coffin Title with Skull Filigree */}
       <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex-col items-center pointer-events-none">
+        <span className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase mb-0.5">
+          {graveNumber}
+        </span>
         <h2 className="font-cinzel text-sm sm:text-base md:text-lg font-black tracking-[0.2em] text-amber-200 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
           {title}
         </h2>
