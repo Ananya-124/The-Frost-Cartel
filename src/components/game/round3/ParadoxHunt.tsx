@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { TeamSession } from '../../../types/team.types';
-import type { Round3StateResponse } from '../../../types/round3.types';
-import type { Round3RunState } from '../../../types/round3.types';
+import type { Round3StateResponse, Round3RunState } from '../../../types/round3.types';
 import { round3Service } from '../../../services/round3Service';
 import { authService } from '../../../services/authService';
 import { inventoryToPowerCards } from './runtime/inventoryCards';
@@ -73,7 +72,36 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
     }
   }, [session.playerNumber]);
 
-  useEffect(() => { void connect(); }, [connect]);
+  useEffect(() => {
+    let isCancelled = false;
+    const runConnect = async () => {
+      try {
+        const [sessionState, runState, authenticatedPlayer] = await Promise.all([
+          round3Service.openSession(),
+          round3Service.getRun().catch(() => ({ success: false, run: createDefaultRun() })),
+          session.playerNumber ? Promise.resolve(session.playerNumber) : authService.getPlayerNumber(),
+        ]);
+        if (!isCancelled) {
+          setState(sessionState);
+          setRun(parseRunState(runState));
+          setPlayerNumber(authenticatedPlayer);
+        }
+      } catch (reason) {
+        if (!isCancelled) {
+          const message = reason instanceof Error ? reason.message : 'Could not open the Round 3 session.';
+          setError(
+            message.includes('No squad token') || message.includes('Authentication required')
+              ? 'Your browser session is not connected to the game server. Sign out, then log in again with the backend running.'
+              : message
+          );
+        }
+      }
+    };
+    void runConnect();
+    return () => {
+      isCancelled = true;
+    };
+  }, [session.playerNumber]);
 
   const loadDevelopmentSample = async () => {
     setError('');

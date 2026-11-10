@@ -45,10 +45,13 @@ async def run_verification():
         await page.locator('button[aria-label="Grave 3: Rune Tombstone"]').first.click()
         await page.wait_for_timeout(1200)
         
-        # Verify Single Header HUD
+        # Verify Single Header HUD & No GRAVE III
         headers = await page.locator('h2:has-text("THE FINAL TESTAMENT")').count()
         print(f"Header count: {headers} (Must be exactly 1 in HUD)")
-        assert headers >= 1, "Expected THE FINAL TESTAMENT header"
+        assert headers == 1, f"Expected exactly 1 THE FINAL TESTAMENT header, got {headers}"
+        grave_iii_count = await page.locator('text="GRAVE III"').count()
+        print(f"GRAVE III count: {grave_iii_count} (Must be 0)")
+        assert grave_iii_count == 0, "Found unwanted GRAVE III label"
         
         # Verify Master 2560x1440 image
         master_img = page.locator('img[alt="The Final Testament Master Coffin Environment"]')

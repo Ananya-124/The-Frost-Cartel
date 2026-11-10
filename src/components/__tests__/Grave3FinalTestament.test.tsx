@@ -39,7 +39,7 @@ const mockConfig: Stage3Config = {
 };
 
 describe('Stage 3: Coffin III — The Final Testament', () => {
-  it('renders single unified header HUD with GRAVE III and THE FINAL TESTAMENT', () => {
+  it('renders single unified header HUD with THE FINAL TESTAMENT and no GRAVE III', () => {
     render(
       <Grave3FinalTestament
         teamId="team-alpha"
@@ -59,8 +59,8 @@ describe('Stage 3: Coffin III — The Final Testament', () => {
       />
     );
 
-    expect(screen.getByText('GRAVE III')).toBeInTheDocument();
-    expect(screen.getAllByText('THE FINAL TESTAMENT').length).toBeGreaterThan(0);
+    expect(screen.queryByText('GRAVE III')).not.toBeInTheDocument();
+    expect(screen.getAllByText('THE FINAL TESTAMENT').length).toBe(1);
     expect(screen.getByText('20:00')).toBeInTheDocument();
   });
 
@@ -263,3 +263,4 @@ describe('Stage 3: Coffin III — The Final Testament', () => {
     expect(screen.getByText(/The ancient cemetery iron gate is now accessible/i)).toBeInTheDocument();
   });
 });
+

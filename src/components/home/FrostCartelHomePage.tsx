@@ -3,7 +3,7 @@ import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { ROUNDS_DATA } from '../../constants/rounds.constants';
 import { authService } from '../../services/authService';
-import { isRound2Route, isRound3Route, isRound4Route } from '../../app/routes';
+import { isRound1Route, isRound2Route, isRound3Route, isRound4Route } from '../../app/routes';
 import { HauntedAtmosphere } from './HauntedAtmosphere';
 import { HauntedHero } from './HauntedHero';
 import { TeamDashboardView } from '../player/TeamDashboardView';
@@ -19,12 +19,11 @@ function resolveChamberFromLocation(
   search: string,
   current: number | null
 ): number | null {
+  if (isRound1Route(hash, search)) return 1;
   if (isRound2Route(hash)) return 2;
   if (isRound3Route(hash, search)) return 3;
   if (isRound4Route(hash, search)) return 4;
-  const params = new URLSearchParams(search);
-  if (params.get('round') === '1') return 1;
-  if (current === 4 || current === 3 || current === 2) return null;
+  if (current === 4 || current === 3 || current === 2 || current === 1) return null;
   return current;
 }
 
@@ -73,6 +72,10 @@ export const FrostCartelHomePage: React.FC = () => {
 
   useEffect(() => {
     const handleRouteSync = () => {
+      const current = authService.getCurrentSession();
+      if (current) {
+        setSession(current);
+      }
       setActiveChamberRound((prev) =>
         resolveChamberFromLocation(window.location.hash, window.location.search, prev)
       );
@@ -126,6 +129,7 @@ export const FrostCartelHomePage: React.FC = () => {
 
   const handleEnterRound1 = () => {
     setIsDashboardOpen(false);
+    window.location.hash = '#/round-1';
     setActiveChamberRound(1);
   };
 
@@ -176,7 +180,10 @@ export const FrostCartelHomePage: React.FC = () => {
       <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans">
         <Round1Dashboard
           session={session}
-          onReturnHome={() => setActiveChamberRound(null)}
+          onReturnHome={() => {
+            window.location.hash = '';
+            setActiveChamberRound(null);
+          }}
           onOpenDashboard={() => setIsDashboardOpen(true)}
           onUpdateCredits={(newCredits) => {
             setSession((prev) => (prev ? { ...prev, credits: newCredits } : null));

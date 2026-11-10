@@ -266,10 +266,17 @@ export class Round1Service {
         },
         stage3State: {
           placedBoneSlots: {},
+          grave1Completed: false,
+          grave1ChestUnlocked: false,
+          grave1RiddleSolved: false,
+          grave1BookRead: false,
+          grave1SkeletonMoved: false,
           dugSoilIds: [],
+          grave2Completed: false,
           grave2CofferUnlocked: false,
           grave3RingIndices: [0, 0, 0],
           grave3Unlocked: false,
+          grave3Completed: false,
           collectedFragments: [],
           isGateUnlocked: false,
         },
@@ -750,10 +757,16 @@ export class Round1Service {
     const isSlotLegs = session.stage3State.placedBoneSlots['slot_legs'] === 'bone_femur';
 
     const allPlaced = isSlotHead && isSlotChest && isSlotLegs;
-    if (allPlaced && !session.stage3State.collectedFragments.includes('THE')) {
-      session.stage3State.collectedFragments.push('THE');
-      session.evidenceJournal.grave1Fragment = 'THE';
-      session.evidenceJournal.notes.push('Grave 1: Ancestral skeleton reassembled. Parchment unsealed: "THE"');
+    if (allPlaced) {
+      session.stage3State.grave1SkeletonMoved = true;
+      if (!session.stage3State.collectedFragments.includes('THE') && !session.stage3State.collectedFragments.includes('BENEATH')) {
+        session.stage3State.collectedFragments.push('THE');
+        session.evidenceJournal.grave1Fragment = 'THE';
+      }
+      const note = 'Grave 1: Ancestral skeleton reassembled. Ancient tomb mechanisms awaken.';
+      if (!session.evidenceJournal.notes.includes(note)) {
+        session.evidenceJournal.notes.push(note);
+      }
     }
 
     this.persistToStorage();
@@ -803,16 +816,16 @@ export class Round1Service {
     const fragment = this.stage3Config.grave1.chestWord || this.stage3Config.grave1.clueFragment || 'BENEATH';
     if (!session) return { success: false, fragment };
 
+    session.stage3State.grave1Completed = true;
     session.stage3State.grave1ChestUnlocked = true;
-    if (!session.stage3State.collectedFragments.includes(fragment)) {
+    session.stage3State.grave1RiddleSolved = true;
+
+    // Canonical fragment for Grave 1 is BENEATH - replace legacy 'THE' if present so collectedFragments only has 1 fragment per grave
+    const theIdx = session.stage3State.collectedFragments.indexOf('THE');
+    if (theIdx !== -1) {
+      session.stage3State.collectedFragments[theIdx] = 'BENEATH';
+    } else if (!session.stage3State.collectedFragments.includes(fragment)) {
       session.stage3State.collectedFragments.push(fragment);
-    }
-    // Also include 'BENEATH' and 'THE' for universal compatibility
-    if (!session.stage3State.collectedFragments.includes('BENEATH')) {
-      session.stage3State.collectedFragments.push('BENEATH');
-    }
-    if (!session.stage3State.collectedFragments.includes('THE')) {
-      session.stage3State.collectedFragments.push('THE');
     }
     session.evidenceJournal.grave1Fragment = fragment;
     const note = `Grave 1: Ancient Relic Chest unlocked with the Skeleton Key. Secret Fragment I revealed: "${fragment}"`;
@@ -821,6 +834,20 @@ export class Round1Service {
     }
     this.persistToStorage();
     return { success: true, fragment };
+  }
+
+  markGrave1Completed(teamId: string): void {
+    const session = this.teamStates.get(teamId);
+    if (!session) return;
+    session.stage3State.grave1Completed = true;
+    session.stage3State.grave1ChestUnlocked = true;
+    session.stage3State.grave1RiddleSolved = true;
+    session.stage3State.collectedFragments = session.stage3State.collectedFragments.filter((f) => f !== 'THE');
+    if (!session.stage3State.collectedFragments.includes('BENEATH')) {
+      session.stage3State.collectedFragments.push('BENEATH');
+    }
+    session.evidenceJournal.grave1Fragment = 'BENEATH';
+    this.persistToStorage();
   }
 
   // Stage 3: Grave 2 Digging & Coffer Code Unlock
@@ -849,25 +876,39 @@ export class Round1Service {
       cleanCode === this.stage3Config.grave2.correctCode.trim();
 
     if (isCorrect) {
+      session.stage3State.grave2Completed = true;
       session.stage3State.grave2CofferUnlocked = true;
       const fragment = cleanCode === '147' ? 'NIGHT' : 'EMBER';
-      if (!session.stage3State.collectedFragments.includes(fragment)) {
-        session.stage3State.collectedFragments.push(fragment);
-      }
-      if (cleanCode === '147' && !session.stage3State.collectedFragments.includes('NIGHT')) {
-        session.stage3State.collectedFragments.push('NIGHT');
-      }
+      // Clean out duplicate Grave 2 fragments so only one exists
+      session.stage3State.collectedFragments = session.stage3State.collectedFragments.filter(
+        (f) => f !== 'NIGHT' && f !== 'EMBER'
+      );
+      session.stage3State.collectedFragments.push(fragment);
       session.evidenceJournal.grave2Fragment = fragment;
       session.evidenceJournal.unlockedCodes.push(`Coffer Key: ${cleanCode}`);
-      session.evidenceJournal.notes.push(
-        `Grave II unsealed: The Covenant Year (${cleanCode}) unlocked the iron coffer. Syllable revealed: "${fragment}"`
-      );
+      const note = `Grave II unsealed: The Covenant Year (${cleanCode}) unlocked the iron coffer. Syllable revealed: "${fragment}"`;
+      if (!session.evidenceJournal.notes.includes(note)) {
+        session.evidenceJournal.notes.push(note);
+      }
       this.persistToStorage();
       return { success: true, fragment };
     }
 
     this.recordPenalty(teamId, 'stage-3', 'Incorrect coffer combination attempt');
     return { success: false };
+  }
+
+  markGrave2Completed(teamId: string, fragment: string = 'EMBER'): void {
+    const session = this.teamStates.get(teamId);
+    if (!session) return;
+    session.stage3State.grave2Completed = true;
+    session.stage3State.grave2CofferUnlocked = true;
+    session.stage3State.collectedFragments = session.stage3State.collectedFragments.filter(
+      (f) => f !== 'NIGHT' && f !== 'EMBER'
+    );
+    session.stage3State.collectedFragments.push(fragment);
+    session.evidenceJournal.grave2Fragment = fragment;
+    this.persistToStorage();
   }
 
   // Stage 3: Grave 3 Rune Rings Rotation
@@ -892,15 +933,108 @@ export class Round1Service {
     const ring3Symbol = this.stage3Config.grave3.runeRings[2].symbols[session.stage3State.grave3RingIndices[2]];
 
     const isCorrect = ring1Symbol === 'MOON' && ring2Symbol === 'RAVEN' && ring3Symbol === 'FLAME';
-    if (isCorrect && !session.stage3State.collectedFragments.includes('RETURNS')) {
+    if (isCorrect) {
+      session.stage3State.grave3Completed = true;
       session.stage3State.grave3Unlocked = true;
-      session.stage3State.collectedFragments.push('RETURNS');
+      if (!session.stage3State.collectedFragments.includes('RETURNS')) {
+        session.stage3State.collectedFragments.push('RETURNS');
+      }
       session.evidenceJournal.grave3Fragment = 'RETURNS';
-      session.evidenceJournal.notes.push('Grave 3: Celestial runes aligned. Secret chamber unsealed: "RETURNS"');
+      const note = 'Grave 3: Celestial runes aligned. Secret chamber unsealed: "RETURNS"';
+      if (!session.evidenceJournal.notes.includes(note)) {
+        session.evidenceJournal.notes.push(note);
+      }
     }
 
     this.persistToStorage();
     return { currentSymbol: ring.symbols[curr], isCorrectSequence: isCorrect };
+  }
+
+  markGrave3Completed(teamId: string): void {
+    const session = this.teamStates.get(teamId);
+    if (!session) return;
+    session.stage3State.grave3Completed = true;
+    session.stage3State.grave3Unlocked = true;
+    if (!session.stage3State.collectedFragments.includes('RETURNS')) {
+      session.stage3State.collectedFragments.push('RETURNS');
+    }
+    session.evidenceJournal.grave3Fragment = 'RETURNS';
+    this.persistToStorage();
+  }
+
+  // Authoritative Stage 3 Grave Completion Getter (guaranteed 0..3)
+  getStage3GraveCompletion(teamId: string): {
+    grave1: boolean;
+    grave2: boolean;
+    grave3: boolean;
+    completedCount: number;
+    fragments: {
+      grave1: string | null;
+      grave2: string | null;
+      grave3: string | null;
+    };
+  } {
+    const session = this.teamStates.get(teamId);
+    if (!session) {
+      return {
+        grave1: false,
+        grave2: false,
+        grave3: false,
+        completedCount: 0,
+        fragments: { grave1: null, grave2: null, grave3: null },
+      };
+    }
+
+    const st3 = session.stage3State;
+    const ev = session.evidenceJournal;
+    const col = st3?.collectedFragments ?? [];
+
+    const grave1 = Boolean(
+      st3?.grave1Completed ||
+      st3?.grave1ChestUnlocked ||
+      col.includes('BENEATH') ||
+      col.includes('THE') ||
+      ev?.grave1Fragment
+    );
+
+    const grave2 = Boolean(
+      st3?.grave2Completed ||
+      st3?.grave2CofferUnlocked ||
+      col.includes('EMBER') ||
+      col.includes('NIGHT') ||
+      ev?.grave2Fragment
+    );
+
+    const grave3 = Boolean(
+      st3?.grave3Completed ||
+      st3?.grave3Unlocked ||
+      col.includes('RETURNS') ||
+      ev?.grave3Fragment
+    );
+
+    const completedCount = (grave1 ? 1 : 0) + (grave2 ? 1 : 0) + (grave3 ? 1 : 0);
+
+    const grave1Fragment = grave1
+      ? (col.includes('BENEATH') ? 'BENEATH' : (ev?.grave1Fragment || (col.includes('THE') ? 'THE' : 'BENEATH')))
+      : null;
+
+    const grave2Fragment = grave2
+      ? (col.includes('EMBER') ? 'EMBER' : (ev?.grave2Fragment || (col.includes('NIGHT') ? 'NIGHT' : 'EMBER')))
+      : null;
+
+    const grave3Fragment = grave3 ? 'RETURNS' : null;
+
+    return {
+      grave1,
+      grave2,
+      grave3,
+      completedCount,
+      fragments: {
+        grave1: grave1Fragment,
+        grave2: grave2Fragment,
+        grave3: grave3Fragment,
+      },
+    };
   }
 
   // Stage 3: Final Answer Submission

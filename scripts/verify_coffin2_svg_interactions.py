@@ -206,7 +206,7 @@ def run():
         page.wait_for_selector('text="IRON-BANDED COFFER"', state='detached')
 
         # TEST H: Click empty background -> MUST NOT execute any object action
-        coffin_box = page.locator('div[style*="aspect-ratio"]').bounding_box()
+        coffin_box = page.locator('svg[aria-label="Burial chamber interactive objects"]').bounding_box()
         assert coffin_box is not None, "Coffin bounding box not found"
         # Dead space on the top coffin lid rim (x=18%, y=25%)
         empty_x = coffin_box['x'] + coffin_box['width'] * 0.18
