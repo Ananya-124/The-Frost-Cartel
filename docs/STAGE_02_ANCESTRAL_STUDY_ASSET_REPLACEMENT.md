@@ -78,3 +78,4 @@ All tests executed in real Chromium via Playwright:
 - [x] **Other 7 Photographs Unmodified:** `img_02` through `img_08` retain their original assets, target configurations, and coordinates.
 - [x] **Twelve Target Inventory & Progress Preserved:** Target IDs, credits (150 CR), scoring, hints, and checklist intact.
 - [x] **Rollback Safeguard:** Preserved in `backup/stage-02-rollback/ancestral-study-old-backup.jpg`.
+
