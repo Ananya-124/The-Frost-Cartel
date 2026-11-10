@@ -119,8 +119,8 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
 
         {/* 3. Helper progress text if partially completed */}
         {progressText && !isNotConfigured && status !== 'completed' && (
-          <div className="absolute bottom-[4%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
-            <span className="text-[8px] sm:text-[9px] font-mono text-stone-300/80 tracking-wider font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+          <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
+            <span className="text-[7.5px] sm:text-[8.5px] font-cinzel text-amber-200/90 tracking-widest font-bold uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,1)] bg-black/60 px-2 py-0.5 rounded-full border border-amber-500/30">
               {progressText}
             </span>
           </div>

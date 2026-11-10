@@ -6,6 +6,7 @@ export const ROUTES = {
   ADMIN_TEAMS: '#/admin/teams',
   ADMIN_ROUNDS: '#/admin/rounds',
   ADMIN_RESULTS: '#/admin/results',
+  ROUND_1: '#/round-1',
   ROUND_2: '#/round-2',
   ROUND_3: '#/round-3',
   ROUND_4: '#/round-4',
@@ -16,6 +17,18 @@ export function isAdminRoute(
   pathname: string = window.location.pathname
 ): boolean {
   return hash.startsWith('#/admin') || pathname === '/admin' || pathname.startsWith('/admin/');
+}
+
+export function isRound1Route(
+  hash: string = window.location.hash,
+  search: string = window.location.search
+): boolean {
+  if (hash === '#/round-1' || hash === '#/round-01') return true;
+  if (typeof search === 'string' && search.length > 0) {
+    const params = new URLSearchParams(search);
+    return params.get('round') === '1' || params.get('round') === '01';
+  }
+  return false;
 }
 
 export function isRound2Route(hash: string = window.location.hash): boolean {
