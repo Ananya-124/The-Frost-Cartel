@@ -3,9 +3,22 @@ import type { Stage3Config } from '../../../types/round1.types';
 import { soundController } from '../../../utils/soundController';
 import { GothicCoffinCard } from './GothicCoffinCard';
 
+export interface Stage3GraveCompletionState {
+  grave1: boolean;
+  grave2: boolean;
+  grave3: boolean;
+  completedCount: number;
+  fragments: {
+    grave1: string | null;
+    grave2: string | null;
+    grave3: string | null;
+  };
+}
+
 interface GraveyardEnvironmentViewProps {
   config: Stage3Config;
   collectedFragments: string[];
+  graveCompletion?: Stage3GraveCompletionState;
   isCompleted: boolean;
   onSelectCoffin: (coffinId: 'coffin1' | 'coffin2' | 'coffin3') => void;
   onOpenJournal: () => void;
@@ -17,6 +30,7 @@ interface GraveyardEnvironmentViewProps {
 export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> = ({
   config: _config,
   collectedFragments,
+  graveCompletion,
   isCompleted,
   onSelectCoffin,
   onOpenJournal,
@@ -24,12 +38,30 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
   onReturnDashboard,
   onSkipStage,
 }) => {
+  // Authoritative completed state (strictly 0..3)
+  const gComp: Stage3GraveCompletionState = graveCompletion ?? {
+    grave1: collectedFragments.includes('BENEATH') || collectedFragments.includes('THE'),
+    grave2: collectedFragments.includes('EMBER') || collectedFragments.includes('NIGHT'),
+    grave3: collectedFragments.includes('RETURNS'),
+    completedCount: Math.min(
+      3,
+      (collectedFragments.includes('BENEATH') || collectedFragments.includes('THE') ? 1 : 0) +
+        (collectedFragments.includes('EMBER') || collectedFragments.includes('NIGHT') ? 1 : 0) +
+        (collectedFragments.includes('RETURNS') ? 1 : 0)
+    ),
+    fragments: {
+      grave1: collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : null),
+      grave2: collectedFragments.includes('EMBER') ? 'EMBER' : (collectedFragments.includes('NIGHT') ? 'NIGHT' : null),
+      grave3: collectedFragments.includes('RETURNS') ? 'RETURNS' : null,
+    },
+  };
+
   // Extract button styles and text to satisfy SonarQube rule S3358 (no nested ternaries)
   const getGateButtonStyles = () => {
     if (isCompleted) {
       return 'bg-emerald-950/90 border border-emerald-500 text-emerald-200 shadow-[0_0_18px_rgba(16,185,129,0.5)]';
     }
-    if (collectedFragments.length === 3) {
+    if (gComp.completedCount === 3) {
       return 'bg-gradient-to-r from-red-950 via-[#351008] to-amber-950 border border-amber-400 text-amber-100 shadow-[0_0_22px_rgba(245,158,11,0.7)] animate-pulse';
     }
     return 'bg-black/85 hover:bg-red-950/70 border border-red-700/60 text-stone-200 shadow-md';
@@ -94,8 +126,8 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
             chamberAltTitle="The Bone Chamber"
             colorTheme="amber"
             artworkSrc="/assets/stage-3/coffins/coffin_hd_1.png"
-            isDiscovered={collectedFragments.includes('BENEATH') || collectedFragments.includes('THE')}
-            discoveredFragment={collectedFragments.includes('BENEATH') ? 'BENEATH' : 'THE'}
+            isCompleted={gComp.grave1}
+            discoveredFragment={gComp.fragments.grave1}
             onSelect={() => onSelectCoffin('coffin1')}
           />
 
@@ -108,8 +140,8 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
             chamberAltTitle="The Buried Diary"
             colorTheme="purple"
             artworkSrc="/assets/stage-3/coffins/coffin_hd_2.png"
-            isDiscovered={collectedFragments.includes('NIGHT')}
-            discoveredFragment="NIGHT"
+            isCompleted={gComp.grave2}
+            discoveredFragment={gComp.fragments.grave2}
             onSelect={() => onSelectCoffin('coffin2')}
           />
 
@@ -122,8 +154,8 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
             chamberAltTitle="The Rune Tombstone"
             colorTheme="teal"
             artworkSrc="/assets/stage-3/coffins/coffin_hd_3.png"
-            isDiscovered={collectedFragments.includes('RETURNS')}
-            discoveredFragment="RETURNS"
+            isCompleted={gComp.grave3}
+            discoveredFragment={gComp.fragments.grave3}
             onSelect={() => onSelectCoffin('coffin3')}
           />
         </div>
@@ -138,12 +170,12 @@ export const GraveyardEnvironmentView: React.FC<GraveyardEnvironmentViewProps> =
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={onOpenJournal}
-            aria-label="Evidence Journal"
+            aria-label={`Evidence Journal (${gComp.completedCount}/3)`}
             className="px-3.5 sm:px-4 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 backdrop-blur-md outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none select-none"
             style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
           >
             <span aria-hidden="true">📜</span>
-            <span>Evidence Journal ({collectedFragments.length}/3)</span>
+            <span>Evidence Journal ({gComp.completedCount}/3)</span>
           </button>
 
           {/* Final Escape Gate Modal Trigger */}

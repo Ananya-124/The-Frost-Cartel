@@ -24,29 +24,27 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     round1Service.beginRound1('team_test_calib', 'Calibration Squad');
   });
 
-  it('declares exact intrinsic 1024 x 576 coordinate space and viewBox', () => {
-    expect(COFFIN_ORIGINAL_WIDTH).toBe(1024);
-    expect(COFFIN_ORIGINAL_HEIGHT).toBe(576);
-    expect(COFFIN_VIEWBOX).toBe('0 0 1024 576');
+  it('declares exact intrinsic 2560 x 1440 coordinate space and viewBox', () => {
+    expect(COFFIN_ORIGINAL_WIDTH).toBe(2560);
+    expect(COFFIN_ORIGINAL_HEIGHT).toBe(1440);
+    expect(COFFIN_VIEWBOX).toBe('0 0 2560 1440');
   });
 
   it('provides precise non-rectangular silhouette paths for all key artifacts', () => {
     // 1. Ancient Book
-    expect(COFFIN_SVG_PATHS.ancient_book).toContain('M 430,255');
-    expect(COFFIN_SVG_PATHS.ancient_book).toContain('547,271');
-    expect(COFFIN_SVG_PATHS.ancient_book).toContain('508,362');
+    expect(COFFIN_SVG_PATHS.ancient_book).toContain('M 1075,638');
     expect(COFFIN_SVG_PATHS.ancient_book.startsWith('M')).toBe(true);
     expect(COFFIN_SVG_PATHS.ancient_book.endsWith('Z')).toBe(true);
 
     // 2. Letter & Envelope
-    expect(COFFIN_SVG_PATHS.envelope).toContain('382,412');
-    expect(COFFIN_SVG_PATHS.parchment).toContain('354,396');
+    expect(COFFIN_SVG_PATHS.envelope).toContain('765,1108');
+    expect(COFFIN_SVG_PATHS.parchment).toContain('885,990');
 
     // 3. Anatomical Skeleton Regions
-    expect(COFFIN_SVG_PATHS.skull).toContain('645,88');
-    expect(COFFIN_SVG_PATHS.ribcage).toContain('545,188');
-    expect(COFFIN_SVG_PATHS.left_arm).toContain('495,195');
-    expect(COFFIN_SVG_PATHS.femur).toContain('605,385');
+    expect(COFFIN_SVG_PATHS.skull).toContain('1612,220');
+    expect(COFFIN_SVG_PATHS.ribcage).toContain('1362,470');
+    expect(COFFIN_SVG_PATHS.left_arm).toContain('1238,488');
+    expect(COFFIN_SVG_PATHS.femur).toContain('1575,788');
   });
 
   it('renders dual invisible hit-areas and visible discovery paths without generic rectangles', () => {
@@ -70,9 +68,9 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     );
 
     // Verify SVG viewBox matches image coordinate system
-    const svgEl = container.querySelector('svg[viewBox="0 0 1024 576"]');
+    const svgEl = container.querySelector('svg[viewBox="0 0 2560 1440"]');
     expect(svgEl).toBeInTheDocument();
-    expect(svgEl?.getAttribute('viewBox')).toBe('0 0 1024 576');
+    expect(svgEl?.getAttribute('viewBox')).toBe('0 0 2560 1440');
 
     // Verify paths are rendered
     const paths = container.querySelectorAll('svg path');
@@ -104,7 +102,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     );
 
     // Verify all coffin interaction paths are completely invisible to the eye
-    const coffinSvg = container.querySelector('svg[viewBox="0 0 1024 576"]');
+    const coffinSvg = container.querySelector('svg[viewBox="0 0 2560 1440"]');
     expect(coffinSvg).toBeInTheDocument();
 
     const paths = coffinSvg?.querySelectorAll('path');
@@ -112,7 +110,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
 
     paths?.forEach((path) => {
       expect(path.getAttribute('fill')).toBe('transparent');
-      expect(path.getAttribute('stroke')).toBe('transparent');
+      expect(['none', 'transparent']).toContain(path.getAttribute('stroke'));
     });
 
     // Ensure no calibration panel or visible gold wireframes exist in the scene

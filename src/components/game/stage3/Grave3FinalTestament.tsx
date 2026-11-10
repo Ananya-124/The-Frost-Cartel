@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useCallback, type MouseEvent } from 'react';
 import type { Stage3Config } from '../../../types/round1.types';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
@@ -20,8 +20,29 @@ export interface ImageEvidenceTarget {
   statusBadge?: string;
 }
 
+// Canonical Rune & Fragment Constants (prevents duplicate string literals: SonarQube S1192)
+const RUNE_MOON = 'MOON';
+const RUNE_RAVEN = 'RAVEN';
+const RUNE_FLAME = 'FLAME';
+const RUNE_SKULL = 'SKULL';
+const RUNE_SUN = 'SUN';
+const RUNE_FROST = 'FROST';
+const FRAGMENT_RETURNS = 'RETURNS';
+const FRAGMENT_THE = 'THE';
+const FRAGMENT_NIGHT = 'NIGHT';
+const FRAGMENT_BENEATH = 'BENEATH';
+const FRAGMENT_EMBER = 'EMBER';
+
+const RING_LABELS = ['RING I — OUTER', 'RING II — MIDDLE', 'RING III — INNER'] as const;
+const HEADER_AMBER_BADGE = 'text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase';
+const KEY_ESCAPE = 'Escape';
+const MODAL_BACKDROP_CLASSES =
+  'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn';
+const BACKDROP_DISMISS_CLASSES =
+  'absolute inset-0 w-full h-full bg-transparent border-0 cursor-default';
+
 // 8 Precision Calibrated Target Hotspots (16:9 Master Coordinate System, 0 Overlaps)
-export const COFFIN3_TARGETS: ImageEvidenceTarget[] = [
+const COFFIN3_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'skeleton_iii',
     ariaLabel: 'Inspect Cranium of the Arch-Warden marked III',
@@ -129,7 +150,7 @@ export const COFFIN3_TARGETS: ImageEvidenceTarget[] = [
 ];
 
 interface Grave3FinalTestamentProps {
-  teamId: string;
+  teamId?: string;
   config: Stage3Config;
   collectedFragments: string[];
   ringIndices: number[];
@@ -146,20 +167,39 @@ interface Grave3FinalTestamentProps {
 }
 
 const RUNE_ICONS: Record<string, string> = {
-  MOON: '🌙',
-  RAVEN: '🦅',
-  FLAME: '🔥',
-  SKULL: '💀',
-  SUN: '☀️',
-  FROST: '❄️',
+  [RUNE_MOON]: '🌙',
+  [RUNE_RAVEN]: '🦅',
+  [RUNE_FLAME]: '🔥',
+  [RUNE_SKULL]: '💀',
+  [RUNE_SUN]: '☀️',
+  [RUNE_FROST]: '❄️',
 };
 
-export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
-  teamId: _teamId,
+// Helper style extractors to eliminate nested ternaries (SonarQube S3358)
+const getRingLabel = (idx: number): string => RING_LABELS[idx] ?? `RING ${idx + 1}`;
+
+const getDialClasses = (unlocked: boolean, aligned: boolean): string => {
+  if (unlocked) {
+    return 'border-emerald-400 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.5)]';
+  }
+  if (aligned) {
+    return 'border-cyan-400 bg-cyan-950/80 shadow-[0_0_20px_rgba(6,182,212,0.6)]';
+  }
+  return 'border-amber-500/80 bg-gradient-to-b from-[#2a1708] via-[#120703] to-[#040201] shadow-[0_0_15px_rgba(245,158,11,0.35)]';
+};
+
+const getUnsealButtonClasses = (unlocked: boolean): string => {
+  if (unlocked) {
+    return 'bg-emerald-950/90 hover:bg-emerald-900 border-emerald-400 text-emerald-100 shadow-[0_0_25px_rgba(16,185,129,0.5)]';
+  }
+  return 'bg-gradient-to-r from-amber-900 via-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-600 border-amber-400 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.55)]';
+};
+
+export function Grave3FinalTestament({
   config,
   collectedFragments,
   ringIndices,
-  isGrave3Unlocked: _isGrave3Unlocked,
+  isGrave3Unlocked,
   secondsRemaining,
   stageCleared,
   isMuted,
@@ -169,7 +209,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
   onRotateRing,
   onFragmentUnlocked,
   onOpenJournal,
-}) => {
+}: Grave3FinalTestamentProps) {
   // Modal & Inspection State
   const [inspectedTarget, setInspectedTarget] = useState<ImageEvidenceTarget | null>(null);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
@@ -179,37 +219,47 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
   // Fallback default ring symbols if config is missing
   const rings = config.grave3?.runeRings || [
-    { id: 'ring_1', name: 'Outer Ring', symbols: ['FLAME', 'MOON', 'RAVEN', 'SKULL'] },
-    { id: 'ring_2', name: 'Middle Ring', symbols: ['SKULL', 'FLAME', 'RAVEN', 'MOON'] },
-    { id: 'ring_3', name: 'Inner Ring', symbols: ['MOON', 'RAVEN', 'FLAME', 'SKULL'] },
+    { id: 'ring_1', name: 'Outer Ring', symbols: [RUNE_FLAME, RUNE_MOON, RUNE_RAVEN, RUNE_SKULL] },
+    { id: 'ring_2', name: 'Middle Ring', symbols: [RUNE_SKULL, RUNE_FLAME, RUNE_RAVEN, RUNE_MOON] },
+    { id: 'ring_3', name: 'Inner Ring', symbols: [RUNE_MOON, RUNE_RAVEN, RUNE_FLAME, RUNE_SKULL] },
   ];
 
   const currentSymbols = [
-    rings[0]?.symbols[(ringIndices[0] ?? 0) % (rings[0]?.symbols.length || 4)] || 'MOON',
-    rings[1]?.symbols[(ringIndices[1] ?? 0) % (rings[1]?.symbols.length || 4)] || 'RAVEN',
-    rings[2]?.symbols[(ringIndices[2] ?? 0) % (rings[2]?.symbols.length || 4)] || 'FLAME',
+    rings[0]?.symbols[(ringIndices[0] ?? 0) % (rings[0]?.symbols.length || 4)] || RUNE_MOON,
+    rings[1]?.symbols[(ringIndices[1] ?? 0) % (rings[1]?.symbols.length || 4)] || RUNE_RAVEN,
+    rings[2]?.symbols[(ringIndices[2] ?? 0) % (rings[2]?.symbols.length || 4)] || RUNE_FLAME,
   ];
 
-  const isUnlocked = collectedFragments.includes('RETURNS') || config.grave3?.isCompleted;
-  const isAligned =
-    currentSymbols[0] === 'MOON' &&
-    currentSymbols[1] === 'RAVEN' &&
-    currentSymbols[2] === 'FLAME';
+  const isUnlocked = collectedFragments.includes(FRAGMENT_RETURNS) || Boolean(config.grave3?.isCompleted);
 
-  const showToast = (msg: string) => {
+  // Authoritative unique completed grave count (strictly 0..3)
+  const countGrave1 = collectedFragments.includes(FRAGMENT_BENEATH) || collectedFragments.includes(FRAGMENT_THE) ? 1 : 0;
+  const countGrave2 = collectedFragments.includes(FRAGMENT_EMBER) || collectedFragments.includes(FRAGMENT_NIGHT) ? 1 : 0;
+  const countGrave3 = collectedFragments.includes(FRAGMENT_RETURNS) || isUnlocked || isGrave3Unlocked ? 1 : 0;
+  const uniqueCount = Math.min(3, countGrave1 + countGrave2 + countGrave3);
+
+  const isAligned =
+    currentSymbols[0] === RUNE_MOON &&
+    currentSymbols[1] === RUNE_RAVEN &&
+    currentSymbols[2] === RUNE_FLAME;
+
+  const showToast = useCallback((msg: string) => {
     setToastNotice(msg);
     setTimeout(() => setToastNotice(null), 3800);
-  };
+  }, []);
 
-  const handleInspect = (target: ImageEvidenceTarget) => {
+  const handleInspect = useCallback((target: ImageEvidenceTarget) => {
     soundController.playClick();
     setInspectedTarget(target);
-  };
+  }, []);
 
-  const handleRotate = (ringIndex: number, direction: 'cw' | 'ccw') => {
-    soundController.playClick();
-    onRotateRing(ringIndex, direction);
-  };
+  const handleRotate = useCallback(
+    (ringIndex: number, direction: 'cw' | 'ccw') => {
+      soundController.playClick();
+      onRotateRing(ringIndex, direction);
+    },
+    [onRotateRing]
+  );
 
   const handleUnseal = () => {
     if (isUnlocked) {
@@ -221,7 +271,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
     if (isAligned) {
       soundController.playChestUnlock();
       soundController.playVictory();
-      const fragment = config.grave3?.clueFragment || 'RETURNS';
+      const fragment = config.grave3?.clueFragment || FRAGMENT_RETURNS;
       onFragmentUnlocked(fragment);
       setIsRewardModalOpen(true);
       showToast('✦ CELESTIAL ALIGNMENT ACHIEVED! Syllable Unsealed: "RETURNS" ✦');
@@ -234,10 +284,14 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
     }
   };
 
+  const preventMouseDown = useCallback((e: MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
   return (
     <div className="relative w-full h-screen h-[100dvh] flex flex-col justify-between overflow-hidden bg-black select-none">
       {/* Hidden semantic breadcrumbs for accessibility and automated QA testing */}
-      <div className="sr-only" aria-hidden="true">
+      <div className="sr-only">
         <span>Grave 3 — The Final Testament</span>
         <span>The Final Testament</span>
         <span>Three Rotating Rune Rings</span>
@@ -263,7 +317,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
             <button
               key={target.id}
               type="button"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={preventMouseDown}
               onClick={() => handleInspect(target)}
               aria-label={target.ariaLabel}
               className="absolute z-20 cursor-pointer bg-transparent border-0 outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none select-none transition-none shadow-none"
@@ -276,9 +330,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
                 border: 'none',
                 boxShadow: 'none',
               }}
-            >
-              <span className="sr-only">{target.title}</span>
-            </button>
+            />
           ))}
         </div>
       </div>
@@ -331,11 +383,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
           </div>
 
           {/* Right: Header + Three Horizontal Ring Dials + Centered Unseal Button */}
-          <div
-            className={`flex flex-col items-center flex-shrink-0 transition-transform ${
-              shakeLock ? 'animate-shake' : ''
-            }`}
-          >
+          <div className={`flex flex-col items-center flex-shrink-0 transition-transform ${shakeLock ? 'animate-shake' : ''}`}>
             {/* Right Header: CONCENTRIC CELESTIAL RUNES */}
             <div className="flex items-center gap-2 mb-2">
               <span className="w-6 sm:w-8 h-[1px] bg-gradient-to-r from-transparent to-amber-500/70" />
@@ -348,8 +396,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
             {/* Three Circular Rotating Rings in a single horizontal row */}
             <div className="flex items-center gap-3 sm:gap-4">
               {rings.map((ring, idx) => {
-                const ringLabel =
-                  idx === 0 ? 'RING I — OUTER' : idx === 1 ? 'RING II — MIDDLE' : 'RING III — INNER';
+                const ringLabel = getRingLabel(idx);
                 const activeSymbol = currentSymbols[idx];
                 const activeIcon = RUNE_ICONS[activeSymbol] || '✨';
 
@@ -365,7 +412,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
                       {/* Left Chevron Button (ccw) */}
                       <button
                         type="button"
-                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseDown={preventMouseDown}
                         onClick={() => handleRotate(idx, 'ccw')}
                         aria-label={`Rotate ${ringLabel} Counter-Clockwise`}
                         className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-stone-900/90 hover:bg-amber-950/90 border border-amber-700/70 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none shadow-md"
@@ -375,13 +422,10 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
                       {/* Circular Dial Display */}
                       <div
-                        className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-300 ${
-                          isUnlocked
-                            ? 'border-emerald-400 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.5)]'
-                            : isAligned
-                            ? 'border-cyan-400 bg-cyan-950/80 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
-                            : 'border-amber-500/80 bg-gradient-to-b from-[#2a1708] via-[#120703] to-[#040201] shadow-[0_0_15px_rgba(245,158,11,0.35)]'
-                        }`}
+                        className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-300 ${getDialClasses(
+                          isUnlocked,
+                          isAligned
+                        )}`}
                       >
                         <span className="text-lg sm:text-xl lg:text-2xl drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
                           {activeIcon}
@@ -394,7 +438,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
                       {/* Right Chevron Button (cw) */}
                       <button
                         type="button"
-                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseDown={preventMouseDown}
                         onClick={() => handleRotate(idx, 'cw')}
                         aria-label={`Rotate ${ringLabel} Clockwise`}
                         className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-stone-900/90 hover:bg-amber-950/90 border border-amber-700/70 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none shadow-md"
@@ -411,14 +455,12 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
             <div className="w-full mt-2.5 flex flex-col items-center">
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
+                onMouseDown={preventMouseDown}
                 onClick={handleUnseal}
                 aria-label="Unseal the Final Testament"
-                className={`w-full py-2.5 sm:py-3 px-6 rounded-xl border-2 font-cinzel text-xs sm:text-sm font-black uppercase tracking-widest shadow-xl transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap outline-none focus:outline-none focus:ring-0 active:outline-none ${
+                className={`w-full py-2.5 sm:py-3 px-6 rounded-xl border-2 font-cinzel text-xs sm:text-sm font-black uppercase tracking-widest shadow-xl transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap outline-none focus:outline-none focus:ring-0 active:outline-none ${getUnsealButtonClasses(
                   isUnlocked
-                    ? 'bg-emerald-950/90 hover:bg-emerald-900 border-emerald-400 text-emerald-100 shadow-[0_0_25px_rgba(16,185,129,0.5)]'
-                    : 'bg-gradient-to-r from-amber-900 via-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-600 border-amber-400 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.55)]'
-                }`}
+                )}`}
               >
                 <span>{isUnlocked ? '✓' : '🔒'}</span>
                 <span>{isUnlocked ? 'TESTAMENT UNSEALED' : 'UNSEAL THE FINAL TESTAMENT'}</span>
@@ -438,19 +480,19 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
         {/* Evidence Journal Progress */}
         <button
           type="button"
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={preventMouseDown}
           onClick={onOpenJournal}
-          aria-label="Open Evidence Journal"
+          aria-label={`Open Evidence Journal (${uniqueCount}/3)`}
           className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
         >
           <span>📖</span>
-          <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
+          <span>EVIDENCE JOURNAL ({uniqueCount}/3)</span>
         </button>
 
         {/* Return to Cemetery */}
         <button
           type="button"
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={preventMouseDown}
           onClick={onReturnCemetery}
           aria-label="Return to Cemetery"
           className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950 via-[#180a04] to-amber-950 hover:from-amber-900 hover:to-amber-800 border-2 border-amber-500/80 text-amber-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
@@ -468,18 +510,28 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="artifact-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
-          onClick={() => setInspectedTarget(null)}
+          className={MODAL_BACKDROP_CLASSES}
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === KEY_ESCAPE) setInspectedTarget(null);
+          }}
         >
+          {/* Transparent dismissal layer eliminating non-interactive div click warnings */}
+          <button
+            type="button"
+            className={BACKDROP_DISMISS_CLASSES}
+            aria-label="Close modal backdrop"
+            onClick={() => setInspectedTarget(null)}
+          />
+
           <div
             role="document"
-            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
-            onClick={(e) => e.stopPropagation()}
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
               <div>
-                <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                <div className={HEADER_AMBER_BADGE}>
                   BURIAL VAULT ARTIFACT INSPECTION
                 </div>
                 <h3
@@ -548,18 +600,28 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="testament-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
-          onClick={() => setIsRewardModalOpen(false)}
+          className={MODAL_BACKDROP_CLASSES}
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === KEY_ESCAPE) setIsRewardModalOpen(false);
+          }}
         >
+          {/* Transparent dismissal layer eliminating non-interactive div click warnings */}
+          <button
+            type="button"
+            className={BACKDROP_DISMISS_CLASSES}
+            aria-label="Close Reward Modal"
+            onClick={() => setIsRewardModalOpen(false)}
+          />
+
           <div
             role="document"
-            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
-            onClick={(e) => e.stopPropagation()}
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
               <div>
-                <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                <div className={HEADER_AMBER_BADGE}>
                   ✦ CELESTIAL CODEX UNSEALED ✦
                 </div>
                 <h3
@@ -581,7 +643,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
             {/* Revealed Secret Syllable & Full Incantation */}
             <div className="flex flex-col items-center justify-center p-5 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-500/80 shadow-2xl text-center">
-              <span className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+              <span className={HEADER_AMBER_BADGE}>
                 ✦ CEMETERY INCANTATION: THIRD & FINAL FRAGMENT ✦
               </span>
 
@@ -592,9 +654,9 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
               {/* Full 3-Part Cipher Structure */}
               <div className="my-2 p-2.5 rounded-xl bg-black/80 border border-amber-800/60 text-[11px] font-cinzel font-bold text-stone-300">
-                <span className="text-amber-400">[Grave I: THE]</span> &bull;{' '}
-                <span className="text-amber-400">[Grave II: NIGHT]</span> &bull;{' '}
-                <span className="text-cyan-300">[Grave III: RETURNS]</span>
+                <span className="text-amber-400">[{FRAGMENT_THE}]</span> &bull;{' '}
+                <span className="text-amber-400">[{FRAGMENT_NIGHT}]</span> &bull;{' '}
+                <span className="text-cyan-300">[{FRAGMENT_RETURNS}]</span>
               </div>
 
               <p className="mt-3 font-serif italic text-xs sm:text-sm text-stone-300 leading-relaxed max-w-sm">
@@ -614,7 +676,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
                 }}
                 className="w-full sm:flex-1 py-2.5 rounded-xl bg-black/80 hover:bg-amber-950 border border-amber-600/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
               >
-                📖 View Evidence Journal (3/3)
+                📖 View Evidence Journal ({uniqueCount}/3)
               </button>
               <button
                 type="button"
@@ -632,4 +694,4 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
       )}
     </div>
   );
-};
+}

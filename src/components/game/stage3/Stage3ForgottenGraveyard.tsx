@@ -34,6 +34,22 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
   // Navigation / Active View State: 'overview' or focused coffin investigation
   const [activeView, setActiveView] = useState<'overview' | 'coffin1' | 'coffin2' | 'coffin3'>('overview');
 
+  // Sync initial fragments into round1Service if provided
+  const [collectedFragments, setCollectedFragments] = useState<string[]>(() => {
+    const session = round1Service.getTeamSession(teamId, '');
+    const stored = session.stage3State?.collectedFragments ?? [];
+    const merged = Array.from(new Set([...stored, ...(initialCollectedFragments || [])]));
+    if (session.stage3State && merged.length > stored.length) {
+      session.stage3State.collectedFragments = merged;
+    }
+    return merged;
+  });
+
+  // Authoritative stage 3 completion state (strictly 0..3)
+  const [graveCompletion, setGraveCompletion] = useState(() =>
+    round1Service.getStage3GraveCompletion(teamId)
+  );
+
   // Modal visibility states
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isFinalGateOpen, setIsFinalGateOpen] = useState(false);
@@ -46,7 +62,6 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
   });
 
   // Game progression states
-  const [collectedFragments, setCollectedFragments] = useState<string[]>(initialCollectedFragments);
   const [stageCleared, setStageCleared] = useState(isCompleted);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
@@ -63,12 +78,18 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
   });
   const [isCofferUnlocked, setIsCofferUnlocked] = useState<boolean>(() => {
     const session = round1Service.getTeamSession(teamId, '');
-    return session.stage3State?.grave2CofferUnlocked ?? false;
+    return Boolean(session.stage3State?.grave2CofferUnlocked || session.stage3State?.grave2Completed);
   });
 
   // Coffin 3: Rune Rings
-  const [ringIndices, setRingIndices] = useState<number[]>([0, 0, 0]);
-  const [isGrave3Unlocked, setIsGrave3Unlocked] = useState(false);
+  const [ringIndices, setRingIndices] = useState<number[]>(() => {
+    const session = round1Service.getTeamSession(teamId, '');
+    return session.stage3State?.grave3RingIndices ? [...session.stage3State.grave3RingIndices] : [0, 0, 0];
+  });
+  const [isGrave3Unlocked, setIsGrave3Unlocked] = useState<boolean>(() => {
+    const session = round1Service.getTeamSession(teamId, '');
+    return Boolean(session.stage3State?.grave3Unlocked || session.stage3State?.grave3Completed);
+  });
 
   // Live countdown timer sync
   useEffect(() => {
@@ -89,12 +110,36 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
     setIsMuted(newMuted);
   };
 
-  const handleFragmentUnlocked = (fragment: string) => {
-    if (!collectedFragments.includes(fragment)) {
-      const updated = [...collectedFragments, fragment];
-      setCollectedFragments(updated);
-      showToast(`Fragment Discovered: "${fragment}"! Added to Evidence Journal.`);
+  // Coffin Selection Guard: Completed coffins are permanently sealed and cannot be reopened
+  const handleSelectCoffin = (coffinId: 'coffin1' | 'coffin2' | 'coffin3') => {
+    const currentStatus = round1Service.getStage3GraveCompletion(teamId);
+    if (coffinId === 'coffin1' && currentStatus.grave1) {
+      showToast('✦ Coffin I is sealed • Fragment "BENEATH" already secured ✦');
+      return;
     }
+    if (coffinId === 'coffin2' && currentStatus.grave2) {
+      showToast('✦ Coffin II is sealed • Fragment "EMBER" already secured ✦');
+      return;
+    }
+    if (coffinId === 'coffin3' && currentStatus.grave3) {
+      showToast('✦ Coffin III is sealed • Fragment "RETURNS" already secured ✦');
+      return;
+    }
+    setActiveView(coffinId);
+  };
+
+  const handleFragmentUnlocked = (fragment: string) => {
+    if (fragment === 'BENEATH' || fragment === 'THE') {
+      round1Service.markGrave1Completed(teamId);
+    } else if (fragment === 'EMBER' || fragment === 'NIGHT') {
+      round1Service.markGrave2Completed(teamId, fragment);
+    } else if (fragment === 'RETURNS') {
+      round1Service.markGrave3Completed(teamId);
+    }
+    const updated = round1Service.getStage3GraveCompletion(teamId);
+    setGraveCompletion(updated);
+    setCollectedFragments((prev) => Array.from(new Set([...prev, fragment])));
+    showToast(`Fragment Discovered: "${fragment}"! Added to Evidence Journal.`);
   };
 
   const handleGateUnlocked = () => {
@@ -104,11 +149,9 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
 
   const session = round1Service.getTeamSession(teamId, '');
   const journalData = {
-    grave1Fragment: collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : session.evidenceJournal?.grave1Fragment),
-    grave2Fragment: collectedFragments.includes('EMBER')
-      ? 'EMBER'
-      : (collectedFragments.includes('NIGHT') ? 'NIGHT' : session.evidenceJournal?.grave2Fragment),
-    grave3Fragment: collectedFragments.includes('RETURNS') ? 'RETURNS' : session.evidenceJournal?.grave3Fragment,
+    grave1Fragment: graveCompletion.fragments.grave1 || (collectedFragments.includes('THE') ? 'THE' : null),
+    grave2Fragment: graveCompletion.fragments.grave2 || (collectedFragments.includes('NIGHT') ? 'NIGHT' : null),
+    grave3Fragment: graveCompletion.fragments.grave3 || (collectedFragments.includes('RETURNS') ? 'RETURNS' : null),
     notes: session.evidenceJournal?.notes ?? [],
     unlockedCodes: session.evidenceJournal?.unlockedCodes ?? [],
   };
@@ -148,17 +191,32 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
           <button type="button" onClick={() => setActiveView('overview')}>
             Graveyard Overview
           </button>
-          <button type="button" onClick={() => setActiveView('coffin1')}>
-            Grave 1: Bone Chamber
+          <button
+            type="button"
+            disabled={graveCompletion.grave1}
+            aria-disabled={graveCompletion.grave1}
+            onClick={() => handleSelectCoffin('coffin1')}
+          >
+            Grave 1: Bone Chamber {graveCompletion.grave1 ? '(Completed)' : ''}
           </button>
-          <button type="button" onClick={() => setActiveView('coffin2')}>
-            Grave 2: Buried Diary
+          <button
+            type="button"
+            disabled={graveCompletion.grave2}
+            aria-disabled={graveCompletion.grave2}
+            onClick={() => handleSelectCoffin('coffin2')}
+          >
+            Grave 2: Buried Diary {graveCompletion.grave2 ? '(Completed)' : ''}
           </button>
-          <button type="button" onClick={() => setActiveView('coffin3')}>
-            Grave 3: Rune Tombstone
+          <button
+            type="button"
+            disabled={graveCompletion.grave3}
+            aria-disabled={graveCompletion.grave3}
+            onClick={() => handleSelectCoffin('coffin3')}
+          >
+            Grave 3: Rune Tombstone {graveCompletion.grave3 ? '(Completed)' : ''}
           </button>
           <button type="button" onClick={() => setIsJournalOpen(true)}>
-            Evidence Journal ({collectedFragments.length}/3)
+            Evidence Journal ({graveCompletion.completedCount}/3)
           </button>
           <button type="button" onClick={() => setIsFinalGateOpen(true)}>
             Final Escape Gate
@@ -180,8 +238,9 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
           <GraveyardEnvironmentView
             config={config}
             collectedFragments={collectedFragments}
+            graveCompletion={graveCompletion}
             isCompleted={stageCleared}
-            onSelectCoffin={(coffinId) => setActiveView(coffinId)}
+            onSelectCoffin={handleSelectCoffin}
             onOpenJournal={() => setIsJournalOpen(true)}
             onOpenFinalGate={() => setIsFinalGateOpen(true)}
             onReturnDashboard={onReturnDashboard}
@@ -201,7 +260,10 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
             onReturnDashboard={onReturnDashboard}
-            onReturnCemetery={() => setActiveView('overview')}
+            onReturnCemetery={() => {
+              setGraveCompletion(round1Service.getStage3GraveCompletion(teamId));
+              setActiveView('overview');
+            }}
             onUpdatePlacedBones={(updated) => setPlacedBones(updated)}
             onFragmentUnlocked={handleFragmentUnlocked}
             onOpenJournal={() => setIsJournalOpen(true)}
@@ -221,9 +283,16 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
             onReturnDashboard={onReturnDashboard}
-            onReturnCemetery={() => setActiveView('overview')}
+            onReturnCemetery={() => {
+              setGraveCompletion(round1Service.getStage3GraveCompletion(teamId));
+              setActiveView('overview');
+            }}
             onSoilDug={(soilId) => setDugSoils((prev) => [...prev, soilId])}
-            onCofferUnlocked={() => setIsCofferUnlocked(true)}
+            onCofferUnlocked={() => {
+              setIsCofferUnlocked(true);
+              round1Service.markGrave2Completed(teamId, 'EMBER');
+              setGraveCompletion(round1Service.getStage3GraveCompletion(teamId));
+            }}
             onFragmentUnlocked={handleFragmentUnlocked}
             onOpenJournal={() => setIsJournalOpen(true)}
           />
@@ -242,14 +311,18 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
             onReturnDashboard={onReturnDashboard}
-            onReturnCemetery={() => setActiveView('overview')}
+            onReturnCemetery={() => {
+              setGraveCompletion(round1Service.getStage3GraveCompletion(teamId));
+              setActiveView('overview');
+            }}
             onRotateRing={(ringIdx, dir) => {
-              setRingIndices((prev) => {
-                const copy = [...prev];
-                copy[ringIdx] = dir === 'cw' ? ((copy[ringIdx] ?? 0) + 1) % 4 : ((copy[ringIdx] ?? 0) + 3) % 4;
-                return copy;
-              });
-              setIsGrave3Unlocked(true);
+              const res = round1Service.rotateRuneRing(teamId, ringIdx, dir);
+              const curSession = round1Service.getTeamSession(teamId, '');
+              setRingIndices([...curSession.stage3State.grave3RingIndices]);
+              if (res.isCorrectSequence) {
+                setIsGrave3Unlocked(true);
+                setGraveCompletion(round1Service.getStage3GraveCompletion(teamId));
+              }
             }}
             onFragmentUnlocked={handleFragmentUnlocked}
             onOpenJournal={() => setIsJournalOpen(true)}
@@ -262,6 +335,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
         isOpen={isJournalOpen}
         journal={journalData}
         collectedFragments={collectedFragments}
+        completedCount={graveCompletion.completedCount}
         onClose={() => setIsJournalOpen(false)}
       />
 
@@ -270,6 +344,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
         isOpen={isFinalGateOpen}
         teamId={teamId}
         collectedFragments={collectedFragments}
+        completedCount={graveCompletion.completedCount}
         isCompleted={stageCleared}
         onGateUnlocked={handleGateUnlocked}
         onClose={() => setIsFinalGateOpen(false)}

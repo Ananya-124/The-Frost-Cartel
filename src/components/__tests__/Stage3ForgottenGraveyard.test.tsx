@@ -12,6 +12,7 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.clearAllMocks();
+    round1Service.resetTeamProgress('test_team_s3');
     round1Service.beginRound1('test_team_s3', 'Graveyard Walkers');
   });
 

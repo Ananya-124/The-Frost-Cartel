@@ -10,6 +10,8 @@ import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
 
 // 2560x1440 CANONICAL COORDINATE SPACE (1:1 with object-cover object-center)
+export const COFFIN_ORIGINAL_WIDTH = 2560;
+export const COFFIN_ORIGINAL_HEIGHT = 1440;
 export const COFFIN_VIEWBOX = '0 0 2560 1440';
 
 // HIGH-PRECISION CALIBRATED INVISIBLE HITBOXES (2560x1440 Master Canvas, 0 Overlaps)
@@ -121,6 +123,14 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
 
   const [isKeyFlying, setIsKeyFlying] = useState(false);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  // Authoritative unique completed grave count (strictly 0..3)
+  const uniqueCount = Math.min(
+    3,
+    (collectedFragments.includes('BENEATH') || collectedFragments.includes('THE') || isChestOpen || isChestUnlocked ? 1 : 0) +
+      (collectedFragments.includes('EMBER') || collectedFragments.includes('NIGHT') ? 1 : 0) +
+      (collectedFragments.includes('RETURNS') ? 1 : 0)
+  );
 
   // Refs
   const flyingKeyRef = useRef<SVGGElement | null>(null);
@@ -333,8 +343,8 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     >
       {/* Semantic Accessibility Fallback */}
       <div className="sr-only">
-        <h1>Grave 1 — The Marked Remains</h1>
-        <h2>The Bone Chamber</h2>
+        <h1>Grave 1 — The Bone Chamber</h1>
+        <h2>The Marked Remains</h2>
         <p>THE KEEPER’S LAST RIDDLE</p>
       </div>
 
@@ -366,7 +376,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             stroke="none"
             role="button"
             tabIndex={0}
-            aria-label="Inspect Ancient Grimoire"
+            aria-label="Ancient Grimoire: Click to Open and Read • Inspect Ancient Grimoire"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
             onClick={handleOpenBook}
             onKeyDown={(e) => {
@@ -673,7 +683,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 : isChestUnlocked
                 ? '✦ Chest unlocked! Click below to claim the sacred fragment'
                 : isRiddleSolved
-                ? '✦ Riddle solved! Click the skeleton key or the button below'
+                ? '✓ RIDDLE SOLVED • Click the skeleton key or the button below'
                 : isSkeletonMoved
                 ? '✦ Skeletal remains shifted! A hidden inscription has been revealed'
                 : isBookRead
@@ -714,6 +724,13 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
               <div className="flex flex-col items-center sm:items-end gap-1.5">
                 <button
                   type="button"
+                  aria-label={
+                    isChestOpen
+                      ? 'FRAGMENT UNSEALED: "BENEATH"'
+                      : isChestUnlocked
+                      ? 'OPEN ANCIENT CHEST • Open unlocked treasure chest'
+                      : 'USE SKELETON KEY'
+                  }
                   onClick={isChestOpen ? () => setIsRewardModalOpen(true) : isChestUnlocked ? handleOpenChest : handleKeyClick}
                   className={`py-2 px-5 rounded-xl border-2 font-cinzel text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     isChestOpen
@@ -747,11 +764,11 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             soundController.playClick();
             onOpenJournal();
           }}
-          aria-label={`Evidence Journal (${collectedFragments.length}/3)`}
+          aria-label={`Evidence Journal (${uniqueCount}/3)`}
           className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
         >
           <span>📖</span>
-          <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
+          <span>EVIDENCE JOURNAL ({uniqueCount}/3)</span>
         </button>
 
         {/* Return to Cemetery */}
@@ -860,7 +877,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 }}
                 className="w-full sm:flex-1 py-2.5 rounded-xl bg-black/80 hover:bg-amber-950 border border-amber-600/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
               >
-                📖 View Evidence Journal ({collectedFragments.length}/3)
+                📖 View Evidence Journal ({uniqueCount}/3)
               </button>
               <button
                 type="button"
