@@ -283,9 +283,8 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
         </div>
       </div>
 
-      {/* 4. Top HUD Header (Single source of truth) */}
+      {/* 4. Top HUD Header (Single source of truth, 3-column CSS Grid, zero GRAVE III) */}
       <CoffinHeaderHUD
-        graveNumber="GRAVE III"
         title="THE FINAL TESTAMENT"
         secondsRemaining={secondsRemaining}
         stageCleared={stageCleared}
