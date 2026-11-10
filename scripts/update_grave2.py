@@ -360,13 +360,14 @@ else:
     print("Could not find Hotspots markers")
 
 # 3. Update Inspection modal texts
+FOLIO_SCRAP_LITERAL = "'SCATTERED FOLIO SCRAP'"
 content = content.replace(
     "'WESTERN MARKER — VII'",
     "'WESTERN MARKER — VII (Digit 7)'"
 )
 content = content.replace(
     "'SCATTERED BURIAL PAGE — VIII'",
-    "'SCATTERED FOLIO SCRAP'"
+    FOLIO_SCRAP_LITERAL
 )
 content = content.replace(
     "'EASTERN MOON MARKER — IV'",
@@ -374,7 +375,7 @@ content = content.replace(
 )
 content = content.replace(
     "'SCATTERED BURIAL PAGE — III'",
-    "'SCATTERED FOLIO SCRAP'"
+    FOLIO_SCRAP_LITERAL
 )
 content = content.replace(
     "'EASTERN SEAL MARKER — IX'",
@@ -382,7 +383,7 @@ content = content.replace(
 )
 content = content.replace(
     "'SCATTERED BURIAL PAGE — VI'",
-    "'SCATTERED FOLIO SCRAP'"
+    FOLIO_SCRAP_LITERAL
 )
 content = content.replace(
     "'CRANIUM OF THE SECOND KEEPER'",

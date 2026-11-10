@@ -42,10 +42,13 @@ export interface ImageEvidenceTarget {
 }
 
 // 11 Calibrated Image-Relative Interaction Targets (2560x1440 Master Coordinate System, 0 Overlaps)
+const MASTER_IMAGE_ID = 'coffin-02-buried-diary-master';
+const INSPECTION_ASSET_BASE = '/assets/round-01/stage-03/inspection';
+
 export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
   {
     id: 'skull_mark',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1080,160 1200,150 1270,175 1310,230 1310,310 1280,370 1220,400 1150,400 1085,360 1060,300 1060,220',
     ariaLabel: 'Cranium of the Keeper: Marked Brow (First Clue)',
     left: '41.41%',
@@ -54,13 +57,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '15.97%',
     title: 'CRANIUM OF THE SECOND KEEPER',
     subtitle: 'Solitary Brow Marking: Roman Numeral I (First Digit: 1)',
-    imageSrc: '/assets/round-01/stage-03/inspection/skull_mark.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/skull_mark.png`,
     description:
       'Carved into the weathered frontal bone is a solitary Roman numeral "I", etched with ceremonial precision. The chronicle designates this as the mark that stands alone upon the crowned keeper—the first digit of the forgotten covenant year.',
   },
   {
     id: 'number_7',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '680,440 885,430 905,615 695,635',
     ariaLabel: 'Western Parchment 7 (Second Clue)',
     left: '26.17%',
@@ -69,13 +72,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '14.58%',
     title: 'WESTERN MARKER — VII (7)',
     subtitle: 'Western Folio Scrap (Second Digit: 7)',
-    imageSrc: '/assets/round-01/stage-03/inspection/number_7.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_7.png`,
     description:
       'An aged parchment slip resting beyond the open folio where the western arm was laid to rest. Inscribed with dark iron-gall ink is the numeral "7". In the keeper\'s chronicle, the western hand placed its seal directly after the solitary crown.',
   },
   {
     id: 'number_4',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1495,375 1615,265 1715,315 1605,425',
     ariaLabel: 'Eastern Moon Parchment 4 (Third Clue)',
     left: '57.81%',
@@ -84,13 +87,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '11.81%',
     title: 'MOONWARD EASTERN SCRAP (4)',
     subtitle: 'Eastern Moon Sign (Third Digit: 4)',
-    imageSrc: '/assets/round-01/stage-03/inspection/number_4.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_4.png`,
     description:
       'Resting beneath the skeletal arm that points toward the nocturnal moonlit sky lies a vellum slip marked with the numeral "4". The chronicle declares that its opposite, beneath the moonward arm, speaks third.',
   },
   {
     id: 'number_3',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1565,525 1655,440 1765,490 1675,575',
     ariaLabel: 'Archival Parchment 3 (Burial Record)',
     left: '60.94%',
@@ -99,14 +102,14 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '10.42%',
     title: 'ARCHIVAL GRAVE RECORD (3)',
     subtitle: 'Burial Record Scrap — Non-Covenant Distractor',
-    imageSrc: '/assets/round-01/stage-03/inspection/number_3.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_3.png`,
     isDistractor: true,
     description:
       'A fragmented burial tally recording three ceremonial censers buried during the second rites. A faded marginal note states: "Tally of mortuary offerings—unrecorded in the covenant of years." This scrap marks cemetery tribute rather than the four founding covenants.',
   },
   {
     id: 'number_9',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1615,685 1705,600 1790,650 1705,740',
     ariaLabel: 'Eastern Seal Parchment 9 (Fourth Clue)',
     left: '62.89%',
@@ -115,13 +118,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '10.42%',
     title: 'CRIMSON-SEALED RECORD (9)',
     subtitle: 'Keeper\'s Seal Sign (Fourth Digit: 9)',
-    imageSrc: '/assets/round-01/stage-03/inspection/number_9.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_9.png`,
     description:
       'A weathered vellum fragment pinned firmly beneath the skeletal ribs beside a crimson wax seal. A bold numeral "9" is impressed upon its fiber. As the chronicle foretells: "Close the year with the numeral pressed beside the crimson seal beneath the remains." Positioned distinctly above the iron coffer.',
   },
   {
     id: 'ancient_diary',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '980,485 1230,480 1480,510 1520,770 1480,830 1225,875 960,860 925,680',
     ariaLabel: "Ancient Diary: Click to Read the Keeper's Chronicle",
     left: '35.94%',
@@ -130,13 +133,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '27.78%',
     title: 'THE KEEPER’S CHRONICLE',
     subtitle: 'Ancient Leather-Bound Folio',
-    imageSrc: '/assets/round-01/stage-03/inspection/ancient_diary.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/ancient_diary.png`,
     description:
       'The leather-bound diary of the Second Keeper. Within its illuminated pages lie the riddles and astronomical charts that govern the burial rites.',
   },
   {
     id: 'sealed_letter',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '760,985 1020,1030 935,1210 665,1160',
     ariaLabel: 'Folded Envelope with Red Wax Fleur-de-lis Seal',
     left: '25.78%',
@@ -145,13 +148,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '16.67%',
     title: 'WAX-SEALED CEMETERY DISPATCH',
     subtitle: 'Folded Vellum with Crimson Seal',
-    imageSrc: '/assets/round-01/stage-03/inspection/sealed_letter.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/sealed_letter.png`,
     description:
       'A folded parchment letter secured with an unbroken crimson wax seal bearing the fleur-de-lis of the Cartel\'s founding house. The letter is addressed to the Keeper of the Graves, warning of betrayal before the winter freeze.',
   },
   {
     id: 'skeleton_key',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1275,1055 1330,960 1380,955 1460,1020 1445,1100 1370,1120 1290,1110',
     ariaLabel: 'Antique Brass Skeleton Key',
     left: '49.61%',
@@ -160,13 +163,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '12.50%',
     title: 'ORNATE SKELETON KEY',
     subtitle: 'Ceremonial Crypt Key',
-    imageSrc: '/assets/round-01/stage-03/inspection/skeleton_key.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/skeleton_key.png`,
     description:
       'An ornate brass skeleton key with intricate gothic wards. Testing the key against the iron coffer reveals that its warding is ceremonial—the coffer opens strictly via the 4-digit covenant lock mechanism.',
   },
   {
     id: 'compass_medallion',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1530,965 1610,970 1645,1040 1615,1125 1535,1135 1485,1070 1485,1010',
     ariaLabel: 'Ornate Astronomical Medallion',
     left: '57.62%',
@@ -175,13 +178,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '12.50%',
     title: 'ASTRONOMICAL COMPASS MEDALLION',
     subtitle: 'Engraved Celestial Talisman',
-    imageSrc: '/assets/round-01/stage-03/inspection/compass_medallion.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/compass_medallion.png`,
     description:
       'A finely wrought brass medallion depicting celestial alignments and compass cardinal bearings. An inscription around the rim honors the North Star.',
   },
   {
     id: 'ancient_scroll',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1850,725 1960,750 2130,890 2060,930 1910,820 1805,785',
     ariaLabel: 'Ancient Rolled Scroll Tied with Scarlet Twine',
     left: '70.31%',
@@ -190,13 +193,13 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     height: '14.58%',
     title: 'ANCIENT ROLLED SCROLL',
     subtitle: 'Crypt Catacomb Map',
-    imageSrc: '/assets/round-01/stage-03/inspection/ancient_scroll.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/ancient_scroll.png`,
     description:
       'A parchment scroll tightly rolled and bound with scarlet twine. The seal remains intact, preserving architectural maps of the subterranean crypt network beneath the graveyard.',
   },
   {
     id: 'treasure_chest',
-    imageId: 'coffin-02-buried-diary-master',
+    imageId: MASTER_IMAGE_ID,
     points: '1670,980 1790,940 1950,970 1970,1100 1840,1135 1675,1090',
     ariaLabel: 'Locked Iron Coffer: Solve 4-digit covenant lock to unseal',
     left: '64.84%',
@@ -206,7 +209,7 @@ export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
     title: 'IRON-BANDED COFFER',
     subtitle: 'Locked Burial Chest',
     statusBadge: 'THE CHEST REMAINS SEALED.',
-    imageSrc: '/assets/round-01/stage-03/inspection/treasure_chest.png',
+    imageSrc: `${INSPECTION_ASSET_BASE}/treasure_chest.png`,
     description:
       'A heavy iron-banded chest forged from black oak and cold steel. The four-tumbler combination mechanism locks the lid shut. Enter the four-digit covenant year below to release the tumblers.',
   },
@@ -422,7 +425,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   ).size;
 
   return (
-    <div className="relative w-full h-screen h-[100dvh] flex flex-col justify-between overflow-hidden bg-black/85 select-none">
+    <div className="relative w-full h-screen h-[100dvh] flex flex-col justify-between overflow-hidden bg-black select-none">
       {/* Hidden semantic breadcrumbs for accessibility and automated testing */}
       <div className="sr-only" aria-hidden="true">
         <span>Grave 2 — The Buried Diary</span>
@@ -435,9 +438,118 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
       <FlyingBat startYPercent={6} durationSeconds={20} delaySeconds={1} scale={0.6} flightDirection="right-to-left" />
       <FlyingCrow startYPercent={10} durationSeconds={24} delaySeconds={4} scale={0.65} flightDirection="left-to-right" />
 
-      {/* 2. Top Header HUD (Single source of truth) */}
+      {/* 2. Fullscreen Master Coffin Environment (Zero Black Side Gutters, Full Viewport Width & Height) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
+        <img
+          src="/assets/round-01/stage-03/coffin-02-buried-diary-master.png"
+          alt="The Buried Diary - Pristine Coffin Environment"
+          className="w-full h-full object-cover object-center pointer-events-none select-none"
+        />
+      </div>
+
+      {/* 3. Canonical Calibrated Invisible SVG Interaction Geometry Layer (1:1 with object-cover object-center) */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-hidden">
+        <svg
+          viewBox="0 0 2560 1440"
+          preserveAspectRatio="xMidYMid slice"
+          className="w-full h-full pointer-events-auto select-none"
+          aria-label="Burial chamber interactive objects"
+        >
+          {/* Golden Glow when Iron Coffer is Unlocked */}
+          <defs>
+            <radialGradient id="cofferGlowGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(245, 158, 11, 0.55)" />
+              <stop offset="60%" stopColor="rgba(245, 158, 11, 0.2)" />
+              <stop offset="100%" stopColor="rgba(245, 158, 11, 0)" />
+            </radialGradient>
+          </defs>
+          {isCofferUnlocked && (
+            <ellipse
+              cx="1820"
+              cy="1040"
+              rx="180"
+              ry="120"
+              fill="url(#cofferGlowGradient)"
+              className="animate-pulse pointer-events-none"
+            />
+          )}
+
+          {EVIDENCE_TARGETS.map((target) => {
+            const isSelectedInDebug = debugSelectedTarget === target.id;
+            return (
+              <polygon
+                key={target.id}
+                data-target-id={target.id}
+                points={target.points}
+                role="button"
+                tabIndex={0}
+                aria-label={target.ariaLabel}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isDebugMode) {
+                    setDebugSelectedTarget(target.id);
+                  }
+                  handleInteraction(target.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleInteraction(target.id);
+                  }
+                }}
+                fill={
+                  isDebugMode
+                    ? isSelectedInDebug
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : 'rgba(245, 158, 11, 0.25)'
+                    : 'transparent'
+                }
+                stroke={isDebugMode ? (isSelectedInDebug ? '#ef4444' : '#f59e0b') : 'none'}
+                strokeWidth={isDebugMode ? 3 : 0}
+                strokeDasharray={isDebugMode ? '6 4' : undefined}
+                pointerEvents="fill"
+                style={{ outline: 'none' }}
+                className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-none shadow-none"
+              />
+            );
+          })}
+
+          {/* Developer Calibration Overlay Badges (Hidden in Production) */}
+          {isDebugMode &&
+            EVIDENCE_TARGETS.map((target) => {
+              const firstPt = target.points.split(' ')[0].split(',');
+              const px = Number(firstPt[0]);
+              const py = Number(firstPt[1]);
+              return (
+                <g key={`debug-label-${target.id}`} pointerEvents="none">
+                  <rect
+                    x={px - 4}
+                    y={py - 22}
+                    width={target.id.length * 11 + 16}
+                    height={20}
+                    fill="rgba(0,0,0,0.85)"
+                    stroke="#f59e0b"
+                    strokeWidth={1}
+                    rx={4}
+                  />
+                  <text
+                    x={px + 4}
+                    y={py - 8}
+                    fill="#fef08a"
+                    fontSize="12"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                  >
+                    {target.id}
+                  </text>
+                </g>
+              );
+            })}
+        </svg>
+      </div>
+
+      {/* 4. Top Header HUD (Single source of truth) */}
       <CoffinHeaderHUD
-        graveNumber="GRAVE II"
         title="THE BURIED DIARY"
         secondsRemaining={secondsRemaining}
         stageCleared={stageCleared}
@@ -454,121 +566,12 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
         </div>
       )}
 
-      {/* 3. Central Stage: Pure Clean Artwork with Zero Baked-in UI & Invisible HTML Click Regions */}
-      <main className="relative flex-1 w-full flex items-center justify-center min-h-0 px-2 sm:px-4 py-1 overflow-hidden">
-        <div
-          className="relative max-h-full max-w-full rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.95)] border border-amber-950/40"
-          style={{ aspectRatio: '16 / 9' }}
-        >
-          {/* 100% Clean Photorealistic Artwork (No HUD, No Riddle Box, No Buttons) */}
-          <img
-            src="/assets/round-01/stage-03/coffin-02-buried-diary-master.png"
-            alt="The Buried Diary - Pristine Coffin Environment"
-            className="w-full h-full object-cover pointer-events-none select-none"
-          />
+      {/* 5. Center Spacer: keeps scene open and coffin visible */}
+      <div className="flex-1 min-h-0 pointer-events-none" />
 
-          {/* Golden Rays Effect when Coffer is Unlocked */}
-          {isCofferUnlocked && (
-            <div
-              className="absolute z-10 pointer-events-none animate-pulse"
-              style={{
-                left: '64.84%',
-                top: '65.28%',
-                width: '12.50%',
-                height: '13.89%',
-                background: 'radial-gradient(circle, rgba(245,158,11,0.5) 0%, rgba(245,158,11,0) 75%)',
-                filter: 'drop-shadow(0 0 25px rgba(245,158,11,0.9))',
-              }}
-            />
-          )}
-
-          {/* ========================================================
-              CANONICAL INVISIBLE SVG INTERACTION GEOMETRY LAYER
-              Exact 2560x1440 Master Canvas Vector Space, 0 Overlaps
-             ======================================================== */}
-          <svg
-            viewBox="0 0 2560 1440"
-            preserveAspectRatio="none"
-            className="absolute inset-0 w-full h-full pointer-events-auto select-none"
-            aria-label="Burial chamber interactive objects"
-          >
-            {EVIDENCE_TARGETS.map((target) => {
-              const isSelectedInDebug = debugSelectedTarget === target.id;
-              return (
-                <polygon
-                  key={target.id}
-                  data-target-id={target.id}
-                  points={target.points}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={target.ariaLabel}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isDebugMode) {
-                      setDebugSelectedTarget(target.id);
-                    }
-                    handleInteraction(target.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleInteraction(target.id);
-                    }
-                  }}
-                  fill={
-                    isDebugMode
-                      ? isSelectedInDebug
-                        ? 'rgba(239, 68, 68, 0.4)'
-                        : 'rgba(245, 158, 11, 0.25)'
-                      : 'transparent'
-                  }
-                  stroke={isDebugMode ? (isSelectedInDebug ? '#ef4444' : '#f59e0b') : 'none'}
-                  strokeWidth={isDebugMode ? 3 : 0}
-                  strokeDasharray={isDebugMode ? '6 4' : undefined}
-                  pointerEvents="fill"
-                  className="cursor-pointer outline-none focus:outline-none transition-none"
-                />
-              );
-            })}
-
-            {/* Developer Calibration Overlay Badges (Hidden in Production) */}
-            {isDebugMode &&
-              EVIDENCE_TARGETS.map((target) => {
-                const firstPt = target.points.split(' ')[0].split(',');
-                const px = Number(firstPt[0]);
-                const py = Number(firstPt[1]);
-                return (
-                  <g key={`debug-label-${target.id}`} pointerEvents="none">
-                    <rect
-                      x={px - 4}
-                      y={py - 22}
-                      width={target.id.length * 11 + 16}
-                      height={20}
-                      fill="rgba(0,0,0,0.85)"
-                      stroke="#f59e0b"
-                      strokeWidth={1}
-                      rx={4}
-                    />
-                    <text
-                      x={px + 4}
-                      y={py - 8}
-                      fill="#fef08a"
-                      fontSize="12"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                    >
-                      {target.id}
-                    </text>
-                  </g>
-                );
-              })}
-          </svg>
-        </div>
-      </main>
-
-      {/* 4. Single Master Riddle & 4-Digit Combination Lock Console */}
+      {/* 6. Single Master Riddle & 4-Digit Combination Lock Console */}
       <section className="relative z-30 w-full px-2 sm:px-4 py-1 flex flex-col items-center">
-        <div className="w-full max-w-4xl rounded-2xl bg-gradient-to-r from-black/95 via-[#180a04]/95 to-black/95 border-2 border-amber-700/70 p-2 sm:p-2.5 shadow-[0_0_35px_rgba(0,0,0,0.95)] backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-2.5">
+        <div className="w-full max-w-4xl rounded-2xl bg-gradient-to-r from-black/95 via-[#180a04]/95 to-black/95 border-2 border-amber-700/70 p-2 sm:p-2.5 shadow-[0_0_35px_rgba(0,0,0,0.95)] flex flex-col md:flex-row items-center justify-between gap-2.5">
           {/* Riddle Section (Left) */}
           <div className="flex-1 text-center md:text-left px-2 sm:px-3">
             <div className="flex items-center justify-center md:justify-start gap-2 mb-0.5">
