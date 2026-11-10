@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { TeamSession } from '../../../types/team.types';
-import type { Round3StateResponse } from '../../../types/round3.types';
-import type { Round3RunState } from '../../../types/round3.types';
+import type { Round3StateResponse, Round3RunState } from '../../../types/round3.types';
 import { round3Service } from '../../../services/round3Service';
 import { authService } from '../../../services/authService';
 import { inventoryToPowerCards } from './runtime/inventoryCards';

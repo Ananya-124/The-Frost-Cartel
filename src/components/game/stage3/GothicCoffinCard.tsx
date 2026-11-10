@@ -14,6 +14,14 @@ export interface GothicCoffinCardProps {
   onSelect: () => void;
 }
 
+const STYLE_NO_OUTLINE: React.CSSProperties = {
+  outline: 'none',
+  outlineWidth: 0,
+  outlineStyle: 'none',
+  boxShadow: 'none',
+  WebkitTapHighlightColor: 'transparent',
+};
+
 export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
   romanNumber,
   title,
@@ -79,13 +87,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
           ? 'cursor-default pointer-events-none'
           : 'cursor-pointer transform hover:scale-[1.03] hover:-translate-y-1'
       }`}
-      style={{
-        outline: 'none',
-        outlineWidth: 0,
-        outlineStyle: 'none',
-        boxShadow: 'none',
-        WebkitTapHighlightColor: 'transparent',
-      }}
+      style={STYLE_NO_OUTLINE}
     >
       {/* 1. Ambient Atmospheric Glow behind the Coffin */}
       <div
@@ -132,13 +134,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
               tabIndex={-1}
               aria-label={`${accessibleGraveName} completed and permanently sealed`}
               className="coffin-card-play-btn w-full h-full rounded-full cursor-default z-20 outline-none focus:outline-none flex items-center justify-center select-none pointer-events-none"
-              style={{
-                outline: 'none',
-                outlineWidth: 0,
-                outlineStyle: 'none',
-                boxShadow: 'none',
-                WebkitTapHighlightColor: 'transparent',
-              }}
+              style={STYLE_NO_OUTLINE}
             >
               <div className="w-full h-full rounded-full bg-[#0a1410] border-2 border-emerald-500/70 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.4)] flex items-center justify-center gap-1.5 px-3">
                 <span className="text-emerald-400 text-xs" aria-hidden="true">
@@ -162,13 +158,7 @@ export const GothicCoffinCard: React.FC<GothicCoffinCardProps> = ({
               }}
               aria-label={`Enter ${accessibleGraveName}`}
               className="coffin-card-play-btn w-full h-full rounded-full cursor-pointer z-20 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none flex items-center justify-center transition-all duration-200 select-none pointer-events-auto"
-              style={{
-                outline: 'none',
-                outlineWidth: 0,
-                outlineStyle: 'none',
-                boxShadow: 'none',
-                WebkitTapHighlightColor: 'transparent',
-              }}
+              style={STYLE_NO_OUTLINE}
             >
               <div
                 className={`w-full h-full rounded-full ${theme.btnBg} border-2 ${theme.btnBorder} ${theme.btnShadow} flex items-center justify-center gap-1.5 px-3 transform group-hover:scale-105 transition-transform duration-200`}

@@ -37,7 +37,16 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     round1Service.getTimeRemainingSeconds(session.teamId)
   );
   const [isMuted, setIsMuted] = useState(soundController.isMuted());
-  const [activeStageId, setActiveStageId] = useState<StageId | null>(null);
+  const [activeStageId, setActiveStageId] = useState<StageId | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('stage');
+      if (s === '1' || s === 'stage-1') return 'stage-1';
+      if (s === '2' || s === 'stage-2') return 'stage-2';
+      if (s === '3' || s === 'stage-3') return 'stage-3';
+    }
+    return null;
+  });
 
   // Synchronize timer and cross-tab storage
   useEffect(() => {

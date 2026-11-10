@@ -80,7 +80,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
 
     // Verify no harsh dashed rectangles are active by default
     const yellowRectangles = container.querySelectorAll('svg polygon[stroke="#f59e0b"]');
-    expect(yellowRectangles.length).toBe(0);
+    expect(yellowRectangles).toHaveLength(0);
   });
 
   it('ensures all interaction paths are 100% transparent hit-areas with zero visible SVG wireframe outlines', () => {
@@ -117,7 +117,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
 
     // Ensure no calibration panel or visible gold wireframes exist in the scene
     expect(screen.queryByText(/✦ SVG CALIBRATION MODE ✦/i)).not.toBeInTheDocument();
-    expect(container.querySelectorAll('svg path[stroke="#d4af37"]').length).toBe(0);
-    expect(container.querySelectorAll('svg path[stroke="rgba(245,158,11,1)"]').length).toBe(0);
+    expect(container.querySelectorAll('svg path[stroke="#d4af37"]')).toHaveLength(0);
+    expect(container.querySelectorAll('svg path[stroke="rgba(245,158,11,1)"]')).toHaveLength(0);
   });
 });
