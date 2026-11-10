@@ -91,7 +91,7 @@ export const EvidenceJournalModal: React.FC<EvidenceJournalModalProps> = ({
           {/* Fragment II */}
           <div
             className={`p-3 rounded-2xl border text-center transition-all ${
-              collectedFragments.includes('NIGHT') || journal.grave2Fragment
+              collectedFragments.includes('EMBER') || collectedFragments.includes('NIGHT') || journal.grave2Fragment
                 ? 'bg-amber-950/40 border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
                 : 'bg-black/40 border-stone-800 opacity-60'
             }`}
@@ -100,10 +100,12 @@ export const EvidenceJournalModal: React.FC<EvidenceJournalModalProps> = ({
               FRAGMENT II
             </span>
             <div className="font-cinzel text-lg sm:text-xl font-black text-amber-200">
-              {collectedFragments.includes('NIGHT') || journal.grave2Fragment ? 'NIGHT' : '??'}
+              {journal.grave2Fragment || (collectedFragments.includes('EMBER') ? 'EMBER' : (collectedFragments.includes('NIGHT') ? 'NIGHT' : '??'))}
             </div>
             <span className="text-[9px] text-stone-400 font-mono">
-              {collectedFragments.includes('NIGHT') ? 'Coffer Unlocked (147)' : 'Diary & Coffer Locked'}
+              {collectedFragments.includes('EMBER') || collectedFragments.includes('NIGHT') || journal.grave2Fragment
+                ? 'The Buried Diary Cleared'
+                : 'Diary & Coffer Locked'}
             </span>
           </div>
 

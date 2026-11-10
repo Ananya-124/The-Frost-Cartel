@@ -1,6 +1,5 @@
 /* ===== Round 2 — The Haunted Auction =====
-   Orange frames + dim violet stage, matching the reference mock-up.
-   The page background (HauntedAtmosphere) is untouched. */
+   Antique framing and horror display type, with the graveyard kept in view. */
 
 :root {
   --r2-orange: #c4601a;      /* frame colour (dimmed) */
@@ -14,6 +13,14 @@
   src: url('/fonts/s1-oswald-latin-600-normal.woff2') format('woff2');
   font-style: normal;
   font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'R2 Haunted';
+  src: url('/fonts/s1-metal-mania-latin-400-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
 }
 
@@ -34,15 +41,6 @@
   0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 110, 20, 0.35)); }
   50%      { filter: drop-shadow(0 0 15px rgba(255, 125, 35, 0.65)); }
 }
-@keyframes r2Flicker {
-  0%, 100% { opacity: 1; }
-  8%  { opacity: 0.8; }
-  14% { opacity: 1; }
-  41% { opacity: 0.88; }
-  47% { opacity: 1; }
-  72% { opacity: 0.78; }
-  78% { opacity: 1; }
-}
 @keyframes r2Sway {
   0%, 100% { transform: rotate(-3deg) translateY(0); }
   50%      { transform: rotate(3deg) translateY(-3px); }
@@ -55,28 +53,23 @@
   0%, 100% { opacity: 0.6; }
   50%      { opacity: 1; }
 }
+@keyframes r2TitleHaunt {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 1;
+    filter: drop-shadow(0 0 7px rgba(127, 229, 217, 0.22)) drop-shadow(0 0 11px rgba(139, 92, 246, 0.13));
+  }
+  48% {
+    transform: translateY(-2px);
+    opacity: 0.94;
+    filter: drop-shadow(0 0 11px rgba(127, 229, 217, 0.42)) drop-shadow(0 0 17px rgba(139, 92, 246, 0.23));
+  }
+  51% { opacity: 0.82; }
+  54% { opacity: 1; }
+}
 @keyframes r2PumpkinPulse {
   0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 4px rgba(255, 106, 0, 0.35)); }
   50%      { transform: scale(1.14); filter: drop-shadow(0 0 11px rgba(255, 130, 20, 0.7)); }
-}
-@keyframes r2GhostFloat {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-    filter: brightness(0.88) drop-shadow(0 0 15px rgba(150, 105, 225, 0.65));
-  }
-  50% {
-    transform: translateY(-22px) rotate(5deg);
-    filter: brightness(0.98) drop-shadow(0 0 30px rgba(224, 130, 40, 0.65));
-  }
-}
-@keyframes r2Mist {
-  0%, 100% { transform: translateX(-50%) scale(1, 1);       opacity: 0.6; }
-  50%      { transform: translateX(-50%) scale(1.18, 1.35); opacity: 1; }
-}
-@keyframes r2Wisp {
-  0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
-  20%  { opacity: 0.9; }
-  100% { transform: translate(var(--wx, 0px), -120px) scale(1); opacity: 0; }
 }
 @keyframes r2HourFlip {
   0%, 35%  { transform: rotate(0deg); }
@@ -98,60 +91,115 @@ button.r2-btn:hover {
 
 /* Title floats on the scene — no box, just a soft dark halo for legibility */
 .r2-title-plate {
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+  background:
+    radial-gradient(ellipse at 34% 45%, rgba(35, 205, 196, 0.1), transparent 44%),
+    radial-gradient(ellipse at 70% 56%, rgba(139, 92, 246, 0.11), transparent 48%),
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0.58) 0%, transparent 72%);
 }
 .r2-title {
-  background: linear-gradient(180deg, #f0b04a 0%, var(--r2-orange) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-stroke: 1px #3a1604;
-  filter: drop-shadow(0 0 8px rgba(196, 96, 26, 0.5));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.02em;
+  margin: 0;
+  padding: 0.3em 0.08em 0.12em;
+  font-family: 'Eater', 'R2 Haunted', 'Cinzel Decorative', Georgia, serif;
+  font-size: clamp(1.65rem, 4.8vw, 4.2rem);
+  line-height: 0.84;
+  letter-spacing: 0.025em;
+  color: #080808;
+  -webkit-text-stroke: 0.7px #050505;
+  text-shadow:
+    0 1px 0 rgba(206, 199, 183, 0.7),
+    1px 2px 0 rgba(104, 101, 95, 0.62),
+    0 4px 8px rgba(0, 0, 0, 0.95),
+    -2px 0 8px rgba(127, 229, 217, 0.22),
+    2px 0 8px rgba(167, 112, 255, 0.18);
+  animation: r2TitleHaunt 6s ease-in-out infinite;
 }
-
+.r2-title-line {
+  position: relative;
+  z-index: 1;
+  display: block;
+  white-space: nowrap;
+}
+.r2-title-the {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0.08em;
+  font-size: 0.4em;
+  line-height: 1;
+  letter-spacing: 0.16em;
+}
+.r2-title-haunted { font-size: 1.12em; }
+.r2-title-auction { font-size: 1.08em; }
 .r2-pumpkin { display: inline-block; animation: r2PumpkinPulse 2.8s ease-in-out infinite; }
 .r2-hourglass { display: inline-block; animation: r2HourFlip 6s ease-in-out infinite; }
-.r2-candle { display: inline-block; animation: r2Flicker 2.6s linear infinite; }
 
 /* ================= STAGE + EARNED CARDS ================= */
 .r2-panel {
+  border: 7px solid #342e26;
   background:
-    radial-gradient(ellipse at 50% 80%, rgba(120, 70, 185, 0.30), transparent 62%),
-    linear-gradient(180deg, #170d26 0%, #0a0612 100%);
-  border: 3px solid var(--r2-orange-lo);
-  box-shadow: 0 0 18px rgba(196, 96, 26, 0.35), inset 0 0 40px rgba(196, 96, 26, 0.14);
+    linear-gradient(180deg, rgba(5, 9, 13, 0.1) 15%, rgba(5, 9, 13, 0.12) 48%, rgba(5, 9, 13, 0.68) 100%),
+    url('/assets/halloween/background/graveyard_master_bg.jpg') center 56% / cover no-repeat;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(182, 146, 97, 0.48),
+    inset 0 0 0 2px rgba(12, 12, 12, 0.92),
+    inset 0 0 42px rgba(0, 0, 0, 0.52);
 }
-/* thin second frame line, like the ornate border in the mock-up */
 .r2-panel::before {
   content: '';
   position: absolute;
-  inset: 6px;
+  inset: 9px;
   border-radius: inherit;
-  border: 1px solid rgba(196, 96, 26, 0.35);
+  border: 1px solid rgba(210, 178, 126, 0.7);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
 
-.r2-ghost {
-  animation: r2GhostFloat 4s ease-in-out infinite;
-  will-change: transform, filter;
+.r2-waiting-panel {
+  min-height: clamp(370px, 58vh, 620px);
 }
-.r2-mist {
-  background: radial-gradient(ellipse, rgba(140, 95, 215, 0.55), rgba(196, 96, 26, 0.18) 55%, transparent 72%);
-  animation: r2Mist 4s ease-in-out infinite;
+.r2-waiting-content {
+  min-height: clamp(356px, calc(58vh - 14px), 606px);
+  padding: 0 2rem 2rem;
 }
-.r2-wisp {
-  position: absolute;
-  bottom: 18%;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #f0b04a, rgba(196, 96, 26, 0));
-  box-shadow: 0 0 8px rgba(224, 144, 47, 0.7);
-  opacity: 0;
-  animation: r2Wisp 4.5s ease-in infinite;
-  animation-delay: var(--wd, 0s);
+.r2-wait {
+  max-width: 100%;
+  margin: 0;
+  color: #e8dfc7;
+  font-family: 'Eater', 'R2 Haunted', 'Cinzel Decorative', Georgia, serif;
+  font-size: clamp(1.7rem, 4vw, 3.7rem);
+  line-height: 1.05;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  text-shadow: 0 3px 4px #000, 0 0 18px rgba(0, 0, 0, 0.9);
+  animation: r2Pulse 2.6s ease-in-out infinite;
 }
-.r2-wait { animation: r2Pulse 2.6s ease-in-out infinite; }
+.r2-wait-divider {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  width: min(100%, 42rem);
+  margin-top: 1rem;
+  color: #e17d4a;
+  filter: drop-shadow(0 0 6px rgba(216, 112, 64, 0.65));
+}
+.r2-wait-divider > span:first-child,
+.r2-wait-divider > span:last-child {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, #bd7657 20%, #dda27c);
+}
+.r2-wait-divider > span:last-child {
+  transform: scaleX(-1);
+}
+.r2-wait-divider .r2-pumpkin {
+  font-size: 1.75rem;
+}
 
 /* ================= EARNED CARD POSTCARD ================= */
 .r2-earned-card {
@@ -246,11 +294,15 @@ button.r2-btn:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .r2-earned-card, .r2-toast, .r2-art-img, .r2-shine,
-  .r2-ghost, .r2-mist, .r2-wisp, .r2-wait, .r2-pumpkin, .r2-hourglass, .r2-candle {
+  .r2-title, .r2-earned-card, .r2-toast, .r2-art-img, .r2-shine,
+  .r2-wait, .r2-pumpkin, .r2-hourglass {
     animation: none !important;
   }
-  .r2-wisp { display: none; }
+}
+
+@media (max-width: 640px) {
+  .r2-title-plate { padding-inline: 0.25rem; }
+  .r2-title { font-size: clamp(1.35rem, 7vw, 2.2rem); }
 }
 
 /* ===== Live / sold / unsold states ===== */

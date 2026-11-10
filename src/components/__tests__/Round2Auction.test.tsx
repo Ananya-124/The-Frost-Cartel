@@ -53,7 +53,12 @@ describe('Round2Auction (player screen)', () => {
   it('waits, then shows the card the admin puts up for bidding', async () => {
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
     expect(await screen.findByText(/Waiting for the next card/i)).toBeInTheDocument();
-    expect(document.querySelector('img.r2-ghost')).toHaveAttribute('src', '/assets/round2/ghost-waiting-cutout.png');
+    expect(document.querySelector('.r2-waiting-panel')).toBeInTheDocument();
+    expect(document.querySelector('.r2-cobweb')).not.toBeInTheDocument();
+    expect(document.querySelector('.r2-ghost, img[src*="ghost-waiting-cutout"]')).not.toBeInTheDocument();
+    expect(screen.queryByText('👻')).not.toBeInTheDocument();
+    expect(document.querySelector('.r2-wait-flame, .r2-candle')).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('🕯️');
     const earnedCards = screen.getByRole('region', { name: 'Cards earned in bidding' });
     expect(earnedCards.querySelectorAll('article')).toHaveLength(0);
     expect(screen.queryByText('Chrono Freeze')).not.toBeInTheDocument();
@@ -66,6 +71,8 @@ describe('Round2Auction (player screen)', () => {
     expect(await screen.findByRole('button', { name: /PLACE BID/i }, { timeout: 4000 })).toBeEnabled();
     expect(screen.getByText(/ROUND 2 • BIDDING OPEN/)).toBeInTheDocument();
     expect(screen.getAllByText('Chrono Freeze')).toHaveLength(1);
+    expect(document.querySelector('.r2-panel')).toBeInTheDocument();
+    expect(document.querySelector('.r2-panel')).not.toHaveClass('r2-waiting-panel');
     const liveCardArt = document.querySelector('.r2-live-art');
     expect(liveCardArt).toBeInTheDocument();
     expect(liveCardArt).not.toHaveClass('r2-art');

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { TeamSession } from '../../../types/team.types';
 import { round2Service, type R2Card, type R2View } from '../../../services/round2Service';
-import { STAGE_GHOST } from '../../../constants/auction.constants';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
 import { AuctionCard, CardArt } from './AuctionCard';
 import '../../../styles/round2.css';
@@ -14,22 +13,6 @@ interface Round2AuctionProps {
 const POLL_MS = 800; // how often the player asks the server for the live card
 const POLL_HIDDEN_MS = 3000; // slower when the browser tab is in the background
 
-const CobWeb: React.FC<{ flip?: boolean }> = ({ flip }) => (
-  <svg
-    aria-hidden="true"
-    viewBox="0 0 120 120"
-    className={`absolute top-1 w-24 h-24 sm:w-32 sm:h-32 opacity-50 pointer-events-none ${
-      flip ? 'right-1 -scale-x-100' : 'left-1'
-    }`}
-    fill="none"
-    stroke="rgba(190,175,220,0.4)"
-    strokeWidth="1"
-  >
-    <path d="M0 0 L120 0 M0 0 L0 120 M0 0 L105 70 M0 0 L70 105 M0 0 L118 35 M0 0 L35 118" />
-    <path d="M30 0 Q28 28 0 30 M60 0 Q55 55 0 60 M90 0 Q82 82 0 90" />
-  </svg>
-);
-
 const Divider: React.FC = () => (
   <div className="flex items-center justify-center gap-3 w-full max-w-md mx-auto opacity-80">
     <span className="h-px flex-1 bg-gradient-to-r from-transparent to-cartel-pumpkin" />
@@ -37,15 +20,6 @@ const Divider: React.FC = () => (
     <span className="h-px flex-1 bg-gradient-to-l from-transparent to-cartel-pumpkin" />
   </div>
 );
-
-const StageGhost: React.FC = () => {
-  const [broken, setBroken] = useState(false);
-  return broken ? (
-    <span aria-hidden="true" className="r2-ghost text-7xl inline-block">👻</span>
-  ) : (
-    <img src={STAGE_GHOST} alt="" onError={() => setBroken(true)} className="r2-ghost h-44 sm:h-52 w-auto" />
-  );
-};
 
 export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnHome }) => {
   const team = session.teamName;
@@ -192,7 +166,11 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
             ← RETURN
           </button>
           <div className="r2-title-plate text-center px-4 py-2">
-            <h1 className="r2-title font-gothic text-3xl sm:text-5xl tracking-wide">THE HAUNTED AUCTION</h1>
+            <h1 className="r2-title" aria-label="The Haunted Auction">
+              <span className="r2-title-the">THE</span>
+              <span className="r2-title-line r2-title-haunted">HAUNTED</span>
+              <span className="r2-title-line r2-title-auction">AUCTION</span>
+            </h1>
             <div className="mt-1"><Divider /></div>
           </div>
           <div className="r2-btn rounded-xl px-4 py-2 text-center min-w-[110px]">
@@ -218,12 +196,10 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
 
         {/* Auction stage */}
         <div>
-          <section className="r2-panel relative rounded-2xl p-5 min-h-[260px] overflow-hidden" aria-label="Card on the block">
-            <CobWeb />
-            <CobWeb flip />
-            <span aria-hidden="true" className="r2-candle absolute bottom-3 left-4 text-3xl drop-shadow-[0_0_10px_rgba(255,140,0,0.55)]">🕯️</span>
-            <span aria-hidden="true" className="r2-candle absolute bottom-3 right-4 text-3xl drop-shadow-[0_0_10px_rgba(255,140,0,0.55)]" style={{ animationDelay: '-1.2s' }}>🕯️</span>
-
+          <section
+            className={`r2-panel relative rounded-2xl overflow-hidden ${live ? 'p-5 min-h-[260px]' : 'r2-waiting-panel'}`}
+            aria-label="Card on the block"
+          >
             {live && liveCard ? (
               <div className="relative z-10">
                 <div className="flex flex-col sm:flex-row gap-5">
@@ -305,22 +281,15 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
                 </ul>
               </div>
             ) : (
-              <div className="relative z-10 flex flex-col items-center justify-center text-center py-6 min-h-[220px]">
-                <div className="relative flex items-end justify-center h-48 sm:h-56 w-72 max-w-full">
-                  <div aria-hidden="true" className="r2-mist absolute left-1/2 bottom-0 w-72 h-16 rounded-[50%] blur-xl" />
-                  {[
-                    { l: '28%', wx: '-18px', wd: '0s' },
-                    { l: '50%', wx: '10px', wd: '1.5s' },
-                    { l: '70%', wx: '22px', wd: '3s' },
-                  ].map((w) => (
-                    <span key={w.l} aria-hidden="true" className="r2-wisp" style={{ left: w.l, '--wx': w.wx, '--wd': w.wd } as React.CSSProperties} />
-                  ))}
-                  <StageGhost />
-                </div>
-                <p className="r2-wait mt-3 font-cinzel uppercase tracking-wider text-lg sm:text-2xl text-[#a58acb]">
+              <div className="r2-waiting-content relative z-10 flex flex-col items-center justify-end text-center">
+                <p className="r2-wait">
                   {view ? 'Waiting for the next card...' : 'Connecting to the auction...'}
                 </p>
-                <div className="mt-2 w-full"><Divider /></div>
+                <div aria-hidden="true" className="r2-wait-divider">
+                  <span />
+                  <span className="r2-pumpkin">🎃</span>
+                  <span />
+                </div>
               </div>
             )}
           </section>

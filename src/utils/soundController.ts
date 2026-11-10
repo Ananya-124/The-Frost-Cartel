@@ -377,6 +377,45 @@ class SoundController {
       // AudioContext unavailable
     }
   }
+
+  playCorrect(): void {
+    this.playVictory();
+  }
+
+  playWrongAnswer(): void {
+    this.playError();
+  }
+
+  playChestUnlock(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + idx * 0.07;
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+
+        gain.gain.setValueAtTime(0.09, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.4);
+      });
+    } catch {
+      // AudioContext unavailable
+    }
+  }
+
+  playSecretFound(): void {
+    this.playVictory();
+  }
 }
 
 export const soundController = new SoundController();

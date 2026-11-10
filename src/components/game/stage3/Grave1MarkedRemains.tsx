@@ -1,15 +1,59 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import gsap from 'gsap';
 import type { Stage3Config } from '../../../types/round1.types';
 import { round1Service } from '../../../services/round1Service';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
 import { AncientBookReader } from './AncientBookReader';
 import { ArtifactInspectionModal, type ArtifactType } from './ArtifactInspectionModal';
-import { TreasureChestRelic } from './TreasureChestRelic';
-import { CinematicCoffinOpening } from './CinematicCoffinOpening';
-import { SkullGraphic, RibcageGraphic, BookGraphic, ScrollGraphic, LetterGraphic, KeyGraphic, CompassGraphic } from './CoffinGraphics';
 import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
+
+// 2560x1440 CANONICAL COORDINATE SPACE (1:1 with object-cover object-center)
+export const COFFIN_VIEWBOX = '0 0 2560 1440';
+
+// HIGH-PRECISION CALIBRATED INVISIBLE HITBOXES (2560x1440 Master Canvas, 0 Overlaps)
+export const COFFIN_SVG_PATHS = {
+  // 1. The Ancient Book / Grimoire (Solar Emblem)
+  ancient_book:
+    'M 1075,638 L 1150,650 L 1225,660 L 1300,670 L 1368,678 L 1380,690 L 1375,738 L 1388,762 L 1370,790 L 1340,840 L 1270,905 L 1260,920 L 1188,938 L 1112,928 L 1060,905 L 1012,865 L 1005,838 L 1030,800 L 1055,712 Z',
+
+  // 2. Sealed Envelope (Red Wax Fleur-de-lis)
+  envelope:
+    'M 765,1108 L 955,1030 L 1140,1088 L 1102,1285 L 910,1300 L 732,1230 Z',
+
+  // 3. Occult Dispatch Parchment Slip
+  parchment:
+    'M 885,990 L 1062,970 L 1162,995 L 1195,1040 L 1195,1138 L 1145,1095 L 955,1030 L 765,1108 L 780,1055 Z',
+
+  // 4. Skeleton: Cranium with Roman Numeral "I"
+  skull:
+    'M 1612,220 L 1688,240 L 1738,288 L 1760,350 L 1755,412 L 1712,480 L 1662,538 L 1612,545 L 1550,512 L 1500,450 L 1480,375 L 1505,288 L 1555,238 Z',
+
+  // 5. Skeleton: Thoracic Ribcage with Solar Medallion
+  ribcage:
+    'M 1362,470 L 1475,465 L 1588,480 L 1638,538 L 1670,612 L 1655,700 L 1588,762 L 1462,770 L 1350,750 L 1280,688 L 1260,600 L 1295,512 Z',
+
+  // 6. Skeleton: Left Arm & Phalanges (Resting beside the book)
+  left_arm:
+    'M 1238,488 L 1138,538 L 1045,605 L 962,688 L 920,745 L 962,795 L 955,845 L 925,890 L 885,880 L 865,830 L 880,755 L 925,688 L 1012,588 L 1112,512 Z',
+
+  // 7. Skeleton: Movable Right Femur (Concealing the "ASH" plate)
+  femur:
+    'M 1575,788 L 1662,850 L 1612,925 L 1488,1075 L 1400,1188 L 1388,1300 L 1300,1312 L 1212,1238 L 1250,1162 L 1362,1050 L 1462,900 L 1500,812 Z',
+
+  // 8. Antique Brass Skeleton Key
+  skeleton_key:
+    'M 1262,988 L 1362,962 L 1400,1000 L 1350,1088 L 1288,1112 L 1245,1050 Z',
+
+  // 9. Rolled Ancient Papyrus Scroll (Triquetra symbol)
+  scroll:
+    'M 1612,888 L 1700,950 L 1650,1088 L 1550,1162 L 1485,1112 L 1495,1038 L 1545,962 L 1585,900 Z',
+
+  // 10. Engraved Antique Compass Medallion
+  compass:
+    'M 1375,862 L 1462,862 L 1500,925 L 1462,988 L 1375,988 L 1338,925 Z',
+};
 
 interface Grave1MarkedRemainsProps {
   teamId: string;
@@ -42,15 +86,10 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   onFragmentUnlocked,
   onOpenJournal,
 }) => {
-  // Session persistence check: was coffin opening already played in this browser session?
-  const [hasOpenedCoffin, setHasOpenedCoffin] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(sessionStorage.getItem('frost_cartel_coffin1_opened'));
-  });
-
-  // Gameplay State Machine
+  // Gameplay State
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [activeArtifact, setActiveArtifact] = useState<ArtifactType | null>(null);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
 
   // Investigation Milestones
   const [isBookRead, setIsBookRead] = useState<boolean>(() => {
@@ -64,12 +103,11 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     return Boolean(session.stage3State?.grave1SkeletonMoved);
   });
 
-  // Riddle & Chest
   const [riddleInput, setRiddleInput] = useState('');
   const [riddleError, setRiddleError] = useState<string | null>(null);
   const [isRiddleSolved, setIsRiddleSolved] = useState<boolean>(() => {
     const session = round1Service.getTeamSession(teamId, '');
-    return Boolean(session.stage3State?.grave1RiddleSolved || session.stage3State?.grave1Completed);
+    return Boolean(session.stage3State?.grave1RiddleSolved);
   });
 
   const [isChestUnlocked, setIsChestUnlocked] = useState<boolean>(() => {
@@ -78,55 +116,71 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   });
 
   const [isChestOpen, setIsChestOpen] = useState<boolean>(() => {
-    return collectedFragments.includes('BENEATH') || collectedFragments.includes('THE');
+    return collectedFragments.includes('BENEATH');
   });
 
   const [isKeyFlying, setIsKeyFlying] = useState(false);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
-  // Drag tracking refs
+  // Refs
+  const flyingKeyRef = useRef<SVGGElement | null>(null);
+  const answerInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Dragging interaction state for skeletal remains
   const [isDraggingSkeleton, setIsDraggingSkeleton] = useState(false);
   const dragStartRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const keyRef = useRef<HTMLDivElement | null>(null);
 
-  const showToast = (msg: string) => {
+  // Auto-dismiss toast
+  const showToast = useCallback((msg: string) => {
     setToastNotice(msg);
-    setTimeout(() => setToastNotice(null), 3500);
-  };
+    window.clearTimeout((showToast as unknown as { timeoutId?: number }).timeoutId);
+    (showToast as unknown as { timeoutId?: number }).timeoutId = window.setTimeout(() => {
+      setToastNotice(null);
+    }, 4500);
+  }, []);
 
-  const handleCoffinOpeningComplete = () => {
-    setHasOpenedCoffin(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('frost_cartel_coffin1_opened', 'true');
+  // Set initial shifted bone offset if already moved
+  useEffect(() => {
+    if (isSkeletonMoved && skeletonOffset.x === 0 && skeletonOffset.y === 0) {
+      setSkeletonOffset({ x: 180, y: -90 });
     }
-  };
+  }, [isSkeletonMoved, skeletonOffset]);
 
-  // 1. Ancient Book interaction
-  const handleOpenBook = () => {
-    soundController.playParchmentOpen();
+  // 1. Ancient Book
+  const handleOpenBook = useCallback(() => {
+    soundController.playClick();
     setIsBookModalOpen(true);
-  };
+  }, []);
 
-  const handleAllPagesRead = () => {
-    setIsBookRead(true);
-    const session = round1Service.getTeamSession(teamId, '');
-    session.stage3State.grave1BookRead = true;
-    showToast('✦ Ancient scripture deciphered! The skeletal remains may now be investigated. ✦');
-  };
+  const handleCloseBook = useCallback(() => {
+    setIsBookModalOpen(false);
+  }, []);
 
-  // 2. Movable Skeleton Dragging
-  const handleSkeletonPointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation();
+  const handleBookFullyRead = useCallback(() => {
     if (!isBookRead) {
-      soundController.playError();
-      showToast('The warden\'s rest is sealed. You must decipher the Ancient Book before disturbing the remains.');
-      return;
+      setIsBookRead(true);
+      round1Service.markGrave1BookRead(teamId);
+      soundController.playDiscover();
+      showToast('✦ Grimoire deciphered! The skeletal remains may now be shifted. ✦');
     }
+  }, [isBookRead, teamId, showToast]);
 
-    try {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // Ignore
+  // 2. Letter / Parchment
+  const handleInspectLetter = useCallback(() => {
+    soundController.playClick();
+    setActiveArtifact('parchment');
+  }, []);
+
+  const handleCloseArtifactModal = useCallback(() => {
+    setActiveArtifact(null);
+  }, []);
+
+  // 3. Movable Skeleton Handling (Pointer drag + click fallback)
+  const handleSkeletonPointerDown = (e: React.PointerEvent) => {
+    if (!isBookRead) {
+      soundController.playClick();
+      showToast('You must decipher the Ancient Book first.');
+      return;
     }
     setIsDraggingSkeleton(true);
     dragStartRef.current = {
@@ -135,126 +189,448 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       origX: skeletonOffset.x,
       origY: skeletonOffset.y,
     };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
   const handleSkeletonPointerMove = (e: React.PointerEvent) => {
     if (!isDraggingSkeleton || !dragStartRef.current) return;
     const dx = e.clientX - dragStartRef.current.startX;
     const dy = e.clientY - dragStartRef.current.startY;
+    const clampedX = Math.max(-50, Math.min(160, dragStartRef.current.origX + dx * 1.5));
+    const clampedY = Math.max(-100, Math.min(75, dragStartRef.current.origY + dy * 1.5));
+    setSkeletonOffset({ x: clampedX, y: clampedY });
 
-    // Natural physical clamping constrained to coffin velvet boundaries
-    const newX = Math.max(-65, Math.min(65, dragStartRef.current.origX + dx));
-    const newY = Math.max(-45, Math.min(45, dragStartRef.current.origY + dy));
-
-    setSkeletonOffset({ x: newX, y: newY });
-
-    if (Math.hypot(newX, newY) >= 22 && !isSkeletonMoved) {
+    if (!isSkeletonMoved && (Math.abs(clampedX) > 40 || Math.abs(clampedY) > 25)) {
       setIsSkeletonMoved(true);
-      const session = round1Service.getTeamSession(teamId, '');
-      session.stage3State.grave1SkeletonMoved = true;
+      round1Service.shiftGrave1Skeleton(teamId);
       soundController.playDiscover();
-      showToast('✦ Remains shifted! Hidden inscription uncovered beneath the crimson-bound bone: "ASH" ✦');
+      showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
     }
   };
 
   const handleSkeletonPointerUp = (e: React.PointerEvent) => {
     if (!isDraggingSkeleton) return;
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore
-    }
     setIsDraggingSkeleton(false);
-    dragStartRef.current = null;
-    soundController.playClick();
-  };
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
 
-  // 3. Artifact Inspections
-  const handleInspectArtifact = (type: ArtifactType) => {
-    soundController.playClick();
-    setActiveArtifact(type);
-  };
-
-  // 4. Skeleton Key Flight & Lock Interaction
-  const handleKeyClick = () => {
-    if (!isRiddleSolved) {
-      soundController.playClick();
-      handleInspectArtifact('key');
-      return;
+    if (isSkeletonMoved || Math.abs(skeletonOffset.x) > 30 || Math.abs(skeletonOffset.y) > 20) {
+      setIsSkeletonMoved(true);
+      round1Service.shiftGrave1Skeleton(teamId);
+      setSkeletonOffset({ x: 180, y: -90 });
+    } else {
+      setSkeletonOffset({ x: 0, y: 0 });
     }
-
-    if (isChestUnlocked || isKeyFlying) return;
-
-    soundController.playParchmentOpen();
-    soundController.playClick();
-    setIsChestUnlocked(true);
-    setIsKeyFlying(false);
-    showToast('✦ Lock tumblers click open! The treasure chest is unsealed. Click to open. ✦');
+    dragStartRef.current = null;
   };
 
-  // 5. Riddle Answer Submission
+  const handleFemurClick = () => {
+    if (!isBookRead) {
+      soundController.playClick();
+      showToast('You must decipher the Ancient Book first.');
+    } else if (!isSkeletonMoved) {
+      setIsSkeletonMoved(true);
+      round1Service.shiftGrave1Skeleton(teamId);
+      setSkeletonOffset({ x: 180, y: -90 });
+      soundController.playDiscover();
+      showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
+    }
+  };
+
+  // 4. Riddle Submission
   const handleSubmitRiddle = (e: React.FormEvent) => {
     e.preventDefault();
     setRiddleError(null);
+    const cleaned = riddleInput.trim().toUpperCase();
 
-    const { success, message } = round1Service.solveGrave1Riddle(teamId, riddleInput);
-    if (success) {
-      soundController.playDiscover();
+    if (!cleaned) {
+      setRiddleError('Enter a keyword to answer the Keeper’s riddle.');
+      return;
+    }
+
+    const res = round1Service.solveGrave1Riddle(teamId, cleaned);
+    if (res.success) {
+      soundController.playCorrect();
       setIsRiddleSolved(true);
-      showToast(message);
+      showToast('✦ Correct! The Keeper accepts "ASH". The Skeleton Key awakens! ✦');
     } else {
-      soundController.playError();
-      setRiddleError(message);
+      soundController.playWrongAnswer();
+      const errMsg = 'The sepulcher remains silent. Consult Folio II & III for guidance.';
+      setRiddleError(errMsg);
+      showToast(errMsg);
+      if (answerInputRef.current) {
+        gsap.fromTo(
+          answerInputRef.current,
+          { x: -8 },
+          {
+            x: 8,
+            duration: 0.08,
+            repeat: 5,
+            yoyo: true,
+            ease: 'none',
+            onComplete: () => {
+              if (answerInputRef.current) answerInputRef.current.style.transform = '';
+            },
+          }
+        );
+      }
     }
   };
 
-  // 6. Chest Open & Secret Word "BENEATH" Unsealed
-  const handleOpenChest = () => {
-    const { success, fragment } = round1Service.unlockGrave1Chest(teamId);
-    if (success) {
-      setIsChestOpen(true);
-      onFragmentUnlocked(fragment);
-      showToast(`✦ Fragment Discovered: "${fragment}"! Recorded in Evidence Journal. ✦`);
+  // 5. Skeleton Key Flight & Lock Animation
+  const handleKeyClick = () => {
+    if (!isRiddleSolved) {
+      soundController.playClick();
+      setActiveArtifact('key');
+      return;
     }
+    if (isChestUnlocked || isKeyFlying) {
+      if (isChestUnlocked && !isChestOpen) {
+        handleOpenChest();
+      }
+      return;
+    }
+
+    soundController.playChestUnlock();
+    setIsChestUnlocked(true);
+    round1Service.unlockGrave1Chest(teamId);
+    showToast('✦ Padlock unlocked! The ancient chest is ready to open. ✦');
+
+    if (flyingKeyRef.current) {
+      setIsKeyFlying(true);
+      gsap.to(flyingKeyRef.current, {
+        x: -700,
+        y: 100,
+        rotation: 90,
+        scale: 1.3,
+        duration: 1.1,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          setIsKeyFlying(false);
+        },
+      });
+    }
+  };
+
+  // 6. Open Chest & Reveal Secret Word
+  const handleOpenChest = () => {
+    if (!isChestUnlocked && !isRiddleSolved) return;
+    soundController.playSecretFound();
+    setIsChestUnlocked(true);
+    setIsChestOpen(true);
+    round1Service.unlockGrave1Chest(teamId);
+    onFragmentUnlocked('BENEATH');
+    setIsRewardModalOpen(true);
+    showToast('✦ Sacred Syllable Unsealed: "BENEATH" • Coffin I Completed! ✦');
   };
 
   return (
     <div
       role="region"
-      aria-label="Grave 1 — The Marked Remains • The Bone Chamber"
-      className="relative w-full h-screen max-h-screen overflow-hidden select-none bg-black flex flex-col justify-between text-stone-100 font-sans"
+      aria-label="Grave 1 — The Marked Remains"
+      className="relative w-full h-screen h-[100dvh] flex flex-col justify-between overflow-hidden bg-black select-none text-stone-100 font-sans"
       onPointerMove={handleSkeletonPointerMove}
       onPointerUp={handleSkeletonPointerUp}
     >
-      {/* 0. Cinematic Opening Transition (Runs on first entry in session) */}
-      {!hasOpenedCoffin && (
-        <CinematicCoffinOpening onComplete={handleCoffinOpeningComplete} />
-      )}
-
       {/* Semantic Accessibility Fallback */}
-      <div className="sr-only" aria-hidden="true">
-        <span>Grave 1 — The Bone Chamber</span>
-        <span>The Marked Remains</span>
+      <div className="sr-only">
+        <h1>Grave 1 — The Marked Remains</h1>
+        <h2>The Bone Chamber</h2>
+        <p>THE KEEPER’S LAST RIDDLE</p>
       </div>
 
-      {/* 1. Master High-Resolution Photorealistic Coffin Scene Background */}
-      <img
-        src="/assets/stage-3/coffins/grave1_marked_remains.jpg"
-        alt="Coffin I: The Marked Remains"
-        className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.94] contrast-[1.06] pointer-events-none"
-      />
-
-      {/* Atmospheric Live Creatures: Flapping Bat & Crow in moonlit sky */}
+      {/* 1. Atmospheric Ambient Creatures */}
       <FlyingBat startYPercent={5} durationSeconds={19} delaySeconds={1} scale={0.6} flightDirection="right-to-left" />
-      <FlyingCrow startYPercent={8} durationSeconds={24} delaySeconds={6} scale={0.7} flightDirection="left-to-right" />
+      <FlyingCrow startYPercent={9} durationSeconds={24} delaySeconds={4} scale={0.65} flightDirection="left-to-right" />
 
-      {/* Layered Moonlit Fog and Dark Vignette */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/85 via-black/20 to-black/40"
-      />
+      {/* 2. Fullscreen Master Coffin Environment (Zero Black Side Gutters, Full Viewport Width & Height) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
+        <img
+          src="/assets/round-01/stage-03/coffin-01-marked-remains-master.png"
+          alt="Coffin I: The Marked Remains - Fullscreen Buried Coffin Environment"
+          className="w-full h-full object-cover object-center pointer-events-none select-none"
+        />
+      </div>
 
-      {/* 2. Top Header HUD Bar */}
+      {/* 3. Canonical Calibrated Invisible SVG Interaction Geometry Layer (1:1 with object-cover object-center) */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-hidden">
+        <svg
+          viewBox={COFFIN_VIEWBOX}
+          preserveAspectRatio="xMidYMid slice"
+          className="w-full h-full pointer-events-auto select-none"
+          aria-label="Burial chamber interactive objects"
+        >
+          {/* OBJECT 1: ANCIENT BOOK / GRIMOIRE (Opens AncientBookReader) */}
+          <path
+            d={COFFIN_SVG_PATHS.ancient_book}
+            fill="transparent"
+            stroke="none"
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Ancient Grimoire"
+            className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+            onClick={handleOpenBook}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenBook();
+              }
+            }}
+          />
+
+          {/* OBJECT 2: ANCIENT SEALED LETTER (Opens ArtifactInspectionModal) */}
+          <path
+            d={COFFIN_SVG_PATHS.envelope}
+            fill="transparent"
+            stroke="none"
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Sealed Letter"
+            className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+            onClick={handleInspectLetter}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleInspectLetter();
+              }
+            }}
+          />
+
+          {/* OBJECT 3: OCCULT DISPATCH PARCHMENT */}
+          <path
+            d={COFFIN_SVG_PATHS.parchment}
+            fill="transparent"
+            stroke="none"
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Occult Dispatch Parchment"
+            className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+            onClick={handleInspectLetter}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleInspectLetter();
+              }
+            }}
+          />
+
+          {/* OBJECT 5: MOVABLE SKELETAL REMAINS GROUP */}
+          <g
+            transform={`translate(${skeletonOffset.x}, ${skeletonOffset.y})`}
+            className="transition-transform duration-300 pointer-events-auto"
+          >
+            {/* 5A. SKULL WITH ROMAN "I" */}
+            <path
+              d={COFFIN_SVG_PATHS.skull}
+              fill="transparent"
+              stroke="none"
+              role="button"
+              tabIndex={0}
+              aria-label="Inspect Cranium of the First Warden marked I"
+              className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+              onClick={() => {
+                soundController.playClick();
+                setActiveArtifact('skull');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  soundController.playClick();
+                  setActiveArtifact('skull');
+                }
+              }}
+            />
+
+            {/* 5B. THORACIC RIBCAGE WITH MEDALLION */}
+            <path
+              d={COFFIN_SVG_PATHS.ribcage}
+              fill="transparent"
+              stroke="none"
+              role="button"
+              tabIndex={0}
+              aria-label="Inspect Thoracic Ribcage"
+              className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+              onClick={() => {
+                soundController.playClick();
+                setActiveArtifact('ribcage');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  soundController.playClick();
+                  setActiveArtifact('ribcage');
+                }
+              }}
+            />
+
+            {/* 5C. LEFT ARM & PHALANGES */}
+            <path
+              d={COFFIN_SVG_PATHS.left_arm}
+              fill="transparent"
+              stroke="none"
+              role="button"
+              tabIndex={0}
+              aria-label="Inspect Skeletal Left Arm"
+              className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+              onClick={() => {
+                soundController.playClick();
+                showToast('The skeletal hand rests beside the ancient grimoire.');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  soundController.playClick();
+                  showToast('The skeletal hand rests beside the ancient grimoire.');
+                }
+              }}
+            />
+
+            {/* 5D. CRIMSON-BOUND FEMUR (Movable bone concealing "ASH") */}
+            <path
+              d={COFFIN_SVG_PATHS.femur}
+              fill="transparent"
+              stroke="none"
+              role="button"
+              tabIndex={0}
+              aria-label="Movable Femur: Click or Drag to Shift Remains"
+              className={`outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-all ${
+                isBookRead ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+              }`}
+              onPointerDown={handleSkeletonPointerDown}
+              onClick={handleFemurClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleFemurClick();
+                }
+              }}
+            />
+          </g>
+
+          {/* OBJECT 4: REVEALED BRASS INSCRIPTION PLATE "ASH" (Rendered on top when shifted) */}
+          {isSkeletonMoved && (
+            <g
+              role="button"
+              tabIndex={0}
+              aria-label="Inspect Revealed Inscription: ASH"
+              className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-all duration-300"
+              onClick={() => {
+                soundController.playDiscover();
+                showToast('✦ Ancient Engraved Plate: "ASH" — The keyword for the Keeper’s Riddle ✦');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  soundController.playDiscover();
+                  showToast('✦ Ancient Engraved Plate: "ASH" — The keyword for the Keeper’s Riddle ✦');
+                }
+              }}
+            >
+              <rect
+                x="1350"
+                y="1025"
+                width="140"
+                height="80"
+                rx="12"
+                fill="#1f100a"
+                stroke="#b45309"
+                strokeWidth="3"
+                filter="drop-shadow(0 0 10px rgba(245,158,11,0.5))"
+              />
+              <rect
+                x="1358"
+                y="1033"
+                width="124"
+                height="64"
+                rx="8"
+                fill="#2c170c"
+                stroke="#78350f"
+                strokeWidth="2"
+              />
+              <text
+                x="1420"
+                y="1076"
+                textAnchor="middle"
+                fill="#fef08a"
+                fontFamily="Cinzel, serif"
+                fontSize="30"
+                fontWeight="900"
+                letterSpacing="6"
+                filter="drop-shadow(0 0 8px #eab308)"
+              >
+                ASH
+              </text>
+            </g>
+          )}
+
+          {/* OBJECT 6: ANTIQUE BRASS SKELETON KEY */}
+          <g
+            ref={flyingKeyRef}
+            role="button"
+            tabIndex={0}
+            aria-label="Antique Brass Skeleton Key"
+            className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+            onClick={handleKeyClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleKeyClick();
+              }
+            }}
+          >
+            <path
+              d={COFFIN_SVG_PATHS.skeleton_key}
+              fill="transparent"
+              stroke="none"
+            />
+          </g>
+
+          {/* OBJECT 7: ROLLED ANCIENT PAPYRUS SCROLL */}
+          <path
+            d={COFFIN_SVG_PATHS.scroll}
+            fill="transparent"
+            stroke="none"
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Rolled Ancient Scroll"
+            className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+            onClick={() => {
+              soundController.playClick();
+              setActiveArtifact('scroll');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                soundController.playClick();
+                setActiveArtifact('scroll');
+              }
+            }}
+          />
+
+          {/* OBJECT 8: ENGRAVED COMPASS MEDALLION */}
+          <path
+            d={COFFIN_SVG_PATHS.compass}
+            fill="transparent"
+            stroke="none"
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Engraved Compass Medallion"
+            className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
+            onClick={() => {
+              soundController.playClick();
+              setActiveArtifact('compass');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                soundController.playClick();
+                setActiveArtifact('compass');
+              }
+            }}
+          />
+        </svg>
+      </div>
+
+      {/* 4. Top Header HUD (Single source of truth) */}
       <CoffinHeaderHUD
         graveNumber="GRAVE I"
         title="THE MARKED REMAINS"
@@ -265,372 +641,241 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
         onReturnDashboard={onReturnDashboard}
       />
 
-      {/* Floating Notice Toast */}
+      {/* Floating Notification Toast */}
       {toastNotice && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-wider shadow-[0_0_30px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
+        <div className="fixed top-14 sm:top-16 left-1/2 -translate-x-1/2 z-50 px-5 py-2 rounded-full bg-black/95 border border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
           <span>⚡</span>
           <span>{toastNotice}</span>
         </div>
       )}
 
-      {/* 3. Main Exploration Workspace: Dual-Panel Responsive Layout */}
-      <div className="relative z-20 flex-1 min-h-0 w-full max-w-7xl mx-auto px-3 sm:px-6 py-1 flex flex-col md:flex-row items-stretch gap-3 sm:gap-5 overflow-hidden">
-        {/* LEFT PANEL: The Ancient Manuscript Riddle Panel (~30% width) */}
-        <section
-          aria-labelledby="keeper-riddle-heading"
-          className="w-full md:w-[32%] lg:w-[28%] flex flex-col justify-between p-3.5 sm:p-5 rounded-3xl bg-[#140904]/90 border-2 border-amber-600/80 backdrop-blur-md shadow-[0_0_40px_rgba(245,158,11,0.25)] text-stone-200 overflow-y-auto max-h-full"
-        >
-          {/* Top Wax Seal Ribbon */}
-          <div className="flex items-center justify-between border-b border-amber-800/40 pb-2.5 mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-base">📜</span>
-              <span className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
-                ANCIENT PARCHMENT SCROLL
-              </span>
-            </div>
-            <span className="px-2 py-0.5 rounded-md bg-amber-950 border border-amber-500/70 text-[9px] font-mono text-amber-300">
-              COFFIN I
-            </span>
-          </div>
+      {/* 5. Center Spacer: keeps scene open and coffin visible */}
+      <div className="flex-1 min-h-0 pointer-events-none" />
 
-          {/* Riddle Heading & Poem */}
-          <div className="my-1 text-center">
-            <h3
-              id="keeper-riddle-heading"
-              className="text-sm sm:text-base font-cinzel font-black tracking-wider text-amber-100 uppercase"
-            >
-              THE KEEPER’S LAST RIDDLE
-            </h3>
-            <div className="mt-2 p-3 rounded-2xl bg-[#f5ecd7] text-stone-950 border-2 border-[#8b4513] shadow-inner text-center">
-              <p className="font-serif italic text-xs sm:text-sm md:text-base leading-relaxed text-[#261005] font-semibold">
-                &ldquo;Born when flame is spent, pale when all light has fled; I am the last trace of fire, yet I hold no heat. What am I?&rdquo;
-              </p>
-              <div className="mt-1 text-[10px] font-serif text-[#8b1c1c] tracking-widest" aria-hidden="true">
-                ✦ ❖ ✦
-              </div>
+      {/* 6. Single Master Riddle & Keyword Submission Console */}
+      <section className="relative z-30 w-full max-w-4xl mx-auto px-3 sm:px-6 pb-2 pt-0 select-none">
+        <div className="w-full rounded-2xl bg-gradient-to-r from-black/95 via-[#180a04]/95 to-black/95 border-2 border-amber-700/70 p-3 sm:p-4 shadow-[0_0_35px_rgba(0,0,0,0.95)] backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-3">
+          {/* Riddle Section (Left) */}
+          <div className="flex-1 text-center md:text-left px-1 sm:px-2">
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+              <span className="text-amber-500 text-xs">✦</span>
+              <h3 className="font-cinzel text-xs font-black tracking-widest text-amber-300 uppercase">
+                THE KEEPER&apos;S LAST RIDDLE
+              </h3>
+              <span className="text-amber-500 text-xs">✦</span>
+            </div>
+            <p className="font-serif italic text-xs sm:text-[13px] text-stone-300 leading-relaxed max-w-xl">
+              &ldquo;Born when flame is spent, pale when all light has fled; I am the last trace of fire, yet I hold no heat. What am I?&rdquo;
+            </p>
+            <div className="text-[10px] font-mono text-amber-500/80 mt-1">
+              {isChestOpen
+                ? '✓ Relic chest unsealed • Fragment "BENEATH" added to Evidence Journal'
+                : isChestUnlocked
+                ? '✦ Chest unlocked! Click below to claim the sacred fragment'
+                : isRiddleSolved
+                ? '✦ Riddle solved! Click the skeleton key or the button below'
+                : isSkeletonMoved
+                ? '✦ Skeletal remains shifted! A hidden inscription has been revealed'
+                : isBookRead
+                ? '✦ Ancient grimoire deciphered. Shift the skeletal remains to inspect the grave floor'
+                : '📖 Read the Ancient Grimoire to begin deciphering the sepulcher'}
             </div>
           </div>
 
-          {/* Investigation Progress Checklist */}
-          <div className="my-2 p-2.5 rounded-xl bg-black/50 border border-amber-900/50 text-[10px] font-mono space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-stone-300">📖 Ancient Grimoire:</span>
-              <span className={isBookRead ? 'text-emerald-400 font-bold' : 'text-amber-400'}>
-                {isBookRead ? '✓ Deciphered (3/3)' : '○ Unread'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-stone-300">💀 Skeletal Remains:</span>
-              <span className={isSkeletonMoved ? 'text-emerald-400 font-bold' : 'text-stone-400'}>
-                {isSkeletonMoved ? '✓ Shifted' : '○ Resting'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-stone-300">✦ Hidden Word:</span>
-              <span className={isSkeletonMoved ? 'text-amber-300 font-black tracking-widest' : 'text-stone-500'}>
-                {isSkeletonMoved ? '✓ "ASH"' : '○ Concealed'}
-              </span>
-            </div>
-          </div>
-
-          {/* Riddle Answer Input Form or Solved State */}
-          {!isRiddleSolved ? (
-            <form onSubmit={handleSubmitRiddle} className="space-y-2">
-              <label htmlFor="riddle-answer-input" className="block text-[10px] font-cinzel font-bold text-amber-300 uppercase tracking-widest">
-                ENTER YOUR ANSWER:
-              </label>
-              <div className="flex items-center gap-1.5">
+          {/* Right: Riddle Input & Action Button */}
+          <div className="flex flex-col items-center sm:items-end gap-2 flex-shrink-0">
+            {!isRiddleSolved ? (
+              <form onSubmit={handleSubmitRiddle} className="relative flex items-center gap-2">
+                {riddleError && (
+                  <span className="absolute -top-7 right-0 px-2 py-0.5 rounded bg-black/90 border border-red-500/80 text-[10px] text-red-300 font-serif italic whitespace-nowrap shadow-md pointer-events-none">
+                    {riddleError}
+                  </span>
+                )}
                 <input
-                  id="riddle-answer-input"
+                  ref={answerInputRef}
                   type="text"
                   value={riddleInput}
-                  onChange={(e) => setRiddleInput(e.target.value)}
-                  placeholder="Type the keyword..."
+                  onChange={(e) => {
+                    setRiddleInput(e.target.value);
+                    if (riddleError) setRiddleError(null);
+                  }}
+                  placeholder="Enter your answer..."
                   autoComplete="off"
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-black/70 border border-amber-500/80 text-amber-100 placeholder-stone-500 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  className="w-36 sm:w-48 px-3.5 py-2 rounded-xl bg-black/90 border border-amber-600/70 text-amber-100 placeholder-amber-700/60 text-xs sm:text-sm font-mono font-bold focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400 transition-all shadow-inner"
                 />
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-500 border border-amber-400 text-stone-950 font-cinzel text-[11px] font-black uppercase tracking-wider transition-all shadow-[0_0_12px_rgba(245,158,11,0.5)] cursor-pointer whitespace-nowrap"
+                  className="py-2 px-5 rounded-xl bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-500 border border-amber-400 text-stone-950 font-cinzel text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(245,158,11,0.5)] cursor-pointer whitespace-nowrap"
                 >
-                  UNSEAL
+                  SUBMIT
+                </button>
+              </form>
+            ) : (
+              <div className="flex flex-col items-center sm:items-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={isChestOpen ? () => setIsRewardModalOpen(true) : isChestUnlocked ? handleOpenChest : handleKeyClick}
+                  className={`py-2 px-5 rounded-xl border-2 font-cinzel text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                    isChestOpen
+                      ? 'bg-emerald-950/90 hover:bg-emerald-900 border-emerald-400 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.5)]'
+                      : isChestUnlocked
+                      ? 'bg-gradient-to-r from-amber-800 via-amber-600 to-amber-800 hover:from-amber-700 hover:to-amber-500 border-amber-400 text-amber-100 shadow-[0_0_25px_rgba(245,158,11,0.6)] animate-pulse'
+                      : 'bg-gradient-to-r from-amber-900 via-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-600 border-amber-500 text-amber-200 shadow-[0_0_20px_rgba(245,158,11,0.4)]'
+                  }`}
+                >
+                  <span>{isChestOpen ? '✓' : isChestUnlocked ? '🔓' : '🗝️'}</span>
+                  <span>
+                    {isChestOpen
+                      ? 'FRAGMENT UNSEALED: "BENEATH"'
+                      : isChestUnlocked
+                      ? 'OPEN ANCIENT CHEST'
+                      : 'USE SKELETON KEY'}
+                  </span>
                 </button>
               </div>
-              {riddleError && (
-                <p className="text-[10px] text-red-400 font-serif italic text-center animate-fadeIn">
-                  {riddleError}
-                </p>
-              )}
-            </form>
-          ) : (
-            <div className="p-2 rounded-xl bg-emerald-950/70 border border-emerald-500/80 text-center">
-              <span className="text-[10px] font-cinzel font-black text-emerald-300 uppercase tracking-widest block">
-                ✓ RIDDLE SOLVED • &ldquo;ASH&rdquo; ACCEPTED
-              </span>
-            </div>
-          )}
-
-          {/* Lower Emerging Treasure Chest Relic */}
-          <div id="chest-lock-target" className="mt-2">
-            <TreasureChestRelic
-              isEmerged={isRiddleSolved}
-              isUnlocked={isChestUnlocked}
-              isOpen={isChestOpen}
-              revealedWord="BENEATH"
-              onOpenChest={handleOpenChest}
-            />
-          </div>
-        </section>
-
-        {/* RIGHT PANEL: Interactive Coffin Scene Viewport (~70% width) */}
-        <section
-          aria-label="Coffin I: Interactive Investigation Surface"
-          className="relative flex-1 min-h-[360px] rounded-3xl overflow-hidden border-2 border-amber-700/60 bg-black/40 shadow-2xl flex items-center justify-center select-none"
-        >
-          {/* Tagline Instruction at Top Center */}
-          <div className="absolute top-2.5 z-30 px-3.5 py-1 rounded-full bg-black/70 border border-amber-500/60 backdrop-blur-sm text-[10px] sm:text-xs font-serif italic text-amber-200 pointer-events-none">
-            {!isBookRead && '✦ Step 1: Click the Ancient Grimoire to read the scripture ✦'}
-            {isBookRead && !isSkeletonMoved && '✦ Step 2: Drag the skeletal remains away to uncover the secret ✦'}
-            {isSkeletonMoved && !isRiddleSolved && '✦ Step 3: Speak the uncovered word into the Keeper’s Riddle ✦'}
-            {isRiddleSolved && !isChestUnlocked && '✦ Step 4: Click the glowing Skeleton Key to unlock the chest ✦'}
-            {isChestUnlocked && !isChestOpen && '✦ Step 5: Click the Treasure Chest to unseal the secret word ✦'}
-            {isChestOpen && '✦ Sacred Syllable Unsealed: "BENEATH" • Coffin I Completed! ✦'}
-          </div>
-
-          {/* SKELETON LAYER (Movable anatomical group) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Skeletal Remains of the First Warden"
-            onPointerDown={handleSkeletonPointerDown}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (!isBookRead) {
-                  showToast('You must decipher the Ancient Book first.');
-                } else if (!isSkeletonMoved) {
-                  setIsSkeletonMoved(true);
-                  soundController.playDiscover();
-                  showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
-                }
-              }
-            }}
-            style={{
-              transform: `translate(${skeletonOffset.x}px, ${skeletonOffset.y}px)`,
-              touchAction: 'none',
-              transition: isDraggingSkeleton ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
-            }}
-            className={`absolute inset-0 pointer-events-auto ${
-              isBookRead
-                ? 'cursor-grab active:cursor-grabbing group hover:drop-shadow-[0_0_25px_rgba(245,158,11,0.6)]'
-                : 'cursor-not-allowed opacity-95'
-            }`}
-          >
-            {/* 1. Skull with Roman I */}
-            <div
-              style={{ left: '64%', top: '24%' }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rotate-[12deg] pointer-events-none"
-            >
-              <SkullGraphic romanNumeral="I" className="w-24 h-28 sm:w-28 sm:h-32" />
-            </div>
-
-            {/* 2. Thoracic Ribcage with Sun Medallion */}
-            <div
-              style={{ left: '58%', top: '40%' }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rotate-[8deg] pointer-events-none"
-            >
-              <RibcageGraphic className="w-28 h-32 sm:w-32 sm:h-36" />
-            </div>
-
-            {/* 3. Crimson-Bound Femur Bone */}
-            <div
-              style={{ left: '62%', top: '70%' }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rotate-[25deg] pointer-events-none"
-            >
-              <div className="relative w-28 h-10 sm:w-32 sm:h-12 flex items-center justify-center">
-                <svg viewBox="0 0 100 35" className="w-full h-full filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.85)]">
-                  <path d="M10 18 C6 8 20 8 22 15 L78 15 C80 8 94 8 90 18 C94 28 80 28 78 21 L22 21 C20 28 6 28 10 18 Z" fill="#d9cbb8" stroke="#5a4231" strokeWidth="2" />
-                  {/* Crimson Ribbons */}
-                  <rect x="35" y="14" width="7" height="8" fill="#991b1b" stroke="#590d0d" strokeWidth="0.8" />
-                  <rect x="55" y="14" width="7" height="8" fill="#991b1b" stroke="#590d0d" strokeWidth="0.8" />
-                  {/* Etched Runes */}
-                  <text x="47" y="19" fontSize="6" fill="#8b1c1c" fontFamily="serif" fontWeight="bold">ᚱᚢ</text>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* HIDDEN INSCRIBED BRASS PLATE (Revealed directly beneath crimson femur when moved) */}
-          {isSkeletonMoved && (
-            <div
-              style={{ left: '62%', top: '70%' }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 z-0 text-center animate-fadeIn pointer-events-none"
-            >
-              <div className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-950 via-[#3a1d08] to-amber-950 border-2 border-amber-400 text-amber-200 font-cinzel font-black text-sm sm:text-base tracking-[0.25em] shadow-[0_0_25px_rgba(245,158,11,0.9)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1.5">
-                <span>✦</span>
-                <span>ASH</span>
-                <span>✦</span>
-              </div>
-            </div>
-          )}
-
-          {/* OBJECT 1: The Ancient Grimoire Book (Mandatory First Interactive Object) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Ancient Grimoire: Click to Open and Read"
-            onClick={handleOpenBook}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenBook();
-              }
-            }}
-            style={{ left: '46%', top: '56%' }}
-            className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 transform hover:scale-110 active:scale-95 ${
-              !isBookRead
-                ? 'animate-pulse drop-shadow-[0_0_20px_rgba(245,158,11,0.85)]'
-                : 'drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]'
-            }`}
-            title="Ancient Grimoire (Click to Open & Read Scripture)"
-          >
-            <BookGraphic className="w-28 h-24 sm:w-32 sm:h-28" />
-            {!isBookRead && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-950 border border-amber-400 text-amber-200 font-cinzel text-[8.5px] font-black uppercase tracking-wider shadow-lg whitespace-nowrap">
-                ✦ READ FIRST ✦
-              </span>
             )}
           </div>
+        </div>
+      </section>
 
-          {/* OBJECT 2: Antique Brass Skeleton Key */}
-          <div
-            ref={keyRef}
-            role="button"
-            tabIndex={0}
-            aria-label="Antique Brass Skeleton Key"
-            onClick={handleKeyClick}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleKeyClick();
-              }
-            }}
-            style={{ left: '51%', top: '72%' }}
-            className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 transform hover:scale-115 active:scale-90 ${
-              isRiddleSolved && !isChestUnlocked
-                ? 'animate-bounce drop-shadow-[0_0_25px_rgba(251,191,36,1)] scale-110'
-                : 'drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]'
-            }`}
-            title="Skeleton Key (Click to Inspect / Unlock Chest)"
-          >
-            <KeyGraphic className="w-16 h-8 sm:w-20 sm:h-10" />
-            {isRiddleSolved && !isChestUnlocked && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-400 text-emerald-200 font-cinzel text-[8px] font-black uppercase tracking-wider shadow-lg whitespace-nowrap animate-pulse">
-                🔑 UNLOCK CHEST
-              </span>
-            )}
-          </div>
-
-          {/* OBJECT 3: Rolled Ribbon Scroll */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Rolled Ribbon Scroll"
-            onClick={() => handleInspectArtifact('scroll')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspectArtifact('scroll');
-              }
-            }}
-            style={{ left: '65%', top: '76%' }}
-            className="absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-200 transform hover:scale-110 active:scale-95 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
-            title="Rolled Scroll (Click to Inspect)"
-          >
-            <ScrollGraphic className="w-20 h-10 sm:w-24 sm:h-12" />
-          </div>
-
-          {/* OBJECT 4: Compass Medallion */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Compass Medallion"
-            onClick={() => handleInspectArtifact('compass')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspectArtifact('compass');
-              }
-            }}
-            style={{ left: '55%', top: '60%' }}
-            className="absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-200 transform hover:scale-110 active:scale-95 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
-            title="Compass Medallion (Click to Inspect)"
-          >
-            <CompassGraphic className="w-14 h-14 sm:w-16 sm:h-16" />
-          </div>
-
-          {/* OBJECT 5: Loose Warden's Letter */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Loose Warden's Letter"
-            onClick={() => handleInspectArtifact('parchment')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspectArtifact('parchment');
-              }
-            }}
-            style={{ left: '36%', top: '78%' }}
-            className="absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-200 transform hover:scale-110 active:scale-95 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
-            title="Warden's Letter (Click to Inspect)"
-          >
-            <LetterGraphic className="w-18 h-14 sm:w-20 sm:h-16" />
-          </div>
-        </section>
-      </div>
-
-      {/* 4. Bottom Controls Footer Bar */}
-      <footer className="relative z-30 w-full px-3 sm:px-6 py-2 flex items-center justify-between select-none">
-        {/* Bottom-Left: Evidence Journal Drawer Button */}
+      {/* 7. Bottom Navigation Controls: Evidence Journal & Return to Cemetery */}
+      <footer className="relative z-30 px-3 sm:px-6 pb-2.5 pt-1 flex items-center justify-between select-none">
+        {/* Evidence Journal Progress */}
         <button
           type="button"
-          onClick={onOpenJournal}
-          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-500/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_18px_rgba(245,158,11,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          onClick={() => {
+            soundController.playClick();
+            onOpenJournal();
+          }}
+          aria-label={`Evidence Journal (${collectedFragments.length}/3)`}
+          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
         >
           <span>📖</span>
           <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
         </button>
 
-        {/* Bottom-Center: Gothic Stage Status */}
-        <div className="hidden md:flex items-center gap-2 text-stone-400 font-serif italic text-xs tracking-wider">
-          <span>✦ 3 COFFINS • 7 RIDDLES • 1 FINAL CHALLENGE ✦</span>
-        </div>
-
-        {/* Bottom-Right: Return to Cemetery Button */}
+        {/* Return to Cemetery */}
         <button
           type="button"
-          onClick={onReturnCemetery}
-          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-red-950 via-[#260f06] to-amber-950 hover:from-red-900 hover:to-amber-900 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          onClick={() => {
+            soundController.playClick();
+            onReturnCemetery();
+          }}
+          aria-label="Return to Cemetery"
+          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-stone-900 border border-stone-700 hover:border-amber-500/70 text-stone-300 hover:text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-md transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
         >
-          <span>←</span>
-          <span>RETURN TO CEMETERY</span>
+          <span>← RETURN TO CEMETERY</span>
         </button>
       </footer>
 
-      {/* 5. Ancient Book 3D Grimoire Reader Modal */}
+      {/* ========================================================
+          MODAL 1: ANCIENT BOOK READER MODAL
+         ======================================================== */}
       <AncientBookReader
         isOpen={isBookModalOpen}
-        onClose={() => setIsBookModalOpen(false)}
-        onAllPagesRead={handleAllPagesRead}
+        onClose={handleCloseBook}
+        onAllPagesRead={handleBookFullyRead}
       />
 
-      {/* 6. Artifact Inspection Viewer Modal */}
+      {/* ========================================================
+          MODAL 2: ARTIFACT CLOSE-UP INSPECTION MODAL
+         ======================================================== */}
       <ArtifactInspectionModal
-        isOpen={activeArtifact !== null}
+        isOpen={Boolean(activeArtifact)}
         artifactType={activeArtifact}
-        onClose={() => setActiveArtifact(null)}
+        onClose={handleCloseArtifactModal}
       />
+
+      {/* ========================================================
+          MODAL 3: SECRET FRAGMENT UNSEALED REWARD MODAL (BENEATH)
+         ======================================================== */}
+      {isRewardModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="grave1-reward-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
+          onClick={() => setIsRewardModalOpen(false)}
+        >
+          <div
+            role="document"
+            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
+              <div>
+                <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                  ✦ SACRED SEPULCHER UNSEALED ✦
+                </div>
+                <h3
+                  id="grave1-reward-title"
+                  className="text-lg sm:text-xl font-cinzel font-black text-amber-100 tracking-wide"
+                >
+                  The Marked Remains
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRewardModalOpen(false)}
+                aria-label="Close Reward Modal"
+                className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Revealed Secret Syllable & Full Incantation */}
+            <div className="flex flex-col items-center justify-center p-5 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-500/80 shadow-2xl text-center">
+              <span className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                ✦ CEMETERY INCANTATION: FIRST FRAGMENT ✦
+              </span>
+
+              {/* Glowing Syllable */}
+              <div className="text-3xl sm:text-4xl font-cinzel font-black text-amber-300 tracking-[0.25em] drop-shadow-[0_0_20px_rgba(245,158,11,0.9)] my-2">
+                B — E — N — E — A — T — H
+              </div>
+
+              {/* 3-Part Cipher Structure */}
+              <div className="my-2 p-2.5 rounded-xl bg-black/80 border border-amber-800/60 text-[11px] font-cinzel font-bold text-stone-300">
+                <span className="text-amber-400">[Grave I: BENEATH]</span> &bull;{' '}
+                <span className="text-stone-500">[Grave II: ???]</span> &bull;{' '}
+                <span className="text-stone-500">[Grave III: ???]</span>
+              </div>
+
+              <p className="mt-3 font-serif italic text-xs sm:text-sm text-stone-300 leading-relaxed max-w-sm">
+                &ldquo;The ancient padlock yields with a dull metallic click. Inside the coffer, illuminated by the cold
+                moonlight, lies the first fragment of the warden&rsquo;s covenant. The syllable &lsquo;BENEATH&rsquo; has
+                been permanently recorded into your Evidence Journal.&rdquo;
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRewardModalOpen(false);
+                  onOpenJournal();
+                }}
+                className="w-full sm:flex-1 py-2.5 rounded-xl bg-black/80 hover:bg-amber-950 border border-amber-600/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
+              >
+                📖 View Evidence Journal ({collectedFragments.length}/3)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRewardModalOpen(false);
+                  onReturnCemetery();
+                }}
+                className="w-full sm:flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 border border-amber-400 text-stone-950 font-cinzel text-xs font-black uppercase tracking-wider cursor-pointer transition-colors shadow-lg"
+              >
+                ← Return to Cemetery
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

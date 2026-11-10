@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { soundController } from '../../../utils/soundController';
 import { ScrollGraphic, CompassGraphic, LetterGraphic, KeyGraphic } from './CoffinGraphics';
 
-export type ArtifactType = 'scroll' | 'compass' | 'parchment' | 'key';
+export type ArtifactType = 'scroll' | 'compass' | 'parchment' | 'key' | 'skull' | 'ribcage';
 
 interface ArtifactInspectionModalProps {
   isOpen: boolean;
@@ -57,6 +57,8 @@ export const ArtifactInspectionModal: React.FC<ArtifactInspectionModalProps> = (
               {artifactType === 'compass' && 'ANTIQUE COMPASS MEDALLION'}
               {artifactType === 'parchment' && 'TORN WARDEN’S DISPATCH'}
               {artifactType === 'key' && 'ANCIENT BRASS SKELETON KEY'}
+              {artifactType === 'skull' && 'ANCIENT CRANIUM OF THE FIRST WARDEN'}
+              {artifactType === 'ribcage' && 'THORACIC RIBCAGE WITH SUN MEDALLION'}
             </h2>
           </div>
 
@@ -83,6 +85,20 @@ export const ArtifactInspectionModal: React.FC<ArtifactInspectionModalProps> = (
             {artifactType === 'compass' && <CompassGraphic className="w-32 h-32 sm:w-36 sm:h-36" />}
             {artifactType === 'parchment' && <LetterGraphic className="w-36 h-28 sm:w-40 sm:h-32" />}
             {artifactType === 'key' && <KeyGraphic className="w-36 h-20 sm:w-44 sm:h-24" />}
+            {artifactType === 'skull' && (
+              <img
+                src="/assets/stage-3/coffins/relic_skull_realistic.png"
+                alt="Ancient Cranium of the First Warden"
+                className="w-48 h-52 sm:w-56 sm:h-60 object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.95)]"
+              />
+            )}
+            {artifactType === 'ribcage' && (
+              <img
+                src="/assets/stage-3/coffins/relic_ribcage_realistic.png"
+                alt="Thoracic Ribcage with Sun Medallion"
+                className="w-52 h-56 sm:w-60 sm:h-64 object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.95)]"
+              />
+            )}
           </div>
 
           {/* Interactive Inspection Controls */}
@@ -124,6 +140,16 @@ export const ArtifactInspectionModal: React.FC<ArtifactInspectionModalProps> = (
           {artifactType === 'key' && (
             <p>
               &ldquo;Ornate skeletal key of heavy cold brass, featuring four-petal bow filigree and intricate warding teeth. It vibrates with ancient potential, awaiting the emergence of the locked chest.&rdquo;
+            </p>
+          )}
+          {artifactType === 'skull' && (
+            <p>
+              &ldquo;The aged cranium of the First Warden, etched with the crimson Roman numeral &lsquo;I&rsquo;. The bone is cold to the touch, guarding the memories of the Cartel’s founding ritual.&rdquo;
+            </p>
+          )}
+          {artifactType === 'ribcage' && (
+            <p>
+              &ldquo;An anatomical ribcage cradling a polished solar medallion. The rays of the medallion point outward in twelve directions, representing the twelve lost sentinels.&rdquo;
             </p>
           )}
         </div>

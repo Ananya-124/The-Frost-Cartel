@@ -44,14 +44,18 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
     }
   };
 
+  const f1 = collectedFragments.includes('BENEATH') ? 'BENEATH' : 'THE';
+  const f2 = collectedFragments.includes('EMBER') ? 'EMBER' : 'NIGHT';
+  const f3 = 'RETURNS';
+
   const handleQuickInsert = () => {
     soundController.playClick();
-    setIncantation('THE NIGHT RETURNS');
+    setIncantation(`${f1} ${f2} ${f3}`);
   };
 
   const hasAllFragments =
-    collectedFragments.includes('THE') &&
-    collectedFragments.includes('NIGHT') &&
+    (collectedFragments.includes('THE') || collectedFragments.includes('BENEATH')) &&
+    (collectedFragments.includes('NIGHT') || collectedFragments.includes('EMBER')) &&
     collectedFragments.includes('RETURNS');
 
   return (
@@ -108,7 +112,7 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
             {/* Syllable 1 */}
             <div
               className={`p-3 rounded-xl border text-center transition-all ${
-                collectedFragments.includes('THE')
+                collectedFragments.includes('THE') || collectedFragments.includes('BENEATH')
                   ? 'bg-amber-950/40 border-amber-500/80 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
                   : 'bg-black/40 border-stone-800 text-stone-600'
               }`}
@@ -117,14 +121,14 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
                 Grave I
               </div>
               <div className="font-cinzel text-base sm:text-xl font-black">
-                {collectedFragments.includes('THE') ? 'THE' : '???'}
+                {collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : '???')}
               </div>
             </div>
 
             {/* Syllable 2 */}
             <div
               className={`p-3 rounded-xl border text-center transition-all ${
-                collectedFragments.includes('NIGHT')
+                collectedFragments.includes('NIGHT') || collectedFragments.includes('EMBER')
                   ? 'bg-amber-950/40 border-amber-500/80 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
                   : 'bg-black/40 border-stone-800 text-stone-600'
               }`}
@@ -133,7 +137,7 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
                 Grave II
               </div>
               <div className="font-cinzel text-base sm:text-xl font-black">
-                {collectedFragments.includes('NIGHT') ? 'NIGHT' : '???'}
+                {collectedFragments.includes('EMBER') ? 'EMBER' : (collectedFragments.includes('NIGHT') ? 'NIGHT' : '???')}
               </div>
             </div>
 

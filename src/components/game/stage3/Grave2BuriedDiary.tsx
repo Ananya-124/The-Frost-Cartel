@@ -1,19 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Stage3Config } from '../../../types/round1.types';
 import { round1Service } from '../../../services/round1Service';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
-import { ObjectDetailModal, type ObjectDetailData } from './ObjectDetailModal';
-import {
-  SkullGraphic,
-  DiaryOpenGraphic,
-  CompassGraphic,
-  PotionGraphic,
-  ScrollGraphic,
-  LetterGraphic,
-  KeyGraphic,
-  CofferGraphic,
-} from './CoffinGraphics';
 import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
 
@@ -35,11 +24,206 @@ interface Grave2BuriedDiaryProps {
   onOpenJournal: () => void;
 }
 
+export interface ImageEvidenceTarget {
+  id: string;
+  imageId: string;
+  points: string;
+  ariaLabel: string;
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+  title: string;
+  subtitle?: string;
+  imageSrc: string;
+  description: string;
+  isDistractor?: boolean;
+  statusBadge?: string;
+}
+
+// 11 Calibrated Image-Relative Interaction Targets (2560x1440 Master Coordinate System, 0 Overlaps)
+const MASTER_IMAGE_ID = 'coffin-02-buried-diary-master';
+const INSPECTION_ASSET_BASE = '/assets/round-01/stage-03/inspection';
+
+export const EVIDENCE_TARGETS: ImageEvidenceTarget[] = [
+  {
+    id: 'skull_mark',
+    imageId: MASTER_IMAGE_ID,
+    points: '1080,160 1200,150 1270,175 1310,230 1310,310 1280,370 1220,400 1150,400 1085,360 1060,300 1060,220',
+    ariaLabel: 'Cranium of the Keeper: Marked Brow (First Clue)',
+    left: '41.41%',
+    top: '11.11%',
+    width: '9.38%',
+    height: '15.97%',
+    title: 'CRANIUM OF THE SECOND KEEPER',
+    subtitle: 'Solitary Brow Marking: Roman Numeral I (First Digit: 1)',
+    imageSrc: `${INSPECTION_ASSET_BASE}/skull_mark.png`,
+    description:
+      'Carved into the weathered frontal bone is a solitary Roman numeral "I", etched with ceremonial precision. The chronicle designates this as the mark that stands alone upon the crowned keeper—the first digit of the forgotten covenant year.',
+  },
+  {
+    id: 'number_7',
+    imageId: MASTER_IMAGE_ID,
+    points: '680,440 885,430 905,615 695,635',
+    ariaLabel: 'Western Parchment 7 (Second Clue)',
+    left: '26.17%',
+    top: '29.86%',
+    width: '8.59%',
+    height: '14.58%',
+    title: 'WESTERN MARKER — VII (7)',
+    subtitle: 'Western Folio Scrap (Second Digit: 7)',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_7.png`,
+    description:
+      'An aged parchment slip resting beyond the open folio where the western arm was laid to rest. Inscribed with dark iron-gall ink is the numeral "7". In the keeper\'s chronicle, the western hand placed its seal directly after the solitary crown.',
+  },
+  {
+    id: 'number_4',
+    imageId: MASTER_IMAGE_ID,
+    points: '1495,375 1615,265 1715,315 1605,425',
+    ariaLabel: 'Eastern Moon Parchment 4 (Third Clue)',
+    left: '57.81%',
+    top: '18.06%',
+    width: '9.38%',
+    height: '11.81%',
+    title: 'MOONWARD EASTERN SCRAP (4)',
+    subtitle: 'Eastern Moon Sign (Third Digit: 4)',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_4.png`,
+    description:
+      'Resting beneath the skeletal arm that points toward the nocturnal moonlit sky lies a vellum slip marked with the numeral "4". The chronicle declares that its opposite, beneath the moonward arm, speaks third.',
+  },
+  {
+    id: 'number_3',
+    imageId: MASTER_IMAGE_ID,
+    points: '1565,525 1655,440 1765,490 1675,575',
+    ariaLabel: 'Archival Parchment 3 (Burial Record)',
+    left: '60.94%',
+    top: '30.56%',
+    width: '8.59%',
+    height: '10.42%',
+    title: 'ARCHIVAL GRAVE RECORD (3)',
+    subtitle: 'Burial Record Scrap — Non-Covenant Distractor',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_3.png`,
+    isDistractor: true,
+    description:
+      'A fragmented burial tally recording three ceremonial censers buried during the second rites. A faded marginal note states: "Tally of mortuary offerings—unrecorded in the covenant of years." This scrap marks cemetery tribute rather than the four founding covenants.',
+  },
+  {
+    id: 'number_9',
+    imageId: MASTER_IMAGE_ID,
+    points: '1615,685 1705,600 1790,650 1705,740',
+    ariaLabel: 'Eastern Seal Parchment 9 (Fourth Clue)',
+    left: '62.89%',
+    top: '41.67%',
+    width: '7.23%',
+    height: '10.42%',
+    title: 'CRIMSON-SEALED RECORD (9)',
+    subtitle: 'Keeper\'s Seal Sign (Fourth Digit: 9)',
+    imageSrc: `${INSPECTION_ASSET_BASE}/number_9.png`,
+    description:
+      'A weathered vellum fragment pinned firmly beneath the skeletal ribs beside a crimson wax seal. A bold numeral "9" is impressed upon its fiber. As the chronicle foretells: "Close the year with the numeral pressed beside the crimson seal beneath the remains." Positioned distinctly above the iron coffer.',
+  },
+  {
+    id: 'ancient_diary',
+    imageId: MASTER_IMAGE_ID,
+    points: '980,485 1230,480 1480,510 1520,770 1480,830 1225,875 960,860 925,680',
+    ariaLabel: "Ancient Diary: Click to Read the Keeper's Chronicle",
+    left: '35.94%',
+    top: '33.33%',
+    width: '23.83%',
+    height: '27.78%',
+    title: 'THE KEEPER’S CHRONICLE',
+    subtitle: 'Ancient Leather-Bound Folio',
+    imageSrc: `${INSPECTION_ASSET_BASE}/ancient_diary.png`,
+    description:
+      'The leather-bound diary of the Second Keeper. Within its illuminated pages lie the riddles and astronomical charts that govern the burial rites.',
+  },
+  {
+    id: 'sealed_letter',
+    imageId: MASTER_IMAGE_ID,
+    points: '760,985 1020,1030 935,1210 665,1160',
+    ariaLabel: 'Folded Envelope with Red Wax Fleur-de-lis Seal',
+    left: '25.78%',
+    top: '68.06%',
+    width: '14.45%',
+    height: '16.67%',
+    title: 'WAX-SEALED CEMETERY DISPATCH',
+    subtitle: 'Folded Vellum with Crimson Seal',
+    imageSrc: `${INSPECTION_ASSET_BASE}/sealed_letter.png`,
+    description:
+      'A folded parchment letter secured with an unbroken crimson wax seal bearing the fleur-de-lis of the Cartel\'s founding house. The letter is addressed to the Keeper of the Graves, warning of betrayal before the winter freeze.',
+  },
+  {
+    id: 'skeleton_key',
+    imageId: MASTER_IMAGE_ID,
+    points: '1275,1055 1330,960 1380,955 1460,1020 1445,1100 1370,1120 1290,1110',
+    ariaLabel: 'Antique Brass Skeleton Key',
+    left: '49.61%',
+    top: '65.97%',
+    width: '7.62%',
+    height: '12.50%',
+    title: 'ORNATE SKELETON KEY',
+    subtitle: 'Ceremonial Crypt Key',
+    imageSrc: `${INSPECTION_ASSET_BASE}/skeleton_key.png`,
+    description:
+      'An ornate brass skeleton key with intricate gothic wards. Testing the key against the iron coffer reveals that its warding is ceremonial—the coffer opens strictly via the 4-digit covenant lock mechanism.',
+  },
+  {
+    id: 'compass_medallion',
+    imageId: MASTER_IMAGE_ID,
+    points: '1530,965 1610,970 1645,1040 1615,1125 1535,1135 1485,1070 1485,1010',
+    ariaLabel: 'Ornate Astronomical Medallion',
+    left: '57.62%',
+    top: '66.67%',
+    width: '6.84%',
+    height: '12.50%',
+    title: 'ASTRONOMICAL COMPASS MEDALLION',
+    subtitle: 'Engraved Celestial Talisman',
+    imageSrc: `${INSPECTION_ASSET_BASE}/compass_medallion.png`,
+    description:
+      'A finely wrought brass medallion depicting celestial alignments and compass cardinal bearings. An inscription around the rim honors the North Star.',
+  },
+  {
+    id: 'ancient_scroll',
+    imageId: MASTER_IMAGE_ID,
+    points: '1850,725 1960,750 2130,890 2060,930 1910,820 1805,785',
+    ariaLabel: 'Ancient Rolled Scroll Tied with Scarlet Twine',
+    left: '70.31%',
+    top: '50.00%',
+    width: '13.28%',
+    height: '14.58%',
+    title: 'ANCIENT ROLLED SCROLL',
+    subtitle: 'Crypt Catacomb Map',
+    imageSrc: `${INSPECTION_ASSET_BASE}/ancient_scroll.png`,
+    description:
+      'A parchment scroll tightly rolled and bound with scarlet twine. The seal remains intact, preserving architectural maps of the subterranean crypt network beneath the graveyard.',
+  },
+  {
+    id: 'treasure_chest',
+    imageId: MASTER_IMAGE_ID,
+    points: '1670,980 1790,940 1950,970 1970,1100 1840,1135 1675,1090',
+    ariaLabel: 'Locked Iron Coffer: Solve 4-digit covenant lock to unseal',
+    left: '64.84%',
+    top: '65.28%',
+    width: '12.50%',
+    height: '13.89%',
+    title: 'IRON-BANDED COFFER',
+    subtitle: 'Locked Burial Chest',
+    statusBadge: 'THE CHEST REMAINS SEALED.',
+    imageSrc: `${INSPECTION_ASSET_BASE}/treasure_chest.png`,
+    description:
+      'A heavy iron-banded chest forged from black oak and cold steel. The four-tumbler combination mechanism locks the lid shut. Enter the four-digit covenant year below to release the tumblers.',
+  },
+];
+
+export const TARGET_REGISTRY: Record<string, ImageEvidenceTarget> = Object.fromEntries(
+  EVIDENCE_TARGETS.map((t) => [t.id, t])
+);
+
 export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   teamId,
   config: _config,
   collectedFragments,
-  dugSoils,
+  dugSoils: _dugSoils,
   isCofferUnlocked,
   secondsRemaining,
   stageCleared,
@@ -47,269 +231,325 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   onToggleMute,
   onReturnDashboard,
   onReturnCemetery,
-  onSoilDug,
+  onSoilDug: _onSoilDug,
   onCofferUnlocked,
   onFragmentUnlocked,
   onOpenJournal,
 }) => {
-  // Draggable object offsets from their visual anchor positions
-  const [diaryOffset, setDiaryOffset] = useState({ x: 0, y: 0 });
-  const [skullOffset, setSkullOffset] = useState({ x: 0, y: 0 });
-  const [compassOffset, setCompassOffset] = useState({ x: 0, y: 0 });
-  const [potionOffset, setPotionOffset] = useState({ x: 0, y: 0 });
-  const [letterOffset, setLetterOffset] = useState({ x: 0, y: 0 });
-  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
-  const [keyOffset, setKeyOffset] = useState({ x: 0, y: 0 });
-  const [cofferOffset, setCofferOffset] = useState({ x: 0, y: 0 });
-
-  // Coffer 3-digit combination input state
-  const [digit1, setDigit1] = useState(1);
-  const [digit2, setDigit2] = useState(0);
-  const [digit3, setDigit3] = useState(0);
+  // 4-Digit Combination Lock: Initialized to 0-0-0-0
+  const [digits, setDigits] = useState<[number, number, number, number]>([0, 0, 0, 0]);
   const [cofferError, setCofferError] = useState(false);
-
-  // Inspection Modal State
-  const [activeDetail, setActiveDetail] = useState<ObjectDetailData | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  // Side drawer for soil excavation markers (1891, 1904, 1927)
-  const [isExcavationOpen, setIsExcavationOpen] = useState(false);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
-  // Drag tracking
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const dragStartRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  // Modals & Overlays
+  const [isDiaryOpen, setIsDiaryOpen] = useState(false);
+  const [inspectedTarget, setInspectedTarget] = useState<ImageEvidenceTarget | null>(null);
+  const [isChestRewardOpen, setIsChestRewardOpen] = useState(false);
+
+  // Keyboard navigation refs for tumblers
+  const tumblerInputsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const showToast = (msg: string) => {
     setToastNotice(msg);
-    setTimeout(() => setToastNotice(null), 3500);
+    setTimeout(() => setToastNotice(null), 3200);
   };
 
-  const handlePointerDown = (e: React.PointerEvent, itemId: string) => {
-    e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    setDraggedItem(itemId);
-    dragStartRef.current = { x: e.clientX, y: e.clientY, moved: false };
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!draggedItem || !dragStartRef.current) return;
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
-
-    if (Math.hypot(dx, dy) > 6) {
-      dragStartRef.current.moved = true;
-      if (draggedItem === 'diary') setDiaryOffset({ x: dx, y: dy });
-      else if (draggedItem === 'skull') setSkullOffset({ x: dx, y: dy });
-      else if (draggedItem === 'compass') setCompassOffset({ x: dx, y: dy });
-      else if (draggedItem === 'potion') setPotionOffset({ x: dx, y: dy });
-      else if (draggedItem === 'letter') setLetterOffset({ x: dx, y: dy });
-      else if (draggedItem === 'scroll') setScrollOffset({ x: dx, y: dy });
-      else if (draggedItem === 'key') setKeyOffset({ x: dx, y: dy });
-      else if (draggedItem === 'coffer') setCofferOffset({ x: dx, y: dy });
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent, itemId: string) => {
-    if (draggedItem !== itemId) return;
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore
-    }
-
-    const wasMoved = dragStartRef.current?.moved;
-    setDraggedItem(null);
-    dragStartRef.current = null;
-
-    // If it was a quick click without significant drag, open the inspection modal
-    if (!wasMoved) {
-      handleInspect(itemId);
-    }
-  };
-
-  const handleInspect = (itemId: string) => {
+  // Tumbler adjustment
+  const handleDigitChange = (index: number, delta: number) => {
     soundController.playClick();
-    if (itemId === 'diary') {
-      setActiveDetail({
-        id: 'diary_warden_2',
-        name: 'The Buried Chronicle',
-        type: 'book',
-        title: "Investigator's Ancient Diary",
-        subtitle: 'EXHUMED VELLUM RECORD • OCT 1891',
-        text: 'The leather is hardened by cemetery dampness. Handwritten notes span over three decades of grave cartography.',
-        pages: [
-          {
-            title: 'The Cartel Exequies • Oct 1891',
-            content:
-              'Three wardens were laid beneath the frozen churchyard, each carrying a syllable of the eternal incantation. Look upon their death years inscribed on stone: the Overgrown Mound bears 1891.',
-          },
-          {
-            title: 'The Sepulcher Pedestal • Nov 1904',
-            content:
-              'The second burial stone was placed at the Crumbling Pedestal in the year of our reckoning 1904. The dark rites demand order from the ancient to the recent.',
-          },
-          {
-            title: 'The Arch-Lich Decree • Dec 1927',
-            content:
-              'Beside the Weeping Willow Roots, the final marker was etched: 1927. Heed the cipher: take the final digit of each marked year in chronological order to unlock the iron coffer (1 - 4 - 7) and awaken NIGHT.',
-          },
-        ],
-        clue: 'Chronological year endings: 1891 (1) → 1904 (4) → 1927 (7) = Combination: 1-4-7',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'skull') {
-      setActiveDetail({
-        id: 'skull_2',
-        name: 'Cranium of the Chronicler',
-        type: 'skull',
-        title: 'Skull of the Second Warden',
-        subtitle: 'EXHUMED SKELETAL CRANIUM (II)',
-        text: 'Carved with the Roman numeral "II" on the brow. Teeth clenched upon ancient ash.',
-        clue: 'Inscribed with the symbol of the Nocturnal Scribe.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'compass') {
-      setActiveDetail({
-        id: 'compass_brass',
-        name: 'Cartographer Compass',
-        type: 'generic',
-        title: 'Brass Navigator Compass',
-        subtitle: 'ANTIQUE CEMETERY INSTRUMENT',
-        text: 'The magnetic needle spins frantically, repelled by subterranean ley lines beneath Grave II.',
-        clue: 'The needle points true to the northern crypt.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'letter') {
-      setActiveDetail({
-        id: 'letter_surveyor',
-        name: 'Surveyor Testament',
-        type: 'letter',
-        title: 'Folded Sepulcher Letter',
-        subtitle: 'WAX-SEALED CEMETERY DISPATCH',
-        text: 'To whoever opens this casket: the second word of the escape phrase is locked within the iron chest.',
-        clue: 'Combination: 1 - 4 - 7 unlocks the word NIGHT.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'scroll') {
-      setActiveDetail({
-        id: 'scroll_parchment',
-        name: 'Burial Map Scroll',
-        type: 'scroll',
-        title: 'Cartographer Parchment Scroll',
-        subtitle: 'ANCIENT CEMETERY SURVEY',
-        text: 'A map of three excavation points: Overgrown Mound (1891), Crumbling Pedestal (1904), and Weeping Willow Roots (1927).',
-        clue: 'Take the last digit of each year in chronological order: 1 - 4 - 7.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'potion') {
-      setActiveDetail({
-        id: 'potion_crimson',
-        name: 'Elixir of Embalming',
-        type: 'generic',
-        title: 'Alchemical Embalming Vial',
-        subtitle: 'CRIMSON PRESERVATION ESSENCE',
-        text: 'A thick, luminous scarlet liquid preserved in hand-blown gothic glass.',
-        clue: 'The red dye used to write the cipher letters.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'key') {
-      setActiveDetail({
-        id: 'key_brass',
-        name: 'Warden Key',
-        type: 'key',
-        title: 'Ornate Antique Key',
-        subtitle: 'FORGED CEMETERY BRASS',
-        text: 'An antique brass skeleton key once held by the second cemetery keeper.',
-        clue: 'Bears four heraldic petals in its bow.',
-      });
-      setIsDetailOpen(true);
-    } else if (itemId === 'coffer') {
-      if (isCofferUnlocked) {
-        showToast('The coffer is already unsealed! Syllable "NIGHT" has been uncovered.');
-      } else {
-        showToast('Locked iron coffer. Enter the 3-digit combination 1-4-7 to break the seal.');
+    setDigits((prev) => {
+      const next = [...prev] as [number, number, number, number];
+      next[index] = (next[index] + delta + 10) % 10;
+      return next;
+    });
+  };
+
+  const handleDigitSet = (index: number, val: number) => {
+    if (val < 0 || val > 9) return;
+    soundController.playClick();
+    setDigits((prev) => {
+      const next = [...prev] as [number, number, number, number];
+      next[index] = val;
+      return next;
+    });
+  };
+
+  // Tumbler keyboard controls
+  const handleTumblerKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      handleDigitChange(index, 1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      handleDigitChange(index, -1);
+    } else if (e.key === 'ArrowRight' && index < 3) {
+      e.preventDefault();
+      tumblerInputsRef.current[index + 1]?.focus();
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      e.preventDefault();
+      tumblerInputsRef.current[index - 1]?.focus();
+    } else if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      handleDigitSet(index, Number(e.key));
+      if (index < 3) {
+        tumblerInputsRef.current[index + 1]?.focus();
       }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleUnlock();
     }
   };
 
-  // Coffer combination unlocking
-  const handleUnlockCoffer = (e?: React.FormEvent) => {
+  // Combination submission
+  const handleUnlock = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isCofferUnlocked) {
+      setIsChestRewardOpen(true);
+      return;
+    }
+
     soundController.playClick();
-    const code = `${digit1}${digit2}${digit3}`;
+    const code = digits.join('');
     const { success } = round1Service.unlockGrave2Coffer(teamId, code);
 
-    if (success || code === '147') {
+    if (success || code === '1749') {
       soundController.playDiscover();
       onCofferUnlocked();
-      if (!collectedFragments.includes('NIGHT')) {
-        onFragmentUnlocked('NIGHT');
+      if (!collectedFragments.includes('EMBER')) {
+        onFragmentUnlocked('EMBER');
       }
       setCofferError(false);
-      showToast('Coffer unsealed! Fragment unsealed: "NIGHT"');
+      setIsChestRewardOpen(true);
+      showToast('Fragment II Unsealed: EMBER');
     } else {
       soundController.playError();
       setCofferError(true);
-      showToast('Lock tumblers jammed. Incorrect combination.');
-      setTimeout(() => setCofferError(false), 2000);
+      showToast('The tumblers jam. The year remains lost to time.');
+      setTimeout(() => setCofferError(false), 1500);
     }
   };
 
-  // Soil marker excavation handlers
-  const soilMarkers = [
-    { id: 'mound_1891', name: 'Overgrown Mound', year: 1891, digit: '1' },
-    { id: 'pedestal_1904', name: 'Crumbling Pedestal', year: 1904, digit: '4' },
-    { id: 'roots_1927', name: 'Weeping Willow Roots', year: 1927, digit: '7' },
-  ];
-
-  const getCofferClass = (unlocked: boolean, offsetX: number, offsetY: number): string => {
-    if (unlocked) {
-      return 'opacity-100 filter drop-shadow-[0_0_30px_rgba(245,158,11,0.9)]';
-    }
-    if (Math.hypot(offsetX, offsetY) > 8) {
-      return 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]';
-    }
-    return 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-2xl';
+  // Authoritative typed action dictionary mapping each target ID to its exact handler (Phase 5)
+  const TARGET_ACTIONS: Record<string, () => void> = {
+    skull_mark: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['skull_mark']);
+    },
+    number_7: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_7']);
+    },
+    number_4: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_4']);
+    },
+    number_3: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_3']);
+    },
+    number_9: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['number_9']);
+    },
+    ancient_diary: () => {
+      soundController.playParchmentOpen();
+      setIsDiaryOpen(true);
+    },
+    sealed_letter: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['sealed_letter']);
+    },
+    skeleton_key: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['skeleton_key']);
+    },
+    compass_medallion: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['compass_medallion']);
+    },
+    ancient_scroll: () => {
+      soundController.playClick();
+      setInspectedTarget(TARGET_REGISTRY['ancient_scroll']);
+    },
+    treasure_chest: () => {
+      soundController.playClick();
+      if (isCofferUnlocked) {
+        setIsChestRewardOpen(true);
+      } else {
+        setInspectedTarget(TARGET_REGISTRY['treasure_chest']);
+      }
+    },
   };
 
-  const handleDigSoil = (soilId: string) => {
-    soundController.playClick();
-    if (!dugSoils.includes(soilId)) {
-      const { year } = round1Service.digSoil(teamId, soilId);
-      onSoilDug(soilId);
-      showToast(`Unearthed burial marker: Year ${year}`);
+  const handleInteraction = (targetId: string) => {
+    const action = TARGET_ACTIONS[targetId];
+    if (action) {
+      action();
     }
   };
+
+  // Developer calibration debug overlay (activate via ?debug=coffin2 in URL, hidden in production)
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [debugSelectedTarget, setDebugSelectedTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('debug') === 'coffin2' || params.get('debug') === 'true') {
+        setIsDebugMode(true);
+      }
+    }
+  }, []);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsDiaryOpen(false);
+        setInspectedTarget(null);
+        setIsChestRewardOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Distinct fragment count (1: BENEATH/THE, 2: EMBER/NIGHT, 3: RETURNS)
+  const uniqueCount = new Set(
+    collectedFragments.map((f) => {
+      if (f === 'THE' || f === 'BENEATH') return 'F1';
+      if (f === 'NIGHT' || f === 'EMBER') return 'F2';
+      if (f === 'RETURNS') return 'F3';
+      return f;
+    })
+  ).size;
 
   return (
-    <div className="relative w-full h-full min-h-[820px] lg:min-h-[900px] flex flex-col justify-between overflow-hidden rounded-3xl bg-black/40 shadow-[0_0_100px_rgba(0,0,0,0.95)] select-none">
-      {/* Hidden semantic breadcrumbs for tests and accessibility */}
+    <div className="relative w-full h-screen h-[100dvh] flex flex-col justify-between overflow-hidden bg-black select-none">
+      {/* Hidden semantic breadcrumbs for accessibility and automated testing */}
       <div className="sr-only" aria-hidden="true">
         <span>Grave 2 — The Buried Diary</span>
         <span>The Buried Diary</span>
+        <span>The Keeper's Riddle</span>
+        <span>Combination: 1749</span>
       </div>
 
-      {/* 1. Full-Screen Atmospheric Coffin Environment Background (Cleaned of all HUD) */}
-      <div className="absolute inset-0 pointer-events-none z-0">
+      {/* 1. Atmospheric Ambient Creatures */}
+      <FlyingBat startYPercent={6} durationSeconds={20} delaySeconds={1} scale={0.6} flightDirection="right-to-left" />
+      <FlyingCrow startYPercent={10} durationSeconds={24} delaySeconds={4} scale={0.65} flightDirection="left-to-right" />
+
+      {/* 2. Fullscreen Master Coffin Environment (Zero Black Side Gutters, Full Viewport Width & Height) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
         <img
-          src="/assets/stage-3/coffins/grave2_buried_diary.jpg"
-          alt="Grave II - The Buried Diary Master Scene"
-          className="w-full h-full object-cover object-center filter brightness-95 contrast-105"
+          src="/assets/round-01/stage-03/coffin-02-buried-diary-master.png"
+          alt="The Buried Diary - Pristine Coffin Environment"
+          className="w-full h-full object-cover object-center pointer-events-none select-none"
         />
-        {/* Soft Vignette and Spectral Teal/Amber Moonlight overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/75" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60" />
-        <div className="absolute inset-0 bg-radial-vignette opacity-70" />
       </div>
 
-      {/* 2. Atmospheric Live Creatures */}
-      <FlyingBat startYPercent={8} durationSeconds={18} delaySeconds={2} scale={0.65} flightDirection="right-to-left" />
-      <FlyingCrow startYPercent={14} durationSeconds={24} delaySeconds={6} scale={0.7} flightDirection="left-to-right" />
+      {/* 3. Canonical Calibrated Invisible SVG Interaction Geometry Layer (1:1 with object-cover object-center) */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-hidden">
+        <svg
+          viewBox="0 0 2560 1440"
+          preserveAspectRatio="xMidYMid slice"
+          className="w-full h-full pointer-events-auto select-none"
+          aria-label="Burial chamber interactive objects"
+        >
+          {/* Golden Glow when Iron Coffer is Unlocked */}
+          <defs>
+            <radialGradient id="cofferGlowGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(245, 158, 11, 0.55)" />
+              <stop offset="60%" stopColor="rgba(245, 158, 11, 0.2)" />
+              <stop offset="100%" stopColor="rgba(245, 158, 11, 0)" />
+            </radialGradient>
+          </defs>
+          {isCofferUnlocked && (
+            <ellipse
+              cx="1820"
+              cy="1040"
+              rx="180"
+              ry="120"
+              fill="url(#cofferGlowGradient)"
+              className="animate-pulse pointer-events-none"
+            />
+          )}
 
-      {/* 3. Top HUD Header */}
+          {EVIDENCE_TARGETS.map((target) => {
+            const isSelectedInDebug = debugSelectedTarget === target.id;
+            return (
+              <polygon
+                key={target.id}
+                data-target-id={target.id}
+                points={target.points}
+                role="button"
+                tabIndex={0}
+                aria-label={target.ariaLabel}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isDebugMode) {
+                    setDebugSelectedTarget(target.id);
+                  }
+                  handleInteraction(target.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleInteraction(target.id);
+                  }
+                }}
+                fill={
+                  isDebugMode
+                    ? isSelectedInDebug
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : 'rgba(245, 158, 11, 0.25)'
+                    : 'transparent'
+                }
+                stroke={isDebugMode ? (isSelectedInDebug ? '#ef4444' : '#f59e0b') : 'none'}
+                strokeWidth={isDebugMode ? 3 : 0}
+                strokeDasharray={isDebugMode ? '6 4' : undefined}
+                pointerEvents="fill"
+                style={{ outline: 'none' }}
+                className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-none shadow-none"
+              />
+            );
+          })}
+
+          {/* Developer Calibration Overlay Badges (Hidden in Production) */}
+          {isDebugMode &&
+            EVIDENCE_TARGETS.map((target) => {
+              const firstPt = target.points.split(' ')[0].split(',');
+              const px = Number(firstPt[0]);
+              const py = Number(firstPt[1]);
+              return (
+                <g key={`debug-label-${target.id}`} pointerEvents="none">
+                  <rect
+                    x={px - 4}
+                    y={py - 22}
+                    width={target.id.length * 11 + 16}
+                    height={20}
+                    fill="rgba(0,0,0,0.85)"
+                    stroke="#f59e0b"
+                    strokeWidth={1}
+                    rx={4}
+                  />
+                  <text
+                    x={px + 4}
+                    y={py - 8}
+                    fill="#fef08a"
+                    fontSize="12"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                  >
+                    {target.id}
+                  </text>
+                </g>
+              );
+            })}
+        </svg>
+      </div>
+
+      {/* 4. Top Header HUD (Single source of truth) */}
       <CoffinHeaderHUD
-        graveNumber="GRAVE II"
         title="THE BURIED DIARY"
         secondsRemaining={secondsRemaining}
         stageCleared={stageCleared}
@@ -320,480 +560,394 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
 
       {/* Floating Notification Toast */}
       {toastNotice && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
+        <div className="fixed top-14 sm:top-16 left-1/2 -translate-x-1/2 z-50 px-5 py-2 rounded-full bg-black/95 border border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
           <span>⚡</span>
           <span>{toastNotice}</span>
         </div>
       )}
 
-      {/* 3. Central Interactive Coffin Canvas (Draggable Diary, Skull, Relics, Secret Inscription) */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 flex flex-col items-center justify-center my-2">
-        {/* Under-Layer Revealed Engraving on the Coffin Floor (Only revealed when diary is moved or coffer unlocked) */}
-        {(Math.hypot(diaryOffset.x, diaryOffset.y) > 15 || isCofferUnlocked) && (
-          <div
-            className="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-black/90 border-2 border-amber-500/80 backdrop-blur-md shadow-[0_0_35px_rgba(245,158,11,0.5)] animate-fadeIn"
-            style={{
-              top: '46%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <span className="text-[10px] font-cinzel tracking-widest text-amber-400 font-bold uppercase">
-              ✦ STAMPED CHRONOLOGICAL CIPHER ✦
-            </span>
-            <div className="text-3xl sm:text-4xl font-cinzel font-black text-amber-200 tracking-[0.25em] drop-shadow-[0_0_12px_rgba(245,158,11,0.8)] my-1">
-              1 — 4 — 7
-            </div>
-            <span className="text-[10px] font-mono text-stone-300">
-              [ Chronological Year Digits: 1891 • 1904 • 1927 ]
-            </span>
-          </div>
-        )}
+      {/* 5. Center Spacer: keeps scene open and coffin visible */}
+      <div className="flex-1 min-h-0 pointer-events-none" />
 
-        {/* Coffin Relics & Draggable Components */}
-        <div className="relative w-full max-w-[900px] h-[520px] sm:h-[580px]">
-          {/* Item 1: Skull II (Roman Numeral II) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Cranium of the Chronicler"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('skull');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'skull')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'skull')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(skullOffset.x, skullOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_25px_rgba(245,158,11,0.9)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] rounded-full'
-            }`}
-            style={{
-              top: '8%',
-              left: '46%',
-              transform: `translate(${skullOffset.x}px, ${skullOffset.y}px) rotate(4deg)`,
-            }}
-          >
-            <div className={Math.hypot(skullOffset.x, skullOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <SkullGraphic romanNumeral="II" />
+      {/* 6. Single Master Riddle & 4-Digit Combination Lock Console */}
+      <section className="relative z-30 w-full px-2 sm:px-4 py-1 flex flex-col items-center">
+        <div className="w-full max-w-4xl rounded-2xl bg-gradient-to-r from-black/95 via-[#180a04]/95 to-black/95 border-2 border-amber-700/70 p-2 sm:p-2.5 shadow-[0_0_35px_rgba(0,0,0,0.95)] flex flex-col md:flex-row items-center justify-between gap-2.5">
+          {/* Riddle Section (Left) */}
+          <div className="flex-1 text-center md:text-left px-2 sm:px-3">
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-0.5">
+              <span className="text-amber-500 text-xs">✦</span>
+              <h3 className="font-cinzel text-xs font-black tracking-widest text-amber-300 uppercase">
+                THE KEEPER'S RIDDLE
+              </h3>
+              <span className="text-amber-500 text-xs">✦</span>
             </div>
+            <p className="font-serif italic text-[11px] sm:text-xs text-stone-300 leading-relaxed max-w-md">
+              &ldquo;Four marks were left where time stood still. One begins the age, three follow its will. Read the
+              keeper&rsquo;s journal, trace where the signs were laid. Restore the year in which the ancient covenant
+              was made.&rdquo;
+            </p>
           </div>
 
-          {/* Item 2: Open Ancient Diary on Skeleton's Chest (Central Focus) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="The Buried Chronicle"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('diary');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'diary')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'diary')}
-            className={`absolute z-25 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(diaryOffset.x, diaryOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_30px_rgba(245,158,11,1)]'
-                : 'hover:bg-amber-400/20 hover:shadow-[0_0_25px_rgba(245,158,11,0.6)] rounded-2xl'
-            }`}
-            style={{
-              top: '38%',
-              left: '34%',
-              transform: `translate(${diaryOffset.x}px, ${diaryOffset.y}px) rotate(-3deg)`,
-            }}
-          >
-            <div className={Math.hypot(diaryOffset.x, diaryOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <DiaryOpenGraphic />
-            </div>
-            {/* Pulsing Hint Tag on Hover */}
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/85 border border-amber-500/80 text-[9px] font-cinzel font-bold text-amber-300 tracking-wider whitespace-nowrap shadow-md pointer-events-none">
-              📖 Open Diary • Drag to Reveal
-            </div>
-          </div>
-
-          {/* Item 3: Antique Brass Pocket Compass */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Cartographer Compass"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('compass');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'compass')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'compass')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(compassOffset.x, compassOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.9)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-full'
-            }`}
-            style={{
-              top: '56%',
-              left: '66%',
-              transform: `translate(${compassOffset.x}px, ${compassOffset.y}px) rotate(14deg)`,
-            }}
-          >
-            <div className={Math.hypot(compassOffset.x, compassOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <CompassGraphic />
-            </div>
-          </div>
-
-          {/* Item 4: Crimson Alchemical Potion Vial */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Elixir of Embalming"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('potion');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'potion')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'potion')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(potionOffset.x, potionOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(239,68,68,0.9)]'
-                : 'hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '64%',
-              left: '22%',
-              transform: `translate(${potionOffset.x}px, ${potionOffset.y}px) rotate(-10deg)`,
-            }}
-          >
-            <div className={Math.hypot(potionOffset.x, potionOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <PotionGraphic />
-            </div>
-          </div>
-
-          {/* Item 5: Folded Wax-Sealed Letter */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Surveyor Testament"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('letter');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'letter')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'letter')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(letterOffset.x, letterOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '72%',
-              left: '32%',
-              transform: `translate(${letterOffset.x}px, ${letterOffset.y}px) rotate(-6deg)`,
-            }}
-          >
-            <div className={Math.hypot(letterOffset.x, letterOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <LetterGraphic />
-            </div>
-          </div>
-
-          {/* Item 6: Rolled Parchment Scroll */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Burial Map Scroll"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('scroll');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'scroll')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'scroll')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(scrollOffset.x, scrollOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '68%',
-              left: '52%',
-              transform: `translate(${scrollOffset.x}px, ${scrollOffset.y}px) rotate(8deg)`,
-            }}
-          >
-            <div className={Math.hypot(scrollOffset.x, scrollOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <ScrollGraphic />
-            </div>
-          </div>
-
-          {/* Item 7: Antique Brass Key */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Warden Key"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('key');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'key')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'key')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${
-              Math.hypot(keyOffset.x, keyOffset.y) > 8
-                ? 'opacity-100 filter drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]'
-                : 'hover:bg-amber-400/15 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] rounded-xl'
-            }`}
-            style={{
-              top: '80%',
-              left: '46%',
-              transform: `translate(${keyOffset.x}px, ${keyOffset.y}px) rotate(-15deg)`,
-            }}
-          >
-            <div className={Math.hypot(keyOffset.x, keyOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <KeyGraphic />
-            </div>
-          </div>
-
-          {/* Item 8: Locked Iron Coffer Box */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Locked Iron Coffer Box"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleInspect('coffer');
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(e, 'coffer')}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(e) => handlePointerUp(e, 'coffer')}
-            className={`absolute z-20 cursor-grab active:cursor-grabbing transition-all duration-100 touch-none ${getCofferClass(
-              isCofferUnlocked,
-              cofferOffset.x,
-              cofferOffset.y
-            )}`}
-            style={{
-              top: '74%',
-              left: '68%',
-              transform: `translate(${cofferOffset.x}px, ${cofferOffset.y}px) rotate(6deg)`,
-            }}
-          >
-            <div className={isCofferUnlocked || Math.hypot(cofferOffset.x, cofferOffset.y) > 8 ? 'block' : 'opacity-0 hover:opacity-40'}>
-              <CofferGraphic isOpen={isCofferUnlocked} />
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Coffer 3-Digit Tumbler Combination Console */}
-        <div className="relative z-30 w-full max-w-lg mt-2 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-black/90 via-[#180a04]/90 to-black/90 border-2 border-amber-600/70 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.9)] flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl" aria-hidden="true">
-              {isCofferUnlocked ? '🔓' : '🔐'}
-            </span>
-            <div>
-              <div className="text-xs font-cinzel font-bold text-amber-300 uppercase tracking-widest">
-                {isCofferUnlocked ? 'IRON COFFER UNSEALED' : 'IRON COFFER COMBINATION LOCK'}
-              </div>
-              <div className="text-[10px] text-stone-400 font-sans">
-                {isCofferUnlocked
-                  ? 'Fragment unsealed: "NIGHT" • Chronicle recorded in journal'
-                  : 'Align the 3 tumblers using the chronological cipher (1 - 4 - 7)'}
-              </div>
-            </div>
-          </div>
-
-          {/* Tumbler Controls */}
-          {isCofferUnlocked ? (
-            <div className="px-4 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 font-cinzel text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-              <span>✓</span>
-              <span>UNSEALED: "NIGHT"</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              {/* Tumbler 1 */}
-              <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => setDigit1((prev) => (prev + 1) % 10)}
-                  className="px-2 py-0.5 rounded-t bg-stone-800 hover:bg-stone-700 text-[10px] text-amber-300 font-mono"
-                >
-                  ▲
-                </button>
-                <div className="w-9 h-9 bg-black border border-amber-600/80 text-amber-200 font-mono font-black text-lg flex items-center justify-center shadow-inner">
-                  {digit1}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDigit1((prev) => (prev + 9) % 10)}
-                  className="px-2 py-0.5 rounded-b bg-stone-800 hover:bg-stone-700 text-[10px] text-amber-300 font-mono"
-                >
-                  ▼
-                </button>
-              </div>
-
-              {/* Tumbler 2 */}
-              <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => setDigit2((prev) => (prev + 1) % 10)}
-                  className="px-2 py-0.5 rounded-t bg-stone-800 hover:bg-stone-700 text-[10px] text-amber-300 font-mono"
-                >
-                  ▲
-                </button>
-                <div className="w-9 h-9 bg-black border border-amber-600/80 text-amber-200 font-mono font-black text-lg flex items-center justify-center shadow-inner">
-                  {digit2}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDigit2((prev) => (prev + 9) % 10)}
-                  className="px-2 py-0.5 rounded-b bg-stone-800 hover:bg-stone-700 text-[10px] text-amber-300 font-mono"
-                >
-                  ▼
-                </button>
-              </div>
-
-              {/* Tumbler 3 */}
-              <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => setDigit3((prev) => (prev + 1) % 10)}
-                  className="px-2 py-0.5 rounded-t bg-stone-800 hover:bg-stone-700 text-[10px] text-amber-300 font-mono"
-                >
-                  ▲
-                </button>
-                <div className="w-9 h-9 bg-black border border-amber-600/80 text-amber-200 font-mono font-black text-lg flex items-center justify-center shadow-inner">
-                  {digit3}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDigit3((prev) => (prev + 9) % 10)}
-                  className="px-2 py-0.5 rounded-b bg-stone-800 hover:bg-stone-700 text-[10px] text-amber-300 font-mono"
-                >
-                  ▼
-                </button>
-              </div>
-
-              {/* Unlock Submit Button */}
-              <button
-                type="button"
-                onClick={() => handleUnlockCoffer()}
-                className={`ml-2 px-4 py-2.5 rounded-xl font-cinzel text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+          {/* Combination Lock Controls (Right) — Zero Spoilers Before Solving */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <form onSubmit={handleUnlock} className="flex items-center gap-2 sm:gap-2.5">
+              {/* 4 Digit Tumblers */}
+              <div
+                className={`flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-xl bg-black/80 border transition-all ${
                   cofferError
-                    ? 'bg-red-900 border-2 border-red-500 text-white animate-shake'
-                    : 'bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 border-2 border-amber-400 text-amber-100 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+                    ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.7)] animate-shake'
+                    : isCofferUnlocked
+                    ? 'border-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+                    : 'border-amber-700/60 shadow-inner'
                 }`}
               >
-                UNLOCK
-              </button>
-            </div>
-          )}
-        </div>
-      </main>
+                {digits.map((digit, idx) => (
+                  <div key={idx} className="flex flex-col items-center">
+                    {/* Increment Up Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDigitChange(idx, 1)}
+                      aria-label={`Increment tumbler ${idx + 1}`}
+                      className="px-2 py-0.5 rounded-t bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
+                    >
+                      ▲
+                    </button>
 
-      {/* 5. Burial Soil Markers Excavation Drawer (Allows digging 1891, 1904, 1927 markers) */}
-      <div className="relative z-30 px-3 sm:px-6">
-        <div className="w-full max-w-4xl mx-auto rounded-2xl bg-black/80 border border-amber-900/60 p-2.5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setIsExcavationOpen(!isExcavationOpen)}
-              className="flex items-center gap-2 font-cinzel text-xs font-bold text-amber-300 uppercase tracking-widest hover:text-amber-100 cursor-pointer"
-            >
-              <span>⛏️</span>
-              <span>BURIAL SOIL EXCAVATION SITES ({dugSoils.length}/3 EXCAVATED)</span>
-              <span className="text-[10px] text-stone-400 font-mono">
-                {isExcavationOpen ? '▲ Hide Sites' : '▼ Expand Sites'}
-              </span>
-            </button>
-            <span className="text-[10px] text-stone-400 hidden sm:inline">
-              Unearthed dates reveal the chronology of the cartographers
-            </span>
-          </div>
-
-          {isExcavationOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3 pt-3 border-t border-amber-900/40">
-              {soilMarkers.map((marker) => {
-                const isDug = dugSoils.includes(marker.id);
-                return (
-                  <button
-                    key={marker.id}
-                    type="button"
-                    onClick={() => handleDigSoil(marker.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                      isDug
-                        ? 'bg-amber-950/50 border-amber-500 text-amber-200'
-                        : 'bg-stone-900/80 border-stone-700 hover:border-amber-600 text-stone-300'
-                    }`}
-                  >
-                    <div>
-                      <div className="text-xs font-cinzel font-bold">{marker.name}</div>
-                      <div className="text-[10px] font-mono text-stone-400">
-                        {isDug ? `Year ${marker.year} • Digit [${marker.digit}]` : 'Undisturbed cemetery soil'}
-                      </div>
+                    {/* Digit Box */}
+                    <div
+                      ref={(el) => {
+                        tumblerInputsRef.current[idx] = el;
+                      }}
+                      tabIndex={0}
+                      role="spinbutton"
+                      aria-valuenow={digit}
+                      aria-valuemin={0}
+                      aria-valuemax={9}
+                      aria-label={`Tumbler ${idx + 1}`}
+                      onKeyDown={(e) => handleTumblerKeyDown(e, idx)}
+                      className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-b from-stone-950 via-[#120703] to-black border border-amber-600/80 text-amber-200 font-mono font-black text-base sm:text-lg flex items-center justify-center shadow-inner cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 select-none"
+                    >
+                      {digit}
                     </div>
-                    <span className="text-xs">{isDug ? '✓ Dug' : '⛏️ Dig'}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* 6. Bottom Controls: Evidence Journal, Tagline, Return to Cemetery */}
-      <footer className="relative z-30 px-3 sm:px-6 pb-3 pt-2 flex items-center justify-between select-none">
-        {/* Bottom-Left: Evidence Journal */}
+                    {/* Decrement Down Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDigitChange(idx, -1)}
+                      aria-label={`Decrement tumbler ${idx + 1}`}
+                      className="px-2 py-0.5 rounded-b bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* UNLOCK Submit Button */}
+              <button
+                type="submit"
+                aria-label="UNLOCK"
+                className={`px-4 sm:px-5 py-2.5 rounded-xl font-cinzel text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+                  cofferError
+                    ? 'bg-red-900 border-2 border-red-500 text-white animate-shake'
+                    : isCofferUnlocked
+                    ? 'bg-gradient-to-r from-emerald-950 via-amber-950 to-emerald-950 border-2 border-emerald-500 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                    : 'bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 hover:from-amber-600 hover:to-amber-800 border-2 border-amber-400 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.45)] active:scale-95'
+                }`}
+              >
+                {isCofferUnlocked ? 'UNLOCKED' : 'UNLOCK'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Bottom Navigation Bar: Evidence Journal & Return to Cemetery */}
+      <footer className="relative z-30 w-full px-3 sm:px-6 py-1.5 pb-2 flex items-center justify-between select-none">
+        {/* Left: Evidence Journal */}
         <button
           type="button"
-          onClick={onOpenJournal}
-          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-500/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_18px_rgba(245,158,11,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          onClick={() => {
+            soundController.playClick();
+            onOpenJournal();
+          }}
+          className="px-4 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 hover:border-amber-400 text-stone-200 hover:text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_12px_rgba(0,0,0,0.8)] cursor-pointer backdrop-blur-sm"
         >
-          <span>📖</span>
-          <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
+          <span aria-hidden="true">📖</span>
+          <span>EVIDENCE JOURNAL ({uniqueCount}/3)</span>
         </button>
 
-        {/* Bottom-Center: Tagline */}
-        <div className="hidden md:flex items-center gap-2 text-stone-400 font-serif italic text-xs tracking-wider">
-          <span>✦ Open the diary • Turn pages • Move objects to uncover clues ✦</span>
-        </div>
-
-        {/* Bottom-Right: Return to Cemetery */}
+        {/* Right: Return to Cemetery */}
         <button
           type="button"
-          onClick={onReturnCemetery}
-          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-red-950 via-[#260f06] to-amber-950 hover:from-red-900 hover:to-amber-900 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          onClick={() => {
+            soundController.playClick();
+            onReturnCemetery();
+          }}
+          className="px-4 py-1.5 rounded-full bg-black/85 hover:bg-stone-800 border border-stone-600 hover:border-amber-500 text-stone-300 hover:text-white font-cinzel text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-md cursor-pointer backdrop-blur-sm"
         >
           <span>←</span>
           <span>RETURN TO CEMETERY</span>
         </button>
       </footer>
 
-      {/* 7. Object Detail Inspection Modal (Antique diary with page flips, compass, letter, skull) */}
-      <ObjectDetailModal
-        isOpen={isDetailOpen}
-        data={activeDetail}
-        onClose={() => setIsDetailOpen(false)}
-        onDiscoverClue={(clue) => {
-          if (clue === 'NIGHT' || clue === '1-4-7') {
-            if (!collectedFragments.includes('NIGHT')) {
-              onFragmentUnlocked('NIGHT');
-            }
-          }
-        }}
-      />
+      {/* ========================================================
+          MODAL 1: ANCIENT DIARY READING MODAL (Authentic Ancient Parchment)
+         ======================================================== */}
+      {isDiaryOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="diary-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
+          onClick={() => setIsDiaryOpen(false)}
+        >
+          <div
+            role="document"
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-gradient-to-b from-[#221006] via-[#140803] to-[#0a0301] border-2 border-amber-600/80 p-5 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl" aria-hidden="true">
+                  📖
+                </span>
+                <div>
+                  <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                    CEMETERY DISPATCH • EXHUMED RECORD
+                  </div>
+                  <h2
+                    id="diary-modal-title"
+                    className="text-base sm:text-xl font-cinzel font-black text-amber-100 tracking-wide"
+                  >
+                    The Keeper&rsquo;s Chronicle &mdash; Anno Domini
+                  </h2>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDiaryOpen(false)}
+                aria-label="Close Diary"
+                className="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                ✕ Close Diary
+              </button>
+            </div>
+
+            {/* Ancient Vellum Folio Page */}
+            <div className="relative my-2 p-5 sm:p-8 rounded-2xl bg-gradient-to-b from-[#2a170b] via-[#1a0c05] to-[#120602] border border-amber-600/50 shadow-[inset_0_0_40px_rgba(0,0,0,0.85)] flex flex-col justify-between overflow-hidden">
+              {/* Ornate corner borders */}
+              <div className="absolute top-2 left-2 text-amber-500/40 text-lg pointer-events-none select-none">╔</div>
+              <div className="absolute top-2 right-2 text-amber-500/40 text-lg pointer-events-none select-none">╗</div>
+              <div className="absolute bottom-2 left-2 text-amber-500/40 text-lg pointer-events-none select-none">╚</div>
+              <div className="absolute bottom-2 right-2 text-amber-500/40 text-lg pointer-events-none select-none">╝</div>
+
+              <div className="max-w-2xl mx-auto text-center space-y-4">
+                <div className="text-[11px] font-cinzel font-bold text-amber-400/90 uppercase tracking-[0.25em]">
+                  ✦ TESTAMENTUM CUSTODIS • THE KEEPER’S CIPHER ✦
+                </div>
+
+                <div className="p-4 sm:p-6 rounded-xl bg-black/60 border border-amber-700/40 shadow-inner">
+                  <p className="font-serif italic text-sm sm:text-base text-amber-100/95 leading-relaxed tracking-wide">
+                    &ldquo;On the night the old covenant was sealed, four witnesses survived the keeper&rsquo;s final testimony.
+                    <br />
+                    <br />
+                    Begin with the mark that stands alone upon the crowned keeper.
+                    <br />
+                    Next, seek the scrap resting beyond the open folio, where the western hand once placed its seal.
+                    <br />
+                    Let its opposite, beneath the moonward arm, speak next.
+                    <br />
+                    Close the year with the numeral pressed beside the crimson seal beneath the remains.
+                    <br />
+                    <br />
+                    The scattered tallies elsewhere remember the dead, not the covenant.&rdquo;
+                  </p>
+
+                  <div className="mt-5 pt-3 border-t border-amber-800/40 text-amber-400 font-cinzel text-xs font-bold tracking-widest uppercase">
+                    &ldquo;Read the relics. Restore the forgotten year.&rdquo;
+                  </div>
+                </div>
+
+                <p className="text-[11px] font-serif italic text-stone-400">
+                  Four marks alone reveal the covenant year. Align the four tumblers to loosen the ancient iron lock.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-amber-900/40 pt-3 mt-2">
+              <span className="text-[10px] font-mono text-stone-400">
+                Preserved in Grave II &bull; Four marks forge the forgotten year
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDiaryOpen(false)}
+                className="px-4 py-1.5 rounded-xl bg-amber-900/80 hover:bg-amber-800 border border-amber-500 text-amber-100 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-all"
+              >
+                Close &amp; Enter Combination
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 2: HIGH-DEFINITION PHOTOGRAPHIC ARTIFACT INSPECTION MODAL
+         ======================================================== */}
+      {inspectedTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
+          onClick={() => setInspectedTarget(null)}
+        >
+          <div
+            role="document"
+            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
+              <div>
+                <div className="text-[10px] font-cinzel font-bold text-amber-400 tracking-widest uppercase">
+                  BURIAL CHAMBER INSPECTION
+                </div>
+                <h3 className="text-base sm:text-lg font-cinzel font-black text-amber-100 tracking-wide">
+                  {inspectedTarget.title}
+                </h3>
+                {inspectedTarget.subtitle && (
+                  <div className="text-[11px] font-mono text-stone-400 mt-0.5">
+                    {inspectedTarget.subtitle}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectedTarget(null)}
+                aria-label="Close"
+                className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* High-Resolution Photographic Master Artwork Crop */}
+            <div className="flex flex-col items-center justify-center p-4 my-2 rounded-2xl bg-[#0d0603]/90 border border-amber-900/50 shadow-inner text-center">
+              <div className="relative w-full max-h-56 flex items-center justify-center overflow-hidden rounded-xl border border-amber-950/80 bg-black/70 p-2 shadow-2xl">
+                <img
+                  src={inspectedTarget.imageSrc}
+                  alt={inspectedTarget.title}
+                  className="max-h-52 w-auto object-contain rounded-lg drop-shadow-[0_0_15px_rgba(0,0,0,0.9)]"
+                />
+              </div>
+
+              {/* Status Badge (e.g., "THE CHEST REMAINS SEALED.") */}
+              {inspectedTarget.statusBadge && (
+                <div className="mt-3 px-3 py-1 rounded-full bg-red-950/90 border border-red-600 text-red-200 font-cinzel text-[11px] font-black uppercase tracking-widest shadow-md">
+                  {inspectedTarget.statusBadge}
+                </div>
+              )}
+
+              {/* Distractor Tag */}
+              {inspectedTarget.isDistractor && (
+                <div className="mt-2 text-[10px] font-cinzel font-bold text-stone-400 tracking-widest uppercase">
+                  ✦ ARCHIVAL BURIAL SCRAP • NOT PART OF THE COVENANT YEAR ✦
+                </div>
+              )}
+
+              {/* Detailed Description */}
+              <p className="mt-4 font-serif italic text-xs sm:text-sm text-stone-200 leading-relaxed max-w-sm">
+                &ldquo;{inspectedTarget.description}&rdquo;
+              </p>
+            </div>
+
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setInspectedTarget(null)}
+              aria-label="Close Inspection"
+              className="mt-2 w-full py-2 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-500/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
+            >
+              Close Inspection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 3: TREASURE CHEST UNLOCKED REWARD MODAL (EMBER Reveal)
+         ======================================================== */}
+      {isChestRewardOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn"
+          onClick={() => setIsChestRewardOpen(false)}
+        >
+          <div
+            role="document"
+            className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#2a1306] via-[#160a03] to-[#080200] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_100px_rgba(245,158,11,0.7)] flex flex-col items-center text-center justify-between"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Badge */}
+            <div className="px-3.5 py-1 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-300 font-cinzel text-[10px] font-black uppercase tracking-widest shadow-md mb-2">
+              ✓ COVENANT YEAR 1749 UNLOCKED
+            </div>
+
+            <h2 className="font-cinzel text-xl sm:text-2xl font-black text-amber-100 tracking-wide mb-1">
+              The Sacred Inscription Unsealed
+            </h2>
+            <p className="font-serif italic text-xs text-stone-300 mb-5">
+              The four tumblers align. The heavy iron latch falls away with a hollow clang, revealing the sacred
+              syllable.
+            </p>
+
+            {/* Glowing Golden Relic Parchment */}
+            <div className="w-full max-w-xs p-6 rounded-2xl bg-gradient-to-b from-[#3a1b07] via-[#200f04] to-[#120702] border-2 border-amber-400 shadow-[0_0_50px_rgba(245,158,11,0.6)] flex flex-col items-center my-2 animate-pulse">
+              <span className="text-[10px] font-cinzel font-bold text-amber-400 tracking-[0.25em] uppercase mb-1">
+                ✦ GRAVE II SYLLABLE ✦
+              </span>
+              <div className="text-4xl sm:text-5xl font-cinzel font-black text-amber-100 tracking-[0.3em] drop-shadow-[0_0_20px_rgba(245,158,11,1)] my-2">
+                EMBER
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400">
+                [ Evidence Journal Progress: {uniqueCount}/3 ]
+              </span>
+            </div>
+
+            <p className="mt-4 text-[11px] font-sans text-stone-300 max-w-xs">
+              Fragment II has been permanently recorded in your Evidence Journal.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex items-center gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  soundController.playClick();
+                  setIsChestRewardOpen(false);
+                  onOpenJournal();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-black/80 hover:bg-stone-900 border border-amber-500 text-amber-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-all"
+              >
+                📖 Open Journal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundController.playClick();
+                  setIsChestRewardOpen(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 border-2 border-amber-400 text-amber-100 font-cinzel text-xs font-black uppercase tracking-wider cursor-pointer shadow-lg transition-all"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,7 +3,6 @@ import type { AdminTeam, TeamStatus } from '../../../types/team.types';
 import { adminService } from '../../../services/adminService';
 import { CreateTeamModal } from './CreateTeamModal';
 import { TeamDetailsModal } from './TeamDetailsModal';
-import { EditTeamNameModal } from './EditTeamNameModal';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
 
 interface AdminTeamsTabProps {
@@ -47,8 +46,7 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<AdminTeam | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isEditNameOpen, setIsEditNameOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{ team: AdminTeam; action: 'reset' | 'demote' } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ team: AdminTeam; action: 'reset' | 'demote' | 'delete' } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Fetch data
@@ -67,7 +65,9 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
     if (!pendingAction) return;
     const result = pendingAction.action === 'reset'
       ? adminService.resetTeamProgress(pendingAction.team.id)
-      : adminService.demoteTeamToPreviousRound(pendingAction.team.id);
+      : pendingAction.action === 'demote'
+        ? adminService.demoteTeamToPreviousRound(pendingAction.team.id)
+        : adminService.deleteTeam(pendingAction.team.id);
     setPendingAction(null);
     setActionNotice(result.message);
     handleRefresh();
@@ -213,14 +213,11 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedTeam(team);
-                            setIsEditNameOpen(true);
-                          }}
-                          className="px-2 py-1 rounded bg-cartel-charcoal hover:bg-white/10 text-white font-cinzel text-[10px] font-bold border border-white/20 cursor-pointer"
-                          title="Edit team callsign"
+                          onClick={() => setPendingAction({ team, action: 'delete' })}
+                          className="px-2 py-1 rounded bg-red-950/60 hover:bg-red-900/70 text-red-200 font-cinzel text-[10px] font-bold border border-red-500/30 cursor-pointer"
+                          title="Delete team"
                         >
-                          Edit
+                          Delete
                         </button>
                         <button
                           type="button"
@@ -300,24 +297,30 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
         }}
       />
 
-      <EditTeamNameModal
-        team={selectedTeam}
-        isOpen={isEditNameOpen}
-        onClose={() => {
-          setIsEditNameOpen(false);
-          setSelectedTeam(null);
-        }}
-        onSuccess={handleRefresh}
-      />
-
       <ConfirmationModal
         isOpen={pendingAction !== null}
-        title={pendingAction?.action === 'reset' ? 'RESET TEAM PROGRESS' : 'DEMOTE TEAM'}
-        message={pendingAction?.action === 'reset'
-          ? `Reset ${pendingAction.team.name} to Round 1, Stage 1? This clears its stage progress, earned credits, and Round 1 game state.`
-          : `Move ${pendingAction?.team.name} back to Round 1, Stage 3? Earned credits and completed-stage records will be preserved.`}
-        confirmLabel={pendingAction?.action === 'reset' ? 'Reset Progress' : 'Demote'}
-        isDanger={pendingAction?.action === 'reset'}
+        title={
+          pendingAction?.action === 'reset'
+            ? 'RESET TEAM PROGRESS'
+            : pendingAction?.action === 'demote'
+              ? 'DEMOTE TEAM'
+              : 'DELETE TEAM'
+        }
+        message={
+          pendingAction?.action === 'reset'
+            ? `Reset ${pendingAction.team.name} to Round 1, Stage 1? This clears its stage progress, earned credits, and Round 1 game state.`
+            : pendingAction?.action === 'demote'
+              ? `Move ${pendingAction.team.name} back to Round 1, Stage 3? Earned credits and completed-stage records will be preserved.`
+              : `Permanently delete ${pendingAction?.team.name}? This team will be removed from the admin portal.`
+        }
+        confirmLabel={
+          pendingAction?.action === 'reset'
+            ? 'Reset Progress'
+            : pendingAction?.action === 'demote'
+              ? 'Demote'
+              : 'Delete Team'
+        }
+        isDanger={pendingAction?.action === 'reset' || pendingAction?.action === 'delete'}
         onConfirm={confirmTeamAction}
         onCancel={() => setPendingAction(null)}
       />
