@@ -38,6 +38,11 @@ const HEADER_AMBER_BADGE = 'text-[10px] font-cinzel font-bold text-amber-400 tra
 const KEY_ESCAPE = 'Escape';
 const MODAL_BACKDROP_CLASSES =
   'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn';
+const ROLE_BUTTON = 'button';
+const ROLE_DIALOG = 'dialog';
+const ROLE_DOCUMENT = 'document';
+const ARIA_TRUE = 'true';
+const STYLE_NONE = 'none';
 const BACKDROP_DISMISS_CLASSES =
   'absolute inset-0 w-full h-full bg-transparent border-0 cursor-default';
 
@@ -316,7 +321,7 @@ export function Grave3FinalTestament({
           {COFFIN3_TARGETS.map((target) => (
             <button
               key={target.id}
-              type="button"
+              type={ROLE_BUTTON}
               onMouseDown={preventMouseDown}
               onClick={() => handleInspect(target)}
               aria-label={target.ariaLabel}
@@ -326,9 +331,9 @@ export function Grave3FinalTestament({
                 top: target.top,
                 width: target.width,
                 height: target.height,
-                outline: 'none',
-                border: 'none',
-                boxShadow: 'none',
+                outline: STYLE_NONE,
+                border: STYLE_NONE,
+                boxShadow: STYLE_NONE,
               }}
             />
           ))}
@@ -411,7 +416,7 @@ export function Grave3FinalTestament({
                     <div className="flex items-center gap-1 sm:gap-1.5">
                       {/* Left Chevron Button (ccw) */}
                       <button
-                        type="button"
+                        type={ROLE_BUTTON}
                         onMouseDown={preventMouseDown}
                         onClick={() => handleRotate(idx, 'ccw')}
                         aria-label={`Rotate ${ringLabel} Counter-Clockwise`}
@@ -437,7 +442,7 @@ export function Grave3FinalTestament({
 
                       {/* Right Chevron Button (cw) */}
                       <button
-                        type="button"
+                        type={ROLE_BUTTON}
                         onMouseDown={preventMouseDown}
                         onClick={() => handleRotate(idx, 'cw')}
                         aria-label={`Rotate ${ringLabel} Clockwise`}
@@ -454,7 +459,7 @@ export function Grave3FinalTestament({
             {/* Centered Wide Golden Bar Button */}
             <div className="w-full mt-2.5 flex flex-col items-center">
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onMouseDown={preventMouseDown}
                 onClick={handleUnseal}
                 aria-label="Unseal the Final Testament"
@@ -479,7 +484,7 @@ export function Grave3FinalTestament({
       <footer className="relative z-30 px-3 sm:px-6 pb-2.5 pt-1 flex items-center justify-between select-none">
         {/* Evidence Journal Progress */}
         <button
-          type="button"
+          type={ROLE_BUTTON}
           onMouseDown={preventMouseDown}
           onClick={onOpenJournal}
           aria-label={`Open Evidence Journal (${uniqueCount}/3)`}
@@ -491,7 +496,7 @@ export function Grave3FinalTestament({
 
         {/* Return to Cemetery */}
         <button
-          type="button"
+          type={ROLE_BUTTON}
           onMouseDown={preventMouseDown}
           onClick={onReturnCemetery}
           aria-label="Return to Cemetery"
@@ -507,8 +512,8 @@ export function Grave3FinalTestament({
          ======================================================== */}
       {inspectedTarget && (
         <div
-          role="dialog"
-          aria-modal="true"
+          role={ROLE_DIALOG}
+          aria-modal={ARIA_TRUE}
           aria-labelledby="artifact-modal-title"
           className={MODAL_BACKDROP_CLASSES}
           tabIndex={-1}
@@ -518,14 +523,14 @@ export function Grave3FinalTestament({
         >
           {/* Transparent dismissal layer eliminating non-interactive div click warnings */}
           <button
-            type="button"
+            type={ROLE_BUTTON}
             className={BACKDROP_DISMISS_CLASSES}
             aria-label="Close modal backdrop"
             onClick={() => setInspectedTarget(null)}
           />
 
           <div
-            role="document"
+            role={ROLE_DOCUMENT}
             className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
           >
             {/* Header */}
@@ -547,7 +552,7 @@ export function Grave3FinalTestament({
                 )}
               </div>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => setInspectedTarget(null)}
                 aria-label="Close Inspection Modal"
                 className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
@@ -581,7 +586,7 @@ export function Grave3FinalTestament({
 
             {/* Close Button */}
             <button
-              type="button"
+              type={ROLE_BUTTON}
               onClick={() => setInspectedTarget(null)}
               aria-label="Close Inspection"
               className="mt-2 w-full py-2.5 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-500/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
@@ -597,8 +602,8 @@ export function Grave3FinalTestament({
          ======================================================== */}
       {isRewardModalOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
+          role={ROLE_DIALOG}
+          aria-modal={ARIA_TRUE}
           aria-labelledby="testament-modal-title"
           className={MODAL_BACKDROP_CLASSES}
           tabIndex={-1}
@@ -608,14 +613,14 @@ export function Grave3FinalTestament({
         >
           {/* Transparent dismissal layer eliminating non-interactive div click warnings */}
           <button
-            type="button"
+            type={ROLE_BUTTON}
             className={BACKDROP_DISMISS_CLASSES}
             aria-label="Close Reward Modal"
             onClick={() => setIsRewardModalOpen(false)}
           />
 
           <div
-            role="document"
+            role={ROLE_DOCUMENT}
             className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
           >
             {/* Header */}
@@ -632,7 +637,7 @@ export function Grave3FinalTestament({
                 </h3>
               </div>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => setIsRewardModalOpen(false)}
                 aria-label="Close Reward Modal"
                 className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
@@ -669,7 +674,7 @@ export function Grave3FinalTestament({
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-2 mt-3">
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => {
                   setIsRewardModalOpen(false);
                   onOpenJournal();
@@ -679,7 +684,7 @@ export function Grave3FinalTestament({
                 📖 View Evidence Journal ({uniqueCount}/3)
               </button>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => {
                   setIsRewardModalOpen(false);
                   onReturnCemetery();

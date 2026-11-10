@@ -17,6 +17,7 @@ export default defineConfig({
     environment: 'jsdom',
     environmentMatchGlobs: [
       ['server/**', 'node'],
+      ['database/**', 'node'],
       ['src/**', 'jsdom'],
     ],
     globals: true,

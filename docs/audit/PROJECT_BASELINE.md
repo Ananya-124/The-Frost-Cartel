@@ -90,3 +90,4 @@ Frost Cartel is an interactive Halloween-themed competitive gaming and escape-ro
    - Update `.gitignore` to prevent test capture pollution.
 4. **Documentation**:
    - Create `docs/architecture/PROJECT_STRUCTURE.md` and update `README.md`.
+

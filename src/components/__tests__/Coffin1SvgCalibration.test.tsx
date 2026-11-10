@@ -10,6 +10,8 @@ import {
 } from '../game/stage3/Grave1MarkedRemains';
 import { round1Service } from '../../services/round1Service';
 
+const TEST_TEAM_ID = 'team_test_calib';
+
 describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
   const mockReturnDashboard = vi.fn();
   const mockReturnCemetery = vi.fn();
@@ -21,7 +23,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
-    round1Service.beginRound1('team_test_calib', 'Calibration Squad');
+    round1Service.beginRound1(TEST_TEAM_ID, 'Calibration Squad');
   });
 
   it('declares exact intrinsic 2560 x 1440 coordinate space and viewBox', () => {
@@ -51,7 +53,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     const config = round1Service.getStage3Config();
     const { container } = render(
       <Grave1MarkedRemains
-        teamId="team_test_calib"
+        teamId={TEST_TEAM_ID}
         config={config}
         collectedFragments={[]}
         placedBones={{}}
@@ -85,7 +87,7 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     const config = round1Service.getStage3Config();
     const { container } = render(
       <Grave1MarkedRemains
-        teamId="team_test_calib"
+        teamId={TEST_TEAM_ID}
         config={config}
         collectedFragments={[]}
         placedBones={{}}

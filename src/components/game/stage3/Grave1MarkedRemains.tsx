@@ -14,6 +14,20 @@ export const COFFIN_ORIGINAL_WIDTH = 2560;
 export const COFFIN_ORIGINAL_HEIGHT = 1440;
 export const COFFIN_VIEWBOX = '0 0 2560 1440';
 
+// Canonical constants to prevent SonarLint S1192 warnings
+const ROLE_BUTTON = 'button';
+const KEY_ENTER = 'Enter';
+const KEY_SPACE = ' ';
+const FILL_TRANSPARENT = 'transparent';
+const STROKE_NONE = 'none';
+const FRAGMENT_BENEATH = 'BENEATH';
+const FRAGMENT_THE = 'THE';
+const FRAGMENT_EMBER = 'EMBER';
+const FRAGMENT_NIGHT = 'NIGHT';
+const FRAGMENT_RETURNS = 'RETURNS';
+const INSCRIPTION_ASH = 'ASH';
+const isActionKey = (e: React.KeyboardEvent): boolean => e.key === KEY_ENTER || e.key === KEY_SPACE;
+
 // HIGH-PRECISION CALIBRATED INVISIBLE HITBOXES (2560x1440 Master Canvas, 0 Overlaps)
 export const COFFIN_SVG_PATHS = {
   // 1. The Ancient Book / Grimoire (Solar Emblem)
@@ -122,7 +136,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   });
 
   const [isChestOpen, setIsChestOpen] = useState<boolean>(() => {
-    return collectedFragments.includes('BENEATH');
+    return collectedFragments.includes(FRAGMENT_BENEATH);
   });
 
   const [isKeyFlying, setIsKeyFlying] = useState(false);
@@ -131,9 +145,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   // Authoritative unique completed grave count (strictly 0..3)
   const uniqueCount = Math.min(
     3,
-    (collectedFragments.includes('BENEATH') || collectedFragments.includes('THE') || isChestOpen || isChestUnlocked ? 1 : 0) +
-      (collectedFragments.includes('EMBER') || collectedFragments.includes('NIGHT') ? 1 : 0) +
-      (collectedFragments.includes('RETURNS') ? 1 : 0)
+    (collectedFragments.includes(FRAGMENT_BENEATH) || collectedFragments.includes(FRAGMENT_THE) || isChestOpen || isChestUnlocked ? 1 : 0) +
+      (collectedFragments.includes(FRAGMENT_EMBER) || collectedFragments.includes(FRAGMENT_NIGHT) ? 1 : 0) +
+      (collectedFragments.includes(FRAGMENT_RETURNS) ? 1 : 0)
   );
 
   // Refs
@@ -222,7 +236,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       setIsSkeletonMoved(true);
       round1Service.shiftGrave1Skeleton(teamId);
       soundController.playDiscover();
-      showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
+      showToast(`✦ Remains shifted! Hidden inscription uncovered: "${INSCRIPTION_ASH}" ✦`);
     }
   };
 
@@ -250,7 +264,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       round1Service.shiftGrave1Skeleton(teamId);
       setSkeletonOffset({ x: 180, y: -90 });
       soundController.playDiscover();
-      showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
+      showToast(`✦ Remains shifted! Hidden inscription uncovered: "${INSCRIPTION_ASH}" ✦`);
     }
   };
 
@@ -269,7 +283,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     if (res.success) {
       soundController.playCorrect();
       setIsRiddleSolved(true);
-      showToast('✦ Correct! The Keeper accepts "ASH". The Skeleton Key awakens! ✦');
+      showToast(`✦ Correct! The Keeper accepts "${INSCRIPTION_ASH}". The Skeleton Key awakens! ✦`);
     } else {
       soundController.playWrongAnswer();
       const errMsg = 'The sepulcher remains silent. Consult Folio II & III for guidance.';
@@ -336,9 +350,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     setIsChestUnlocked(true);
     setIsChestOpen(true);
     round1Service.unlockGrave1Chest(teamId);
-    onFragmentUnlocked('BENEATH');
+    onFragmentUnlocked(FRAGMENT_BENEATH);
     setIsRewardModalOpen(true);
-    showToast('✦ Sacred Syllable Unsealed: "BENEATH" • Coffin I Completed! ✦');
+    showToast(`✦ Sacred Syllable Unsealed: "${FRAGMENT_BENEATH}" • Coffin I Completed! ✦`);
   };
 
   return (
@@ -380,15 +394,15 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           {/* OBJECT 1: ANCIENT BOOK / GRIMOIRE (Opens AncientBookReader) */}
           <path
             d={COFFIN_SVG_PATHS.ancient_book}
-            fill="transparent"
-            stroke="none"
-            role="button"
+            fill={FILL_TRANSPARENT}
+            stroke={STROKE_NONE}
+            role={ROLE_BUTTON}
             tabIndex={0}
             aria-label="Ancient Grimoire: Click to Open and Read • Inspect Ancient Grimoire"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
             onClick={handleOpenBook}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (isActionKey(e)) {
                 e.preventDefault();
                 handleOpenBook();
               }
@@ -398,15 +412,15 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           {/* OBJECT 2: ANCIENT SEALED LETTER (Opens ArtifactInspectionModal) */}
           <path
             d={COFFIN_SVG_PATHS.envelope}
-            fill="transparent"
-            stroke="none"
-            role="button"
+            fill={FILL_TRANSPARENT}
+            stroke={STROKE_NONE}
+            role={ROLE_BUTTON}
             tabIndex={0}
             aria-label="Inspect Sealed Letter"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
             onClick={handleInspectLetter}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (isActionKey(e)) {
                 e.preventDefault();
                 handleInspectLetter();
               }
@@ -416,15 +430,15 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           {/* OBJECT 3: OCCULT DISPATCH PARCHMENT */}
           <path
             d={COFFIN_SVG_PATHS.parchment}
-            fill="transparent"
-            stroke="none"
-            role="button"
+            fill={FILL_TRANSPARENT}
+            stroke={STROKE_NONE}
+            role={ROLE_BUTTON}
             tabIndex={0}
             aria-label="Inspect Occult Dispatch Parchment"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
             onClick={handleInspectLetter}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (isActionKey(e)) {
                 e.preventDefault();
                 handleInspectLetter();
               }
@@ -439,9 +453,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             {/* 5A. SKULL WITH ROMAN "I" */}
             <path
               d={COFFIN_SVG_PATHS.skull}
-              fill="transparent"
-              stroke="none"
-              role="button"
+              fill={FILL_TRANSPARENT}
+              stroke={STROKE_NONE}
+              role={ROLE_BUTTON}
               tabIndex={0}
               aria-label="Inspect Cranium of the First Warden marked I"
               className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
@@ -450,7 +464,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 setActiveArtifact('skull');
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (isActionKey(e)) {
                   e.preventDefault();
                   soundController.playClick();
                   setActiveArtifact('skull');
@@ -461,9 +475,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             {/* 5B. THORACIC RIBCAGE WITH MEDALLION */}
             <path
               d={COFFIN_SVG_PATHS.ribcage}
-              fill="transparent"
-              stroke="none"
-              role="button"
+              fill={FILL_TRANSPARENT}
+              stroke={STROKE_NONE}
+              role={ROLE_BUTTON}
               tabIndex={0}
               aria-label="Inspect Thoracic Ribcage"
               className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
@@ -472,7 +486,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 setActiveArtifact('ribcage');
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (isActionKey(e)) {
                   e.preventDefault();
                   soundController.playClick();
                   setActiveArtifact('ribcage');
@@ -483,9 +497,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             {/* 5C. LEFT ARM & PHALANGES */}
             <path
               d={COFFIN_SVG_PATHS.left_arm}
-              fill="transparent"
-              stroke="none"
-              role="button"
+              fill={FILL_TRANSPARENT}
+              stroke={STROKE_NONE}
+              role={ROLE_BUTTON}
               tabIndex={0}
               aria-label="Inspect Skeletal Left Arm"
               className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
@@ -494,7 +508,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 showToast('The skeletal hand rests beside the ancient grimoire.');
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (isActionKey(e)) {
                   e.preventDefault();
                   soundController.playClick();
                   showToast('The skeletal hand rests beside the ancient grimoire.');
@@ -505,9 +519,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             {/* 5D. CRIMSON-BOUND FEMUR (Movable bone concealing "ASH") */}
             <path
               d={COFFIN_SVG_PATHS.femur}
-              fill="transparent"
-              stroke="none"
-              role="button"
+              fill={FILL_TRANSPARENT}
+              stroke={STROKE_NONE}
+              role={ROLE_BUTTON}
               tabIndex={0}
               aria-label="Movable Femur: Click or Drag to Shift Remains"
               className={`outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-all ${
@@ -516,7 +530,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
               onPointerDown={handleSkeletonPointerDown}
               onClick={handleFemurClick}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (isActionKey(e)) {
                   e.preventDefault();
                   handleFemurClick();
                 }
@@ -527,19 +541,19 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           {/* OBJECT 4: REVEALED BRASS INSCRIPTION PLATE "ASH" (Rendered on top when shifted) */}
           {isSkeletonMoved && (
             <g
-              role="button"
+              role={ROLE_BUTTON}
               tabIndex={0}
               aria-label="Inspect Revealed Inscription: ASH"
               className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-all duration-300"
               onClick={() => {
                 soundController.playDiscover();
-                showToast('✦ Ancient Engraved Plate: "ASH" — The keyword for the Keeper’s Riddle ✦');
+                showToast(`✦ Ancient Engraved Plate: "${INSCRIPTION_ASH}" — The keyword for the Keeper’s Riddle ✦`);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (isActionKey(e)) {
                   e.preventDefault();
                   soundController.playDiscover();
-                  showToast('✦ Ancient Engraved Plate: "ASH" — The keyword for the Keeper’s Riddle ✦');
+                  showToast(`✦ Ancient Engraved Plate: "${INSCRIPTION_ASH}" — The keyword for the Keeper’s Riddle ✦`);
                 }
               }}
             >
@@ -583,13 +597,13 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           {/* OBJECT 6: ANTIQUE BRASS SKELETON KEY */}
           <g
             ref={flyingKeyRef}
-            role="button"
+            role={ROLE_BUTTON}
             tabIndex={0}
             aria-label="Antique Brass Skeleton Key"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
             onClick={handleKeyClick}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (isActionKey(e)) {
                 e.preventDefault();
                 handleKeyClick();
               }
@@ -597,17 +611,17 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           >
             <path
               d={COFFIN_SVG_PATHS.skeleton_key}
-              fill="transparent"
-              stroke="none"
+              fill={FILL_TRANSPARENT}
+              stroke={STROKE_NONE}
             />
           </g>
 
           {/* OBJECT 7: ROLLED ANCIENT PAPYRUS SCROLL */}
           <path
             d={COFFIN_SVG_PATHS.scroll}
-            fill="transparent"
-            stroke="none"
-            role="button"
+            fill={FILL_TRANSPARENT}
+            stroke={STROKE_NONE}
+            role={ROLE_BUTTON}
             tabIndex={0}
             aria-label="Inspect Rolled Ancient Scroll"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
@@ -616,7 +630,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
               setActiveArtifact('scroll');
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (isActionKey(e)) {
                 e.preventDefault();
                 soundController.playClick();
                 setActiveArtifact('scroll');
@@ -627,9 +641,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           {/* OBJECT 8: ENGRAVED COMPASS MEDALLION */}
           <path
             d={COFFIN_SVG_PATHS.compass}
-            fill="transparent"
-            stroke="none"
-            role="button"
+            fill={FILL_TRANSPARENT}
+            stroke={STROKE_NONE}
+            role={ROLE_BUTTON}
             tabIndex={0}
             aria-label="Inspect Engraved Compass Medallion"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
@@ -638,7 +652,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
               setActiveArtifact('compass');
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (isActionKey(e)) {
                 e.preventDefault();
                 soundController.playClick();
                 setActiveArtifact('compass');
@@ -731,7 +745,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             ) : (
               <div className="flex flex-col items-center sm:items-end gap-1.5">
                 <button
-                  type="button"
+                  type={ROLE_BUTTON}
                   aria-label={
                     isChestOpen
                       ? 'FRAGMENT UNSEALED: "BENEATH"'
@@ -767,7 +781,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       <footer className="relative z-30 px-3 sm:px-6 pb-2.5 pt-1 flex items-center justify-between select-none">
         {/* Evidence Journal Progress */}
         <button
-          type="button"
+          type={ROLE_BUTTON}
           onClick={() => {
             soundController.playClick();
             onOpenJournal();
@@ -781,7 +795,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
 
         {/* Return to Cemetery */}
         <button
-          type="button"
+          type={ROLE_BUTTON}
           onClick={() => {
             soundController.playClick();
             onReturnCemetery();
@@ -841,7 +855,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 </h3>
               </div>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => setIsRewardModalOpen(false)}
                 aria-label="Close Reward Modal"
                 className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
@@ -878,7 +892,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-2 mt-3">
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => {
                   setIsRewardModalOpen(false);
                   onOpenJournal();
@@ -888,7 +902,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 📖 View Evidence Journal ({uniqueCount}/3)
               </button>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => {
                   setIsRewardModalOpen(false);
                   onReturnCemetery();

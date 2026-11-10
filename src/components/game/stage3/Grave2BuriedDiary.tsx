@@ -54,6 +54,13 @@ const KEY_ESCAPE = 'Escape';
 const PCT_12_5 = '12.50%';
 const MODAL_BACKDROP_CLASSES =
   'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-fadeIn';
+const ROLE_BUTTON = 'button';
+const ROLE_DIALOG = 'dialog';
+const ROLE_DOCUMENT = 'document';
+const ARIA_TRUE = 'true';
+const STYLE_NONE = 'none';
+const PCT_50 = '50%';
+const DISMISS_OVERLAY_ARIA = 'Dismiss modal overlay';
 const BACKDROP_DISMISS_CLASSES =
   'absolute inset-0 w-full h-full bg-transparent border-0 cursor-default';
 
@@ -239,7 +246,7 @@ const getPolygonFill = (isDebug: boolean, isSelected: boolean): string => {
 };
 
 const getPolygonStroke = (isDebug: boolean, isSelected: boolean): string => {
-  if (!isDebug) return 'none';
+  if (!isDebug) return STYLE_NONE;
   return isSelected ? '#ef4444' : '#f59e0b';
 };
 
@@ -463,7 +470,7 @@ export function Grave2BuriedDiary({
         >
           {/* Golden Glow when Iron Coffer is Unlocked */}
           <defs>
-            <radialGradient id="cofferGlowGradient" cx="50%" cy="50%" r="50%">
+            <radialGradient id="cofferGlowGradient" cx={PCT_50} cy={PCT_50} r={PCT_50}>
               <stop offset="0%" stopColor="rgba(245, 158, 11, 0.55)" />
               <stop offset="60%" stopColor="rgba(245, 158, 11, 0.2)" />
               <stop offset="100%" stopColor="rgba(245, 158, 11, 0)" />
@@ -503,7 +510,7 @@ export function Grave2BuriedDiary({
                   }
                 }}
                 className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none transition-none shadow-none"
-                style={{ outline: 'none' }}
+                style={{ outline: STYLE_NONE }}
               >
                 <polygon
                   points={target.points}
@@ -512,7 +519,7 @@ export function Grave2BuriedDiary({
                   strokeWidth={isDebugMode ? 3 : 0}
                   strokeDasharray={isDebugMode ? '6 4' : undefined}
                   pointerEvents="fill"
-                  style={{ outline: 'none' }}
+                  style={{ outline: STYLE_NONE }}
                 />
               </g>
             );
@@ -525,7 +532,7 @@ export function Grave2BuriedDiary({
               const px = Number(firstPt[0]);
               const py = Number(firstPt[1]);
               return (
-                <g key={`debug-label-${target.id}`} pointerEvents="none">
+                <g key={`debug-label-${target.id}`} pointerEvents={STYLE_NONE}>
                   <rect
                     x={px - 4}
                     y={py - 22}
@@ -604,7 +611,7 @@ export function Grave2BuriedDiary({
                   <div key={`tumbler-slot-${idx}`} className="flex flex-col items-center">
                     {/* Increment Up Button */}
                     <button
-                      type="button"
+                      type={ROLE_BUTTON}
                       onClick={() => handleDigitChange(idx, 1)}
                       aria-label={`Increment tumbler ${idx + 1}`}
                       className="px-2 py-0.5 rounded-t bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
@@ -631,7 +638,7 @@ export function Grave2BuriedDiary({
 
                     {/* Decrement Down Button */}
                     <button
-                      type="button"
+                      type={ROLE_BUTTON}
                       onClick={() => handleDigitChange(idx, -1)}
                       aria-label={`Decrement tumbler ${idx + 1}`}
                       className="px-2 py-0.5 rounded-b bg-stone-900 hover:bg-stone-700 text-[10px] text-amber-400 font-mono transition-colors cursor-pointer select-none"
@@ -662,20 +669,20 @@ export function Grave2BuriedDiary({
       <footer className="relative z-30 w-full px-3 sm:px-6 py-1.5 pb-2 flex items-center justify-between select-none">
         {/* Left: Evidence Journal */}
         <button
-          type="button"
+          type={ROLE_BUTTON}
           onClick={() => {
             soundController.playClick();
             onOpenJournal();
           }}
           className="px-4 py-1.5 rounded-full bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 hover:border-amber-400 text-stone-200 hover:text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_12px_rgba(0,0,0,0.8)] cursor-pointer backdrop-blur-sm"
         >
-          <span aria-hidden="true">📖</span>
+          <span aria-hidden={ARIA_TRUE}>📖</span>
           <span>EVIDENCE JOURNAL ({uniqueCount}/3)</span>
         </button>
 
         {/* Right: Return to Cemetery */}
         <button
-          type="button"
+          type={ROLE_BUTTON}
           onClick={() => {
             soundController.playClick();
             onReturnCemetery();
@@ -692,8 +699,8 @@ export function Grave2BuriedDiary({
          ======================================================== */}
       {isDiaryOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
+          role={ROLE_DIALOG}
+          aria-modal={ARIA_TRUE}
           aria-labelledby="diary-modal-title"
           className={MODAL_BACKDROP_CLASSES}
           tabIndex={-1}
@@ -703,20 +710,20 @@ export function Grave2BuriedDiary({
         >
           {/* Transparent dismiss backdrop */}
           <button
-            type="button"
+            type={ROLE_BUTTON}
             className={BACKDROP_DISMISS_CLASSES}
-            aria-label="Dismiss modal overlay"
+            aria-label={DISMISS_OVERLAY_ARIA}
             onClick={() => setIsDiaryOpen(false)}
           />
 
           <div
-            role="document"
+            role={ROLE_DOCUMENT}
             className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-gradient-to-b from-[#221006] via-[#140803] to-[#0a0301] border-2 border-amber-600/80 p-5 sm:p-8 text-stone-100 shadow-[0_0_90px_rgba(245,158,11,0.5)] flex flex-col justify-between"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-amber-800/40 pb-3 mb-4">
               <div className="flex items-center gap-3">
-                <span className="text-2xl" aria-hidden="true">
+                <span className="text-2xl" aria-hidden={ARIA_TRUE}>
                   📖
                 </span>
                 <div>
@@ -732,7 +739,7 @@ export function Grave2BuriedDiary({
                 </div>
               </div>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => setIsDiaryOpen(false)}
                 aria-label="Close Diary"
                 className="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
@@ -788,7 +795,7 @@ export function Grave2BuriedDiary({
                 Preserved in Grave II &bull; Four marks forge the forgotten year
               </span>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => setIsDiaryOpen(false)}
                 className="px-4 py-1.5 rounded-xl bg-amber-900/80 hover:bg-amber-800 border border-amber-500 text-amber-100 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-all"
               >
@@ -804,8 +811,8 @@ export function Grave2BuriedDiary({
          ======================================================== */}
       {inspectedTarget && (
         <div
-          role="dialog"
-          aria-modal="true"
+          role={ROLE_DIALOG}
+          aria-modal={ARIA_TRUE}
           aria-labelledby="inspection-modal-title"
           className={MODAL_BACKDROP_CLASSES}
           tabIndex={-1}
@@ -815,14 +822,14 @@ export function Grave2BuriedDiary({
         >
           {/* Transparent dismiss backdrop */}
           <button
-            type="button"
+            type={ROLE_BUTTON}
             className={BACKDROP_DISMISS_CLASSES}
-            aria-label="Dismiss modal overlay"
+            aria-label={DISMISS_OVERLAY_ARIA}
             onClick={() => setInspectedTarget(null)}
           />
 
           <div
-            role="document"
+            role={ROLE_DOCUMENT}
             className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#24130a] via-[#140803] to-[#0a0301] border-2 border-amber-600/70 p-5 sm:p-7 text-stone-100 shadow-[0_0_80px_rgba(245,158,11,0.4)] flex flex-col justify-between"
           >
             {/* Header */}
@@ -841,7 +848,7 @@ export function Grave2BuriedDiary({
                 )}
               </div>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => setInspectedTarget(null)}
                 aria-label="Close"
                 className="px-3 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
@@ -882,7 +889,7 @@ export function Grave2BuriedDiary({
 
             {/* Close Button */}
             <button
-              type="button"
+              type={ROLE_BUTTON}
               onClick={() => setInspectedTarget(null)}
               aria-label="Close Inspection"
               className="mt-2 w-full py-2 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-500/80 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
@@ -898,8 +905,8 @@ export function Grave2BuriedDiary({
          ======================================================== */}
       {isChestRewardOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
+          role={ROLE_DIALOG}
+          aria-modal={ARIA_TRUE}
           aria-labelledby="reward-modal-title"
           className={MODAL_BACKDROP_CLASSES}
           tabIndex={-1}
@@ -909,14 +916,14 @@ export function Grave2BuriedDiary({
         >
           {/* Transparent dismiss backdrop */}
           <button
-            type="button"
+            type={ROLE_BUTTON}
             className={BACKDROP_DISMISS_CLASSES}
-            aria-label="Dismiss modal overlay"
+            aria-label={DISMISS_OVERLAY_ARIA}
             onClick={() => setIsChestRewardOpen(false)}
           />
 
           <div
-            role="document"
+            role={ROLE_DOCUMENT}
             className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-b from-[#2a1306] via-[#160a03] to-[#080200] border-2 border-amber-500 p-6 sm:p-8 text-stone-100 shadow-[0_0_100px_rgba(245,158,11,0.7)] flex flex-col items-center text-center justify-between"
           >
             {/* Header Badge */}
@@ -952,7 +959,7 @@ export function Grave2BuriedDiary({
             {/* Action Buttons */}
             <div className="mt-6 flex items-center gap-3 w-full">
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => {
                   soundController.playClick();
                   setIsChestRewardOpen(false);
@@ -963,7 +970,7 @@ export function Grave2BuriedDiary({
                 📖 Open Journal
               </button>
               <button
-                type="button"
+                type={ROLE_BUTTON}
                 onClick={() => {
                   soundController.playClick();
                   setIsChestRewardOpen(false);
