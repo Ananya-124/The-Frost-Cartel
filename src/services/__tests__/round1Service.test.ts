@@ -32,9 +32,9 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
       return id;
     };
 
-    it('starts with two pending trials (5 pumpkins / 40 CR, 7 pumpkins / 60 CR, 2 tries each)', () => {
+    it('starts with two pending trials (7 pumpkins / 40 CR, 10 pumpkins / 60 CR, 2 tries each)', () => {
       const id = start();
-      expect(service.getStage1Trials().map((t) => [t.pumpkins, t.tries, t.reward])).toEqual([[5, 2, 40], [7, 2, 60]]);
+      expect(service.getStage1Trials().map((t) => [t.pumpkins, t.tries, t.reward])).toEqual([[7, 2, 40], [10, 2, 60]]);
       expect(service.getStage1State(id)?.trials).toEqual([
         { attemptsUsed: 0, status: 'pending', earnedCredits: 0 },
         { attemptsUsed: 0, status: 'pending', earnedCredits: 0 },

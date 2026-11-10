@@ -47,11 +47,11 @@ export class Round1Service {
     this.onScoreSync = callback;
   }
 
-  // Stage 1 Configuration: The Pumpkin Shuffle — two trials (5 pumpkins / 40 CR, 7 pumpkins / 60 CR), 2 tries each
+  // Stage 1 Configuration: The Pumpkin Shuffle — two trials (7 pumpkins / 40 CR, 10 pumpkins / 60 CR), 2 tries each
   private stage1Config: Stage1Config = {
     title: 'The Pumpkin Shuffle',
     description: 'A skull sleeps beneath one of the pumpkins. Watch it vanish, follow the shuffle, then smash the right pumpkin.',
-    instructions: 'Two trials, two tries each. Trial I: five pumpkins, 40 Credits. Trial II: seven pumpkins, 60 Credits. The skull is shown once, then the pumpkins shuffle for 20 seconds.',
+    instructions: 'Two trials, two tries each. Trial I: seven pumpkins, 40 Credits. Trial II: ten pumpkins, 60 Credits. The skull is shown once, then the pumpkins shuffle for 18 seconds.',
     rewardCredits: STAGE_CREDITS['stage-1'], // 100 in total
     isReadyForPublication: true,
     activityType: 'skull_pumpkin_shuffle',

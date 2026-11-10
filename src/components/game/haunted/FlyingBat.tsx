@@ -4,6 +4,7 @@ interface FlyingBatProps {
   delaySeconds?: number;
   durationSeconds?: number;
   scale?: number;
+  opacity?: number;
   startYPercent?: number; // 0 - 100
   flightDirection?: 'left-to-right' | 'right-to-left';
   className?: string;
@@ -13,6 +14,7 @@ export const FlyingBat: React.FC<FlyingBatProps> = ({
   delaySeconds = 0,
   durationSeconds = 18,
   scale = 1,
+  opacity = 0.85,
   startYPercent = 20,
   flightDirection = 'right-to-left',
   className = '',
@@ -26,8 +28,9 @@ export const FlyingBat: React.FC<FlyingBatProps> = ({
         animationDuration: `${durationSeconds}s`,
         animationDelay: `${delaySeconds}s`,
         transform: `scale(${scale}) ${isL2R ? 'scaleX(-1)' : ''}`,
+        opacity,
       }}
-      className={`absolute z-0 pointer-events-none select-none opacity-85 ${
+      className={`absolute z-0 pointer-events-none select-none ${
         isL2R ? 'animate-bat-fly-l2r' : 'animate-bat-fly-r2l'
       } ${className}`}
       aria-hidden="true"
@@ -58,4 +61,3 @@ export const FlyingBat: React.FC<FlyingBatProps> = ({
     </div>
   );
 };
-

@@ -3,7 +3,7 @@
 export type Swap = [number, number];
 
 export const MIN_PUMPKINS = 3;
-export const MAX_PUMPKINS = 9;
+export const MAX_PUMPKINS = 10;
 
 export const clampPumpkinCount = (n: number | undefined): number =>
   Math.min(MAX_PUMPKINS, Math.max(MIN_PUMPKINS, Math.round(Number.isFinite(n) ? (n as number) : MIN_PUMPKINS)));
@@ -13,9 +13,9 @@ export const clampSeconds = (n: number | undefined, fallback: number, min: numbe
 
 /**
  * How long each swap lasts. Starts slow, speeds up, and always adds up to exactly `totalMs`.
- * Example: 20000 ms -> about 37 swaps, from 780 ms down to 300 ms each.
+ * Example: 18000 ms -> about 37 swaps, from 700 ms down to 270 ms each.
  */
-export function buildShufflePlan(totalMs: number, startMs = 780, endMs = 300): number[] {
+export function buildShufflePlan(totalMs: number, startMs = 700, endMs = 270): number[] {
   const plan: number[] = [];
   if (!(totalMs > 0)) return plan;
   let t = 0;

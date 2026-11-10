@@ -37,6 +37,14 @@ const LEAD_MS = 700; // pause before the skull is shown, and after it is hidden 
 const SMASH_MS = 450; // how long the pumpkin shakes before it bursts
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 
+const pumpkinPosition = (slot: number, count: number) => {
+  const angle = (slot / count) * Math.PI * 2 - Math.PI / 2;
+  return {
+    left: `${50 + Math.cos(angle) * 40}%`,
+    top: `${50 + Math.sin(angle) * 40}%`,
+  };
+};
+
 const SHARD_GRID = [
   [[0, 0], [25, 0], [50, 0], [76, 0], [100, 0]],
   [[0, 24], [22, 27], [52, 22], [77, 28], [100, 23]],
@@ -123,7 +131,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
   const trial = trials[trialIdx];
   const trialState = state.trials[trialIdx];
   const count = clampPumpkinCount(trial.pumpkins);
-  const shuffleMs = clampSeconds(trial.shuffleSeconds, 20, 5, 60) * 1000;
+  const shuffleMs = clampSeconds(trial.shuffleSeconds, 18, 5, 60) * 1000;
   const triesLeft = trial.tries - trialState.attemptsUsed;
 
   const [slots, setSlots] = useState<number[]>(() => identitySlots(count));
@@ -437,7 +445,12 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
                   <div
                     key={id}
                     className={`s1-cell ${lifted === id ? 's1-lifted' : ''} ${idle ? 's1-idle' : ''} ${isBroken && !burst ? 's1-shaking' : ''}`}
-                    style={vars({ '--swap-ms': `${swapMs}ms`, '--d': `${-id * 0.9}s`, transform: `translateX(${slot * 100}%)`, zIndex: front === id || isBroken ? 5 : 1 })}
+                    style={vars({
+                      '--swap-ms': `${swapMs}ms`,
+                      '--d': `${-id * 0.9}s`,
+                      ...pumpkinPosition(slot, count),
+                      zIndex: front === id || isBroken ? 5 : 1,
+                    })}
                   >
                     {!(isBroken && burst) && <span className="s1-pool" aria-hidden="true" />}
                     <span className="s1-shadow" aria-hidden="true" />
