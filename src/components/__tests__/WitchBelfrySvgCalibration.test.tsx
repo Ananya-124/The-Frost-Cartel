@@ -73,12 +73,10 @@ describe("Stage 2: The Witch's Belfry / Bat & Candle SVG Calibration", () => {
 
   it('verifies bat and candle targets have zero geometric overlap and maintain distinct coordinate domains', () => {
     // Bat is in upper arch apex
-    const batMinY = batDef.y;
     const batMaxY = batDef.y + batDef.height;
 
     // Candle is on mid pillar sconce
     const candleMinY = candleDef.y;
-    const candleMaxY = candleDef.y + candleDef.height;
 
     // Minimum vertical separation > 200px
     expect(candleMinY - batMaxY).toBeGreaterThan(200);
