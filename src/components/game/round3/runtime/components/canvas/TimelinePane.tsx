@@ -41,13 +41,13 @@ export default function TimelinePane({
         <div className={`${styles.role} ${isFuture ? styles.futureRole : styles.pastRole}`}>
           <b>{view.role.toUpperCase()}</b> · {isFuture ? 'FUTURE' : 'PAST'}
         </div>
-        <div className={styles.room}>{view.roomName}</div>
+        {/* <div className={styles.room}>{view.roomName}</div> */}
         {!hideObjective && <div className={styles.objective}>
           {view.objective}
           {view.partnerArmed && <span className={styles.armed}> PARTNER IS ARMED!</span>}
         </div>}
       </div>
-      <div className={styles.prompt}>{view.prompt}</div>
+      {/* <div className={styles.prompt}>{view.prompt}</div> */}
       {view.message && <div className={styles.message}>{view.message}</div>}
       {view.journalOpen && <SharedJournal entries={journal} className={view.index === 0 ? styles.pastJournal : styles.futureJournal} />}
       {view.puzzle && <PuzzlePanel index={view.index} puzzle={view.puzzle} onPress={onPuzzleKey} />}
