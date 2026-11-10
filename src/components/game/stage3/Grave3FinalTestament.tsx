@@ -235,7 +235,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[720px] lg:min-h-[820px] max-h-screen flex flex-col justify-between overflow-hidden rounded-3xl bg-black select-none">
+    <div className="relative w-full h-screen h-[100dvh] flex flex-col justify-between overflow-hidden bg-black select-none">
       {/* Hidden semantic breadcrumbs for accessibility and automated QA testing */}
       <div className="sr-only" aria-hidden="true">
         <span>Grave 3 — The Final Testament</span>
@@ -247,7 +247,43 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
       <FlyingBat startYPercent={7} durationSeconds={19} delaySeconds={1} scale={0.65} flightDirection="right-to-left" />
       <FlyingCrow startYPercent={12} durationSeconds={24} delaySeconds={3} scale={0.7} flightDirection="left-to-right" />
 
-      {/* 2. Top HUD Header (Rendered Exactly Once) */}
+      {/* 2. Fullscreen Master Coffin Environment (Zero Black Side Gutters, Full Viewport Width & Height) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
+        <img
+          src="/assets/round-01/stage-03/coffin-03-final-testament-master.png"
+          alt="The Final Testament Master Coffin Environment"
+          className="w-full h-full object-cover object-center pointer-events-none select-none"
+        />
+      </div>
+
+      {/* 3. Calibrated Invisible Hotspots Layer (Zero Mouse-Click Outlines, 16:9 Coordinate System) */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-20">
+        <div className="relative w-full h-full pointer-events-auto">
+          {COFFIN3_TARGETS.map((target) => (
+            <button
+              key={target.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleInspect(target)}
+              aria-label={target.ariaLabel}
+              className="absolute z-20 cursor-pointer bg-transparent border-0 outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none select-none transition-none shadow-none"
+              style={{
+                left: target.left,
+                top: target.top,
+                width: target.width,
+                height: target.height,
+                outline: 'none',
+                border: 'none',
+                boxShadow: 'none',
+              }}
+            >
+              <span className="sr-only">{target.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Top HUD Header (Single source of truth) */}
       <CoffinHeaderHUD
         graveNumber="GRAVE III"
         title="THE FINAL TESTAMENT"
@@ -260,52 +296,21 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
       {/* Floating Notification Toast */}
       {toastNotice && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-6 py-2.5 rounded-full bg-black/95 border-2 border-amber-500 text-amber-200 font-cinzel text-xs font-bold tracking-widest shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-fadeIn flex items-center gap-2">
           <span>⚡</span>
           <span>{toastNotice}</span>
         </div>
       )}
 
-      {/* 3. Main Center Stage: 16:9 Master Coffin Environment with Native Elements */}
-      <main className="relative z-10 flex-1 min-h-0 flex items-center justify-center p-2">
-        <div
-          className="relative w-full max-h-[64vh] overflow-hidden rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.95)]"
-          style={{ aspectRatio: '16 / 9' }}
-        >
-          {/* Master 2560x1440 HD Artwork */}
-          <img
-            src="/assets/round-01/stage-03/coffin-03-final-testament-master.png"
-            alt="The Final Testament Master Coffin Environment"
-            className="w-full h-full object-contain pointer-events-none select-none"
-          />
+      {/* Center Spacer: keeps scene open and coffin visible */}
+      <div className="flex-1 min-h-0 pointer-events-none" />
 
-          {/* 8 Calibrated Invisible HTML Hotspots (0 Overlap, Cursor Pointer, Keyboard Accessible) */}
-          {COFFIN3_TARGETS.map((target) => (
-            <button
-              key={target.id}
-              type="button"
-              onClick={() => handleInspect(target)}
-              aria-label={target.ariaLabel}
-              className="absolute z-20 cursor-pointer rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/80"
-              style={{
-                left: target.left,
-                top: target.top,
-                width: target.width,
-                height: target.height,
-              }}
-            >
-              <span className="sr-only">{target.title}</span>
-            </button>
-          ))}
-        </div>
-      </main>
-
-      {/* 4. Center-Bottom Console: The Keeper's Final Testament Riddle & 3 Large Circular Rotating Rings */}
-      <section className="relative z-30 w-full px-2 sm:px-4 py-1.5 flex flex-col items-center">
-        <div className="w-full max-w-5xl rounded-2xl bg-gradient-to-r from-black/95 via-[#120a04]/95 to-black/95 border-2 border-amber-600/70 p-2.5 sm:p-3 shadow-[0_0_40px_rgba(0,0,0,0.95)] backdrop-blur-md flex flex-col lg:flex-row items-center justify-between gap-3">
+      {/* 5. Center-Bottom Console: The Keeper's Final Testament Riddle & 3 Concentric Celestial Rune Rings */}
+      <section className="relative z-30 w-full px-2 sm:px-4 py-1 flex flex-col items-center">
+        <div className="w-full max-w-5xl rounded-2xl bg-gradient-to-r from-black/95 via-[#180a04]/95 to-black/95 border-2 border-amber-600/80 p-3 sm:p-3.5 shadow-[0_0_40px_rgba(0,0,0,0.95)] flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4">
           {/* Left: The Riddle Verse */}
           <div className="flex-1 text-center lg:text-left px-2 sm:px-4">
-            <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
+            <div className="flex items-center justify-center lg:justify-start gap-2 mb-1.5">
               <span className="text-amber-400 text-xs">✦</span>
               <h3 className="font-cinzel text-xs sm:text-sm font-black tracking-widest text-amber-200 uppercase drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
                 THE KEEPER&rsquo;S FINAL TESTAMENT
@@ -326,14 +331,23 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
             )}
           </div>
 
-          {/* Right: Three Prominent Antique-Gold Circular Rotating Ring Selectors */}
+          {/* Right: Header + Three Horizontal Ring Dials + Centered Unseal Button */}
           <div
-            className={`flex flex-col sm:flex-row items-center gap-3 sm:gap-4 flex-shrink-0 transition-transform ${
+            className={`flex flex-col items-center flex-shrink-0 transition-transform ${
               shakeLock ? 'animate-shake' : ''
             }`}
           >
-            {/* Ring Selectors */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* Right Header: CONCENTRIC CELESTIAL RUNES */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 sm:w-8 h-[1px] bg-gradient-to-r from-transparent to-amber-500/70" />
+              <span className="text-[10px] sm:text-[11px] font-cinzel font-bold tracking-[0.2em] text-amber-200 uppercase">
+                CONCENTRIC CELESTIAL RUNES
+              </span>
+              <span className="w-6 sm:w-8 h-[1px] bg-gradient-to-l from-transparent to-amber-500/70" />
+            </div>
+
+            {/* Three Circular Rotating Rings in a single horizontal row */}
+            <div className="flex items-center gap-3 sm:gap-4">
               {rings.map((ring, idx) => {
                 const ringLabel =
                   idx === 0 ? 'RING I — OUTER' : idx === 1 ? 'RING II — MIDDLE' : 'RING III — INNER';
@@ -342,49 +356,51 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
 
                 return (
                   <div key={ring.id} className="flex flex-col items-center">
-                    {/* Ring Label */}
-                    <span className="text-[9px] sm:text-[10px] font-cinzel font-bold text-amber-300/90 tracking-wider uppercase mb-1">
+                    {/* Pill Label */}
+                    <span className="px-2 sm:px-2.5 py-0.5 rounded-full border border-amber-700/60 bg-black/80 text-[8px] sm:text-[9px] font-cinzel font-bold text-amber-300/90 tracking-wider uppercase mb-1 shadow-sm">
                       {ringLabel}
                     </span>
 
-                    {/* Circular Selector Box */}
-                    <div className="flex flex-col items-center p-1.5 rounded-2xl bg-black/85 border border-amber-700/60 shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-                      {/* Rotate Up Button */}
+                    {/* Horizontal Stepper Row: ◄ [ Dial ] ► */}
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                      {/* Left Chevron Button (ccw) */}
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleRotate(idx, 'ccw')}
                         aria-label={`Rotate ${ringLabel} Counter-Clockwise`}
-                        className="w-7 h-6 sm:w-8 sm:h-7 rounded-lg bg-stone-900/90 hover:bg-amber-950/80 border border-amber-800/60 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+                        className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-stone-900/90 hover:bg-amber-950/90 border border-amber-700/70 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none shadow-md"
                       >
-                        ▲
+                        ◄
                       </button>
 
-                      {/* Prominent Circular Dial Display */}
+                      {/* Circular Dial Display */}
                       <div
-                        className={`w-16 h-16 sm:w-20 sm:h-20 my-1 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-300 ${
+                        className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-300 ${
                           isUnlocked
                             ? 'border-emerald-400 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.5)]'
                             : isAligned
                             ? 'border-cyan-400 bg-cyan-950/80 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
-                            : 'border-amber-500/80 bg-gradient-to-b from-[#261609] via-[#120703] to-[#040201] shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                            : 'border-amber-500/80 bg-gradient-to-b from-[#2a1708] via-[#120703] to-[#040201] shadow-[0_0_15px_rgba(245,158,11,0.35)]'
                         }`}
                       >
-                        <span className="text-xl sm:text-2xl drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
+                        <span className="text-lg sm:text-xl lg:text-2xl drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
                           {activeIcon}
                         </span>
-                        <span className="text-[9px] sm:text-[10px] font-cinzel font-black tracking-widest text-amber-100 uppercase mt-0.5">
+                        <span className="text-[8px] sm:text-[9px] lg:text-[10px] font-cinzel font-black tracking-widest text-amber-100 uppercase mt-0.5">
                           {activeSymbol}
                         </span>
                       </div>
 
-                      {/* Rotate Down Button */}
+                      {/* Right Chevron Button (cw) */}
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleRotate(idx, 'cw')}
                         aria-label={`Rotate ${ringLabel} Clockwise`}
-                        className="w-7 h-6 sm:w-8 sm:h-7 rounded-lg bg-stone-900/90 hover:bg-amber-950/80 border border-amber-800/60 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+                        className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-stone-900/90 hover:bg-amber-950/90 border border-amber-700/70 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none shadow-md"
                       >
-                        ▼
+                        ►
                       </button>
                     </div>
                   </div>
@@ -392,19 +408,20 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
               })}
             </div>
 
-            {/* Action Unlock Button */}
-            <div className="flex flex-col items-center sm:ml-2">
+            {/* Centered Wide Golden Bar Button */}
+            <div className="w-full mt-2.5 flex flex-col items-center">
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={handleUnseal}
                 aria-label="Unseal the Final Testament"
-                className={`px-5 sm:px-6 py-3.5 rounded-2xl border-2 font-cinzel text-xs sm:text-sm font-black uppercase tracking-widest shadow-xl transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                className={`w-full py-2.5 sm:py-3 px-6 rounded-xl border-2 font-cinzel text-xs sm:text-sm font-black uppercase tracking-widest shadow-xl transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap outline-none focus:outline-none focus:ring-0 active:outline-none ${
                   isUnlocked
                     ? 'bg-emerald-950/90 hover:bg-emerald-900 border-emerald-400 text-emerald-100 shadow-[0_0_25px_rgba(16,185,129,0.5)]'
                     : 'bg-gradient-to-r from-amber-900 via-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-600 border-amber-400 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.55)]'
                 }`}
               >
-                <span>{isUnlocked ? '✓' : '✦'}</span>
+                <span>{isUnlocked ? '✓' : '🔒'}</span>
                 <span>{isUnlocked ? 'TESTAMENT UNSEALED' : 'UNSEAL THE FINAL TESTAMENT'}</span>
               </button>
               {isUnlocked && (
@@ -417,14 +434,15 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
         </div>
       </section>
 
-      {/* 5. Bottom Navigation Controls: Evidence Journal & Return to Cemetery */}
+      {/* 6. Bottom Navigation Controls: Evidence Journal & Return to Cemetery */}
       <footer className="relative z-30 px-3 sm:px-6 pb-2.5 pt-1 flex items-center justify-between select-none">
         {/* Evidence Journal Progress */}
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onOpenJournal}
           aria-label="Open Evidence Journal"
-          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          className="px-4 py-2 rounded-2xl bg-black/85 hover:bg-amber-950/80 border border-amber-600/70 text-amber-200 font-cinzel text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
         >
           <span>📖</span>
           <span>EVIDENCE JOURNAL ({collectedFragments.length}/3)</span>
@@ -433,9 +451,10 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
         {/* Return to Cemetery */}
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onReturnCemetery}
           aria-label="Return to Cemetery"
-          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950 via-[#180a04] to-amber-950 hover:from-amber-900 hover:to-amber-800 border-2 border-amber-500/80 text-amber-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950 via-[#180a04] to-amber-950 hover:from-amber-900 hover:to-amber-800 border-2 border-amber-500/80 text-amber-200 font-cinzel text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 outline-none focus:outline-none focus:ring-0"
         >
           <span>←</span>
           <span>RETURN TO CEMETERY</span>

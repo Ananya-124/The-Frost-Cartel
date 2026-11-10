@@ -92,3 +92,4 @@ master_2560.save('public/assets/round-01/stage-03/coffin-03-final-testament-mast
 print('All assets built successfully!')
 print(f'grave3_final_testament.jpg size: {master_1024.size}')
 print(f'coffin-03-final-testament-master.png size: {master_2560.size}')
+

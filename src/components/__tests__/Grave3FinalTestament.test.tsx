@@ -263,3 +263,4 @@ describe('Stage 3: Coffin III — The Final Testament', () => {
     expect(screen.getByText(/The ancient cemetery iron gate is now accessible/i)).toBeInTheDocument();
   });
 });
+
