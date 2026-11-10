@@ -107,3 +107,4 @@ FrostCartelHomePage
 3. Validate HUD alignment, credit display, timer, and stage completion tracking.
 4. Run browser verification and capture high-resolution screenshots.
 5. Run full test suite (`oxlint`, `vitest`, `build`).
+

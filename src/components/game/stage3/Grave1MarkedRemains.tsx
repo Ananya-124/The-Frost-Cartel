@@ -99,11 +99,15 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     return Boolean(session.stage3State?.grave1BookRead);
   });
 
-  const [skeletonOffset, setSkeletonOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isSkeletonMoved, setIsSkeletonMoved] = useState<boolean>(() => {
     const session = round1Service.getTeamSession(teamId, '');
     return Boolean(session.stage3State?.grave1SkeletonMoved);
   });
+  const [skeletonOffset, setSkeletonOffset] = useState<{ x: number; y: number }>(() =>
+    round1Service.getTeamSession(teamId, '').stage3State?.grave1SkeletonMoved
+      ? { x: 180, y: -90 }
+      : { x: 0, y: 0 }
+  );
 
   const [riddleInput, setRiddleInput] = useState('');
   const [riddleError, setRiddleError] = useState<string | null>(null);
@@ -141,20 +145,24 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   const dragStartRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   // Auto-dismiss toast
+  const toastTimeoutRef = useRef<number | null>(null);
   const showToast = useCallback((msg: string) => {
     setToastNotice(msg);
-    window.clearTimeout((showToast as unknown as { timeoutId?: number }).timeoutId);
-    (showToast as unknown as { timeoutId?: number }).timeoutId = window.setTimeout(() => {
+    if (toastTimeoutRef.current !== null) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = window.setTimeout(() => {
       setToastNotice(null);
     }, 4500);
   }, []);
 
-  // Set initial shifted bone offset if already moved
   useEffect(() => {
-    if (isSkeletonMoved && skeletonOffset.x === 0 && skeletonOffset.y === 0) {
-      setSkeletonOffset({ x: 180, y: -90 });
-    }
-  }, [isSkeletonMoved, skeletonOffset]);
+    return () => {
+      if (toastTimeoutRef.current !== null) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 1. Ancient Book
   const handleOpenBook = useCallback(() => {

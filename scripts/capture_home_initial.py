@@ -18,3 +18,4 @@ async def run():
         await browser.close()
 
 asyncio.run(run())
+

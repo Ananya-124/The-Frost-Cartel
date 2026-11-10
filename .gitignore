@@ -28,6 +28,9 @@ database/*.db-shm
 *.db-shm
 
 # Ephemeral test captures and media
+/*.png
+/*.jpg
+/*.jpeg
 screenshot_*.png
 test_*.png
 thumb_*.jpg
