@@ -185,161 +185,116 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
       {/* 2. Master Ancient Relic Parchment Scroll Container */}
       <div
         ref={scrollContainerRef}
-        className="relative transition-all duration-700 ease-out flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] drop-shadow-[0_10px_25px_rgba(25,12,4,0.7)]"
+        className="relative transition-all duration-700 ease-out flex items-center justify-center drop-shadow-[0_25px_60px_rgba(0,0,0,0.92)] drop-shadow-[0_10px_25px_rgba(25,12,4,0.7)]"
         style={{
-          width: 'min(600px, calc(86vh * 1024 / 1246), 94vw)',
-          aspectRatio: '1024 / 1246',
+          width: 'min(600px, calc(86vh * 896 / 1200), 92vw)',
+          aspectRatio: '896 / 1200',
           maxHeight: '92vh',
         }}
       >
-        {/* Parchment Base Texture Layer (Lossless HD Inpainted Relic Scroll) */}
+        {/* Parchment Base Texture Layer (Clean Ancient Relic Scroll) */}
         <div
           ref={scrollBodyRef}
           className="relative w-full h-full"
           style={{
-            backgroundImage: "url('/assets/round-4/ancient_parchment_dawn_relic_hd.png')",
+            backgroundImage: "url('/assets/round-4/ancient_parchment_clean.png?v=3')",
             backgroundSize: '100% 100%',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
           }}
         >
-          {/* Subtle Ambient Light Shimmer across Upper Roll & Wax Seal */}
+          {/* Central Compass Medallion Seal (Centered on the Top Roll) */}
           <div
             ref={sealGleamRef}
-            className="absolute top-[3.8%] left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 pointer-events-none flex items-center justify-center"
+            className="absolute top-[10.5%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-gradient-to-b from-[#d9aa52] via-[#a3792c] to-[#5a3e14] p-[1.5px] shadow-[0_3px_10px_rgba(0,0,0,0.65),0_1px_3px_rgba(25,12,4,0.8)] flex items-center justify-center pointer-events-none z-10"
             aria-hidden="true"
           >
-            <div className="w-full h-full rounded-full bg-[radial-gradient(circle_at_center,rgba(255,215,80,0.35)_0%,transparent_70%)] blur-[4px] animate-pulse [animation-duration:4s]" />
-            <svg viewBox="0 0 100 100" className="absolute w-8 h-8 sm:w-10 sm:h-10 opacity-70 filter drop-shadow-[0_0_6px_rgba(255,220,100,0.8)]">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,225,120,0.35)" strokeWidth="1" strokeDasharray="3 3" />
-              <polygon points="50,16 53,47 84,50 53,53 50,84 47,53 16,50 47,47" fill="rgba(255,215,80,0.3)" />
-            </svg>
+            <div className="w-full h-full rounded-full bg-gradient-to-br from-[#2a170b] via-[#1c0f06] to-[#0e0703] flex items-center justify-center border border-[#e6be6a]/50">
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-[#ecc273] filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                viewBox="0 0 100 100"
+              >
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="1.8" strokeDasharray="4 3" />
+                <circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" strokeWidth="1.2" />
+                <polygon points="50,14 55,45 86,50 55,55 50,86 45,55 14,50 45,45" fill="currentColor" opacity="0.92" />
+                <polygon points="50,22 53,47 78,50 53,53 50,78 47,53 22,50 47,47" fill="#fff2d0" opacity="0.6" />
+                <circle cx="50" cy="50" r="5" fill="#fff7e0" />
+              </svg>
+            </div>
           </div>
 
-          {/* Printable Scroll Content - Safely confined within antique deckled margins */}
-          <div className="w-full h-full pt-[14%] pb-[9%] px-[12%] sm:px-[14%] flex flex-col justify-between items-center text-center">
+          {/* Printable Scroll Content - Safely positioned below the roll with natural vertical rhythm */}
+          <div className="w-full h-full pt-[19%] sm:pt-[21%] md:pt-[22%] pb-[8%] px-[12%] sm:px-[14%] flex flex-col items-center text-center">
             
-            {/* Header Section: Title, Sunburst Crest, and Subheading */}
-            <div ref={headingRef} className="w-full flex flex-col items-center flex-shrink-0 pt-0 sm:pt-1">
+            {/* Header Section: Title, Subtle Antique Divider, and Subtitle */}
+            <div ref={headingRef} className="w-full flex flex-col items-center flex-shrink-0">
               
               {/* Main Heading: THE DAWN AWAKENS */}
               <h2
                 id="letter-heading"
-                className="font-cinzel text-[clamp(19px,3.2vw,30px)] font-black tracking-[0.16em] text-[#2c170a] drop-shadow-[0_1px_1px_rgba(255,245,220,0.6)] uppercase leading-none whitespace-nowrap"
+                className="font-cinzel text-[clamp(19px,2.8vw,36px)] font-black tracking-[0.16em] text-[#2c170a] drop-shadow-[0_1px_1px_rgba(255,245,220,0.6)] uppercase leading-tight whitespace-nowrap"
               >
                 THE DAWN AWAKENS
               </h2>
 
-              {/* Radiant Sunburst Crest Motif (Underneath Heading) */}
-              <div className="flex items-center justify-center my-0.5 sm:my-1 opacity-85" aria-hidden="true">
-                <svg viewBox="0 0 160 30" className="w-24 sm:w-32 h-auto text-[#5a2e12]">
-                  {/* Center Sun & Rays */}
-                  <circle cx="80" cy="18" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="80" y1="11" x2="80" y2="5" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="74" y1="13" x2="69" y2="8" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="86" y1="13" x2="91" y2="8" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="69" y1="17" x2="63" y2="14" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="91" y1="17" x2="97" y2="14" stroke="currentColor" strokeWidth="1.2" />
-                  {/* Flanking Filigree Arches */}
-                  <path d="M 28 18 C 48 18, 58 18, 72 18" fill="none" stroke="currentColor" strokeWidth="1" />
-                  <path d="M 132 18 C 112 18, 102 18, 88 18" fill="none" stroke="currentColor" strokeWidth="1" />
-                  <circle cx="28" cy="18" r="1.5" fill="currentColor" />
-                  <circle cx="132" cy="18" r="1.5" fill="currentColor" />
-                </svg>
+              {/* Subtle Antique-Gold Decorative Divider */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 my-1 sm:my-1.5 opacity-75" aria-hidden="true">
+                <div className="w-8 sm:w-14 h-px bg-gradient-to-r from-transparent to-[#8a5d24]" />
+                <span className="text-[9px] sm:text-xs text-[#8a5d24]">❖</span>
+                <div className="w-8 sm:w-14 h-px bg-gradient-to-l from-transparent to-[#8a5d24]" />
               </div>
 
-              {/* Storyline Subheading: The darkness has finally faded. */}
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2 my-0.5 sm:my-1 text-[#3d200e]">
-                <span className="text-[10px] sm:text-xs text-[#8c5020] opacity-80" aria-hidden="true">✦</span>
-                <h3 className="font-cormorant italic text-[clamp(13px,1.9vw,17px)] font-bold tracking-[0.04em] leading-tight">
-                  The darkness has finally faded.
-                </h3>
-                <span className="text-[10px] sm:text-xs text-[#8c5020] opacity-80" aria-hidden="true">✦</span>
-              </div>
+              {/* Storyline Subtitle: The darkness has finally faded. */}
+              <p className="font-cormorant italic text-[clamp(13.5px,1.8vw,20px)] font-bold text-[#3d200e] tracking-[0.03em] leading-tight">
+                The darkness has finally faded.
+              </p>
             </div>
 
-            {/* Storyline Body Narrative (Central Parchment Section) */}
-            <div ref={storyRef} className="w-full flex-1 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-2.5 px-1 py-1">
+            {/* Storyline Body Narrative (Grouped Closely as One Balanced Reading Block) */}
+            <div ref={storyRef} className="w-full flex flex-col items-center text-center space-y-2 sm:space-y-3 mt-2 sm:mt-3.5 max-w-[450px]">
               
               {/* Paragraph 1 */}
-              <p className="font-cormorant text-[clamp(11.8px,1.65vw,15.2px)] leading-[1.42] sm:leading-[1.48] text-[#2e190b] font-medium max-w-[430px]">
+              <p className="font-cormorant text-[clamp(12.5px,1.65vw,18px)] leading-[1.42] sm:leading-[1.54] text-[#2e190b] font-medium">
                 Beyond the graveyard, a new dawn awaits. Hidden within the walls of your own college lies a forgotten treasure — a relic of knowledge, mystery and unimaginable value.
               </p>
 
-              {/* Ornamental Compass / Star Divider */}
-              <div className="flex items-center justify-center gap-2 sm:gap-3 my-0.5 sm:my-1 opacity-75" aria-hidden="true">
-                <div className="w-10 sm:w-16 h-px bg-gradient-to-r from-transparent to-[#784419]" />
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#784419]">
-                  <polygon points="12,2 14,9 21,12 14,15 12,22 10,15 3,12 10,9" fill="currentColor" />
-                  <circle cx="12" cy="12" r="1.5" fill="#fdf3d6" />
-                </svg>
-                <div className="w-10 sm:w-16 h-px bg-gradient-to-l from-transparent to-[#784419]" />
-              </div>
-
               {/* Paragraph 2 */}
-              <p className="font-cormorant text-[clamp(11.8px,1.65vw,15.2px)] leading-[1.42] sm:leading-[1.48] text-[#2e190b] font-medium max-w-[430px]">
+              <p className="font-cormorant text-[clamp(12.5px,1.65vw,18px)] leading-[1.42] sm:leading-[1.54] text-[#2e190b] font-medium">
                 Explore the floors, uncover the scattered clues, and follow the ancient trail to discover the Golden Relic.
               </p>
 
-              {/* Highlighted Distressed Parchment Wash Banner (Matching Reference 1) */}
-              <div className="relative w-full max-w-[440px] my-1 sm:my-1.5 py-1.5 sm:py-2 px-3 sm:px-5 rounded bg-[#8e2920]/14 border-y border-[#8e2920]/25 shadow-[inset_0_0_12px_rgba(142,41,32,0.12)]">
-                <p className="font-cormorant italic text-[clamp(12px,1.7vw,15.5px)] font-bold text-[#3d1610] tracking-[0.03em] leading-snug">
-                  Your next journey begins where your own story was written.
-                </p>
-              </div>
+              {/* Paragraph 3 */}
+              <p className="font-cormorant italic text-[clamp(12.5px,1.65vw,18px)] leading-[1.42] sm:leading-[1.54] text-[#2e190b] font-bold tracking-[0.02em]">
+                Your next journey begins where your own story was written.
+              </p>
             </div>
 
-            {/* Bottom Section: Royal Ancient Relic "BEGIN THE HUNT" Action Button */}
-            <div ref={buttonRef} className="w-full flex-shrink-0 pt-1.5 sm:pt-2 flex flex-col items-center">
+            {/* Action Section: Centered Integrated "✦ BEGIN THE HUNT ✦" Button */}
+            <div ref={buttonRef} className="w-full flex flex-col items-center mt-3.5 sm:mt-5 md:mt-6 flex-shrink-0">
               <button
                 type="button"
                 onClick={handleBeginHuntClick}
                 disabled={isSubmitting || isTransitioning}
                 aria-label="Begin the hunt through time and space"
-                className="group relative px-6 sm:px-8 py-2 sm:py-2.5 transition-all duration-300 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-950"
+                className="group relative transition-all duration-300 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg"
               >
-                {/* Ambient Golden Backlight Bloom (Radiates behind the button) */}
+                {/* Subtle Golden Ambient Illumination */}
                 <div
-                  className="absolute -inset-1.5 rounded-lg bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.55)_0%,rgba(217,119,6,0.22)_50%,transparent_75%)] blur-md group-hover:blur-lg group-hover:opacity-100 opacity-80 transition-all duration-300 pointer-events-none"
+                  className="absolute -inset-1 rounded-lg bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.45)_0%,rgba(180,120,20,0.15)_50%,transparent_75%)] blur-sm group-hover:blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                   aria-hidden="true"
                 />
 
-                {/* The Ornate Gold Frame with Crests and Wine Enamel Core */}
+                {/* Integrated Burgundy Button Body with Gold Border */}
                 <div
-                  className={`relative rounded-md bg-gradient-to-b from-[#3a0d13] via-[#24080c] to-[#140306] border-2 border-[#d4af37] px-5 sm:px-7 py-2 sm:py-2.5 shadow-[0_6px_22px_rgba(0,0,0,0.82),inset_0_1px_2px_rgba(255,235,160,0.5)] transform transition-all duration-200 ${
+                  className={`relative rounded-md bg-gradient-to-b from-[#3c0e14] via-[#2a070c] to-[#1a0306] border-2 border-[#c59e47] px-6 sm:px-9 md:px-10 py-2 sm:py-2.5 md:py-3 shadow-[0_4px_14px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,235,170,0.4)] transform transition-all duration-200 ${
                     isTransitioning
                       ? 'opacity-85 scale-95 pointer-events-none'
-                      : 'group-hover:scale-[1.03] group-hover:border-[#ffe082] group-hover:shadow-[0_0_26px_rgba(245,190,60,0.7),inset_0_1px_2px_rgba(255,245,190,0.7)] group-active:scale-[0.98] group-active:translate-y-[1px]'
+                      : 'group-hover:scale-[1.02] group-hover:border-[#ffd778] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.55),inset_0_1px_2px_rgba(255,245,190,0.6)] group-active:scale-[0.98]'
                   }`}
                 >
-                  {/* Top Pointed Crown Crest */}
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-3 flex items-center justify-center pointer-events-none" aria-hidden="true">
-                    <svg viewBox="0 0 24 12" className="w-5 h-2.5 text-[#d4af37] filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-                      <polygon points="12,0 16,6 24,12 0,12 8,6" fill="currentColor" />
-                      <polygon points="12,2 15,6 20,10 4,10 9,6" fill="#ffeaa7" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom Pointed Finial Crest */}
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-3 flex items-center justify-center pointer-events-none" aria-hidden="true">
-                    <svg viewBox="0 0 24 12" className="w-5 h-2.5 text-[#d4af37] filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] rotate-180">
-                      <polygon points="12,0 16,6 24,12 0,12 8,6" fill="currentColor" />
-                      <polygon points="12,2 15,6 20,10 4,10 9,6" fill="#ffeaa7" />
-                    </svg>
-                  </div>
-
-                  {/* Corner Filigree Brackets */}
-                  <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-[#ffeaa7]/80 pointer-events-none" aria-hidden="true" />
-                  <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 border-t border-r border-[#ffeaa7]/80 pointer-events-none" aria-hidden="true" />
-                  <div className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 border-b border-l border-[#ffeaa7]/80 pointer-events-none" aria-hidden="true" />
-                  <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-[#ffeaa7]/80 pointer-events-none" aria-hidden="true" />
-
-                  {/* Button Text with Flanking Diamond Stars */}
-                  <div className="flex items-center justify-center gap-2 sm:gap-2.5 font-cinzel text-[clamp(11.5px,1.4vw,14.5px)] font-black tracking-[0.2em] text-[#fae4a8] group-hover:text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] uppercase whitespace-nowrap">
-                    <span className="text-[#f5c34d] text-[10px] sm:text-xs transition-transform duration-300 group-hover:rotate-45" aria-hidden="true">✦</span>
-                    <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">BEGIN THE HUNT</span>
-                    <span className="text-[#f5c34d] text-[10px] sm:text-xs transition-transform duration-300 group-hover:-rotate-45" aria-hidden="true">✦</span>
-                  </div>
+                  <span className="font-cinzel text-[clamp(11.5px,1.4vw,15px)] font-bold tracking-[0.2em] text-[#fae4a8] group-hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] uppercase whitespace-nowrap">
+                    ✦ BEGIN THE HUNT ✦
+                  </span>
                 </div>
               </button>
             </div>
