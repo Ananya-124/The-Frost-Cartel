@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { R2View, R2Card } from '../../services/round2Service';
 
 const NAMES = [
@@ -20,15 +20,15 @@ const makeCards = (): R2Card[] =>
 
 let current: R2View;
 const bidMock = vi.fn();
+let auctionChanged: (() => void) | null = null;
 
 vi.mock('../../services/round2Service', () => ({
   round2Service: {
-    getRound1Credits: () => 250,
     join: vi.fn(async () => current),
     getState: vi.fn(async () => current),
     bid: (...a: unknown[]) => bidMock(...a),
-    saveInventory: vi.fn(),
   },
+  subscribeToAuctionChanges: (callback: () => void) => { auctionChanged = callback; return () => { auctionChanged = null; }; },
 }));
 
 import { Round2Auction } from '../game/round2/Round2Auction';
@@ -48,6 +48,7 @@ describe('Round2Auction (player screen)', () => {
   beforeEach(() => {
     bidMock.mockReset();
     current = view();
+    auctionChanged = null;
   });
 
   it('waits, then shows the card the admin puts up for bidding', async () => {
@@ -67,6 +68,7 @@ describe('Round2Auction (player screen)', () => {
     const cards = makeCards();
     cards[0].status = 'live';
     current = view({ now: Date.now() + 5, cards, live: { cardId: 1, base: 100, highBid: 0, highBidder: null, endsAt: null, bids: [] } });
+    act(() => auctionChanged?.());
 
     expect(await screen.findByRole('button', { name: /PLACE BID/i }, { timeout: 4000 })).toBeEnabled();
     expect(screen.getByText(/ROUND 2 • BIDDING OPEN/)).toBeInTheDocument();
@@ -91,8 +93,29 @@ describe('Round2Auction (player screen)', () => {
 
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
     fireEvent.click(await screen.findByRole('button', { name: /PLACE BID/i }));
-    await waitFor(() => expect(bidMock).toHaveBeenCalledWith('Alpha', 100));
+    await waitFor(() => expect(bidMock).toHaveBeenCalledWith(100, expect.any(String)));
+    expect(bidMock.mock.calls[0][1]).toMatch(/^r2-|^[0-9a-f-]{36}$/i);
     expect(await screen.findByText('YOU ARE LEADING')).toBeInTheDocument();
+  });
+
+  it('reuses the same request ID when retrying a bid after a failed response', async () => {
+    const cards = makeCards();
+    cards[0].status = 'live';
+    const live = { cardId: 1, base: 100, highBid: 0, highBidder: null, endsAt: null, bids: [] as never[] };
+    current = view({ cards, live });
+    bidMock.mockResolvedValueOnce({ success: false, message: 'Temporary network failure.' });
+    bidMock.mockImplementationOnce(async (_amount: number, _requestId: string) => {
+      const updated = view({ now: Date.now() + 5, cards, live: { ...live, highBid: 100, highBidder: 'Alpha', bids: [{ team: 'Alpha', amount: 100, t: 1 }] } });
+      current = updated;
+      return updated;
+    });
+    render(<Round2Auction session={session} onReturnHome={() => {}} />);
+    const bidButton = await screen.findByRole('button', { name: /PLACE BID/i });
+    fireEvent.click(bidButton);
+    await screen.findByText('Temporary network failure.');
+    fireEvent.click(bidButton);
+    await waitFor(() => expect(bidMock).toHaveBeenCalledTimes(2));
+    expect(bidMock.mock.calls[1][1]).toBe(bidMock.mock.calls[0][1]);
   });
 
   it('blocks a bid the team cannot afford', async () => {
@@ -118,6 +141,7 @@ describe('Round2Auction (player screen)', () => {
     finishedCards[0].winner = 'Bravo';
     finishedCards[0].price = 170;
     current = view({ now: current.now + 5, cards: finishedCards });
+    act(() => auctionChanged?.());
 
     const notification = await screen.findByText('Bravo won Chrono Freeze for 170 CR');
     expect(notification).toHaveAttribute('role', 'status');

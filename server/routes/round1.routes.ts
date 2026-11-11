@@ -1,159 +1,65 @@
-import { Router } from 'express';
-import * as crypto from 'node:crypto';
-import { db } from '../../database/db.ts';
-import { requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
-import { eventBus } from '../services/eventBus.ts';
+import { Router, type Response } from 'express';
+import { postgresPool } from '../../database/postgres/pool.ts';
+import { requireAdminAuth, requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
+import { getRound1Config, getTeamRound1State, performRound1Action, Round1GameError, setRound1Timer, updateRound1Config, type Round1Action, type Round1TimingMetrics } from '../services/round1Gameplay.ts';
 
-export const round1Router = Router();
+export const round1Router=Router();
+const failure=(res:Response,error:unknown)=>{
+  if(error instanceof Round1GameError){res.status(error.status).json({success:false,message:error.message});return;}
+  console.error('[Round 1 PostgreSQL]',error);res.status(503).json({success:false,message:'Round 1 service is temporarily unavailable.'});
+};
+const team=(req:AuthenticatedRequest)=>{if(!req.team)throw new Round1GameError('Team authentication required.',401);return req.team.id;};
+const pool=()=>{if(!postgresPool)throw new Round1GameError('PostgreSQL gameplay service is unavailable.',503);return postgresPool;};
+const asyncRoute=(fn:(req:AuthenticatedRequest,res:Response)=>Promise<unknown>)=>(req:AuthenticatedRequest,res:Response)=>{void fn(req,res).catch((e)=>failure(res,e));};
 
-// GET /api/round1/state
-round1Router.get('/state', requireTeamAuth, (req: AuthenticatedRequest, res) => {
-  if (!req.team) {
-    res.status(401).json({ success: false, message: 'Squad authentication required.' });
-    return;
-  }
-  const teamId = req.team.id;
+round1Router.get('/state',requireTeamAuth,asyncRoute(async(req,res)=>{
+  const requestStartedAt=performance.now();
+  const timings:Round1TimingMetrics|undefined=process.env.ROUND1_PERF_LOG==='1'?{}:undefined;
+  const value=await getTeamRound1State(pool(),team(req),timings);
+  const responseStartedAt=performance.now();
+  const config=value.config;
+  const {riddleAnswer:_riddleAnswer,...grave1Base}=config.stage3.grave1;
+  const grave1={...grave1Base,slots:grave1Base.slots.map(({acceptedBoneId:_acceptedBoneId,...slot})=>slot)};
+  const {correctCode:_correctCode,...grave2}=config.stage3.grave2;
+  const {acceptedAnswer:_acceptedAnswer,...finalGate}=config.stage3.finalGate;
+  const publicStage3={...config.stage3,grave1,grave2,grave3:{...config.stage3.grave3,runeRings:config.stage3.grave3.runeRings.map(({correctSymbol:_correctSymbol,...ring})=>ring)},finalGate};
+  const session=structuredClone(value.session);session.stage1State.activeTarget=undefined;
+  res.json({success:true,round:{id:1,name:'The Graveyard Escape',isActive:value.roundActive,totalDurationSeconds:config.durationMinutes*60,remainingSeconds:value.remainingSeconds},team:{score:value.score,totalCredits:value.totalCredits,maxCredits:req.team?.maxCredits??500,isPaused:req.team?.isPaused??false},session,stages:value.stages.map(({state:_privateState,...stage})=>stage),config:{stage1:config.stage1,stage2:config.stage2,stage3:publicStage3}});
+  if(timings)console.info(`[Round 1 timing] GET /state ${JSON.stringify({...timings,responseBuildMs:performance.now()-responseStartedAt,totalServerMs:performance.now()-requestStartedAt})}`);
+}));
 
-  const round = db.prepare('SELECT * FROM global_round_state WHERE round_id = 1').get() as {
-    is_active: number;
-    duration_seconds: number;
-    start_time: string;
-  } | undefined;
+round1Router.post('/actions',requireTeamAuth,asyncRoute(async(req,res)=>{
+  const id=team(req);
+  if(!req.body||typeof req.body!=='object'||typeof req.body.type!=='string')throw new Round1GameError('Action type is required.');
+  const result=await performRound1Action(pool(),id,req.body as Round1Action);
+  res.json({success:true,...result});
+}));
 
-  if (!round) {
-    res.status(404).json({ success: false, message: 'Round 1 state not found.' });
-    return;
-  }
+// The legacy completion contract accepted client-computed points. Refuse it so it
+// cannot continue awarding scores; stage completion now follows validated actions.
+round1Router.post('/stage/complete',requireTeamAuth,(_req,res)=>res.status(410).json({success:false,message:'Client-submitted stage completion is retired. Use validated Round 1 actions.'}));
 
-  const startTime = new Date(round.start_time).getTime();
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  const remainingSeconds = Math.max(0, round.duration_seconds - elapsed);
-
-  const stages = db.prepare('SELECT * FROM stages_progress WHERE team_id = ? ORDER BY stage_id ASC').all(teamId);
-  const team = db.prepare('SELECT score, max_credits, total_credits, is_paused FROM teams WHERE id = ?').get(teamId) as {
-    score: number;
-    max_credits: number;
-    total_credits: number;
-    is_paused: number;
-  };
-
-  res.json({
-    success: true,
-    round: {
-      id: 1,
-      name: 'The Graveyard Escape',
-      isActive: round.is_active === 1,
-      totalDurationSeconds: round.duration_seconds,
-      remainingSeconds,
-    },
-    team: {
-      score: team.score,
-      maxCredits: team.max_credits,
-      totalCredits: team.total_credits,
-      isPaused: team.is_paused === 1,
-    },
-    stages,
-  });
-});
-
-// POST /api/round1/stage/complete
-round1Router.post('/stage/complete', requireTeamAuth, (req: AuthenticatedRequest, res) => {
-  if (!req.team) {
-    res.status(401).json({ success: false, message: 'Squad authentication required.' });
-    return;
-  }
-  const teamId = req.team.id;
-  const { stageId, points, timeSpentSeconds, fragmentUnlocked } = req.body;
-
-  if (!stageId || typeof stageId !== 'number') {
-    res.status(400).json({ success: false, message: 'Valid stageId is required.' });
-    return;
-  }
-
-  const stageProgress = db.prepare('SELECT * FROM stages_progress WHERE team_id = ? AND stage_id = ?').get(teamId, stageId) as {
-    id: string;
-    status: string;
-    score: number;
-    max_score: number;
-  } | undefined;
-
-  if (!stageProgress) {
-    res.status(404).json({ success: false, message: 'Stage progress record not found.' });
-    return;
-  }
-
-  // Prevent re-scoring completed stage
-  if (stageProgress.status === 'COMPLETED') {
-    res.json({ success: true, message: 'Stage already recorded as completed.', stage: stageProgress });
-    return;
-  }
-
-  // Verify points limit
-  const awardedPoints = Math.min(typeof points === 'number' ? points : stageProgress.max_score, stageProgress.max_score);
-  const team = db.prepare('SELECT score, max_credits FROM teams WHERE id = ?').get(teamId) as { score: number; max_credits: number };
-  const newTotalScore = Math.min(team.score + awardedPoints, team.max_credits);
-  const now = new Date().toISOString();
-
-  // Transaction: Update stage progress + update team score + insert score transaction + insert activity
-  db.exec('BEGIN TRANSACTION;');
-  try {
-    // 1. Update this stage
-    db.prepare(`
-      UPDATE stages_progress
-      SET status = 'COMPLETED', score = ?, time_spent_seconds = ?, completed_at = ?, fragment_unlocked = ?, updated_at = ?
-      WHERE team_id = ? AND stage_id = ?
-    `).run(awardedPoints, timeSpentSeconds || 0, now, fragmentUnlocked ? 1 : 0, now, teamId, stageId);
-
-    // 2. If Stage 2 completed, unlock Stage 3
-    if (stageId === 2) {
-      db.prepare(`
-        UPDATE stages_progress
-        SET status = 'AVAILABLE', updated_at = ?
-        WHERE team_id = ? AND stage_id = 3 AND status = 'LOCKED'
-      `).run(now, teamId);
-    }
-
-    // 3. Update team total score
-    db.prepare(`
-      UPDATE teams
-      SET score = ?, updated_at = ?
-      WHERE id = ?
-    `).run(newTotalScore, now, teamId);
-
-    // 4. Record score transaction in append-only ledger
-    db.prepare(`
-      INSERT INTO score_transactions (id, team_id, stage_id, delta, new_score, reason, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run('tx-' + crypto.randomUUID(), teamId, stageId, awardedPoints, newTotalScore, `Stage ${stageId} completion`, now);
-
-    // 5. Activity log
-    db.prepare(`
-      INSERT INTO activity_history (id, team_id, action, details, created_at)
-      VALUES (?, ?, 'STAGE_COMPLETE', ?, ?)
-    `).run('act-' + crypto.randomUUID(), teamId, `Completed Stage ${stageId} (+${awardedPoints} CR)`, now);
-
-    db.exec('COMMIT;');
-  } catch (err) {
-    db.exec('ROLLBACK;');
-    console.error('Transaction failed:', err);
-    res.status(500).json({ success: false, message: 'Database transaction error.' });
-    return;
-  }
-
-  // Broadcast update to all players on this squad
-  eventBus.broadcastToTeam(teamId, 'STAGE_COMPLETED', {
-    stageId,
-    awardedPoints,
-    newTotalScore,
-    fragmentUnlocked: Boolean(fragmentUnlocked),
-  });
-
-  res.json({
-    success: true,
-    stageId,
-    awardedPoints,
-    newTotalScore,
-    fragmentUnlocked: Boolean(fragmentUnlocked),
-  });
-});
-
+const adminRouter=Router();
+adminRouter.use(requireAdminAuth);
+adminRouter.get('/config',asyncRoute(async(_req,res)=>res.json({success:true,configuration:await getRound1Config(pool())})));
+adminRouter.patch('/config/duration',asyncRoute(async(req,res)=>{
+  if(!req.admin)throw new Round1GameError('Administrator authentication required.',401);
+  const minutes=Number(req.body?.durationMinutes);
+  if(!Number.isInteger(minutes)||minutes<20||minutes>25)throw new Round1GameError('Round duration must be 20–25 minutes.');
+  const p=pool();
+  const result=await p.query('UPDATE round1_configuration SET configuration=jsonb_set(configuration,\'{durationMinutes}\',$1::jsonb,true),updated_by=$2,updated_at=now() WHERE singleton_id=1 RETURNING configuration',[JSON.stringify(minutes),req.admin.id]);
+  res.json({success:true,configuration:result.rows[0]?.configuration});
+}));
+adminRouter.patch('/config/:stage',asyncRoute(async(req,res)=>{
+  if(!req.admin)throw new Round1GameError('Administrator authentication required.',401);
+  const stage=String(req.params.stage);
+  if(!['stage1','stage2','stage3'].includes(stage))throw new Round1GameError('Unknown configuration group.');
+  const configuration=await updateRound1Config(pool(),req.admin.id,stage as 'stage1'|'stage2'|'stage3',req.body);
+  res.json({success:true,configuration});
+}));
+adminRouter.post('/timer/:action',asyncRoute(async(req,res)=>{
+  const action=String(req.params.action); if(!['start','pause','resume','end'].includes(action))throw new Round1GameError('Unknown timer transition.');
+  if(!req.admin)throw new Round1GameError('Administrator authentication required.',401);
+  res.json(await setRound1Timer(pool(),req.admin.id,action as 'start'|'pause'|'resume'|'end'));
+}));
+round1Router.use('/admin',adminRouter);

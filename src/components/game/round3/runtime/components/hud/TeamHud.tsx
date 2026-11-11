@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { UiSnapshot } from '../../engine/state/snapshot';
-import type { Round3RunStatus } from '../../../../../../types/round3.types';
+import type { HuntProgress } from '../../../../../../services/progressionService';
 import { getAudioPreferences, saveAudioPreferences } from '../../audio/preferences';
 import { applyAmbientPreferences } from '../../audio/sound';
 import { soundFx } from '../../audio/soundfx';
@@ -11,12 +11,10 @@ const READINESS_LABELS = ['Weakness', 'Entity', 'Past node', 'Future node'] as c
 interface TeamHudProps {
   snapshot: UiSnapshot;
   remainingSeconds: number;
-  runStatus: Round3RunStatus;
-  runBusy: boolean;
-  onToggleRun: () => void;
+  huntProgression: readonly HuntProgress[];
 }
 
-export default function TeamHud({ snapshot, remainingSeconds, runStatus, runBusy, onToggleRun }: TeamHudProps) {
+export default function TeamHud({ snapshot, remainingSeconds, huntProgression }: TeamHudProps) {
   const [audio, setAudio] = useState(getAudioPreferences);
   useEffect(() => {
     applyAmbientPreferences(audio);
@@ -24,7 +22,6 @@ export default function TeamHud({ snapshot, remainingSeconds, runStatus, runBusy
   }, [audio]);
   const updateAudio = (next: typeof audio) => { setAudio(next); saveAudioPreferences(next); };
   const time = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
-  const terminal = runStatus === 'completed' || runStatus === 'expired';
   return (
     <div className={styles.hud} aria-label="Team game status">
       <div className={`${styles.hudBox} ${styles.teamStatus}`}>
@@ -35,6 +32,9 @@ export default function TeamHud({ snapshot, remainingSeconds, runStatus, runBusy
       <div className={`${styles.hudBox} ${styles.huntStatus}`}>
         <span className={styles.hudLabel}>HUNT {snapshot.huntNumber} / 3</span>
         <strong className={styles.huntTitle}>{snapshot.huntTitle}</strong>
+        <span className={styles.huntSequence} aria-label="Hunt progression">
+          {huntProgression.length ? huntProgression.map((hunt) => `H${hunt.hunt_id} ${hunt.status === 'COMPLETED' ? 'DONE' : hunt.status === 'IN_PROGRESS' ? 'ACTIVE' : hunt.status === 'AVAILABLE' ? 'READY' : 'LOCKED'}`).join(' · ') : 'Progress loading'}
+        </span>
       </div>
       <div className={`${styles.hudBox} ${styles.readiness}`} aria-label="Capture readiness">
         <span className={styles.hudLabel}>READY</span>
@@ -53,9 +53,9 @@ export default function TeamHud({ snapshot, remainingSeconds, runStatus, runBusy
       <div className={`${styles.hudBox} ${styles.runTimer}`} aria-label="Round 3 timer">
         <span className={styles.hudLabel}>TIME</span>
         <strong className={styles.runTime} role="timer" aria-live="off">{time}</strong>
-        {!terminal && <button className={styles.runToggle} type="button" disabled={runBusy || runStatus === 'not_started'} onClick={onToggleRun}>
+        {/* {!terminal && <button className={styles.runToggle} type="button" disabled={runBusy || runStatus === 'not_started'} onClick={onToggleRun}>
           {runBusy ? '…' : runStatus === 'paused' ? 'RESUME' : 'PAUSE'}
-        </button>}
+        </button>} */}
       </div>
       <details className={styles.soundControls}>
         <summary>{audio.muted || audio.volume === 0 ? 'SOUND OFF' : 'SOUND'}</summary>

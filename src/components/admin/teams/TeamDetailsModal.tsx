@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { AdminTeam, StageId, StageStatus, TeamStatus } from '../../../types/admin';
 import { useNativeDialog } from '../../../hooks/useNativeDialog';
+import { AdminProgressionControls } from './AdminProgressionControls';
+import { EditTeamNameModal } from './EditTeamNameModal';
+import { ResetPasswordModal } from './ResetPasswordModal';
+import { adminReadService } from '../../../services/adminReadService';
 
 interface TeamDetailsModalProps {
   team: AdminTeam | null;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
 function getTeamStatusBadgeClass(status: TeamStatus): string {
@@ -48,8 +53,14 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
   team,
   isOpen,
   onClose,
+  onRefresh,
 }) => {
   const { dialogRef } = useNativeDialog(isOpen, onClose);
+  const [editingName, setEditingName] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   if (!isOpen || !team) return null;
 
@@ -86,6 +97,17 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
             </div>
           </div>
 
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => setEditingName(true)} className="rounded border border-white/20 px-2 py-1 text-[10px] text-cartel-silver disabled:opacity-50">Rename</button>
+            <button type="button" disabled={busy} onClick={() => setResettingPassword(true)} className="rounded border border-cartel-amber/30 px-2 py-1 text-[10px] text-cartel-amber disabled:opacity-50">Reset password</button>
+            <button type="button" disabled={busy} onClick={() => { void (async () => {
+              setBusy(true); setError(null); setNotice(null);
+              try { await adminReadService.setTeamPaused(team.id, team.status !== 'paused'); await onRefresh?.(); setNotice(team.status === 'paused' ? 'Team resumed.' : 'Team paused.'); }
+              catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not change team status.'); }
+              finally { setBusy(false); }
+            })(); }} className="rounded border border-cartel-amber/30 px-2 py-1 text-[10px] text-cartel-amber disabled:opacity-50">{busy ? 'Saving…' : team.status === 'paused' ? 'Resume team' : 'Pause team'}</button>
+          </div>
+
           <button
             type="button"
             onClick={onClose}
@@ -98,6 +120,8 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
 
         {/* Scrollable Content */}
         <div className="p-5 overflow-y-auto space-y-5">
+          {error && <p role="alert" className="rounded border border-red-500/40 bg-red-950/30 p-2 text-xs text-red-200">{error}</p>}
+          {notice && <output aria-live="polite" className="block rounded border border-emerald-500/30 bg-emerald-950/30 p-2 text-xs text-emerald-200">{notice}</output>}
           {/* Top Metric Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-cartel-charcoal/80 border border-white/10 rounded p-3">
@@ -117,7 +141,7 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
               </div>
             </div>
             <div className="bg-cartel-charcoal/80 border border-cartel-pumpkin/40 rounded p-3">
-              <div className="text-[10px] font-cinzel text-cartel-silver/60 uppercase">TOTAL CREDITS</div>
+              <div className="text-[10px] font-cinzel text-cartel-silver/60 uppercase">WALLET CREDITS</div>
               <div className="text-base font-mono font-bold text-cartel-pumpkin mt-0.5">
                 {team.credits} / 500 CR
               </div>
@@ -139,7 +163,7 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
           {/* Stage Tracking Section */}
           <div>
             <h4 className="text-xs font-cinzel font-bold text-cartel-amber uppercase tracking-wider mb-2.5">
-              STAGE PROGRESSION &amp; FIXED CREDIT AUDIT
+              STAGE PROGRESSION &amp; SCORE AUDIT
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {stageKeys.map((key) => {
@@ -169,11 +193,11 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 space-y-1 text-[10px] font-mono">
                       <div className="flex justify-between">
                         <span className="text-cartel-silver/60">Reward Potential:</span>
-                        <span className="text-cartel-amber">{stage.rewardCredits} CR</span>
+                        <span className="text-cartel-amber">{stage.rewardCredits} PTS</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-cartel-silver/60">Earned:</span>
-                        <span className="text-emerald-400 font-bold">{stage.earnedCredits} CR</span>
+                        <span className="text-cartel-silver/60">Stage Score:</span>
+                        <span className="text-emerald-400 font-bold">{stage.earnedCredits} PTS</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-cartel-silver/60">Started:</span>
@@ -189,6 +213,9 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
               })}
             </div>
           </div>
+
+          {/* Activity History Timeline */}
+          <AdminProgressionControls teamId={team.id} teamName={team.name} onProgressChanged={onRefresh ? () => onRefresh() : undefined} />
 
           {/* Activity History Timeline */}
           <div>
@@ -231,6 +258,8 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
           </button>
         </div>
       </div>
+      <EditTeamNameModal team={team} isOpen={editingName} onClose={() => setEditingName(false)} onSuccess={async () => { await onRefresh?.(); setEditingName(false); setNotice('Team name updated.'); }} />
+      <ResetPasswordModal team={team} isOpen={resettingPassword} onClose={() => setResettingPassword(false)} onSuccess={async () => { await onRefresh?.(); setNotice('Password reset confirmed.'); }} />
     </dialog>
   );
 };

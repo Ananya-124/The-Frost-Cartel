@@ -1,110 +1,48 @@
-# FROST CARTEL — Development & Operations Guide
+# Frost Cartel Development Guide
 
-## 1. System Requirements
+## Requirements
 
-- **Node.js**: `v22.0.0` or higher (Tested and certified on `v26.5.0` with native `node:sqlite` and type stripping)
-- **Package Manager**: `npm` `v10.0.0` or higher
-- **Modern Browser**: Chrome 120+, Edge 120+, Firefox 120+, or Safari 17+ (Supports ES2023, CSS nesting, and Web Audio API)
+- Node.js 22.18 or later within the version range in `package.json`.
+- npm 10 or later.
+- A separate local PostgreSQL database for development and integration tests.
 
----
+## Setup
 
-## 2. Quickstart Installation
-
-```bash
-# 1. Clone repository
-git clone https://github.com/Ananya-124/The-Frost-Cartel.git
-cd "winter arc"
-
-# 2. Install dependencies
-npm install
-
-# 3. Initialize environment variables
-cp .env.example .env
+```powershell
+npm ci
+$env:DATABASE_URL = '<local PostgreSQL connection URI>'
+$env:PG_TEST_DATABASE_URL = '<isolated local PostgreSQL test database URI>'
+$env:PGSSLMODE = 'disable'
+npm run db:migrate
 ```
 
----
+Never use the production Supabase URL for development or tests. PostgreSQL integration tests create isolated temporary schemas and refuse remote test hosts.
 
-## 3. Running the Platform
+## Run the application
 
-FROST CARTEL consists of an **Authoritative Express / SQLite Backend** and a **React 19 / Vite Frontend**.
-
-### Starting the Authoritative Backend (Port 3001)
-
-```bash
+```powershell
 npm run server
-```
-- Listens on `http://127.0.0.1:3001`
-- Automatically provisions `database/frost_cartel.db` with WAL mode
-- Seeds default admin `admin123` (`must_change_password=1`)
-- Seeds tournament squads: `TEAM AI`, `TEAM1`, `Shadow Syndicate`, `Grave Walkers`, `Cursed Alchemists`
-
-### Starting the React 19 Frontend (Port 5173)
-
-```bash
 npm run dev
 ```
-- Listens on `http://127.0.0.1:5173`
-- Proxies all `/api/*` network requests automatically to `http://127.0.0.1:3001`
 
----
+The Express API listens on port 3001. Vite runs on port 5173 and proxies `/api` requests to the local API. The server requires PostgreSQL configuration; `/api/ready` reports whether PostgreSQL is reachable and migrations 001–012 are present.
 
-## 4. Default Seed Credentials
+For local admin login, configure `ADMIN_BOOTSTRAP_USER` and `ADMIN_BOOTSTRAP_PASSWORD`. Bootstrap creates an account only when the PostgreSQL `admins` table is empty; it does not seed sample teams or development credentials.
 
-### Player Portal (`http://127.0.0.1:5173/`)
-| Squad Name | Ritual Password | Assigned Role |
-| :--- | :--- | :--- |
-| r | Player 1 / Player 2 |
+## Verification
 
-### Hardened Admin Vault (`http://127.0.0.1:5173/#/admin` or `http://127.0.0.1:5173/admin`)
-| Username | Temporary Password | Note |
-| :--- | :--- | :--- |
-| `admin123` | `admin@1` | Hardened route. Password change required on first login. |
-
-> **Security Note**: The public homepage contains strictly NO link or button to the Admin Portal. Access is restricted to direct navigation to `#/admin`.
-
----
-
-## 5. Verification & Testing
-
-### Running Code Quality Linter (Oxlint)
-
-```bash
-npm run lint
-```
-- Scans all 93+ TypeScript and React files with 116 AST rules
-- Must exit with `Found 0 warnings and 0 errors`
-
-### Running Automated Test Suites (Vitest)
-
-```bash
+```powershell
 npm test
-```
-Executes all 43 unit, integration, and persistence tests across 7 test suites:
-- `src/services/__tests__/round1Service.test.ts`
-- `src/components/__tests__/FrostCartelHomePage.test.tsx`
-- `src/components/__tests__/AdminPortal.test.tsx`
-- `src/components/__tests__/Stage2HauntedImageHunt.test.tsx`
-- `src/components/__tests__/Stage3ForgottenGraveyard.test.tsx`
-- `server/__tests__/database_and_api.test.ts`
-- `server/__tests__/persistence_restart.test.ts`
-
-### Compiling Production Build
-
-```bash
+npm run lint
 npm run build
 ```
-Runs `tsc -b && vite build` and generates minified, tree-shaken static assets in `dist/`.
 
----
+PostgreSQL-backed test files require `PG_TEST_DATABASE_URL` to point to an isolated local database. They create and remove temporary schemas; they do not reset the database.
 
-## 6. Authoritative Database & Durability
+## Database layout
 
-The database layer is located in `database/`:
-- `database/schema.sql`: Full relational DDL schema
-- `database/db.ts`: SQLite `DatabaseSync` engine with write-ahead logging (WAL)
-- `database/frost_cartel.db`: Local SQLite database file (ignored in `.gitignore`)
+- `database/postgres/migrations/`: ordered PostgreSQL schema and catalog migrations.
+- `database/postgres/`: connection, transaction, ledger, progression, and round repositories.
+- `server/routes/`: authenticated Express APIs backed by PostgreSQL.
 
-### Durability Guarantees:
-1. **Admin Team Creation**: Teams created via the Admin Portal immediately persist to `database/frost_cartel.db` and browser `localStorage`.
-2. **Crash & Restart Survival**: If the backend process crashes or is restarted, all teams, passwords, credit balances, stage completion records, and audit logs remain 100% intact.
-3. **Multiplayer SSE Sync**: Server-Sent Events stream `/api/events/stream` pushes stage unlocks and score changes to both players on a team in real-time.
+The PostgreSQL database is the persistent source for identities, sessions, scores, credits, progression, and rounds 1–4. Round 2 remains disabled by its PostgreSQL configuration.

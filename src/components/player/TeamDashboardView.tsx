@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { useNativeDialog } from '../../hooks/useNativeDialog';
-import { round1Service } from '../../services/round1Service';
-import { adminService } from '../../services/adminService';
+import { round1Api } from '../../services/round1ApiService';
 import { FlyingBat } from '../game/haunted/FlyingBat';
+import { progressionService, errorStatus, type TeamProgression } from '../../services/progressionService';
+import { TeamProgressionSummary } from './TeamProgressionSummary';
 
 interface TeamDashboardViewProps {
   session: TeamSession;
@@ -23,32 +24,38 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
 }) => {
   const { dialogRef } = useNativeDialog(true, onClose);
 
-  // Check round status reactively from services
-  const [roundStatus, setRoundStatus] = useState<'not_started' | 'running' | 'paused' | 'completed'>(() => {
-    return adminService.getRound1Status() || round1Service.getRound1Status();
-  });
+  const [roundStatus, setRoundStatus] = useState<'not_started' | 'running' | 'paused' | 'completed'>('not_started');
+  const [progression, setProgression] = useState<TeamProgression | null>(null);
+  const [progressionLoading, setProgressionLoading] = useState(false);
+  const [progressionError, setProgressionError] = useState<string | null>(null);
+
+  const refreshProgression = useCallback(async () => {
+    setProgressionLoading(true); setProgressionError(null);
+    try { setProgression(await progressionService.getMine()); }
+    catch (error) {
+      setProgressionError(errorStatus(error) === 401 ? 'Your team session expired. Sign in again to refresh progression.' : error instanceof Error ? error.message : 'Could not load team progression.');
+    } finally { setProgressionLoading(false); }
+  }, []);
+
+  useEffect(() => { void refreshProgression(); }, [refreshProgression, session.teamId]);
 
   useEffect(() => {
-    const syncStatus = () => {
-      const current = adminService.getRound1Status() || round1Service.getRound1Status();
-      setRoundStatus(current);
-    };
-
-    const interval = setInterval(syncStatus, 1000);
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'frost_cartel_round1_status') {
-        syncStatus();
+    let disposed = false;
+    const syncStatus = async () => {
+      try {
+        const state = await round1Api.getState();
+        if (!disposed) setRoundStatus(state.round.isActive ? 'running' : state.session.status === 'completed' ? 'completed' : 'paused');
+      } catch {
+        if (!disposed) {
+          const status = progression?.rounds.find((round) => round.round_id === 1)?.status;
+          setRoundStatus(status === 'COMPLETED' ? 'completed' : 'not_started');
+        }
       }
     };
-
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
+    void syncStatus();
+    const interval = setInterval(() => { void syncStatus(); }, 10000);
+    return () => { disposed = true; clearInterval(interval); };
+  }, [progression, session.teamId]);
 
   const isRoundActive = roundStatus === 'running';
 
@@ -169,7 +176,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           <span className="text-stone-500" aria-hidden="true">•</span>
           <span className="flex items-center gap-1 text-amber-300 font-semibold whitespace-nowrap">
             <span aria-hidden="true">💰</span>
-            <span>UP TO 500 CR</span>
+            <span>WALLET: {session.credits === null ? 'UNAVAILABLE' : `${session.credits} CR`}</span>
           </span>
         </div>
 
@@ -254,6 +261,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           <span>SIGN OUT</span>
           <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
         </button>
+        <details className="mt-3 w-full max-w-2xl rounded border border-amber-500/25 bg-black/45 px-3 py-2 text-left">
+          <summary className="cursor-pointer text-[10px] font-cinzel font-bold uppercase tracking-wider text-amber-200">View team progression</summary>
+          <TeamProgressionSummary progression={progression} loading={progressionLoading} error={progressionError} onRetry={() => { void refreshProgression(); }} />
+        </details>
       </div>
     </dialog>
   );

@@ -34,6 +34,15 @@ describe('PostgreSQL connection settings', () => {
     expect(config.idleTimeoutMillis).toBe(30_000);
   });
 
+  it('accepts a secret CA certificate supplied as environment content', () => {
+    const config = createPostgresPoolConfig({
+      DATABASE_URL: 'postgres://u:p@localhost/db',
+      PGSSLMODE: 'verify-full',
+      PGSSLROOTCERT_CONTENT: '-----BEGIN CERTIFICATE-----\\nexample\\n-----END CERTIFICATE-----',
+    });
+    expect(config.ssl).toMatchObject({ rejectUnauthorized: true, ca: '-----BEGIN CERTIFICATE-----\\nexample\\n-----END CERTIFICATE-----' });
+  });
+
   it('makes encryption-only and disabled TLS explicit', () => {
     expect(createPostgresPoolConfig({ DATABASE_URL: 'postgres://u:p@localhost/db', PGSSLMODE: 'require' }).ssl)
       .toMatchObject({ rejectUnauthorized: false });

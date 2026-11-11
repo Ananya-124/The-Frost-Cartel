@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { AdminTeam, TeamStatus } from '../../../types/team.types';
-import { adminService } from '../../../services/adminService';
+import { adminReadService } from '../../../services/adminReadService';
 import { TeamDetailsModal } from '../teams/TeamDetailsModal';
 
 export const AdminResultsTab: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedTeam, setSelectedTeam] = useState<AdminTeam | null>(null);
+  const [allResults, setAllResults] = useState<Array<AdminTeam & { officialScore: number; rank: number }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const results = adminService.getResults(search, statusFilter);
+  const loadResults = async () => {
+    setLoading(true); setLoadError(null);
+    try { setAllResults(await adminReadService.getResults()); }
+    catch (error) { setLoadError(error instanceof Error ? error.message : 'Could not load official results.'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void loadResults(); }, []);
+
+  const results = useMemo(() => allResults.filter((team) =>
+    (!search.trim() || team.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())) &&
+    (statusFilter === 'all' || team.status === statusFilter)), [allResults, search, statusFilter]);
 
   const handleExportCSV = () => {
-    const csvContent = adminService.exportResultsCSV();
+    const escape = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
+    const rows = [
+      ['Rank', 'Team Name', 'Stage 1 Score', 'Stage 2 Score', 'Stage 3 Score', 'Official Score', 'Wallet Credits', 'Round Status'],
+      ...results.map((team) => [team.rank, team.name, team.stages['stage-1'].earnedCredits, team.stages['stage-2'].earnedCredits,
+        team.stages['stage-3'].earnedCredits, team.officialScore, team.credits, team.status]),
+    ];
+    const csvContent = rows.map((row) => row.map(escape).join(',')).join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -73,6 +92,7 @@ export const AdminResultsTab: React.FC = () => {
           <span className="text-xs font-mono text-cartel-silver/60">
             <span>Rankings: </span><strong className="text-white">{results.length}</strong><span> squads</span>
           </span>
+          <button type="button" onClick={() => { void loadResults(); }} disabled={loading} className="px-2.5 py-1.5 rounded bg-cartel-charcoal border border-white/15 text-cartel-silver text-xs disabled:opacity-50">Refresh</button>
         </div>
 
         {/* CSV Export CTA */}
@@ -86,6 +106,8 @@ export const AdminResultsTab: React.FC = () => {
         </button>
       </div>
 
+      {loadError && <div role="alert" className="rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm text-red-200">{loadError} <button type="button" onClick={() => { void loadResults(); }} className="ml-2 underline">Retry</button></div>}
+
       {/* Standings Table */}
       <div className="stone-panel rounded-xl border border-white/10 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
@@ -94,24 +116,23 @@ export const AdminResultsTab: React.FC = () => {
               <tr>
                 <th className="py-3 px-3.5 text-center w-12">Rank</th>
                 <th className="py-3 px-3.5">Team Name</th>
-                <th className="py-3 px-3 text-right">Stage 1 (100 CR)</th>
-                <th className="py-3 px-3 text-right">Stage 2 (150 CR)</th>
-                <th className="py-3 px-3 text-right">Stage 3 (250 CR)</th>
-                <th className="py-3 px-4 text-right">Total Credits</th>
+                <th className="py-3 px-3 text-right">Stage 1 Score</th>
+                <th className="py-3 px-3 text-right">Stage 2 Score</th>
+                <th className="py-3 px-3 text-right">Stage 3 Score</th>
+                <th className="py-3 px-3 text-right">Official Score</th>
+                <th className="py-3 px-4 text-right">Wallet Credits</th>
                 <th className="py-3 px-3">Round Status</th>
                 <th className="py-3 px-3.5 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-sans">
-              {results.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-cartel-silver/50 font-mono">
-                    No results match current search criteria.
-                  </td>
-                </tr>
+              {loading ? (
+                <tr><td colSpan={9} className="py-8 text-center text-cartel-silver/60 font-mono">Loading official results…</td></tr>
+              ) : results.length === 0 ? (
+                <tr><td colSpan={9} className="py-8 text-center text-cartel-silver/50 font-mono">{loadError ? 'Results are unavailable until the server responds.' : 'No results match current search criteria.'}</td></tr>
               ) : (
-                results.map((team, idx) => {
-                  const rank = idx + 1;
+                results.map((team) => {
+                  const rank = team.rank;
                   const isTopThree = rank <= 3;
                   const badgeClass = getStatusBadge(team.status);
 
@@ -134,16 +155,19 @@ export const AdminResultsTab: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-cartel-silver">
-                        {team.stages['stage-1'].earnedCredits} CR
+                        {team.stages['stage-1'].earnedCredits} PTS
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-cartel-silver">
-                        {team.stages['stage-2'].earnedCredits} CR
+                        {team.stages['stage-2'].earnedCredits} PTS
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-cartel-silver">
-                        {team.stages['stage-3'].earnedCredits} CR
+                        {team.stages['stage-3'].earnedCredits} PTS
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-sm text-cartel-cyan">
+                        {team.officialScore}
                       </td>
                       <td className="py-2.5 px-4 text-right font-mono font-black text-sm text-cartel-pumpkin">
-                        {team.credits} / 500 CR
+                        {team.credits} CR
                       </td>
                       <td className="py-2.5 px-3">
                         <span

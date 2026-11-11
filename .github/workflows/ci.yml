@@ -10,6 +10,24 @@ jobs:
   audit-and-test:
     name: Build, Lint, Test & Verify
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: frost_cartel_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d frost_cartel_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/frost_cartel_test
+      PG_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/frost_cartel_test
+      PGSSLMODE: disable
 
     strategy:
       matrix:
@@ -27,6 +45,9 @@ jobs:
 
       - name: Install Project Dependencies
         run: npm ci
+
+      - name: Apply PostgreSQL Migrations to CI Database
+        run: npm run db:migrate
 
       - name: Lint Codebase (Oxlint)
         run: npm run lint

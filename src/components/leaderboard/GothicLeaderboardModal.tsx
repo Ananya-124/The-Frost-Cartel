@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import type { AdminTeam } from '../../types/admin';
-import { adminService } from '../../services/adminService';
+import React, { useEffect, useState } from 'react';
+import { adminReadService, type ApiLeaderboardEntry } from '../../services/adminReadService';
 import { useNativeDialog } from '../../hooks/useNativeDialog';
 
 interface GothicLeaderboardModalProps {
@@ -14,13 +13,23 @@ export const GothicLeaderboardModal: React.FC<GothicLeaderboardModalProps> = ({
 }) => {
   const { dialogRef } = useNativeDialog(isOpen, onClose);
   const [searchQuery, setSearchQuery] = useState('');
+  const [standings, setStandings] = useState<ApiLeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadStandings = async () => {
+    setLoading(true); setError(null);
+    try { setStandings(await adminReadService.getLeaderboard()); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load the leaderboard.'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { if (isOpen) void loadStandings(); }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const standings: AdminTeam[] = adminService.getResultsStandings();
-  const filtered = standings.filter((t) =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
-  );
+  const filtered = standings.filter((team) =>
+    team.team_name.toLowerCase().includes(searchQuery.toLowerCase().trim()));
 
   return (
     <dialog
@@ -69,7 +78,7 @@ export const GothicLeaderboardModal: React.FC<GothicLeaderboardModalProps> = ({
           </div>
 
           <div className="text-xs font-mono text-cartel-silver/70">
-            Total Squads: <strong className="text-white">{standings.length}</strong> • Ranked by Credits &amp; Time
+            Total Squads: <strong className="text-white">{standings.length}</strong> • Ranked by Official Score
           </div>
         </div>
 
@@ -80,26 +89,22 @@ export const GothicLeaderboardModal: React.FC<GothicLeaderboardModalProps> = ({
               <tr className="border-b border-white/10 text-[10px] font-cinzel font-bold text-cartel-silver/60 uppercase">
                 <th className="py-2.5 px-3">Rank</th>
                 <th className="py-2.5 px-3">Operative Squad</th>
-                <th className="py-2.5 px-3 hidden sm:table-cell">Status</th>
-                <th className="py-2.5 px-3">Chambers Cleared</th>
-                <th className="py-2.5 px-3 text-right">Bounty Yield</th>
+                <th className="py-2.5 px-3 text-right">Official Score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono">
-              {filtered.map((team, idx) => {
-                const rank = idx + 1;
+              {loading ? <tr><td colSpan={3} className="py-8 text-center text-cartel-silver/60">Loading leaderboard…</td></tr>
+                : error ? <tr><td colSpan={3} className="py-8 text-center text-red-300" role="alert">{error}<button type="button" onClick={() => { void loadStandings(); }} className="ml-2 underline">Retry</button></td></tr>
+                : filtered.length === 0 ? <tr><td colSpan={3} className="py-8 text-center text-cartel-silver/60">{searchQuery ? 'No teams match your search.' : 'No leaderboard results yet.'}</td></tr>
+                : filtered.map((team) => {
+                const rank = team.rank;
                 const isTop1 = rank === 1;
                 const isTop2 = rank === 2;
                 const isTop3 = rank === 3;
 
-                // Count completed stages
-                const stagesCompleted = Object.values(team.stages).filter(
-                  (s) => s.status === 'completed'
-                ).length;
-
                 return (
                   <tr
-                    key={team.id}
+                    key={team.team_id}
                     className={`hover:bg-white/5 transition-colors ${
                       isTop1
                         ? 'bg-amber-950/20 text-amber-200'
@@ -123,67 +128,15 @@ export const GothicLeaderboardModal: React.FC<GothicLeaderboardModalProps> = ({
                     {/* Squad Name */}
                     <td className="py-3 px-3">
                       <div className="font-gothic text-sm font-bold text-white tracking-wide">
-                        {team.name}
+                        {team.team_name}
                       </div>
                       <div className="text-[10px] text-cartel-silver/50">
-                        {team.id}
+                        {team.team_id}
                       </div>
                     </td>
-
-                    {/* Status */}
-                    <td className="py-3 px-3 hidden sm:table-cell">
-                      <span
-                        className={`text-[9px] font-cinzel font-bold px-2 py-0.5 rounded-full border uppercase ${
-                          team.status === 'completed'
-                            ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400'
-                            : team.status === 'active'
-                            ? 'bg-cartel-pumpkin/20 border-cartel-pumpkin/60 text-cartel-pumpkin'
-                            : team.status === 'paused'
-                            ? 'bg-amber-950/80 border-amber-500/70 text-amber-400'
-                            : 'bg-cartel-charcoal border-white/20 text-cartel-silver/70'
-                        }`}
-                      >
-                        {team.status}
-                      </span>
-                    </td>
-
-                    {/* Chambers Cleared */}
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-cartel-amber">{stagesCompleted}/3</span>
-                        <div className="flex gap-1">
-                          <span
-                            title="Chamber 1"
-                            className={`w-2 h-2 rounded-full ${
-                              team.stages['stage-1']?.status === 'completed'
-                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
-                                : 'bg-white/20'
-                            }`}
-                          />
-                          <span
-                            title="Chamber 2"
-                            className={`w-2 h-2 rounded-full ${
-                              team.stages['stage-2']?.status === 'completed'
-                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
-                                : 'bg-white/20'
-                            }`}
-                          />
-                          <span
-                            title="Chamber 3"
-                            className={`w-2 h-2 rounded-full ${
-                              team.stages['stage-3']?.status === 'completed'
-                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
-                                : 'bg-white/20'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Credits */}
                     <td className="py-3 px-3 text-right">
                       <span className="font-mono text-sm font-bold text-cartel-pumpkin">
-                        {team.credits} <span className="text-[10px] text-cartel-silver/60">CR</span>
+                        {team.score} <span className="text-[10px] text-cartel-silver/60">PTS</span>
                       </span>
                     </td>
                   </tr>

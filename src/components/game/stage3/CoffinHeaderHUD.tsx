@@ -1,10 +1,11 @@
 import React from 'react';
 import { soundController } from '../../../utils/soundController';
+import { type Round1TimerStore, useRound1TimerSeconds } from '../round1TimerStore';
 
 interface CoffinHeaderHUDProps {
   graveNumber?: 'GRAVE I' | 'GRAVE II' | 'GRAVE III' | null;
   title: 'THE MARKED REMAINS' | 'THE BURIED DIARY' | 'THE FINAL TESTAMENT';
-  secondsRemaining: number;
+  timerStore: Round1TimerStore;
   stageCleared: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -14,12 +15,13 @@ interface CoffinHeaderHUDProps {
 export const CoffinHeaderHUD: React.FC<CoffinHeaderHUDProps> = ({
   graveNumber,
   title,
-  secondsRemaining,
+  timerStore,
   stageCleared: _stageCleared,
   isMuted,
   onToggleMute,
   onReturnDashboard,
 }) => {
+  const secondsRemaining=useRound1TimerSeconds(timerStore);
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;

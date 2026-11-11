@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Round4AdminOverview, QualifiedTeamAssignment } from '../../../types/round4Expedition.types';
-import { adminService } from '../../../services/adminService';
+import { round4Service } from '../../../services/round4Service';
 import { getFloorMapConfig } from '../../game/round4/FloorMapConfiguration';
 
 function renderSquadStatusBadge(team: QualifiedTeamAssignment, winnerTeamId?: string): React.JSX.Element {
@@ -20,6 +20,9 @@ function renderSquadStatusBadge(team: QualifiedTeamAssignment, winnerTeamId?: st
 export const AdminRound4Tab: React.FC = () => {
   const [overview, setOverview] = useState<Round4AdminOverview | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const saving = useRef(false);
   const [activeSubTab, setActiveSubTab] = useState<'monitoring' | 'qualification' | 'editor'>('monitoring');
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -27,7 +30,7 @@ export const AdminRound4Tab: React.FC = () => {
   const [assignments, setAssignments] = useState<Array<{ teamId: string; routeId: string }>>([]);
 
   // Editor State
-  const [selectedRouteId, setSelectedRouteId] = useState<string>('route-1');
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [selectedClueIndex, setSelectedClueIndex] = useState<number>(1);
   const [editingStep, setEditingStep] = useState<{
     riddleText: string;
@@ -42,109 +45,53 @@ export const AdminRound4Tab: React.FC = () => {
     riddleText: '',
     fieldLocationHint: '',
     acceptedAnswers: '',
-    floorId: 'floor-7',
+    floorId: '',
     locationName: '',
-    targetX: 280,
-    targetY: 125,
-    triggerRadius: 36,
+    targetX: 0,
+    targetY: 0,
+    triggerRadius: 0,
   });
 
-  const createMockOverview = (): Round4AdminOverview => {
-    const { teams } = adminService.getTeams();
-    const defaultRoutes = [
-      { id: 'route-1', route_number: 1, roman_numeral: 'I', route_name: "The Cartographer's Compass", route_subtitle: 'Route I' },
-      { id: 'route-2', route_number: 2, roman_numeral: 'II', route_name: "The Alchemist's Crucible", route_subtitle: 'Route II' },
-      { id: 'route-3', route_number: 3, roman_numeral: 'III', route_name: "The Astronomer's Sextant", route_subtitle: 'Route III' },
-      { id: 'route-4', route_number: 4, roman_numeral: 'IV', route_name: "The Chronicler's Quill", route_subtitle: 'Route IV' },
-      { id: 'route-5', route_number: 5, roman_numeral: 'V', route_name: "The Botanist's Herbarium", route_subtitle: 'Route V' },
-      { id: 'route-6', route_number: 6, roman_numeral: 'VI', route_name: "The Architect's Blueprint", route_subtitle: 'Route VI' },
-      { id: 'route-7', route_number: 7, roman_numeral: 'VII', route_name: "The Cryptographer's Cipher", route_subtitle: 'Route VII' },
-    ];
-    const qualified = teams.slice(0, 7).map((t, idx) => ({
-      qualId: `mock_qual_${idx + 1}`,
-      teamId: t.id,
-      teamName: t.name,
-      routeId: defaultRoutes[idx].id,
-      romanNumeral: defaultRoutes[idx].roman_numeral,
-      routeName: defaultRoutes[idx].route_name,
-      currentStepIndex: 0,
-      targetDiscovered: 0,
-      commonRoomArrived: 0,
-      isFinished: 0,
-      finishedAt: null,
-      totalSteps: 5,
-    }));
-    const available = teams.map((t) => ({
-      id: t.id,
-      teamName: t.name,
-      score: t.credits,
-      totalCredits: t.credits,
-    }));
-    const mockSteps = defaultRoutes.flatMap((r) =>
-      [1, 2, 3, 4, 5].map((stepNum) => ({
-        id: `${r.id}-step-${stepNum}`,
-        routeId: r.id,
-        clueIndex: stepNum,
-        floorId: stepNum === 5 ? 'floor-7' : `floor-${8 - stepNum}`,
-        locationName: stepNum === 5 ? 'Celestial Archives & Grand Observatory' : `Expedition Sector ${stepNum}`,
-        targetX: 280,
-        targetY: 125,
-        triggerRadius: 36,
-        riddleText: `Riddle ${stepNum} for Route ${r.roman_numeral}: Seek the hidden inscription etched within the chamber.`,
-        fieldLocationHint: `Navigate to floor ${stepNum === 5 ? 7 : 8 - stepNum} and inspect the marker.`,
-        acceptedAnswersJson: JSON.stringify([`ANSWER_${stepNum}`, `TEST_${stepNum}`]),
-        isCaseSensitive: 0,
-        isCommonFinal: stepNum === 5 ? 1 : 0,
-      }))
-    );
-    return {
-      settings: {
-        id: 'settings-1',
-        is_released: 1,
-        common_final_location_id: 'loc_final_observatory',
-        common_final_floor_id: 'floor-7',
-        common_final_room_name: 'Celestial Archives & Grand Observatory',
-        common_final_x: 280,
-        common_final_y: 125,
-        common_final_radius: 40,
-        physical_entry_instructions: 'Room 701, Seventh Floor, B. S. Narayan Academic Block.',
-      },
-      routes: defaultRoutes,
-      qualifiedTeams: qualified,
-      availableTeams: available,
-      steps: mockSteps,
-      winner: null,
-    };
-  };
-
-  const loadOverview = () => {
-    fetch('/api/round4/admin/overview', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: Round4AdminOverview | null) => {
-        const effectiveData = data || createMockOverview();
-        setOverview(effectiveData);
-        if (effectiveData.qualifiedTeams?.length) {
-          setAssignments(effectiveData.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
-        }
-      })
-      .catch((err) => {
-        console.warn('[AdminRound4Tab] Using mock fallback:', err);
-        const fallback = createMockOverview();
-        setOverview(fallback);
-        if (fallback.qualifiedTeams?.length) {
-          setAssignments(fallback.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
-        }
-      })
-      .finally(() => setIsLoading(false));
+  const loadOverview = async () => {
+    setIsLoading(true); setLoadError(null);
+    try {
+      const data = await round4Service.getAdminOverview();
+      if (!data.settings || !Array.isArray(data.routes) || !Array.isArray(data.steps) || !Array.isArray(data.qualifiedTeams) || !Array.isArray(data.availableTeams)) {
+        throw new Error('Round 04 overview response is incomplete.');
+      }
+      setOverview(data);
+      setAssignments(data.qualifiedTeams.map((q) => ({ teamId: q.teamId, routeId: q.routeId })));
+      const firstStep = data.steps.find((step) => step.routeId === selectedRouteId && step.clueIndex === selectedClueIndex) ?? data.steps[0];
+      if (firstStep) {
+        setSelectedRouteId(firstStep.routeId); setSelectedClueIndex(firstStep.clueIndex);
+        let answers: string[] = [];
+        try { answers = JSON.parse(firstStep.acceptedAnswersJson || '[]'); } catch { answers = []; }
+        setEditingStep({ riddleText: firstStep.riddleText, fieldLocationHint: firstStep.fieldLocationHint, acceptedAnswers: answers.join(', '), floorId: firstStep.floorId, locationName: firstStep.locationName, targetX: firstStep.targetX, targetY: firstStep.targetY, triggerRadius: firstStep.triggerRadius });
+      }
+    } catch (error) {
+      setOverview(null); setLoadError(error instanceof Error ? error.message : 'Round 04 overview could not be loaded.');
+    } finally { setIsLoading(false); }
   };
 
   useEffect(() => {
-    loadOverview();
+    void loadOverview();
   }, []);
+
+  const runAdminAction = async (action: () => Promise<string>) => {
+    if (saving.current) return;
+    saving.current = true; setIsSaving(true); setNotice(null); setLoadError(null);
+    try {
+      setNotice(await action());
+      await loadOverview();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'The Round 04 action could not be completed.');
+    } finally { saving.current = false; setIsSaving(false); }
+  };
 
   const handleSelectRouteOrClue = (newRouteId: string, newClueIndex: number) => {
     setSelectedRouteId(newRouteId);
     setSelectedClueIndex(newClueIndex);
+    setLoadError(null);
 
     if (!overview?.steps) return;
     const found = overview.steps.find(
@@ -168,40 +115,29 @@ export const AdminRound4Tab: React.FC = () => {
         targetY: found.targetY,
         triggerRadius: found.triggerRadius,
       });
+    } else {
+      setEditingStep({ riddleText: '', fieldLocationHint: '', acceptedAnswers: '', floorId: '', locationName: '', targetX: 0, targetY: 0, triggerRadius: 0 });
+      setLoadError('The selected clue is missing from the server catalog. Reload the Round 04 overview.');
     }
-  };
+    };
 
   const handleToggleRelease = async () => {
     if (!overview) return;
     const nextState = overview.settings.is_released !== 1;
-    try {
-      const res = await fetch('/api/round4/admin/release', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isReleased: nextState }),
-      });
-      if (res.ok) {
-        setNotice(`Round 04 is now ${nextState ? 'RELEASED to qualified squads' : 'SEALED'}.`);
-        loadOverview();
-      }
-    } catch {
-      setNotice('Failed updating release state.');
-    }
+    await runAdminAction(async () => {
+      const result = await round4Service.setAdminRelease(nextState);
+      return `Round 04 is now ${result.isReleased ? 'RELEASED to qualified squads' : 'SEALED'}.`;
+    });
   };
 
   const handleResetTournament = async () => {
     if (!window.confirm('Are you sure you want to RESET Round 04? This will clear the champion record and reset all 7 teams back to Clue 1.')) {
       return;
     }
-    try {
-      const res = await fetch('/api/round4/admin/reset-tournament', { method: 'POST' });
-      if (res.ok) {
-        setNotice('Tournament state successfully reset.');
-        loadOverview();
-      }
-    } catch {
-      setNotice('Failed resetting tournament state.');
-    }
+    await runAdminAction(async () => {
+      const result = await round4Service.resetAdminTournament();
+      return result.message;
+    });
   };
 
   const handleSaveQualifications = async () => {
@@ -209,36 +145,22 @@ export const AdminRound4Tab: React.FC = () => {
       setNotice('Error: Exactly seven teams (or fewer) can be qualified.');
       return;
     }
-    try {
-      const res = await fetch('/api/round4/admin/qualify-teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignments }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setNotice('7-team qualifications & route assignments successfully saved.');
-        loadOverview();
-      } else {
-        setNotice(`Error: ${data.message}`);
-      }
-    } catch {
-      setNotice('Failed saving qualifications.');
-    }
+    await runAdminAction(async () => {
+      const result = await round4Service.qualifyAdminTeams(assignments);
+      return result.message;
+    });
   };
 
   const handleSaveStep = async () => {
-    const stepId = `${selectedRouteId.replace('route-', 'r')}_s${selectedClueIndex}`;
+    const stepId = overview?.steps.find((step) => step.routeId === selectedRouteId && step.clueIndex === selectedClueIndex)?.id;
+    if (!stepId) { setLoadError('The selected clue is missing from the server catalog. Reload the Round 04 overview.'); return; }
     const answers = editingStep.acceptedAnswers
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
 
-    try {
-      const res = await fetch('/api/round4/admin/configure-step', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    await runAdminAction(async () => {
+      const result = await round4Service.configureAdminStep({
           stepId,
           riddleText: editingStep.riddleText,
           fieldLocationHint: editingStep.fieldLocationHint,
@@ -248,15 +170,9 @@ export const AdminRound4Tab: React.FC = () => {
           triggerRadius: editingStep.triggerRadius,
           floorId: editingStep.floorId,
           locationName: editingStep.locationName,
-        }),
       });
-      if (res.ok) {
-        setNotice(`Clue step ${selectedClueIndex} of ${selectedRouteId.toUpperCase()} updated.`);
-        loadOverview();
-      }
-    } catch {
-      setNotice('Failed updating step.');
-    }
+      return result.message;
+    });
   };
 
   if (isLoading) {
@@ -266,6 +182,9 @@ export const AdminRound4Tab: React.FC = () => {
       </div>
     );
   }
+
+  if (!overview && loadError) return <div className="space-y-4 rounded-xl border border-red-500/40 bg-red-950/20 p-6 text-center text-sm text-red-200"><p role="alert">{loadError}</p><button type="button" disabled={isLoading} onClick={() => { void loadOverview(); }} className="rounded border border-red-300/40 px-4 py-2 text-xs disabled:opacity-50">Retry Round 04 data</button></div>;
+  if (!overview) return <div role="status" className="p-8 text-center text-sm text-cartel-silver">Round 04 data is unavailable.</div>;
 
   const mapConfig = getFloorMapConfig(editingStep.floorId);
 
@@ -291,7 +210,8 @@ export const AdminRound4Tab: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleToggleRelease}
+            disabled={isSaving}
+            onClick={() => { void handleToggleRelease(); }}
             className={`px-3 py-1.5 rounded font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer border transition-colors ${
               overview?.settings.is_released === 1
                 ? 'bg-amber-950/80 hover:bg-amber-900 border-amber-600 text-amber-200'
@@ -302,7 +222,8 @@ export const AdminRound4Tab: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={handleResetTournament}
+            disabled={isSaving}
+            onClick={() => { void handleResetTournament(); }}
             className="px-3 py-1.5 rounded bg-red-950/60 hover:bg-red-900/80 border border-red-700/60 text-red-300 font-cinzel text-xs font-bold uppercase tracking-wider cursor-pointer"
           >
             Reset Tournament
@@ -317,6 +238,7 @@ export const AdminRound4Tab: React.FC = () => {
           <button type="button" onClick={() => setNotice(null)} className="text-sm font-bold cursor-pointer">✕</button>
         </div>
       )}
+      {loadError && <div role="alert" className="flex items-center justify-between gap-3 rounded border border-red-500/40 bg-red-950/30 p-3 text-xs text-red-200"><span>{loadError}</span><button type="button" disabled={isLoading} onClick={() => { void loadOverview(); }} className="underline disabled:opacity-50">Retry</button></div>}
 
       {/* Winner Spotlight Banner if Winner Recorded */}
       {overview?.winner && (
@@ -352,7 +274,7 @@ export const AdminRound4Tab: React.FC = () => {
               : 'text-cartel-silver hover:text-white'
           }`}
         >
-          Live Monitoring (7 Teams)
+          Live Monitoring ({overview?.qualifiedTeams.length ?? 0} Teams)
         </button>
         <button
           type="button"
@@ -393,7 +315,7 @@ export const AdminRound4Tab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {overview?.qualifiedTeams.map((team) => (
+              {overview.qualifiedTeams.length === 0 ? <tr><td colSpan={6} className="p-6 text-center text-cartel-silver/60">No teams are currently qualified.</td></tr> : overview.qualifiedTeams.map((team) => (
                 <tr key={team.teamId} className="hover:bg-white/5">
                   <td className="py-2.5 px-3 font-bold text-white">{team.teamName}</td>
                   <td className="py-2.5 px-3 font-cinzel text-amber-300">
@@ -437,7 +359,8 @@ export const AdminRound4Tab: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {overview?.routes.map((route) => {
+            {overview.routes.length === 0 && <p className="text-xs text-cartel-silver/60">No Round 04 routes are available in PostgreSQL.</p>}
+            {overview.routes.map((route) => {
               const currentAssign = assignments.find((a) => a.routeId === route.id);
               return (
                 <div key={route.id} className="p-3 rounded-lg bg-black/40 border border-white/10 flex items-center justify-between">
@@ -449,6 +372,7 @@ export const AdminRound4Tab: React.FC = () => {
                   </div>
 
                   <select
+                    disabled={isSaving}
                     value={currentAssign?.teamId || ''}
                     aria-label={`Assign squad to Route ${route.roman_numeral}`}
                     onChange={(e) => {
@@ -479,10 +403,11 @@ export const AdminRound4Tab: React.FC = () => {
             </span>
             <button
               type="button"
-              onClick={handleSaveQualifications}
+              disabled={isSaving}
+              onClick={() => { void handleSaveQualifications(); }}
               className="px-4 py-2 rounded bg-cartel-amber hover:bg-amber-400 text-black font-cinzel font-bold text-xs uppercase tracking-wider cursor-pointer shadow-lg"
             >
-              Confirm 7-Team Qualification & Save Assignments
+              {isSaving ? 'Saving…' : 'Confirm 7-Team Qualification & Save Assignments'}
             </button>
           </div>
         </div>
@@ -500,7 +425,7 @@ export const AdminRound4Tab: React.FC = () => {
                 onChange={(e) => handleSelectRouteOrClue(e.target.value, selectedClueIndex)}
                 className="p-1.5 rounded bg-black border border-white/20 text-xs text-amber-300 font-cinzel"
               >
-                {overview?.routes.map((r) => (
+                {overview.routes.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.route_name} ({r.roman_numeral})
                   </option>

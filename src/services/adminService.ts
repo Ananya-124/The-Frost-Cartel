@@ -8,7 +8,6 @@ import type {
   TeamStatus,
 } from '../types/admin';
 import { STAGE_CREDITS, STAGE_NAMES } from '../types/admin';
-import { round1Service } from './round1Service';
 
 /**
  * Admin Service & Team Repository for Frost Cartel.
@@ -445,7 +444,6 @@ class AdminService {
    */
   updateRound1Status(newStatus: Round1Status): { success: boolean; message: string } {
     this.round1Status = newStatus;
-    round1Service.setRound1Status(newStatus);
     const now = new Date().toISOString();
 
     if (newStatus === 'running') {
@@ -753,7 +751,6 @@ class AdminService {
       timestamp: now,
     });
 
-    round1Service.resetTeamProgress(teamId);
     this.saveTeams();
 
     return { success: true, message: `"${team.name}" progress reset to Round 1, Stage 1.` };
@@ -889,7 +886,3 @@ class AdminService {
 
 export const adminService = new AdminService();
 
-// Automatically synchronize live Round 1 gameplay events into the Admin Standings & Audit logs
-round1Service.setOnScoreSync((teamId, credits, stageId, stageStatus, activityDesc) => {
-  adminService.syncTeamProgress(teamId, credits, stageId, stageStatus, activityDesc);
-});

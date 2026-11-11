@@ -249,6 +249,12 @@
   flex: 1 1 auto;
 }
 
+.huntSequence {
+  color: #e8d7b5;
+  font: 8px/1.2 ui-monospace, monospace;
+  white-space: nowrap;
+}
+
 .readiness {
   flex: 0 0 auto;
   border-color: #7e806f;

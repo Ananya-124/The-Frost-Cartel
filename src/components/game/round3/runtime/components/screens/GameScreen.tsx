@@ -10,6 +10,7 @@ import MenuScreen from './MenuScreen';
 import { CompletionToast, type ToastData } from '../hud/CompletionToast';
 import { soundFx } from '../../audio/soundfx';
 import type { Round3InventoryItem, Round3RunState } from '../../../../../../types/round3.types';
+import type { HuntProgress } from '../../../../../../services/progressionService';
 import type { ClueRecord, PowerCard, GameState, InteractableObject, PlayerIndex } from '../../types';
 import type { Round3CardId } from '../../../../../../constants/round3.cards';
 import { round3Service } from '../../../../../../services/round3Service';
@@ -24,31 +25,38 @@ import { useRound3RunTimer } from '../../hooks/useRound3RunTimer';
 import type { TestPowerCardId } from '../../testingCards';
 
 interface GameScreenProps {
+  teamId: string;
   teamName: string;
   cards: PowerCard[];
   inventory: readonly Round3InventoryItem[];
   savedGameState: unknown;
   initialRun: Round3RunState;
+  huntProgression: readonly HuntProgress[];
+  onProgressionRefresh?: () => void | Promise<unknown>;
   onExit: () => void;
   onSaveGameState: (gameState: GameState) => Promise<unknown>;
   onComplete: () => Promise<unknown>;
-  onLoadDevelopmentSample: () => void;
   externalError?: string;
   testingCardIds: readonly TestPowerCardId[];
   onToggleTestingCard: (id: TestPowerCardId) => void;
   onTestingCardUsed: (id: TestPowerCardId) => void;
 }
 
+const HUNT_STATE_SYNC_INTERVAL_MS = 15_000;
+const GAME_STATE_CHECKPOINT_INTERVAL_MS = 30_000;
+
 export default function GameScreen({
+  teamId,
   teamName,
   cards,
   inventory,
   savedGameState,
   initialRun,
+  huntProgression,
+  onProgressionRefresh,
   onExit,
   onSaveGameState,
   onComplete,
-  onLoadDevelopmentSample,
   externalError = '',
   testingCardIds,
   onToggleTestingCard,
@@ -97,6 +105,7 @@ export default function GameScreen({
   const prevHunt2Score = useRef(0);
   const prevHunt3Score = useRef(0);
   const hunt1StateRef = useRef<Hunt1State | null>(null);
+  const progressionCompletionSeen = useRef([false, false, false]);
 
   const hunt3CompletionHandled = useRef(false);
   const completionStarted = useRef(false);
@@ -140,6 +149,7 @@ export default function GameScreen({
     if (!shouldApplyHunt1State(previous, next)) return;
     hunt1StateRef.current = next;
     setHunt1(next);
+    if (next.completed && !progressionCompletionSeen.current[0]) { progressionCompletionSeen.current[0] = true; void onProgressionRefresh?.(); }
     for (const completion of getHunt1TaskCompletions(previous, next)) {
       soundFx.taskComplete();
       addToast({ type: 'task', ...completion });
@@ -179,7 +189,7 @@ export default function GameScreen({
         entities: next.completed ? store.state.entities.map((entity) => ({ ...entity, gone: true })) : store.state.entities,
       });
     }
-  }, [addToast, store]);
+  }, [addToast, onProgressionRefresh, store]);
 
   const hunt1Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
     if (hunt1InFlight.current[index]) return;
@@ -206,6 +216,7 @@ export default function GameScreen({
 
   const syncHunt2State = useCallback((next: Hunt2State) => {
     setHunt2(next);
+    if (next.completed && !progressionCompletionSeen.current[1]) { progressionCompletionSeen.current[1] = true; void onProgressionRefresh?.(); }
     if (next.score > prevHunt2Score.current) {
       const delta = next.score - prevHunt2Score.current;
       soundFx.taskComplete();
@@ -275,7 +286,7 @@ export default function GameScreen({
         entities: next.completed ? store.state.entities.map((entity) => ({ ...entity, gone: true })) : store.state.entities,
       });
     }
-  }, [addToast, store]);
+  }, [addToast, onProgressionRefresh, store]);
 
   const hunt2Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
     if (hunt2InFlight.current[index]) return;
@@ -309,6 +320,7 @@ export default function GameScreen({
 
   const syncHunt3State = useCallback((next: Hunt3State) => {
     setHunt3(next);
+    if (next.completed && !progressionCompletionSeen.current[2]) { progressionCompletionSeen.current[2] = true; void onProgressionRefresh?.(); }
     if (next.score > prevHunt3Score.current) {
       const delta = next.score - prevHunt3Score.current;
       soundFx.taskComplete();
@@ -381,7 +393,7 @@ export default function GameScreen({
         hunt3LureActive: next.weakness.lure > 0,
       });
     }
-  }, [addToast, store]);
+  }, [addToast, onProgressionRefresh, store]);
 
   const hunt3Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
     if (hunt3InFlight.current[index]) return;
@@ -490,17 +502,6 @@ export default function GameScreen({
     }
   }, [engine, timer.pause, timer.run]);
 
-  const toggleRun = useCallback(async () => {
-    if (snapshot.huntIntro) return;
-    engine?.setGameplayEnabled(false);
-    try {
-      if (timer.run.status === 'paused') await timer.resume();
-      else if (timer.run.status === 'running') await timer.pause();
-    } catch {
-      /* The timer hook reports the failed request and allows a retry. */
-    }
-  }, [engine, snapshot.huntIntro, timer.pause, timer.resume, timer.run.status]);
-
   const exitGame = useCallback(async () => {
     try {
       if (timer.run.status === 'running') await timer.pause();
@@ -511,6 +512,7 @@ export default function GameScreen({
   }, [onExit, timer.pause, timer.run.status]);
 
   useEffect(() => {
+    if (snapshot.phase !== 'playing' || snapshot.huntNumber !== 1) return;
     let active = true;
     let loading = false;
     const refresh = async (open: boolean) => {
@@ -518,7 +520,7 @@ export default function GameScreen({
       loading = true;
       try {
         const result = open ? await round3Service.openHunt1Session() : await round3Service.getHunt1State();
-        if (active) syncHunt1State(result.state);
+        if (active) { syncHunt1State(result.state); if (open) void onProgressionRefresh?.(); }
       } catch (reason) {
         if (active) setHunt1Message(reason instanceof Error ? reason.message : 'Could not load Hunt 1 progress.');
       } finally {
@@ -526,14 +528,22 @@ export default function GameScreen({
       }
     };
     void refresh(true);
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') void refresh(false);
+    };
     const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       void refresh(false);
-    }, 2500);
+    }, HUNT_STATE_SYNC_INTERVAL_MS);
+    window.addEventListener('focus', refreshIfVisible);
+    window.addEventListener('online', refreshIfVisible);
     return () => {
       active = false;
       window.clearInterval(interval);
+      window.removeEventListener('focus', refreshIfVisible);
+      window.removeEventListener('online', refreshIfVisible);
     };
-  }, [syncHunt1State]);
+  }, [onProgressionRefresh, snapshot.huntNumber, snapshot.phase, syncHunt1State]);
 
   useEffect(() => {
     if (snapshot.phase !== 'playing' || snapshot.huntNumber !== 2) return;
@@ -544,7 +554,7 @@ export default function GameScreen({
       loading = true;
       try {
         const result = open ? await round3Service.openHunt2Session() : await round3Service.getHunt2State();
-        if (active) syncHunt2State(result.state);
+        if (active) { syncHunt2State(result.state); if (open) void onProgressionRefresh?.(); }
       } catch (reason) {
         if (active) setHunt2Message(reason instanceof Error ? reason.message : 'Could not load Hunt 2 progress.');
       } finally {
@@ -552,14 +562,22 @@ export default function GameScreen({
       }
     };
     void refresh(true);
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') void refresh(false);
+    };
     const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       void refresh(false);
-    }, 2500);
+    }, HUNT_STATE_SYNC_INTERVAL_MS);
+    window.addEventListener('focus', refreshIfVisible);
+    window.addEventListener('online', refreshIfVisible);
     return () => {
       active = false;
       window.clearInterval(interval);
+      window.removeEventListener('focus', refreshIfVisible);
+      window.removeEventListener('online', refreshIfVisible);
     };
-  }, [snapshot.phase, snapshot.huntNumber, syncHunt2State]);
+  }, [onProgressionRefresh, snapshot.phase, snapshot.huntNumber, syncHunt2State]);
 
   useEffect(() => {
     if (snapshot.phase !== 'playing' || snapshot.huntNumber !== 3) return;
@@ -570,9 +588,10 @@ export default function GameScreen({
       if (loading) return;
       loading = true;
       try {
+        const openingSession = !sessionReady;
         const result = sessionReady ? await round3Service.getHunt3State() : await round3Service.openHunt3Session();
         sessionReady = true;
-        if (active) syncHunt3State(result.state);
+        if (active) { syncHunt3State(result.state); if (openingSession) void onProgressionRefresh?.(); }
       } catch (reason) {
         sessionReady = false;
         if (active)
@@ -582,14 +601,20 @@ export default function GameScreen({
       }
     };
     void refresh();
+    const refreshIfVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
     const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       void refresh();
-    }, 2500);
+    }, HUNT_STATE_SYNC_INTERVAL_MS);
+    window.addEventListener('focus', refreshIfVisible);
+    window.addEventListener('online', refreshIfVisible);
     return () => {
       active = false;
       window.clearInterval(interval);
+      window.removeEventListener('focus', refreshIfVisible);
+      window.removeEventListener('online', refreshIfVisible);
     };
-  }, [snapshot.phase, snapshot.huntNumber, syncHunt3State]);
+  }, [onProgressionRefresh, snapshot.phase, snapshot.huntNumber, syncHunt3State]);
 
   // Submissions without arbitrary playerNumber restrictions for true split-screen co-op
   const submitHunt1 = useCallback(
@@ -768,22 +793,47 @@ export default function GameScreen({
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let latest: GameState | null = null;
+    let lastSavedAt = Date.now();
+    let saveInFlight = false;
+    let disposed = false;
+    const saveLatest = async () => {
+      timeout = undefined;
+      if (!latest || saveInFlight || disposed) return;
+      const source = latest;
+      latest = null;
+      // UI/HUD snapshots are emitted four times per second. Clone only at the
+      // checkpoint, never on every animation-driven store notification.
+      const snapshot = JSON.parse(JSON.stringify(source)) as GameState;
+      saveInFlight = true;
+      try {
+        await onSaveGameState(snapshot);
+        lastSavedAt = Date.now();
+      } catch (reason) {
+        if (!disposed) setCardError(reason instanceof Error ? `Progress save failed: ${reason.message}` : 'Progress save failed.');
+      } finally {
+        saveInFlight = false;
+        if (latest && !disposed) scheduleSave();
+      }
+    };
+    const scheduleSave = () => {
+      if (timeout || disposed || saveInFlight || !latest) return;
+      const delay = Math.max(0, GAME_STATE_CHECKPOINT_INTERVAL_MS - (Date.now() - lastSavedAt));
+      timeout = setTimeout(() => { void saveLatest(); }, delay);
+    };
     const queueSave = () => {
       if (store.state.phase === 'menu') return;
-      latest = JSON.parse(JSON.stringify(store.state)) as GameState;
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        if (latest)
-          void onSaveGameState(latest).catch((reason: unknown) => {
-            setCardError(reason instanceof Error ? `Progress save failed: ${reason.message}` : 'Progress save failed.');
-          });
-      }, 800);
+      latest = store.state;
+      scheduleSave();
     };
     const unsubscribe = store.subscribe(queueSave);
     return () => {
+      disposed = true;
       unsubscribe();
       if (timeout) clearTimeout(timeout);
-      if (latest) void onSaveGameState(latest);
+      if (latest && store.state.phase !== 'ended') {
+        const snapshot = JSON.parse(JSON.stringify(store.state)) as GameState;
+        void onSaveGameState(snapshot).catch(() => undefined);
+      }
     };
   }, [onSaveGameState, store]);
 
@@ -816,7 +866,6 @@ export default function GameScreen({
         onExit={() => {
           void exitGame();
         }}
-        onLoadDevelopmentSample={onLoadDevelopmentSample}
       />
       <SplitScreen
         snapshot={snapshot}
@@ -828,12 +877,7 @@ export default function GameScreen({
         }}
         onUseCard={(slot) => engine?.useCardSlot(slot)}
         remainingSeconds={timer.remainingSeconds}
-        runStatus={timer.run.status}
-        runBusy={timer.busy}
-        canToggleRun={!snapshot.huntIntro && snapshot.phase === 'playing'}
-        onToggleRun={() => {
-          void toggleRun();
-        }}
+        huntProgression={huntProgression}
       />
       {snapshot.phase === 'playing' && snapshot.huntNumber === 1 && (
         <>
@@ -902,6 +946,7 @@ export default function GameScreen({
       {snapshot.phase === 'ended' && snapshot.summary && (
         <EndScreen
           summary={snapshot.summary}
+          teamId={teamId}
           onNewSession={() => {
             void exitGame();
           }}

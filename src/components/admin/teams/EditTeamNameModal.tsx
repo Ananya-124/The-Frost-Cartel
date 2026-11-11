@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { adminService } from '../../../services/adminService';
+import { adminReadService } from '../../../services/adminReadService';
 import type { AdminTeam } from '../../../types/team.types';
 import { useNativeDialog } from '../../../hooks/useNativeDialog';
 
@@ -7,18 +7,19 @@ interface EditTeamNameModalProps {
   team: AdminTeam | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 const EditTeamNameDialogContent: React.FC<{
   team: AdminTeam;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }> = ({ team, onClose, onSuccess }) => {
   const [newName, setNewName] = useState(team.name);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -28,12 +29,15 @@ const EditTeamNameDialogContent: React.FC<{
       return;
     }
 
-    const res = adminService.updateTeamName(team.id, trimmed);
-    if (res.success) {
-      onSuccess();
+    setIsSaving(true);
+    try {
+      await adminReadService.renameTeam(team.id, trimmed);
+      await onSuccess();
       onClose();
-    } else {
-      setErrorMessage(res.message);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Team name could not be updated.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -65,6 +69,7 @@ const EditTeamNameDialogContent: React.FC<{
             name="teamName"
             type="text"
             value={newName}
+            disabled={isSaving}
             onChange={(e) => setNewName(e.target.value)}
             className="w-full px-3 py-2 bg-cartel-charcoal border border-cartel-frostBorder/60 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin"
             required
@@ -75,6 +80,7 @@ const EditTeamNameDialogContent: React.FC<{
           <button
             type="button"
             onClick={onClose}
+            disabled={isSaving}
             aria-label="Cancel editing"
             className="px-3 py-1.5 rounded bg-cartel-charcoal hover:bg-white/5 border border-white/15 text-cartel-silver font-cinzel text-xs cursor-pointer"
           >
@@ -82,10 +88,11 @@ const EditTeamNameDialogContent: React.FC<{
           </button>
           <button
             type="submit"
+            disabled={isSaving}
             aria-label="Confirm update team name"
             className="px-3.5 py-1.5 rounded bg-gradient-to-r from-cartel-pumpkin to-cartel-amber text-cartel-void font-cinzel font-bold text-xs uppercase cursor-pointer"
           >
-            Update Name
+            {isSaving ? 'Saving…' : 'Update Name'}
           </button>
         </div>
       </form>

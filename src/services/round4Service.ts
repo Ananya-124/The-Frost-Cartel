@@ -1,20 +1,21 @@
-/**
- * FROST CARTEL — ROUND 04: THE CAMPUS EXPEDITION SERVICE
- * Authoritative 7-team competitive treasure hunt progression service.
- * Connects to `/api/round4` with local fallback support and SSE real-time sync.
- */
+import type { ClueStep, ExpeditionProgress, Round4AdminOverview, WinnerRecord } from '../types/round4Expedition.types';
+import { apiUrl } from './apiBaseUrl';
 
-import type { ExpeditionProgress, WinnerRecord } from '../types/round4Expedition.types';
-import { EXPEDITION_ROUTES, getExpeditionRoute } from '../components/game/round4/ExpeditionRouteConfiguration';
-
-export interface AuthoritativeRouteState {
+export interface Round4Status {
+  success: true;
   qualified: boolean;
   isReleased: boolean;
-  assignedRouteId: string;
-  routeNumber: number;
-  romanNumeral: string;
-  routeName: string;
-  routeSubtitle: string;
+  assignedRouteId: string | null;
+  routeNumber?: number;
+  romanNumeral?: string;
+  routeName?: string;
+  winner: WinnerRecord | null;
+  message?: string;
+}
+
+export interface AuthoritativeRouteState {
+  success: true;
+  route: { routeId: string; routeNumber: number; romanNumeral: string; routeName: string; routeSubtitle: string };
   progress: {
     currentStepIndex: number;
     targetDiscovered: boolean;
@@ -23,410 +24,155 @@ export interface AuthoritativeRouteState {
     isFinished: boolean;
     finishedAt: string | null;
   };
-  activeStep: {
-    stepId: string;
-    clueIndex: number;
-    floorId: string;
-    locationName: string;
-    targetPoint: { x: number; y: number };
-    triggerRadius: number;
-    riddle: string;
-    fieldLocationHint: string;
-    isCommonFinal: boolean;
-    physicalEntryInstructions?: string;
-  } | null;
+  activeStep: (Omit<ClueStep, 'acceptedCodes'> & { isCommonFinal: boolean; physicalEntryInstructions?: string }) | null;
   totalSteps: number;
   winner: WinnerRecord | null;
   isWinner: boolean;
 }
 
+export interface Round4ActionResult {
+  success: boolean;
+  message: string;
+  state?: AuthoritativeRouteState;
+  isWinner?: boolean;
+  raceClosed?: boolean;
+  winner?: WinnerRecord;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(apiUrl(path), {
+    ...init,
+    credentials: 'include',
+    headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...(init?.headers ?? {}) },
+  });
+  const data = await response.json().catch(() => ({})) as { message?: string } & T;
+  if (!response.ok) {
+    const error = new Error(data.message ?? `Round 04 request failed (${response.status}).`);
+    Object.assign(error, { status: response.status });
+    throw error;
+  }
+  return data;
+}
+
+function requestId(): string {
+  return crypto.randomUUID();
+}
+
 class Round4Service {
-  private readonly listeners: Set<(progress: ExpeditionProgress) => void> = new Set();
-  private readonly winnerListeners: Set<(winner: WinnerRecord | null) => void> = new Set();
+  private readonly listeners = new Set<(progress: ExpeditionProgress) => void>();
+  private readonly winnerListeners = new Set<(winner: WinnerRecord | null) => void>();
   private currentWinner: WinnerRecord | null = null;
-  private sseSource: EventSource | null = null;
+  private readonly pendingIds = new Map<string, string>();
 
   constructor() {
-    this.initSSE();
-  }
-
-  private initSSE(): void {
     if (typeof window !== 'undefined' && 'EventSource' in window) {
       try {
-        this.sseSource = new EventSource('/api/events/stream');
-        this.sseSource.addEventListener('ROUND4_WINNER_DECLARED', (e: MessageEvent) => {
-          try {
-            const data = JSON.parse(e.data);
-            if (data.winner) {
-              this.currentWinner = data.winner;
-              this.winnerListeners.forEach((l) => l(data.winner));
-            }
-          } catch (err) {
-            console.error('[Round4Service] Failed parsing SSE winner event:', err);
-          }
+        const source = new EventSource(apiUrl('/api/events/stream'), { withCredentials: true });
+        source.addEventListener('ROUND4_WINNER_DECLARED', (event: MessageEvent) => {
+          try { this.publishWinner(JSON.parse(event.data).winner ?? null); } catch { /* Ignore malformed event payloads. */ }
         });
-
-        this.sseSource.addEventListener('ROUND4_RESET', () => {
-          this.currentWinner = null;
-          this.winnerListeners.forEach((l) => l(null));
-        });
+        source.addEventListener('ROUND4_RESET', () => this.publishWinner(null));
       } catch {
-        // SSE connection failure ignored in non-server / test environments
+        // API polling remains available when the event stream cannot connect.
       }
     }
   }
 
-  private getStorageKey(teamId: string): string {
-    return `frost_cartel_round4_progress_${teamId || 'default'}`;
+  private publishWinner(winner: WinnerRecord | null): void {
+    this.currentWinner = winner;
+    this.winnerListeners.forEach((listener) => listener(winner));
   }
 
-  /**
-   * Synchronous progress getter for immediate render and unit testing
-   */
-  getProgress(teamId: string): ExpeditionProgress {
-    const key = this.getStorageKey(teamId);
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          // ignore corrupted JSON
-        }
-      }
-    }
-
-    const initial: ExpeditionProgress = {
-      teamId: teamId || 'default',
-      activeRouteId: 'route-1',
-      activeStepIndex: 0,
-      targetDiscovered: false,
-      solvedStepIds: [],
-      completedRouteIds: [],
-      lastUpdated: new Date().toISOString(),
+  private publishState(state: AuthoritativeRouteState): ExpeditionProgress {
+    const progress: ExpeditionProgress = {
+      teamId: '',
+      activeRouteId: state.route.routeId,
+      activeStepIndex: state.progress.currentStepIndex,
+      targetDiscovered: state.progress.targetDiscovered,
+      solvedStepIds: state.progress.solvedStepIds,
+      completedRouteIds: state.progress.isFinished ? [state.route.routeId] : [],
+      lastUpdated: state.progress.finishedAt ?? new Date().toISOString(),
     };
-    return initial;
-  }
-
-  saveLocalProgress(progress: ExpeditionProgress): void {
-    if (typeof window !== 'undefined') {
-      const key = this.getStorageKey(progress.teamId);
-      progress.lastUpdated = new Date().toISOString();
-      localStorage.setItem(key, JSON.stringify(progress));
-    }
     this.listeners.forEach((listener) => listener(progress));
-  }
-
-  /**
-   * Check qualification & tournament release status from authoritative server
-   */
-  async getStatus(): Promise<{
-    qualified: boolean;
-    isReleased: boolean;
-    assignedRouteId: string | null;
-    winner: WinnerRecord | null;
-    message?: string;
-  }> {
-    try {
-      const res = await fetch('/api/round4/status');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.winner) {
-          this.currentWinner = data.winner;
-        }
-        return data;
-      }
-    } catch {
-      // Local fallback for test or offline mode
-    }
-
-    return {
-      qualified: true,
-      isReleased: true,
-      assignedRouteId: 'route-1',
-      winner: this.currentWinner,
-    };
-  }
-
-  /**
-   * Fetch authoritative route state for current team
-   */
-  async fetchMyRouteState(teamId: string): Promise<AuthoritativeRouteState> {
-    try {
-      const res = await fetch('/api/round4/my-route');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          if (data.winner) {
-            this.currentWinner = data.winner;
-          }
-          // Sync local progress cache with authoritative server state
-          const local = this.getProgress(teamId);
-          local.activeRouteId = data.route.routeId;
-          local.activeStepIndex = data.progress.currentStepIndex;
-          local.targetDiscovered = data.progress.targetDiscovered;
-          local.solvedStepIds = data.progress.solvedStepIds;
-          this.saveLocalProgress(local);
-
-          return data;
-        }
-      }
-    } catch {
-      // Fallback to local configuration if offline or in testing
-    }
-
-    const localProg = this.getProgress(teamId);
-    const route = getExpeditionRoute(localProg.activeRouteId);
-    const activeRaw = route.steps[localProg.activeStepIndex] || null;
-
-    return {
-      qualified: true,
-      isReleased: true,
-      assignedRouteId: route.routeId,
-      routeNumber: route.routeNumber,
-      romanNumeral: route.romanNumeral,
-      routeName: route.routeName,
-      routeSubtitle: route.routeSubtitle,
-      progress: {
-        currentStepIndex: localProg.activeStepIndex,
-        targetDiscovered: localProg.targetDiscovered,
-        solvedStepIds: localProg.solvedStepIds,
-        commonRoomArrived: localProg.activeStepIndex === 4 && localProg.targetDiscovered,
-        isFinished: localProg.activeStepIndex >= 5,
-        finishedAt: null,
-      },
-      activeStep: activeRaw
-        ? {
-            stepId: activeRaw.stepId,
-            clueIndex: activeRaw.clueIndex,
-            floorId: activeRaw.floorId,
-            locationName: activeRaw.locationName,
-            targetPoint: activeRaw.targetPoint,
-            triggerRadius: activeRaw.triggerRadius,
-            riddle: localProg.targetDiscovered ? activeRaw.riddle : '',
-            fieldLocationHint: localProg.targetDiscovered ? activeRaw.fieldLocationHint : '',
-            isCommonFinal: activeRaw.clueIndex === 5,
-          }
-        : null,
-      totalSteps: route.steps.length,
-      winner: this.currentWinner,
-      isWinner: this.currentWinner?.teamId === teamId,
-    };
-  }
-
-  /**
-   * Mark the active map target as discovered by the Map Explorer avatar
-   */
-  markTargetDiscovered(teamId: string): ExpeditionProgress {
-    const progress = this.getProgress(teamId);
-    if (!progress.targetDiscovered) {
-      progress.targetDiscovered = true;
-      this.saveLocalProgress(progress);
-    }
-
-    if (typeof window !== 'undefined') {
-      fetch('/api/round4/discover-target', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      }).catch(() => {});
-    }
-
+    if (state.winner) this.publishWinner(state.winner);
     return progress;
   }
 
-  /**
-   * Submit an answer/code discovered by the Field Partner
-   */
-  submitAnswer(
-    teamId: string,
-    rawAnswer: string
-  ): {
-    success: boolean;
-    message: string;
-    isRouteCompleted: boolean;
-    isWinner?: boolean;
-    raceClosed?: boolean;
-    winner?: WinnerRecord;
-    progress: ExpeditionProgress;
-  } {
-    const progress = this.getProgress(teamId);
-    const route = getExpeditionRoute(progress.activeRouteId);
-    const currentStep = route.steps[progress.activeStepIndex];
+  async getStatus(): Promise<Round4Status> {
+    const status = await request<Round4Status>('/api/round4/status');
+    if (status.winner !== undefined) this.publishWinner(status.winner);
+    return status;
+  }
 
-    if (!currentStep) {
-      return {
-        success: false,
-        message: 'No active clue step found.',
-        isRouteCompleted: false,
-        progress,
-      };
-    }
+  getAdminOverview(): Promise<Round4AdminOverview & { success: true }> {
+    return request('/api/round4/admin/overview');
+  }
 
-    if (!progress.targetDiscovered) {
-      return {
-        success: false,
-        message: 'You must reach the marked golden point on the map first.',
-        isRouteCompleted: false,
-        progress,
-      };
-    }
+  setAdminRelease(isReleased: boolean): Promise<{ success: true; isReleased: boolean }> {
+    return request('/api/round4/admin/release', { method: 'POST', body: JSON.stringify({ isReleased }) });
+  }
 
-    const normalizedInput = rawAnswer.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const isCorrect = currentStep.acceptedCodes.some(
-      (code) => code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') === normalizedInput
-    );
+  resetAdminTournament(): Promise<{ success: true; message: string }> {
+    return request('/api/round4/admin/reset-tournament', { method: 'POST' });
+  }
 
-    if (!isCorrect) {
-      return {
-        success: false,
-        message: 'Incorrect code or cipher. Re-examine the clue with your field partner.',
-        isRouteCompleted: false,
-        progress,
-      };
-    }
+  qualifyAdminTeams(assignments: Array<{ teamId: string; routeId: string }>): Promise<{ success: true; message: string }> {
+    return request('/api/round4/admin/qualify-teams', { method: 'POST', body: JSON.stringify({ assignments }) });
+  }
 
-    const newSolved = [...new Set([...progress.solvedStepIds, currentStep.stepId])];
-    const isLastStepOfRoute = progress.activeStepIndex >= 4;
+  configureAdminStep(configuration: Record<string, unknown>): Promise<{ success: true; message: string }> {
+    return request('/api/round4/admin/configure-step', { method: 'POST', body: JSON.stringify(configuration) });
+  }
 
-    if (isLastStepOfRoute) {
-      const newCompletedRoutes = [...new Set([...progress.completedRouteIds, route.routeId])];
-      const nextRouteIndex = route.routeNumber;
-      const nextRoute = EXPEDITION_ROUTES[nextRouteIndex];
+  async fetchMyRouteState(): Promise<AuthoritativeRouteState> {
+    const state = await request<AuthoritativeRouteState>('/api/round4/my-route');
+    this.publishState(state);
+    return state;
+  }
 
-      const updated: ExpeditionProgress = {
-        ...progress,
-        solvedStepIds: newSolved,
-        completedRouteIds: newCompletedRoutes,
-        activeRouteId: nextRoute ? nextRoute.routeId : route.routeId,
-        activeStepIndex: nextRoute ? 0 : 4,
-        targetDiscovered: false,
-      };
-      this.saveLocalProgress(updated);
+  async markTargetDiscovered(): Promise<AuthoritativeRouteState> {
+    const key = 'discover-target';
+    const id = this.pendingIds.get(key) ?? requestId();
+    this.pendingIds.set(key, id);
+    const result = await request<{ state?: AuthoritativeRouteState }>('/api/round4/discover-target', { method: 'POST', body: JSON.stringify({ requestId: id }) });
+    this.pendingIds.delete(key);
+    return result.state ? (this.publishState(result.state), result.state) : this.fetchMyRouteState();
+  }
 
-      const winRecord: WinnerRecord = {
-        teamId,
-        teamName: 'Team Champion',
-        routeId: route.routeId,
-        solvedAt: new Date().toISOString(),
-      };
-      this.currentWinner = winRecord;
-      this.winnerListeners.forEach((l) => l(winRecord));
-
-      if (typeof window !== 'undefined') {
-        fetch('/api/round4/submit-clue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ stepId: currentStep.stepId, answer: rawAnswer }),
-        }).catch(() => {});
+  async submitAnswer(stepId: string, rawAnswer: string): Promise<Round4ActionResult> {
+    const key = `answer:${stepId}:${rawAnswer.trim().toUpperCase()}`;
+    const id = this.pendingIds.get(key) ?? requestId();
+    this.pendingIds.set(key, id);
+    try {
+      const result = await request<{ success: boolean; message: string; isWinner?: boolean; raceClosed?: boolean; winner?: WinnerRecord; state?: AuthoritativeRouteState }>(
+        '/api/round4/submit-clue',
+        { method: 'POST', body: JSON.stringify({ stepId, answer: rawAnswer, requestId: id }) },
+      );
+      this.pendingIds.delete(key);
+      if (!result.success) return result;
+      if (result.winner) this.publishWinner(result.winner);
+      if (result.state) return { ...result, state: result.state };
+      try {
+        const state = await this.fetchMyRouteState();
+        return { ...result, state };
+      } catch {
+        return { ...result, message: `${result.message} The server accepted it; refresh Round 04 state before continuing.` };
       }
-
-      return {
-        success: true,
-        message: `Route ${route.romanNumeral} completed! All five sector clues verified.`,
-        isRouteCompleted: true,
-        isWinner: true,
-        progress: updated,
-      };
-    }
-
-    const updated: ExpeditionProgress = {
-      ...progress,
-      solvedStepIds: newSolved,
-      activeStepIndex: progress.activeStepIndex + 1,
-      targetDiscovered: false,
-    };
-    this.saveLocalProgress(updated);
-
-    if (typeof window !== 'undefined') {
-      fetch('/api/round4/submit-clue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stepId: currentStep.stepId, answer: rawAnswer }),
-      }).catch(() => {});
-    }
-
-    return {
-      success: true,
-      message: 'Clue verified! Advancing to the next target location.',
-      isRouteCompleted: false,
-      progress: updated,
-    };
-  }
-
-  /**
-   * Switch active route if unlocked (for test harness and admin routing)
-   */
-  selectRoute(
-    teamId: string,
-    targetRouteId: string
-  ): {
-    success: boolean;
-    message: string;
-    progress: ExpeditionProgress;
-  } {
-    const progress = this.getProgress(teamId);
-    const targetRoute = getExpeditionRoute(targetRouteId);
-
-    // Route 1 is always accessible
-    if (targetRoute.routeNumber === 1) {
-      const updated = {
-        ...progress,
-        activeRouteId: targetRoute.routeId,
-        activeStepIndex: this.calculateCurrentStepIndexForRoute(progress, targetRoute.routeId),
-        targetDiscovered: false,
-      };
-      this.saveLocalProgress(updated);
-      return { success: true, message: `Switched to ${targetRoute.routeName}`, progress: updated };
-    }
-
-    // Subsequent routes require the preceding route to be completed
-    const prevRoute = EXPEDITION_ROUTES[targetRoute.routeNumber - 2];
-    const isUnlocked = prevRoute && progress.completedRouteIds.includes(prevRoute.routeId);
-
-    if (!isUnlocked) {
-      return {
-        success: false,
-        message: `${targetRoute.routeName} is locked. Complete ${prevRoute ? prevRoute.routeName : 'previous route'} first.`,
-        progress,
-      };
-    }
-
-    const updated: ExpeditionProgress = {
-      ...progress,
-      activeRouteId: targetRoute.routeId,
-      activeStepIndex: this.calculateCurrentStepIndexForRoute(progress, targetRoute.routeId),
-      targetDiscovered: false,
-    };
-    this.saveLocalProgress(updated);
-    return { success: true, message: `Switched to ${targetRoute.routeName}`, progress: updated };
-  }
-
-  private calculateCurrentStepIndexForRoute(progress: ExpeditionProgress, routeId: string): number {
-    const route = getExpeditionRoute(routeId);
-    for (let i = 0; i < route.steps.length; i++) {
-      if (!progress.solvedStepIds.includes(route.steps[i].stepId)) {
-        return i;
+    } catch (error) {
+      // Keep the request ID for a retry after a network failure; the server may have committed it.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return { success: false, message: 'Network unavailable. Retry when connected; the same request will be safely replayed.' };
       }
+      return { success: false, message: error instanceof Error ? error.message : 'Answer submission failed. Please retry.' };
     }
-    return 4;
   }
 
-  getWinner(): WinnerRecord | null {
-    return this.currentWinner;
-  }
-
+  getWinner(): WinnerRecord | null { return this.currentWinner; }
   subscribe(listener: (progress: ExpeditionProgress) => void): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    this.listeners.add(listener); return () => { this.listeners.delete(listener); };
   }
-
   subscribeWinner(listener: (winner: WinnerRecord | null) => void): () => void {
-    this.winnerListeners.add(listener);
-    return () => {
-      this.winnerListeners.delete(listener);
-    };
+    this.winnerListeners.add(listener); return () => { this.winnerListeners.delete(listener); };
   }
 }
 

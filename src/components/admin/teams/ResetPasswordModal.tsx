@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { adminService } from '../../../services/adminService';
+import { adminReadService } from '../../../services/adminReadService';
 import type { AdminTeam } from '../../../types/team.types';
 import { useNativeDialog } from '../../../hooks/useNativeDialog';
 
@@ -7,7 +7,7 @@ interface ResetPasswordModalProps {
   team: AdminTeam | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
@@ -16,31 +16,25 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [newPassword, setNewPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { dialogRef } = useNativeDialog(isOpen, onClose);
 
   if (!isOpen || !team) return null;
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
-
-    const trimmed = newPassword.trim();
-    if (!trimmed || trimmed.length < 4) {
-      setErrorMessage('Passkey must be at least 4 characters.');
-      return;
-    }
-
-    const res = adminService.resetTeamPassword(team.id, trimmed);
-    if (res.success) {
-      setNewPassword('');
-      onSuccess();
-      onClose();
-    } else {
-      setErrorMessage(res.message);
-    }
+    setIsSubmitting(true);
+    try {
+      const result = await adminReadService.resetTeamPassword(team.id);
+      setNewPassword(result.newPassword);
+      await onSuccess();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Passkey could not be reset.');
+    } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -53,9 +47,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
         <h3 id="reset-pass-title" className="text-base font-cinzel font-bold text-white mb-1">
           RESET PASSKEY: {team.name}
         </h3>
-        <p className="text-xs text-cartel-silver/70 mb-4 font-sans">
-          Assign a new organizer master passkey for this squad.
-        </p>
+        <p className="text-xs text-cartel-silver/70 mb-4 font-sans">The server will generate a new passkey and store only its secure hash.</p>
 
         {errorMessage && (
           <div role="alert" aria-live="assertive" className="mb-3 p-2 rounded bg-red-950/80 border border-red-500/50 text-red-200 text-xs">
@@ -63,30 +55,15 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label
-              htmlFor="reset-team-pass-input"
-              className="block text-[10px] font-cinzel font-bold text-cartel-amber uppercase mb-1"
-            >
-              NEW PASSKEY (MIN. 4 CHARS)
-            </label>
-            <input
-              id="reset-team-pass-input"
-              name="newPasskey"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-2 bg-cartel-charcoal border border-cartel-frostBorder/60 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin"
-              required
-            />
-          </div>
+        {newPassword && <div className="mb-3 rounded border border-emerald-500/30 bg-emerald-950/30 p-3"><p className="text-xs text-emerald-200">Passkey reset confirmed. Copy it now; it will not be shown again.</p><output className="mt-2 block break-all font-mono text-sm text-white select-all">{newPassword}</output></div>}
+
+        <form onSubmit={(event) => { void handleSubmit(event); }} className="space-y-3">
 
           <div className="flex justify-end space-x-2 pt-2 border-t border-white/10">
             <button
               type="button"
               onClick={onClose}
+              disabled={isSubmitting}
               aria-label="Cancel password reset"
               className="px-3 py-1.5 rounded bg-cartel-charcoal hover:bg-white/5 border border-white/15 text-cartel-silver font-cinzel text-xs cursor-pointer"
             >
@@ -95,9 +72,10 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             <button
               type="submit"
               aria-label="Confirm reset passkey"
+              disabled={isSubmitting}
               className="px-3.5 py-1.5 rounded bg-gradient-to-r from-cartel-pumpkin to-cartel-amber text-cartel-void font-cinzel font-bold text-xs uppercase cursor-pointer"
             >
-              Set Passkey
+              {isSubmitting ? 'Resetting…' : newPassword ? 'Generate Another Passkey' : 'Generate Passkey'}
             </button>
           </div>
         </form>

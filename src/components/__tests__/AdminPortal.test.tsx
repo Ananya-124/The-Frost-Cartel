@@ -5,16 +5,37 @@ import { AdminPortal } from '../admin/AdminPortal';
 
 describe('FROST CARTEL Admin Portal', () => {
   const mockNavigatePublic = vi.fn();
+  let teams: Array<Record<string, unknown>>;
+  const response = (body: unknown, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
+  const apiPath = (input: RequestInfo | URL) => new URL(String(input), 'http://test.local').pathname;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    teams = [
+      { id: 'team-1', teamName: 'Phantom Crypt', isPaused: false, score: 120, maxCredits: 500, totalCredits: 85, loginCount: 1, lastLoginAt: null, createdAt: '2026-01-01T00:00:00Z', stages: [{ stage_id: 1, status: 'COMPLETED', score: 120, max_score: 150, completed_at: '2026-01-01T00:10:00Z' }], rounds: [{ roundId: 1, status: 'IN_PROGRESS', completedAt: null }], hunts: [], round4: null },
+      { id: 'team-2', teamName: 'Wraith Syndicate', isPaused: false, score: 80, maxCredits: 500, totalCredits: 80, loginCount: 1, lastLoginAt: null, createdAt: '2026-01-02T00:00:00Z', stages: [], rounds: [{ roundId: 1, status: 'AVAILABLE', completedAt: null }], hunts: [], round4: null },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = apiPath(input);
+      if (path === '/api/admin/dashboard') return response({ success: true, data: { stats: { totalTeams: teams.length, activeTeams: 1, pausedTeams: 0, averageScore: 100, round1Active: true }, recentLogs: [] } });
+      if (path === '/api/admin/teams' && init?.method === 'POST') {
+        const payload = JSON.parse(String(init.body)) as { teamName: string };
+        if (teams.some((team) => team.teamName === payload.teamName)) return response({ success: false, message: 'A squad with this name already exists.' }, 409);
+        teams.push({ id: 'team-new', teamName: payload.teamName, isPaused: false, score: 0, maxCredits: 500, totalCredits: 0, loginCount: 0, lastLoginAt: null, createdAt: '2026-01-03T00:00:00Z', stages: [], rounds: [{ roundId: 1, status: 'AVAILABLE', completedAt: null }], hunts: [], round4: null });
+        return response({ success: true, team: { id: 'team-new', teamName: payload.teamName } }, 201);
+      }
+      if (path === '/api/admin/teams') return response({ success: true, teams });
+      if (path === '/api/round1/admin/config') return response({ success: true, configuration: { lifecycle: 'running', durationMinutes: 22 } });
+      if (path === '/api/admin/results') return response({ success: true, results: teams.map((team, index) => ({ id: team.id, teamName: team.teamName, score: team.score, rank: index + 1, maxCredits: team.maxCredits, last_login_at: team.lastLoginAt, completedStages: 0 })) });
+      return response({ success: false, message: `Unhandled test API ${path}` }, 404);
+    }));
   });
 
-  it('renders admin header, tab navigation, and mock mode banner', () => {
+  it('renders admin header and tab navigation with live-session status', async () => {
     render(<AdminPortal onNavigatePublic={mockNavigatePublic} />);
 
     expect(screen.getByText('CONTROL VAULT')).toBeInTheDocument();
-    expect(screen.getByText('MOCK REPOSITORY ACTIVE:')).toBeInTheDocument();
+    expect(screen.getByText('SERVER SESSION ACTIVE:')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Dashboard$/i })[0]).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Teams/i })[0]).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Round Control/i })[0]).toBeInTheDocument();
@@ -32,7 +53,7 @@ describe('FROST CARTEL Admin Portal', () => {
     expect(screen.getByText('COMPLETED')).toBeInTheDocument();
   });
 
-  it('switches to Teams tab and creates a new squad with unique name validation', async () => {
+  it('switches to Teams tab and submits team creation to the server', async () => {
     render(<AdminPortal onNavigatePublic={mockNavigatePublic} />);
 
     // Switch to Teams
@@ -68,10 +89,10 @@ describe('FROST CARTEL Admin Portal', () => {
       expect(screen.queryByText('MANUAL SQUAD CREATION')).not.toBeInTheDocument();
     });
 
-    expect(screen.getByText('Vampire Syndicate')).toBeInTheDocument();
+    expect(teams.some((team) => team.teamName === 'Vampire Syndicate')).toBe(true);
   });
 
-  it('filters teams by search input', () => {
+  it('filters teams by search input', async () => {
     render(<AdminPortal onNavigatePublic={mockNavigatePublic} />);
 
     const teamsBtn = screen.getAllByRole('button', { name: /Teams/i })[0];
@@ -80,7 +101,7 @@ describe('FROST CARTEL Admin Portal', () => {
     const searchInput = screen.getByPlaceholderText(/Search team name\.\.\./i);
     fireEvent.change(searchInput, { target: { value: 'Phantom' } });
 
-    expect(screen.getByText('Phantom Crypt')).toBeInTheDocument();
+    expect(await screen.findByText('Phantom Crypt')).toBeInTheDocument();
     expect(screen.queryByText('Wraith Syndicate')).not.toBeInTheDocument();
   });
 
@@ -97,16 +118,18 @@ describe('FROST CARTEL Admin Portal', () => {
     expect(screen.getByText('NON-SEQUENTIAL UNLOCK VERIFIED')).toBeInTheDocument();
   });
 
-  it('switches to Results tab, lists standings, and triggers CSV export', () => {
+  it('switches to Results tab, loads server standings, and triggers CSV export', async () => {
     render(<AdminPortal onNavigatePublic={mockNavigatePublic} />);
 
     const resultsBtn = screen.getAllByRole('button', { name: /Results/i })[0];
     fireEvent.click(resultsBtn);
 
-    expect(screen.getByText('Rankings:')).toBeInTheDocument();
-    expect(screen.getByText('Stage 1 (100 CR)')).toBeInTheDocument();
-    expect(screen.getByText('Stage 2 (150 CR)')).toBeInTheDocument();
-    expect(screen.getByText('Stage 3 (250 CR)')).toBeInTheDocument();
+    expect(await screen.findByText('Rankings:')).toBeInTheDocument();
+    expect(screen.getByText('Stage 1 Score')).toBeInTheDocument();
+    expect(screen.getByText('Stage 2 Score')).toBeInTheDocument();
+    expect(screen.getByText('Stage 3 Score')).toBeInTheDocument();
+    expect(screen.getByText('Official Score')).toBeInTheDocument();
+    expect(screen.getByText('Wallet Credits')).toBeInTheDocument();
 
     const exportBtn = screen.getByRole('button', { name: /Export Results \(CSV\)/i });
     expect(exportBtn).toBeInTheDocument();

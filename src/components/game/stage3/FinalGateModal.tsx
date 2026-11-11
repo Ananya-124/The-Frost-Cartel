@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { round1Service } from '../../../services/round1Service';
+import type { Round1ActionResponse } from '../../../services/round1ApiService';
 import { soundController } from '../../../utils/soundController';
 import { HorrorJumpscareModal } from './HorrorJumpscareModal';
 
 interface FinalGateModalProps {
   isOpen: boolean;
   teamId: string;
+  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   collectedFragments: string[];
   isCompleted: boolean;
   onGateUnlocked: () => void;
@@ -14,7 +15,8 @@ interface FinalGateModalProps {
 
 export const FinalGateModal: React.FC<FinalGateModalProps> = ({
   isOpen,
-  teamId,
+  teamId: _teamId,
+  onAction,
   collectedFragments,
   isCompleted,
   onGateUnlocked,
@@ -29,18 +31,23 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorNotice(null);
 
-    const { success, message } = round1Service.submitFinalEscapeAnswer(teamId, incantation);
+    let result: Round1ActionResponse;
+    try { result = await onAction('stage3.finalAnswer', { answer: incantation }); }
+    catch (error) { soundController.playError(); setErrorNotice(error instanceof Error ? error.message : 'The gate could not be checked.'); return; }
+    const success = Boolean(result.success);
+    const message = typeof result.message === 'string' ? result.message : '';
     if (success) {
       setIsJumpscareActive(true);
       setSuccessNotice('Arch-Lich Gate Shattered • Escaped!');
       onGateUnlocked();
     } else {
       soundController.playError();
-      setErrorNotice(message);
+      const penalty = Math.abs(Number(result.creditsDelta ?? 0));
+      setErrorNotice(`${message}${penalty ? ` (-${penalty} CR)` : ''}`);
     }
   };
 

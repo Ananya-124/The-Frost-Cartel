@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { DashboardMetrics, Round1Status } from '../../../types/admin';
-import { adminService } from '../../../services/adminService';
+import { round1Api } from '../../../services/round1ApiService';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
 
 interface AdminDashboardTabProps {
@@ -49,22 +49,25 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     isOpen: boolean;
     title: string;
     message: string;
-    action: () => void;
+    action: () => Promise<void>;
     isDanger?: boolean;
     confirmLabel?: string;
   }>({
     isOpen: false,
     title: '',
     message: '',
-    action: () => {},
+    action: async () => {},
   });
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const actionInFlight = useRef(false);
 
   const roundBadge = getRound1BadgeStyle(metrics.round1Status);
 
   const requestAction = (
     title: string,
     message: string,
-    action: () => void,
+    action: () => Promise<void>,
     isDanger = false,
     confirmLabel = 'Confirm Action'
   ) => {
@@ -72,10 +75,16 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
       isOpen: true,
       title,
       message,
-      action: () => {
-        action();
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-        onRefresh();
+      action: async () => {
+        if (actionInFlight.current) return;
+        actionInFlight.current = true; setActionBusy(true); setActionError(null);
+        try {
+          await action();
+          await onRefresh();
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        } catch (error) {
+          setActionError(error instanceof Error ? error.message : 'Round 1 control request failed.');
+        } finally { actionInFlight.current = false; setActionBusy(false); }
       },
       isDanger,
       confirmLabel,
@@ -86,7 +95,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     requestAction(
       'COMMENCE ROUND 1',
       'This will unlock Round 1: The Graveyard Escape for all waiting teams and initialize their session clocks. Are you ready to commence?',
-      () => adminService.updateRound1Status('running'),
+      async () => { await round1Api.timer('start'); },
       false,
       'Start Round 1'
     );
@@ -96,7 +105,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     requestAction(
       'PAUSE ROUND 1 GLOBALLY',
       'This will immediately pause active gameplay across all squad stations and flag them as paused. Confirm global pause?',
-      () => adminService.updateRound1Status('paused'),
+      async () => { await round1Api.timer('pause'); },
       true,
       'Pause Round 1'
     );
@@ -106,7 +115,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     requestAction(
       'RESUME ROUND 1 GLOBALLY',
       'This will resume gameplay across all paused workstations and restore the active status. Resume Round 1?',
-      () => adminService.updateRound1Status('running'),
+      async () => { await round1Api.timer('resume'); },
       false,
       'Resume Round 1'
     );
@@ -116,7 +125,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
     requestAction(
       'END ROUND 1 (PERMANENT)',
       'This will conclude Round 1 for all teams, freeze final credit tallies, and finalize the stage records. This action cannot be reversed without manual override.',
-      () => adminService.updateRound1Status('completed'),
+      async () => { await round1Api.timer('end'); },
       true,
       'End Round 1'
     );
@@ -124,6 +133,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {actionError && <div role="alert" className="rounded border border-red-500/40 bg-red-950/30 p-3 text-sm text-red-200">{actionError}</div>}
       {/* 1. Global Round 1 Status Hero Card */}
       <div className="stone-panel rounded-xl p-5 border border-cartel-frostBorder/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -195,15 +205,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
             </>
           )}
 
-          {metrics.round1Status === 'completed' && (
-            <button
-              type="button"
-              onClick={onNavigateToRoundControl}
-              className="px-4 py-2 rounded bg-cartel-charcoal hover:bg-white/10 border border-cartel-cyan/40 text-cartel-cyan font-cinzel font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              Manage Round 2 Transfer
-            </button>
-          )}
+          {metrics.round1Status === 'completed' && <span className="rounded border border-white/10 px-3 py-2 text-[10px] font-cinzel uppercase text-cartel-silver/60">Round 2 remains disabled</span>}
         </div>
       </div>
 
@@ -282,8 +284,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
         <div className="flex items-center space-x-2 text-cartel-silver/80">
           <span className="text-base text-cartel-amber" aria-hidden="true">⚙️</span>
           <span>
-            <strong className="text-white">Admin Command: </strong>To move squads between chambers or
-            advance them to Round 2 (The Haunted Auction), use the <strong className="text-cartel-amber">Round Control</strong> tab.
+            <strong className="text-white">Admin Command: </strong>Use the <strong className="text-cartel-amber">Round Control</strong> tab for server-authorized progression. Round 2 remains disabled.
           </span>
         </div>
         <div className="flex items-center space-x-2 shrink-0">
@@ -312,6 +313,8 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
         onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
         isDanger={confirmModal.isDanger}
         confirmLabel={confirmModal.confirmLabel}
+        isSubmitting={actionBusy}
+        errorMessage={actionError}
       />
     </div>
   );

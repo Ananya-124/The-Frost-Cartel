@@ -133,6 +133,11 @@ export const RoundPortalCard: React.FC<RoundPortalCardProps> = ({
             <span>{round.statusText}</span>
           </span>
         )}
+        {round.statusBadge === 'completed' && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 text-[9px] sm:text-[10px] font-cinzel font-bold uppercase tracking-widest">
+            <span aria-hidden="true">✓</span><span>{round.statusText}</span>
+          </span>
+        )}
       </div>
 
       {/* 4. Quick Specs (Fixed Height for Horizontal Baseline Alignment) */}

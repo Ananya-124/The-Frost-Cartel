@@ -10,6 +10,8 @@ interface ConfirmationModalProps {
   isDanger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -21,6 +23,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isDanger = false,
   onConfirm,
   onCancel,
+  isSubmitting = false,
+  errorMessage,
 }) => {
   const { dialogRef } = useNativeDialog(isOpen, onCancel);
 
@@ -52,11 +56,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </p>
           </div>
         </div>
+        {errorMessage && <p role="alert" className="mb-3 rounded border border-red-500/40 bg-red-950/30 p-2 text-xs text-red-200">{errorMessage}</p>}
 
         <div className="flex items-center justify-end space-x-3 pt-3 border-t border-white/10">
           <button
             type="button"
             onClick={onCancel}
+            disabled={isSubmitting}
             className="px-4 py-2 rounded bg-cartel-charcoal hover:bg-white/5 border border-white/15 text-cartel-silver hover:text-white font-cinzel text-xs font-semibold tracking-wider transition-colors cursor-pointer"
           >
             {cancelLabel}
@@ -64,13 +70,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <button
             type="button"
             onClick={onConfirm}
+            disabled={isSubmitting}
             className={`px-4 py-2 rounded font-cinzel font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
               isDanger
                 ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]'
                 : 'bg-gradient-to-r from-cartel-pumpkin to-cartel-amber text-cartel-void shadow-pumpkinGlow hover:scale-105'
             }`}
           >
-            {confirmLabel}
+            {isSubmitting ? 'Saving…' : confirmLabel}
           </button>
         </div>
       </div>

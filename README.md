@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20%2F%207.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Express 5](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![SQLite](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Tests Passing](https://img.shields.io/badge/Tests-81%2F81%20Passing-brightgreen)](https://vitest.dev/)
 [![Oxlint Clean](https://img.shields.io/badge/Oxlint-0%20Warnings-brightgreen)](https://oxc.rs/)
@@ -61,9 +61,9 @@ The platform provides a strict separation of concerns between the **Public Playe
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│               DURABLE PERSISTENCE (Node 26 native SQLite)               │
-│  - database/frost_cartel.db (WAL Mode, Foreign Key Cascades)            │
-│  - Survives page reloads, browser restarts, and process crashes         │
+│               DURABLE PERSISTENCE (Supabase PostgreSQL)                │
+│  - Central team, session, scoring, progression and round state          │
+│  - Transactional state survives backend restarts and concurrent actions│
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -72,9 +72,9 @@ The platform provides a strict separation of concerns between the **Public Playe
 - **Admin Control Vault (`/admin` / `#/admin`)**: Completely unlinked on the public home page. Hardened behind authentication with live metrics, team pause/resume, credential generation, and score realignments.
 
 ### 2. Permanent Authoritative Persistence
-- Backed by Node.js native `node:sqlite` (`database/frost_cartel.db`) operating in high-performance **Write-Ahead Logging (WAL)** mode.
-- Teams created by organizers persist across browser close, page refresh, and server restarts.
-- Append-only transactional audit trail in `score_transactions`.
+- Supabase PostgreSQL is the single persistent source for teams, sessions, scores, credits, progression, and all four rounds.
+- Team state survives browser refreshes and backend restarts.
+- Score and credit changes use transactional ledgers with idempotency references.
 
 ### 3. Real-Time Multiplayer Sync
 - Built-in **Server-Sent Events (SSE)** endpoint (`/api/events/stream`) synchronizes credit balances and stage completions across teammates in real-time.
@@ -95,41 +95,15 @@ The platform provides a strict separation of concerns between the **Public Playe
 
 ## 🕸 Tournament Gameplay (Round 2)
 
-**Round 02: The Haunted Auction** — squads spend the credits they earned in Round 1 to bid on **6 power cards** that are used in Round 3.
-
-### How a squad plays
-1. Open the **Round 02** portal on the home page (the screen shows *Waiting for the next card...* until the organizer starts one).
-2. When a card goes live, place a bid. The first bid must meet the organizer's base price; every later bid must beat the current high bid by at least `10 CR`. Quick-bid buttons add `+10`, `+20` or `+50`.
-3. The countdown turns yellow at 15 seconds and red at 5 seconds. A bid placed in the last 10 seconds resets the clock to 10 seconds (anti-sniping).
-4. When bidding ends, the highest bidder wins the card and pays the winning bid. A squad cannot bid more than its credits or outbid itself. Cards nobody bid on are marked *unsold* and can be auctioned again.
-
-### How the organizer runs it
-Open `http://127.0.0.1:5173/#/admin` and choose the **Auction** tab:
-- Enter the auction key once per browser session (default `frost-r2-admin`, set with `ROUND2_ADMIN_KEY` in `.env`).
-- Choose **any** card, enter its **base price** (defaults to the card's own price) and the **bidding time** in seconds (`0` = no timer, end it manually), then press **START BIDDING**.
-- Press **END BIDDING** to close the card early. Only one card is live at a time.
-- The Teams table shows every squad's starting credits, spend, remaining credits and cards. **Remove** lets a squad rejoin with fresh credits (only if it has won nothing); **Reset Auction** clears everything.
+**Round 02: The Haunted Auction** is currently disabled by its PostgreSQL server-side setting. The auction remains unavailable until explicitly activated after its security and ownership checks are approved.
 
 ### Connecting the rounds
 | Direction | How it works |
 | :--- | :--- |
-| **Round 1 → Round 2** | Credits are read automatically from the browser's `localStorage` (`frost_cartel_round1_sessions`) when a squad opens Round 2. A squad's credits are **locked on its first join**, so squads should open Round 2 only after finishing Round 1. |
-| **Round 2 → Round 3** | Cards won and credits left are mirrored to `localStorage` (`frost_cartel_round2_inventory`). Round 3 reads them with `round2Service.getInventory()`, which returns `{ teamName, remainingCredits, cards }`. |
+| **Round 1 → Round 2** | The PostgreSQL team wallet is authoritative. Round 2 is disabled by default. |
+| **Round 2 → Round 3** | Auction card mappings remain `UNMAPPED`; no auction ownership grants Round 3 inventory. |
 
-### Technical notes
-- Backend: `server/routes/round2.routes.ts` (mounted at `/api/round2`). Auction state lives in memory and is mirrored to one row in the `round2_state` SQLite table, so a server restart does not lose the auction.
-- Frontend: `src/components/game/round2/Round2Auction.tsx` (squad screen), `src/components/admin/auction/AdminAuctionTab.tsx` (organizer tab), `src/services/round2Service.ts` (API + storage helpers).
-- The squad screen polls `GET /api/round2/state` roughly every 0.8 seconds rather than using the SSE stream.
-- To rename the 11 cards or change their descriptions and default prices, edit the `CARDS` list at the top of `server/routes/round2.routes.ts`. Each card defaults to 100 credits; organizers can override a card's base price before bidding. The Warden's Decree is enforced manually by the event coordinators. The minimum increment and anti-sniping window are in `CONFIG` just above it.
-
-| Endpoint | Auth | Purpose |
-| :--- | :--- | :--- |
-| `GET /api/round2/state?team=NAME` | none | Cards, live auction and the squad's own balance |
-| `POST /api/round2/join` | none | Register a squad with its Round 1 credits (locked on first call) |
-| `POST /api/round2/bid` | none | Place a bid |
-| `GET /api/round2/admin/overview` | `x-round2-key` | Full state including all squads |
-| `POST /api/round2/admin/start` · `/end` · `/reset` | `x-round2-key` | Start a card (`cardId`, `basePrice`, `durationSeconds`), end it, reset everything |
-| `DELETE /api/round2/admin/team/:name` | `x-round2-key` | Remove a squad that has won nothing |
+Round 2's PostgreSQL server gate is disabled by default. Its auction and inventory are not available to teams while disabled. All 11 auction card mappings to Round 3 remain `UNMAPPED`.
 
 ---
 
@@ -142,8 +116,8 @@ Open `http://127.0.0.1:5173/#/admin` and choose the **Auction** tab:
 - **Cooperative Hunts**:
   - *Hunt 1 (Temporal Stabilization)*: Investigate 5 spatial sectors, disable security overrides, unlock containment chambers.
   - *Hunt 2 (The Anomaly Core)*: Multi-stage logic puzzles with penalty deductions and durable server state.
-- **Card Tray Integration**: Seamlessly carries over power cards earned in Round 2 auction (Vampire Shield, Witch Hex, Ghost Pass, Zombie Revive, Pumpkin Bomb, Reaper Strike).
-- **Backend Services**: `server/routes/round3.routes.ts`, `server/services/round3.service.ts`, `round3-hunt1.service.ts`, `round3-hunt2.service.ts`.
+- **Card Tray Integration**: Uses PostgreSQL-backed Round 3 inventory. Auction cards do not grant Round 3 abilities while their mappings remain `UNMAPPED`.
+- **Backend Services**: `server/routes/round3.routes.ts` with PostgreSQL persistence in `database/postgres/round3-repository.ts`, `round3-hunt1.ts`, `round3-hunt2.ts`, and `round3-hunt3.ts`.
 
 ---
 
@@ -204,19 +178,7 @@ Visit `http://127.0.0.1:5173` in your browser.
 
 ## 🔑 Credentials Roster
 
-### Organizer Vault (`http://127.0.0.1:5173/#/admin`)
-- **Username**: `admin123`
-- **Temporary Password**: `admin@1`
-- *Note: Hardened route. Password change required on first login.*
-
-### Pre-Seeded Tournament Squads (`http://127.0.0.1:5173/`)
-- `TEAM AI` / `SQUAD@AI9`
-- `TEAM1` / `TEAM1@2026`
-- `Shadow Syndicate` / `SHADOW#88`
-- `Grave Walkers` / `GRAVE#44`
-- `Cursed Alchemists` / `ALCHEMY!22`
-
-*(New squads can be created at any time in the Admin Vault and will persist indefinitely.)*
+No sample teams or admin credentials are seeded. Configure `ADMIN_BOOTSTRAP_USER` and `ADMIN_BOOTSTRAP_PASSWORD` for the first administrator, then create teams through the authenticated Admin Vault.
 
 ---
 

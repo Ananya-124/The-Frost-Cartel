@@ -1,19 +1,23 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import gsap from 'gsap';
 import type { Stage3Config } from '../../../types/round1.types';
-import { round1Service } from '../../../services/round1Service';
+import type { Round1TeamSessionState } from '../../../types/round1.types';
+import type { Round1ActionResponse } from '../../../services/round1ApiService';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
+import type { Round1TimerStore } from '../round1TimerStore';
 import { AncientBookReader } from './AncientBookReader';
 import { ArtifactInspectionModal, type ArtifactType } from './ArtifactInspectionModal';
 import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
 
-// 2560x1440 CANONICAL COORDINATE SPACE (1:1 with object-cover object-center)
-export const COFFIN_VIEWBOX = '0 0 2560 1440';
+// 1024x576 intrinsic coordinate space, matching the coffin artwork ratio.
+export const COFFIN_ORIGINAL_WIDTH = 1024;
+export const COFFIN_ORIGINAL_HEIGHT = 576;
+export const COFFIN_VIEWBOX = '0 0 1024 576';
 
 // HIGH-PRECISION CALIBRATED INVISIBLE HITBOXES (2560x1440 Master Canvas, 0 Overlaps)
-export const COFFIN_SVG_PATHS = {
+const COFFIN_MASTER_PATHS = {
   // 1. The Ancient Book / Grimoire (Solar Emblem)
   ancient_book:
     'M 1075,638 L 1150,650 L 1225,660 L 1300,670 L 1368,678 L 1380,690 L 1375,738 L 1388,762 L 1370,790 L 1340,840 L 1270,905 L 1260,920 L 1188,938 L 1112,928 L 1060,905 L 1012,865 L 1005,838 L 1030,800 L 1055,712 Z',
@@ -40,7 +44,7 @@ export const COFFIN_SVG_PATHS = {
 
   // 7. Skeleton: Movable Right Femur (Concealing the "ASH" plate)
   femur:
-    'M 1575,788 L 1662,850 L 1612,925 L 1488,1075 L 1400,1188 L 1388,1300 L 1300,1312 L 1212,1238 L 1250,1162 L 1362,1050 L 1462,900 L 1500,812 Z',
+    'M 1575,788 L 1662,850 L 1612,925 L 1512,962 L 1488,1075 L 1400,1188 L 1388,1300 L 1300,1312 L 1212,1238 L 1250,1162 L 1362,1050 L 1462,900 L 1500,812 Z',
 
   // 8. Antique Brass Skeleton Key
   skeleton_key:
@@ -55,12 +59,24 @@ export const COFFIN_SVG_PATHS = {
     'M 1375,862 L 1462,862 L 1500,925 L 1462,988 L 1375,988 L 1338,925 Z',
 };
 
+// Artwork hitboxes were authored at 2560x1440. Scale coordinates without
+// changing their relative placement so they remain aligned in the 1024 viewBox.
+export const COFFIN_SVG_PATHS = Object.fromEntries(
+  Object.entries(COFFIN_MASTER_PATHS).map(([name, path]) => [
+    name,
+    path.replace(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g, (_pair, x: string, y: string) =>
+      `${Math.round(Number(x) * 0.4)},${Math.round(Number(y) * 0.4)}`),
+  ]),
+) as typeof COFFIN_MASTER_PATHS;
+
 interface Grave1MarkedRemainsProps {
   teamId: string;
   config: Stage3Config;
+  initialSession: Round1TeamSessionState;
+  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   collectedFragments: string[];
   placedBones: Record<string, string>;
-  secondsRemaining: number;
+  timerStore: Round1TimerStore;
   stageCleared: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -72,11 +88,13 @@ interface Grave1MarkedRemainsProps {
 }
 
 export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
-  teamId,
+  teamId: _teamId,
   config: _config,
+  initialSession,
+  onAction,
   collectedFragments,
   placedBones: _placedBones,
-  secondsRemaining,
+  timerStore,
   stageCleared,
   isMuted,
   onToggleMute,
@@ -92,28 +110,22 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
 
   // Investigation Milestones
-  const [isBookRead, setIsBookRead] = useState<boolean>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return Boolean(session.stage3State?.grave1BookRead);
-  });
+  const [isBookRead, setIsBookRead] = useState(Boolean(initialSession.stage3State.grave1BookRead));
 
   const [skeletonOffset, setSkeletonOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isSkeletonMoved, setIsSkeletonMoved] = useState<boolean>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return Boolean(session.stage3State?.grave1SkeletonMoved);
-  });
+  const [isSkeletonMoved, setIsSkeletonMoved] = useState(Boolean(initialSession.stage3State.grave1SkeletonMoved));
 
   const [riddleInput, setRiddleInput] = useState('');
   const [riddleError, setRiddleError] = useState<string | null>(null);
-  const [isRiddleSolved, setIsRiddleSolved] = useState<boolean>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return Boolean(session.stage3State?.grave1RiddleSolved);
-  });
+  const [isRiddleSolved, setIsRiddleSolved] = useState(Boolean(initialSession.stage3State.grave1RiddleSolved));
 
-  const [isChestUnlocked, setIsChestUnlocked] = useState<boolean>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return Boolean(session.stage3State?.grave1ChestUnlocked);
-  });
+  const [isChestUnlocked, setIsChestUnlocked] = useState(Boolean(initialSession.stage3State.grave1ChestUnlocked));
+  useEffect(() => {
+    setIsBookRead(Boolean(initialSession.stage3State.grave1BookRead));
+    setIsSkeletonMoved(Boolean(initialSession.stage3State.grave1SkeletonMoved));
+    setIsRiddleSolved(Boolean(initialSession.stage3State.grave1RiddleSolved));
+    setIsChestUnlocked(Boolean(initialSession.stage3State.grave1ChestUnlocked));
+  }, [initialSession]);
 
   const [isChestOpen, setIsChestOpen] = useState<boolean>(() => {
     return collectedFragments.includes('BENEATH');
@@ -158,12 +170,9 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
 
   const handleBookFullyRead = useCallback(() => {
     if (!isBookRead) {
-      setIsBookRead(true);
-      round1Service.markGrave1BookRead(teamId);
-      soundController.playDiscover();
-      showToast('✦ Grimoire deciphered! The skeletal remains may now be shifted. ✦');
+      void onAction('stage3.readBook').then(() => { setIsBookRead(true); soundController.playDiscover(); showToast('✦ Grimoire deciphered! The skeletal remains may now be shifted. ✦'); }).catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The book reading could not be saved.'));
     }
-  }, [isBookRead, teamId, showToast]);
+  }, [isBookRead, onAction, showToast]);
 
   // 2. Letter / Parchment
   const handleInspectLetter = useCallback(() => {
@@ -201,8 +210,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     setSkeletonOffset({ x: clampedX, y: clampedY });
 
     if (!isSkeletonMoved && (Math.abs(clampedX) > 40 || Math.abs(clampedY) > 25)) {
-      setIsSkeletonMoved(true);
-      round1Service.shiftGrave1Skeleton(teamId);
+      void onAction('stage3.moveSkeleton').then(() => setIsSkeletonMoved(true)).catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The remains could not be moved.'));
       soundController.playDiscover();
       showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
     }
@@ -215,7 +223,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
 
     if (isSkeletonMoved || Math.abs(skeletonOffset.x) > 30 || Math.abs(skeletonOffset.y) > 20) {
       setIsSkeletonMoved(true);
-      round1Service.shiftGrave1Skeleton(teamId);
+      void onAction('stage3.moveSkeleton').catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The remains could not be moved.'));
       setSkeletonOffset({ x: 180, y: -90 });
     } else {
       setSkeletonOffset({ x: 0, y: 0 });
@@ -228,8 +236,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       soundController.playClick();
       showToast('You must decipher the Ancient Book first.');
     } else if (!isSkeletonMoved) {
-      setIsSkeletonMoved(true);
-      round1Service.shiftGrave1Skeleton(teamId);
+      void onAction('stage3.moveSkeleton').then(() => setIsSkeletonMoved(true)).catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The remains could not be moved.'));
       setSkeletonOffset({ x: 180, y: -90 });
       soundController.playDiscover();
       showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
@@ -237,7 +244,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   };
 
   // 4. Riddle Submission
-  const handleSubmitRiddle = (e: React.FormEvent) => {
+  const handleSubmitRiddle = async (e: React.FormEvent) => {
     e.preventDefault();
     setRiddleError(null);
     const cleaned = riddleInput.trim().toUpperCase();
@@ -247,14 +254,17 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       return;
     }
 
-    const res = round1Service.solveGrave1Riddle(teamId, cleaned);
+    let res: Round1ActionResponse;
+    try { res = await onAction('stage3.solveRiddle', { answer: cleaned }); }
+    catch (error) { setRiddleError(error instanceof Error ? error.message : 'Answer could not be checked.'); return; }
     if (res.success) {
       soundController.playCorrect();
       setIsRiddleSolved(true);
       showToast('✦ Correct! The Keeper accepts "ASH". The Skeleton Key awakens! ✦');
     } else {
       soundController.playWrongAnswer();
-      const errMsg = 'The sepulcher remains silent. Consult Folio II & III for guidance.';
+      const penalty = Math.abs(Number(res.creditsDelta ?? 0));
+      const errMsg = `The sepulcher remains silent. Consult Folio II & III for guidance.${penalty ? ` (-${penalty} CR)` : ''}`;
       setRiddleError(errMsg);
       showToast(errMsg);
       if (answerInputRef.current) {
@@ -277,7 +287,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   };
 
   // 5. Skeleton Key Flight & Lock Animation
-  const handleKeyClick = () => {
+  const handleKeyClick = async () => {
     if (!isRiddleSolved) {
       soundController.playClick();
       setActiveArtifact('key');
@@ -291,8 +301,8 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     }
 
     soundController.playChestUnlock();
-    setIsChestUnlocked(true);
-    round1Service.unlockGrave1Chest(teamId);
+    try { const result = await onAction('stage3.unlockChest'); setIsChestUnlocked(Boolean(result.session.stage3State.grave1ChestUnlocked)); }
+    catch (error) { showToast(error instanceof Error ? error.message : 'Chest could not be unlocked.'); return; }
     showToast('✦ Padlock unlocked! The ancient chest is ready to open. ✦');
 
     if (flyingKeyRef.current) {
@@ -312,13 +322,11 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
   };
 
   // 6. Open Chest & Reveal Secret Word
-  const handleOpenChest = () => {
+  const handleOpenChest = async () => {
     if (!isChestUnlocked && !isRiddleSolved) return;
     soundController.playSecretFound();
-    setIsChestUnlocked(true);
-    setIsChestOpen(true);
-    round1Service.unlockGrave1Chest(teamId);
-    onFragmentUnlocked('BENEATH');
+    try { const result = await onAction('stage3.unlockChest'); setIsChestUnlocked(true); setIsChestOpen(true); onFragmentUnlocked(String(result.fragment ?? 'BENEATH')); }
+    catch (error) { showToast(error instanceof Error ? error.message : 'Chest could not be opened.'); return; }
     setIsRewardModalOpen(true);
     showToast('✦ Sacred Syllable Unsealed: "BENEATH" • Coffin I Completed! ✦');
   };
@@ -333,7 +341,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     >
       {/* Semantic Accessibility Fallback */}
       <div className="sr-only">
-        <h1>Grave 1 — The Marked Remains</h1>
+        <h1>Grave 1 — The Bone Chamber</h1>
         <h2>The Bone Chamber</h2>
         <p>THE KEEPER’S LAST RIDDLE</p>
       </div>
@@ -363,10 +371,10 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           <path
             d={COFFIN_SVG_PATHS.ancient_book}
             fill="transparent"
-            stroke="none"
+            stroke="transparent"
             role="button"
             tabIndex={0}
-            aria-label="Inspect Ancient Grimoire"
+            aria-label="Ancient Grimoire: Click to Open and Read"
             className="cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none focus-visible:outline-none"
             onClick={handleOpenBook}
             onKeyDown={(e) => {
@@ -381,7 +389,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           <path
             d={COFFIN_SVG_PATHS.envelope}
             fill="transparent"
-            stroke="none"
+            stroke="transparent"
             role="button"
             tabIndex={0}
             aria-label="Inspect Sealed Letter"
@@ -399,7 +407,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           <path
             d={COFFIN_SVG_PATHS.parchment}
             fill="transparent"
-            stroke="none"
+            stroke="transparent"
             role="button"
             tabIndex={0}
             aria-label="Inspect Occult Dispatch Parchment"
@@ -422,7 +430,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             <path
               d={COFFIN_SVG_PATHS.skull}
               fill="transparent"
-              stroke="none"
+              stroke="transparent"
               role="button"
               tabIndex={0}
               aria-label="Inspect Cranium of the First Warden marked I"
@@ -444,7 +452,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             <path
               d={COFFIN_SVG_PATHS.ribcage}
               fill="transparent"
-              stroke="none"
+              stroke="transparent"
               role="button"
               tabIndex={0}
               aria-label="Inspect Thoracic Ribcage"
@@ -466,7 +474,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             <path
               d={COFFIN_SVG_PATHS.left_arm}
               fill="transparent"
-              stroke="none"
+              stroke="transparent"
               role="button"
               tabIndex={0}
               aria-label="Inspect Skeletal Left Arm"
@@ -488,7 +496,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             <path
               d={COFFIN_SVG_PATHS.femur}
               fill="transparent"
-              stroke="none"
+              stroke="transparent"
               role="button"
               tabIndex={0}
               aria-label="Movable Femur: Click or Drag to Shift Remains"
@@ -580,7 +588,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
             <path
               d={COFFIN_SVG_PATHS.skeleton_key}
               fill="transparent"
-              stroke="none"
+              stroke="transparent"
             />
           </g>
 
@@ -588,7 +596,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           <path
             d={COFFIN_SVG_PATHS.scroll}
             fill="transparent"
-            stroke="none"
+            stroke="transparent"
             role="button"
             tabIndex={0}
             aria-label="Inspect Rolled Ancient Scroll"
@@ -610,7 +618,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
           <path
             d={COFFIN_SVG_PATHS.compass}
             fill="transparent"
-            stroke="none"
+            stroke="transparent"
             role="button"
             tabIndex={0}
             aria-label="Inspect Engraved Compass Medallion"
@@ -634,7 +642,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
       <CoffinHeaderHUD
         graveNumber="GRAVE I"
         title="THE MARKED REMAINS"
-        secondsRemaining={secondsRemaining}
+        timerStore={timerStore}
         stageCleared={stageCleared}
         isMuted={isMuted}
         onToggleMute={onToggleMute}
@@ -673,7 +681,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
                 : isChestUnlocked
                 ? '✦ Chest unlocked! Click below to claim the sacred fragment'
                 : isRiddleSolved
-                ? '✦ Riddle solved! Click the skeleton key or the button below'
+                ? '✓ RIDDLE SOLVED • Click the skeleton key or the button below'
                 : isSkeletonMoved
                 ? '✦ Skeletal remains shifted! A hidden inscription has been revealed'
                 : isBookRead
@@ -714,6 +722,7 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
               <div className="flex flex-col items-center sm:items-end gap-1.5">
                 <button
                   type="button"
+                  aria-label={isChestOpen ? 'Fragment unsealed' : isChestUnlocked ? 'Open unlocked treasure chest' : 'Use skeleton key'}
                   onClick={isChestOpen ? () => setIsRewardModalOpen(true) : isChestUnlocked ? handleOpenChest : handleKeyClick}
                   className={`py-2 px-5 rounded-xl border-2 font-cinzel text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     isChestOpen

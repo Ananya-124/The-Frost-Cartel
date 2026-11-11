@@ -1,55 +1,89 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { Pool } from 'pg';
+import express, { type Express } from 'express';
+import cookieParser from 'cookie-parser';
+import { runMigrations } from '../../database/postgres/migration-runner.ts';
 import type { Server } from 'node:http';
-import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Hunt2State } from '../../src/types/hunt2.types.ts';
 
-const oldDbPath = process.env.SQLITE_DB_PATH;
-const testDbPath = path.join(process.cwd(), 'database', `round3_hunt2_${process.pid}_${Date.now()}.db`);
-process.env.SQLITE_DB_PATH = testDbPath;
-const [{ app }, { db, hashPassword, initDatabase }] = await Promise.all([import('../index.ts'), import('../../database/db.ts')]);
+const testDatabaseUrl = process.env.PG_TEST_DATABASE_URL;
+if (!testDatabaseUrl) throw new Error('PG_TEST_DATABASE_URL is required for isolated Hunt II integration tests.');
+const localDatabaseUrl = new URL(testDatabaseUrl);
+if (!['localhost', '127.0.0.1', '::1'].includes(localDatabaseUrl.hostname)) throw new Error('Remote PostgreSQL hosts are refused in Hunt II tests.');
+const originalDatabaseUrl = process.env.DATABASE_URL;
+const originalSslMode = process.env.PGSSLMODE;
+const schemaName = `frost_hunt2_${randomUUID().replaceAll('-', '')}`;
+const adminPool = new Pool({ connectionString: testDatabaseUrl });
+await adminPool.query(`CREATE SCHEMA "${schemaName}"`);
+const schemaPool = new Pool({ connectionString: testDatabaseUrl, options: `-c search_path=${schemaName}` });
+await runMigrations(schemaPool, path.resolve('database/postgres/migrations'));
+localDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
+process.env.DATABASE_URL = localDatabaseUrl.toString();
+process.env.PGSSLMODE = 'disable';
+const { seedPostgresTeamIdentity, prepareTeamRoundProgression, removeTeamProgressionFixture } = await import('./progressionFixtures.ts');
 
 describe('Round 3 Hunt 2 cooperative progression', () => {
   let server: Server;
+  let app: Express;
   let baseUrl = '';
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const team = { id: `hunt2-test-${suffix}`, name: `Hunt2 Test ${suffix}`, password: 'Hunt#Two2026' };
   const tokens: Record<'archivist' | 'tracker', string> = { archivist: '', tracker: '' };
 
   beforeAll(async () => {
-    initDatabase();
-    const now = new Date().toISOString();
-    const { hash, salt } = hashPassword(team.password);
-    db.prepare(`INSERT INTO teams (id, team_name, password_hash, salt, raw_password, is_paused, score, max_credits, total_credits, login_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, 0, 500, 500, 0, ?, ?)`)
-      .run(team.id, team.name, hash, salt, team.password, now, now);
-    await new Promise<void>((resolve) => { server = app.listen(0, '127.0.0.1', () => { const address = server.address(); if (address && typeof address === 'object') baseUrl = `http://127.0.0.1:${address.port}`; resolve(); }); });
+    await seedPostgresTeamIdentity(team.id, team.name, 'test-hash', 'test-salt');
+    await prepareTeamRoundProgression(team.id, 3);
+    await schemaPool.query("UPDATE round_progress SET status='IN_PROGRESS' WHERE team_id=$1 AND round_id=3", [team.id]);
+    const { createFreshRound3Hunt1State } = await import('../services/round3-hunt1.rules.ts');
+    const completedHunt1 = createFreshRound3Hunt1State(team.id);
+    completedHunt1.completed = true;
+    completedHunt1.currentChallenge = 4;
+    completedHunt1.score = 750;
+    completedHunt1.taskCompleted = { powerFailure: true, observationLog: true, signalReconstruction: true, incidentConclusion: true };
+    completedHunt1.taskScores = { powerFailure: 200, observationLog: 200, signalReconstruction: 200, incidentConclusion: 150 };
+    await schemaPool.query("UPDATE round3_hunt_state SET state=$2::jsonb,model_version=3 WHERE team_id=$1 AND hunt_id=1", [team.id, JSON.stringify(completedHunt1)]);
+    await schemaPool.query("UPDATE team_hunt_progress SET status=CASE WHEN hunt_id=1 THEN 'COMPLETED' WHEN hunt_id=2 THEN 'AVAILABLE' ELSE 'LOCKED' END WHERE team_id=$1", [team.id]);
     for (const actor of ['archivist', 'tracker'] as const) {
-      const login = await fetch(`${baseUrl}/api/auth/team-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teamName: team.name, password: team.password }) });
-      const result = await login.json() as { token: string; playerNumber: number };
-      expect(result.playerNumber).toBe(actor === 'archivist' ? 1 : 2);
-      tokens[actor] = result.token;
+      const index = actor === 'archivist' ? 1 : 2;
+      tokens[actor] = `hunt2-token-${randomUUID()}`;
+      await schemaPool.query('INSERT INTO team_sessions(id,team_id,token,player_number,expires_at) VALUES($1,$2,$3,$4,now()+interval \'1 hour\')', [`hunt2-session-${index}`, team.id, tokens[actor], index]);
     }
+    const [{ round3Router }, { roundAccessGuard }] = await Promise.all([
+      import('../routes/round3.routes.ts'), import('../routes/progression.routes.ts'),
+    ]);
+    app = express();
+    app.use(express.json());
+    app.use(cookieParser());
+    app.use('/api/round3', roundAccessGuard(3));
+    app.use('/api/round3', round3Router);
+    await new Promise<void>((resolve) => { server = app.listen(0, '127.0.0.1', () => { const address = server.address(); if (address && typeof address === 'object') baseUrl = `http://127.0.0.1:${address.port}`; resolve(); }); });
   });
 
   afterAll(async () => {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    db.prepare('DELETE FROM teams WHERE id = ?').run(team.id);
-    db.close();
-    for (const suffix of ['', '-wal', '-shm']) { const file = `${testDbPath}${suffix}`; if (fs.existsSync(file)) fs.unlinkSync(file); }
-    if (oldDbPath === undefined) delete process.env.SQLITE_DB_PATH; else process.env.SQLITE_DB_PATH = oldDbPath;
+    if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
+    await removeTeamProgressionFixture(team.id);
+    const { postgresPool } = await import('../../database/postgres/pool.ts');
+    await postgresPool?.end();
+    await schemaPool.end();
+    await adminPool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+    await adminPool.end();
+    if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = originalDatabaseUrl;
+    if (originalSslMode === undefined) delete process.env.PGSSLMODE; else process.env.PGSSLMODE = originalSslMode;
   });
 
   it('validates the four retained tasks, rejects removed task inputs, and preserves progress', async () => {
     const call = async (actor: 'archivist' | 'tracker', pathName: string, body?: unknown) => fetch(`${baseUrl}/api/round3${pathName}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${tokens[actor]}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
     const actAs = async (session: 'archivist' | 'tracker', actor: 'archivist' | 'tracker', objectId: string) => {
-      const response = await call(session, '/hunt2/action', { type: 'interact', actor, objectId });
+      const response = await call(session, '/hunt2/action', { actionId: randomUUID(), type: 'interact', actor, objectId });
       expect(response.status).toBe(200);
       return response.json() as Promise<{ success: boolean; message: string; input?: string; state: Hunt2State }>;
     };
     const act = (actor: 'archivist' | 'tracker', objectId: string) => actAs(actor, actor, objectId);
     const submit = async (actor: 'archivist' | 'tracker', value: unknown) => {
-      const response = await call(actor, '/hunt2/action', { type: 'submit', actor, value });
+      const response = await call(actor, '/hunt2/action', { actionId: randomUUID(), type: 'submit', actor, value });
       expect(response.status).toBe(200);
       return response.json() as Promise<{ success: boolean; state: Hunt2State }>;
     };
@@ -57,29 +91,26 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await fetch(`${baseUrl}/api/round3/hunt2/state`)).status).toBe(401);
     await call('archivist', '/session', {});
     await call('archivist', '/hunt1/session', {});
-    const hunt1Row = db.prepare('SELECT state_json FROM round3_hunt1_sessions WHERE team_id=?').get(team.id) as { state_json: string };
-    const completedHunt1 = JSON.parse(hunt1Row.state_json) as { completed: boolean; currentChallenge: number; taskCompleted: Record<string, boolean> };
-    completedHunt1.completed = true;
-    completedHunt1.currentChallenge = 4;
-    completedHunt1.taskCompleted = { powerFailure: true, observationLog: true, signalReconstruction: true, incidentConclusion: true };
-    db.prepare('UPDATE round3_hunt1_sessions SET state_json=? WHERE team_id=?').run(JSON.stringify(completedHunt1), team.id);
-    expect((await call('archivist', '/hunt2/session', {})).status).toBe(200);
-    const savedStateRow = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };
-    const freshStateJson = savedStateRow.state_json;
+    const openedHunt2 = await call('archivist', '/hunt2/session', {});
+    expect(openedHunt2.status).toBe(200);
+    const savedStateRow = (await schemaPool.query<{ state: Hunt2State }>('SELECT state FROM round3_hunt_state WHERE team_id=$1 AND hunt_id=2', [team.id])).rows[0];
+    const freshStateDb = savedStateRow.state;
+    const readHunt2State = async () => (await schemaPool.query<{ state: Hunt2State }>('SELECT state FROM round3_hunt_state WHERE team_id=$1 AND hunt_id=2', [team.id])).rows[0].state;
+    const writeHunt2State = async (state: Hunt2State) => schemaPool.query('UPDATE round3_hunt_state SET state=$2::jsonb,version=version+1 WHERE team_id=$1 AND hunt_id=2', [team.id, JSON.stringify(state)]);
     const freshState = await call('archivist', '/hunt2/state').then((response) => response.json()) as { state: Hunt2State };
     expect(freshState.state.currentChallenge).toBe(2);
-    expect((db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string }).state_json).toBe(freshStateJson);
-    const legacyState = JSON.parse(savedStateRow.state_json) as Record<string, unknown>;
+    expect(await readHunt2State()).toEqual(freshStateDb);
+    const legacyState = structuredClone(freshStateDb) as unknown as Record<string, unknown>;
     legacyState.currentChallenge = 4;
     legacyState.identityReconstruction = {};
     (legacyState.scoreBreakdown as Record<string, unknown>).identities = 100;
     const legacyStateJson = JSON.stringify(legacyState);
-    db.prepare('UPDATE round3_hunt2_sessions SET state_json=? WHERE team_id=?').run(legacyStateJson, team.id);
+    await schemaPool.query('UPDATE round3_hunt_state SET state=$2::jsonb,version=version+1 WHERE team_id=$1 AND hunt_id=2', [team.id, legacyStateJson]);
     const compatible = await call('archivist', '/hunt2/state').then((response) => response.json()) as { state: Hunt2State };
     expect(compatible.state.currentChallenge).toBe(2);
     expect(compatible.state).not.toHaveProperty('identityReconstruction');
-    expect((db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string }).state_json).toBe(legacyStateJson);
-    db.prepare('UPDATE round3_hunt2_sessions SET state_json=? WHERE team_id=?').run(savedStateRow.state_json, team.id);
+    expect(await readHunt2State()).toEqual(JSON.parse(legacyStateJson));
+    await writeHunt2State(freshStateDb);
     const initial = await call('archivist', '/hunt2/state').then((response) => response.json()) as { state: Hunt2State };
     expect(initial.state.currentChallenge).toBe(2);
     expect(initial.state.scoreBreakdown).toEqual({ hiddenWeakness: 0, brokenMemory: 0, anchor: 0, final: 0, optional: 0, penalties: 0 });
@@ -90,11 +121,11 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect(optional.state.currentChallenge).toBe(2);
     const optionalScore = optional.state.score;
     expect((await act('tracker', 'optionalAnomaly')).state.score).toBe(optionalScore);
-    await call('archivist', '/hunt2/action', { type: 'hint', actor: 'archivist' });
-    await call('tracker', '/hunt2/action', { type: 'hint', actor: 'tracker' });
+    await call('archivist', '/hunt2/action', { actionId: randomUUID(), type: 'hint', actor: 'archivist' });
+    await call('tracker', '/hunt2/action', { actionId: randomUUID(), type: 'hint', actor: 'tracker' });
     const hintPenalty = (await call('archivist', '/hunt2/state').then((response) => response.json()) as { state: { penalties: number } }).state.penalties;
     expect(hintPenalty).toBe(50);
-    await call('tracker', '/hunt2/action', { type: 'hint', actor: 'tracker' });
+    await call('tracker', '/hunt2/action', { actionId: randomUUID(), type: 'hint', actor: 'tracker' });
     expect((await call('archivist', '/hunt2/state').then((response) => response.json()) as { state: { penalties: number } }).state.penalties).toBe(50);
 
     for (const id of ['identityTraceA', 'identityPatientFile', 'manifestationA', 'manifestationRecords', 'memoryDiary', 'memoryEcho', 'falseDoor3']) {
@@ -127,10 +158,9 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     await submit('tracker', { kind: 'weakness-conclusion', profile: { frequency: 'low', light: 'dark', temperature: 'cold' } });
     expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.hiddenWeakness.experimentalConclusion).toBe('{"frequency":"low","light":"dark","temperature":"cold"}');
     await act('tracker', 'weaknessContainmentConsole');
-    const savedWeakness = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };
-    const pendingWeakness = JSON.parse(savedWeakness.state_json) as Hunt2State;
+    const pendingWeakness = structuredClone(await readHunt2State());
     pendingWeakness.hiddenWeakness.syncDeadline = Date.now() - 1;
-    db.prepare('UPDATE round3_hunt2_sessions SET state_json=? WHERE team_id=?').run(JSON.stringify(pendingWeakness), team.id);
+    await writeHunt2State(pendingWeakness);
     const failedCalibration = await act('archivist', 'weaknessCalibrationConsole');
     expect(failedCalibration.state.subtasks.hiddenWeaknessComplete).not.toBe(true);
     await act('tracker', 'weaknessContainmentConsole');
@@ -166,10 +196,9 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect(sharedSplitScreen.brokenMemory.archivistEvidence).toHaveLength(3);
     expect((await act('tracker', 'brokenRestoreMechanism')).success).toBe(false);
     await act('archivist', 'brokenSyncConsole');
-    const brokenRaw = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };
-    const waitingBroken = JSON.parse(brokenRaw.state_json) as Hunt2State;
+    const waitingBroken = structuredClone(await readHunt2State());
     waitingBroken.brokenMemory.syncDeadline = Date.now() - 1;
-    db.prepare('UPDATE round3_hunt2_sessions SET state_json=? WHERE team_id=?').run(JSON.stringify(waitingBroken), team.id);
+    await writeHunt2State(waitingBroken);
     expect((await act('tracker', 'brokenRestoreMechanism')).success).toBe(false);
     await act('archivist', 'brokenSyncConsole');
     const restored = await act('tracker', 'brokenRestoreMechanism');
@@ -206,10 +235,9 @@ describe('Round 3 Hunt 2 cooperative progression', () => {
     expect((await call('tracker', '/hunt2/state').then((r) => r.json()) as { state: Hunt2State }).state.memoryAnchor.physicalConfiguration).toEqual(physicalAnchor);
     expect((await act('tracker', 'anchorFutureControl')).success).toBe(false);
     await act('archivist', 'anchorPastControl');
-    const anchorRaw = db.prepare('SELECT state_json FROM round3_hunt2_sessions WHERE team_id=?').get(team.id) as { state_json: string };
-    const waitingAnchor = JSON.parse(anchorRaw.state_json) as Hunt2State;
+    const waitingAnchor = structuredClone(await readHunt2State());
     waitingAnchor.memoryAnchor.syncDeadline = Date.now() - 1;
-    db.prepare('UPDATE round3_hunt2_sessions SET state_json=? WHERE team_id=?').run(JSON.stringify(waitingAnchor), team.id);
+    await writeHunt2State(waitingAnchor);
     expect((await act('tracker', 'anchorFutureControl')).success).toBe(false);
     await act('archivist', 'anchorPastControl');
     await act('tracker', 'anchorFutureControl');

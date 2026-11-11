@@ -9,9 +9,9 @@ import type {
   Stage1TrialConfig,
   Stage1TrialState,
 } from '../types/round1.types';
-import { DEFAULT_STAGE1_TRIALS } from '../constants/stage1.constants';
-import { STAGE_CREDITS } from '../constants/credits.constants';
-import { STAGE2_CANONICAL_IMAGES, STAGE2_CANONICAL_TARGETS } from '../components/game/stage2/stage2TargetsConfig';
+import { DEFAULT_STAGE1_TRIALS } from '../constants/stage1.constants.ts';
+import { STAGE_CREDITS } from '../constants/credits.constants.ts';
+import { STAGE2_CANONICAL_IMAGES, STAGE2_CANONICAL_TARGETS } from '../components/game/stage2/stage2TargetsConfig.ts';
 
 export type ScoreSyncCallback = (
   teamId: string,
@@ -287,6 +287,16 @@ export class Round1Service {
     return session;
   }
 
+  /** Restore a trusted server-loaded session in process memory; never reads browser storage. */
+  restoreTeamSession(session: Round1TeamSessionState): void {
+    this.teamStates.set(session.teamId, session);
+  }
+
+  /** Return a detached snapshot for server persistence. */
+  snapshotTeamSession(teamId: string, teamName = ''): Round1TeamSessionState {
+    return structuredClone(this.getTeamSession(teamId, teamName));
+  }
+
   /**
    * Team presses "BEGIN ROUND 1" or enters a stage to start their timer session.
    * If forceRenew is true, or if session was expired, or if timer has reached 0,
@@ -339,7 +349,8 @@ export class Round1Service {
       return this.durationMinutes * 60;
     }
     if (this.round1Status === 'paused' || session.status === 'paused') {
-      // Return preserved active time
+      if (typeof session.pausedRemainingSeconds === 'number') return Math.max(0, session.pausedRemainingSeconds);
+      // Legacy sessions without a saved pause snapshot.
       const deadline = new Date(session.roundDeadline).getTime();
       const now = Date.now();
       return Math.max(0, Math.floor((deadline - now) / 1000));

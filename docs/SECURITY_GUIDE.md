@@ -8,11 +8,9 @@
 - **Credential Storage**: Admin credentials are never embedded in the frontend bundle. They reside strictly on the server or in the database.
 
 ### Bootstrap Admin Protocol
-- Local development provisions a temporary bootstrap administrator:
-  - Username: `admin123`
-  - Temporary Password: `admin@1`
-- **Forced Password Rotation**: The database record stores `must_change_password = 1`. Upon initial login, the admin is prompted to rotate credentials.
-- **Production Defense**: In production (`NODE_ENV=production`), the server verifies that default bootstrap passwords are not active without an explicit override from a secure secrets manager.
+- Configure `ADMIN_BOOTSTRAP_USER` and `ADMIN_BOOTSTRAP_PASSWORD` for initial setup.
+- The PostgreSQL bootstrap creates an administrator only when none exists; it never resets existing credentials on restart.
+- No sample admin or team credentials are created. Store bootstrap values in a secret manager and remove them after first login.
 
 ---
 
@@ -39,26 +37,22 @@ Passwords are never stored in plaintext in the database:
 
 ## 4. SQL Injection Prevention & Transaction Isolation
 
-### 100% Parameterized Statements
-All database operations utilize SQLite prepared statements with parameter binding:
+### Parameterized PostgreSQL Statements
+Database operations use PostgreSQL parameter binding:
 ```typescript
-const stmt = db.prepare('SELECT * FROM teams WHERE LOWER(team_name) = LOWER(?)');
-stmt.get(teamName);
+const result = await pool.query('SELECT * FROM teams WHERE lower(team_name) = lower($1)', [teamName]);
 ```
-Zero string concatenation or dynamic SQL assembly is permitted in any database query.
+User-provided values are passed as parameters rather than interpolated into SQL.
 
 ### Atomic Financial Scoring Transactions
 Credit score updates are isolated within transactions:
 ```sql
-BEGIN TRANSACTION;
--- 1. Update stages_progress
--- 2. Unlock subsequent stage if eligible
--- 3. Update teams.score (enforcing 500 CR ceiling)
--- 4. Insert into append-only score_transactions
--- 5. Insert into activity_history
+BEGIN;
+-- Update round1_stage_progress and the team score.
+-- Insert the idempotent score_transactions event and related activity history.
 COMMIT;
 ```
-If any step fails, the entire transaction rolls back cleanly, preventing partial scoring or credit desynchronization.
+Related state changes roll back together if any step fails.
 
 ---
 

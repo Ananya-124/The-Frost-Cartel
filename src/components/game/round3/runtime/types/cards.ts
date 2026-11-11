@@ -9,5 +9,5 @@ export interface PowerCard {
   /** Round 3 inventory identity; absent only for standalone legacy data. */
   cardId?: string;
   consumption?: 'consume-one' | 'retained';
-  source?: 'auction' | 'development' | 'testing';
+  source?: 'auction' | 'development' | 'admin' | 'testing';
 }

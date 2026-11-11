@@ -2,24 +2,47 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Server } from 'node:http';
 import * as crypto from 'node:crypto';
-import { app } from '../index.ts';
-import { db, initDatabase, hashPassword } from '../../database/db.ts';
+import path from 'node:path';
+import { Pool } from 'pg';
+import { runMigrations } from '../../database/postgres/migration-runner.ts';
+import { hashPassword } from '../auth/password.ts';
+
+const previousDatabaseUrl = process.env.DATABASE_URL;
+const previousSslMode = process.env.PGSSLMODE;
+const previousNodeEnv = process.env.NODE_ENV;
+const testDatabaseUrl = process.env.PG_TEST_DATABASE_URL;
+if (!testDatabaseUrl) throw new Error('PG_TEST_DATABASE_URL is required for the Round 4 isolated PostgreSQL regression suite.');
+const parsedTestUrl = new URL(testDatabaseUrl);
+if (!['localhost', '127.0.0.1', '::1'].includes(parsedTestUrl.hostname)) throw new Error('Round 4 tests refuse remote PostgreSQL hosts.');
+const schemaName = `frost_round4_api_${crypto.randomUUID().replaceAll('-', '')}`;
+const schemaAdminPool = new Pool({ connectionString: testDatabaseUrl });
+await schemaAdminPool.query(`CREATE SCHEMA "${schemaName}"`);
+const scopedDatabaseUrl = new URL(testDatabaseUrl);
+scopedDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
+process.env.DATABASE_URL = scopedDatabaseUrl.toString();
+process.env.PGSSLMODE = 'disable';
+process.env.NODE_ENV = 'test';
+const migrationPool = new Pool({ connectionString: scopedDatabaseUrl.toString() });
+await runMigrations(migrationPool, path.resolve('database/postgres/migrations'));
+await migrationPool.end();
+const [{ app }, { seedPostgresTeamIdentity, prepareTeamRoundProgression, removeTeamProgressionFixture }, { postgresPool }] = await Promise.all([
+  import('../index.ts'), import('./progressionFixtures.ts'), import('../../database/postgres/pool.ts'),
+]);
 
 describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race', () => {
   let server: Server;
   let baseUrl: string;
   let adminToken: string;
+  const adminName = `r4-admin-${crypto.randomUUID()}`;
+  const adminPassword = 'Round4-Admin-Password-42';
 
   // Track 8 distinct test teams (7 to qualify + 1 unqualified)
   const testTeams: Array<{ id: string; name: string; pass: string; token: string }> = [];
 
   beforeAll(async () => {
-    initDatabase();
-    // Clean test state so each test run starts pristine
-    db.exec('DELETE FROM round4_winner;');
-    db.exec('DELETE FROM round4_team_progress;');
-    db.exec('DELETE FROM round4_qualified_teams;');
-
+    if (!postgresPool) throw new Error('Round 4 API integration test requires the local PostgreSQL test database.');
+    const adminCredentials = hashPassword(adminPassword);
+    await postgresPool.query('INSERT INTO admins(id,username,password_hash,salt,role,must_change_password) VALUES($1,$2,$3,$4,\'admin\',false)', [`r4-admin-${crypto.randomUUID()}`, adminName, adminCredentials.hash, adminCredentials.salt]);
     await new Promise<void>((resolve) => {
       server = app.listen(0, '127.0.0.1', () => {
         const addr = server.address();
@@ -34,13 +57,12 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
     const adminRes = await fetch(`${baseUrl}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin123', password: 'admin@1' }),
+      body: JSON.stringify({ username: adminName, password: adminPassword }),
     });
     const adminData = await adminRes.json();
     adminToken = adminData.token;
 
     // 2. Create 8 distinct tournament teams (7 to qualify + 1 unqualified)
-    const now = new Date().toISOString();
     for (let i = 1; i <= 8; i++) {
       const teamId = `r4-team-test-${i}-${Date.now()}`;
       const name = `Squad Omega ${i} ${Date.now()}`;
@@ -48,24 +70,28 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       const { hash, salt } = hashPassword(pass);
       const token = `squad_tok_${i}_${crypto.randomBytes(16).toString('hex')}`;
 
-      db.prepare(`
-        INSERT INTO teams (id, team_name, password_hash, salt, raw_password, is_paused, score, max_credits, total_credits, login_count, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 0, 100, 500, 500, 1, ?, ?)
-      `).run(teamId, name, hash, salt, pass, now, now);
-
-      db.prepare(`
-        INSERT INTO team_sessions (id, team_id, token, player_number, expires_at, created_at)
-        VALUES (?, ?, ?, 1, ?, ?)
-      `).run(`sess-${teamId}`, teamId, token, new Date(Date.now() + 86400000).toISOString(), now);
+      await seedPostgresTeamIdentity(teamId, name, hash, salt);
+      await prepareTeamRoundProgression(teamId, 4);
+      await postgresPool.query(`INSERT INTO team_sessions(id,team_id,token,player_number,expires_at)
+        VALUES($1,$2,$3,1,now()+interval '24 hours')`, [`sess-${teamId}`, teamId, token]);
 
       testTeams.push({ id: teamId, name, pass, token });
     }
   });
 
   afterAll(async () => {
-    await new Promise<void>((resolve) => {
-      server.close(() => resolve());
-    });
+    if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
+    await postgresPool?.query('DELETE FROM round4_winner');
+    for (const team of testTeams) {
+      await removeTeamProgressionFixture(team.id);
+    }
+    await postgresPool?.query('DELETE FROM admins WHERE username=$1', [adminName]);
+    await postgresPool?.end();
+    await schemaAdminPool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+    await schemaAdminPool.end();
+    if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = previousDatabaseUrl;
+    if (previousSslMode === undefined) delete process.env.PGSSLMODE; else process.env.PGSSLMODE = previousSslMode;
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
   });
 
   describe('Phase 1: Qualification of Seven Teams & Strict Limit Enforcement', () => {
@@ -130,6 +156,18 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.message).toMatch(/Successfully qualified 7 squads/i);
+
+      const sealedRoute = await fetch(`${baseUrl}/api/round4/my-route`, {
+        headers: { Authorization: `Bearer ${testTeams[0].token}` },
+      });
+      expect(sealedRoute.status).toBe(423);
+
+      const releaseResponse = await fetch(`${baseUrl}/api/round4/admin/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ isReleased: true }),
+      });
+      expect(releaseResponse.status).toBe(200);
     });
 
     it('blocks an unqualified 8th team from accessing Round 04 (403 Forbidden)', async () => {
@@ -357,9 +395,9 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       expect(raceClosed.length).toBe(1);
 
       // Verify the database contains strictly ONE winner record
-      const dbWinners = db.prepare('SELECT * FROM round4_winner').all() as Array<{ team_id: string; team_name: string }>;
-      expect(dbWinners.length).toBe(1);
-      expect(dbWinners[0].team_id).toBe(winners[0].teamId || dbWinners[0].team_id);
+      const dbWinners = await postgresPool!.query<{ team_id: string; team_name: string }>('SELECT team_id,team_name FROM round4_winner');
+      expect(dbWinners.rows).toHaveLength(1);
+      expect(dbWinners.rows[0].team_id).toBe(winners[0].teamId || dbWinners.rows[0].team_id);
     });
 
     it('subsequent attempts to submit final answers are blocked with raceClosed = true', async () => {

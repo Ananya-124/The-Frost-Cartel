@@ -17,15 +17,6 @@ dist-ssr
 # Environment variables (Never commit real secrets)
 .env
 .env*.local
-!.env.example
-
-# Authoritative Local Database Storage
-database/*.db
-database/*.db-wal
-database/*.db-shm
-*.db
-*.db-wal
-*.db-shm
 
 # Ephemeral test captures and media
 screenshot_*.png

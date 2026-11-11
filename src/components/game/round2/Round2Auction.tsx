@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { TeamSession } from '../../../types/team.types';
-import { round2Service, type R2Card, type R2View } from '../../../services/round2Service';
+import { round2Service, subscribeToAuctionChanges, type R2Card, type R2View } from '../../../services/round2Service';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
 import { AuctionCard, CardArt } from './AuctionCard';
 import '../../../styles/round2.css';
@@ -10,8 +10,7 @@ interface Round2AuctionProps {
   onReturnHome: () => void;
 }
 
-const POLL_MS = 800; // how often the player asks the server for the live card
-const POLL_HIDDEN_MS = 3000; // slower when the browser tab is in the background
+const FALLBACK_POLL_MS = 15000; // SSE delivers changes; this is reconnect recovery only.
 
 const Divider: React.FC = () => (
   <div className="flex items-center justify-center gap-3 w-full max-w-md mx-auto opacity-80">
@@ -23,11 +22,11 @@ const Divider: React.FC = () => (
 
 export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnHome }) => {
   const team = session.teamName;
-  const [startCredits] = useState(() => round2Service.getRound1Credits(session.teamId, session.credits));
   const [view, setView] = useState<R2View | null>(null);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [offline, setOffline] = useState(false);
+  const [connectionMessage, setConnectionMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState('');
   const [nowMs, setNowMs] = useState(0);
@@ -36,7 +35,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   const offset = useRef(0); // server clock minus this browser's clock
   const lastServerNow = useRef(0);
   const prevStatus = useRef<Record<number, R2Card['status']>>({});
-  const lastInventory = useRef('');
+  const pendingBid = useRef<{ amount: number; requestId: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const showBanner = useCallback((text: string) => {
@@ -53,13 +52,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
     setNowMs(r.now);
     setView(r);
     setOffline(false);
-
-    // Mirror the cards won + credits left for Round 3, only when they actually change.
-    const inventory = JSON.stringify(r.me);
-    if (inventory !== lastInventory.current) {
-      lastInventory.current = inventory;
-      round2Service.saveInventory(r.me);
-    }
+      setConnectionMessage('');
 
     // Announce auction results to every team as they receive the updated state.
     const prev = prevStatus.current;
@@ -78,32 +71,55 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let first = true;
+    let inFlight = false;
+    let refreshQueued = false;
 
-    const loop = async (first: boolean) => {
-      let r = first ? await round2Service.join(team, startCredits) : await round2Service.getState(team);
+    const refresh = async () => {
       if (!alive) return;
-      if (r.success && !r.me) {
-        r = await round2Service.join(team, startCredits);
+      if (inFlight) { refreshQueued = true; return; }
+      inFlight = true;
+      try {
+        let r = first ? await round2Service.join() : await round2Service.getState();
+        first = false;
         if (!alive) return;
+        if (r.success && !r.me) r = await round2Service.join();
+        if (!alive) return;
+        if (r.success) apply(r);
+        else { setOffline(true); setConnectionMessage(r.message ?? 'Auction server is unavailable.'); }
+      } finally {
+        inFlight = false;
+        if (refreshQueued && alive) { refreshQueued = false; void refresh(); }
       }
-      if (r.success) apply(r);
-      else setOffline(true);
-      timer = setTimeout(() => void loop(false), document.hidden ? POLL_HIDDEN_MS : POLL_MS);
     };
 
-    void loop(true);
+    const scheduleFallback = () => {
+      timer = setTimeout(() => {
+        if (document.visibilityState === 'visible') void refresh();
+        scheduleFallback();
+      }, FALLBACK_POLL_MS);
+    };
+    void refresh();
+    const unsubscribe = subscribeToAuctionChanges(() => { void refresh(); });
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    scheduleFallback();
     return () => {
       alive = false;
       clearTimeout(timer);
       clearTimeout(bannerTimer.current);
+      unsubscribe();
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
-  }, [team, startCredits, apply]);
+  }, [team, apply]);
 
   // The countdown only needs a fast clock while a timed card is live.
   const endsAt = view?.live?.endsAt ?? null;
   useEffect(() => {
     if (endsAt === null) return;
-    const i = setInterval(() => setNowMs(Date.now() + offset.current), 250);
+    const i = setInterval(() => setNowMs(Date.now() + offset.current), 1000);
     return () => clearInterval(i);
   }, [endsAt]);
 
@@ -112,7 +128,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   const inc = view?.minIncrement ?? 10;
   const min = live ? (live.highBidder ? live.highBid + inc : live.base) : 0;
   const ref = live ? (live.highBidder ? live.highBid : live.base) : 0;
-  const credits = view?.me?.credits ?? startCredits;
+  const credits = view?.me?.credits ?? 0;
   const myName = view?.me?.name ?? team; // the server may store the team name with different capitals
   const leading = !!live && live.highBidder === myName;
   const secs = endsAt !== null && nowMs ? Math.max(0, Math.ceil((endsAt - nowMs) / 1000)) : null;
@@ -135,12 +151,19 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
 
   const placeBid = async () => {
     if (!canBid) return;
+    if (!pendingBid.current || pendingBid.current.amount !== amountNum) {
+      pendingBid.current = { amount: amountNum, requestId: globalThis.crypto?.randomUUID?.() ?? `r2-${Date.now()}-${Math.random().toString(36).slice(2)}` };
+    }
+    const requestId = pendingBid.current.requestId;
     setBusy(true);
     setError('');
     try {
-      const r = await round2Service.bid(myName, amountNum);
-      if (r.success) apply(r);
-      else setError(r.message ?? 'Bid failed.');
+      const r = await round2Service.bid(amountNum, requestId);
+      if (r.success) {
+        pendingBid.current = null;
+        apply(r);
+        showBanner(r.bid?.duplicate ? 'Your earlier bid was received. Auction state is up to date.' : 'Bid accepted.');
+      } else setError(r.message ?? 'Bid failed. You can retry safely.');
     } finally {
       setBusy(false);
     }
@@ -185,7 +208,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
 
         {offline && (
           <div role="status" className="mb-3 text-center font-cinzel text-xs tracking-widest text-red-300 border border-red-500/40 bg-black/60 rounded-lg py-1.5">
-            RECONNECTING TO THE AUCTION…
+            {connectionMessage || 'RECONNECTING TO THE AUCTION…'}
           </div>
         )}
         {banner && (

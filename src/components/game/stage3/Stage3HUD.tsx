@@ -1,8 +1,9 @@
 import React from 'react';
 import { soundController } from '../../../utils/soundController';
+import { type Round1TimerStore, useRound1TimerSeconds } from '../round1TimerStore';
 
 interface Stage3HUDProps {
-  secondsRemaining: number;
+  timerStore: Round1TimerStore;
   stageCleared: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -12,7 +13,7 @@ interface Stage3HUDProps {
 }
 
 export const Stage3HUD: React.FC<Stage3HUDProps> = ({
-  secondsRemaining,
+  timerStore,
   stageCleared,
   isMuted,
   onToggleMute,
@@ -20,6 +21,7 @@ export const Stage3HUD: React.FC<Stage3HUDProps> = ({
   teamName = 'FROST CARTEL',
   credits = 250,
 }) => {
+  const secondsRemaining=useRound1TimerSeconds(timerStore);
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;

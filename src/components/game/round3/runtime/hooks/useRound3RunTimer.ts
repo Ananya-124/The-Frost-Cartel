@@ -7,6 +7,8 @@ export function formatRound3Time(milliseconds: number): string {
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+const TIMER_SYNC_INTERVAL_MS = 30_000;
+
 /** Uses server-computed remaining time and a monotonic local delta between server syncs. */
 export function useRound3RunTimer(initialRun: Round3RunState) {
   const [run, setRun] = useState(initialRun);
@@ -84,18 +86,20 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
   const resume = useCallback(() => transition('resume'), [transition]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setTick((value) => value + 1), 250);
+    const timer = run.status === 'running'
+      ? window.setInterval(() => setTick((value) => value + 1), 1000)
+      : undefined;
     const sync = () => { void refresh(); };
-    const interval = window.setInterval(sync, 5000);
+    const interval = run.status === 'running' ? window.setInterval(sync, TIMER_SYNC_INTERVAL_MS) : undefined;
     window.addEventListener('focus', sync);
     window.addEventListener('online', sync);
     return () => {
-      window.clearInterval(timer);
-      window.clearInterval(interval);
+      if (timer !== undefined) window.clearInterval(timer);
+      if (interval !== undefined) window.clearInterval(interval);
       window.removeEventListener('focus', sync);
       window.removeEventListener('online', sync);
     };
-  }, [refresh]);
+  }, [refresh, run.status]);
 
   useEffect(() => {
     if (run.status === 'running' && remainingMs <= 0) void refresh();

@@ -93,6 +93,9 @@ export interface Stage1TrialState {
 
 export interface Stage1State {
   trials: Stage1TrialState[];
+  /** Server-only active challenge fields; clients submit guesses, never correctness. */
+  activeTrial?: number;
+  activeTarget?: number;
 }
 
 export interface Stage2Config {
@@ -176,6 +179,7 @@ export interface Round1TeamSessionState {
   roundStartTime: string | null;
   roundDeadline: string | null;
   roundEndTime: string | null;
+  pausedRemainingSeconds?: number;
   totalDurationMinutes: number;
   credits: number;
   stages: Record<StageId, StageProgress>;

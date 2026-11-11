@@ -1,26 +1,16 @@
 import React from 'react';
-import type { ExpeditionProgress, ExpeditionRoute } from '../../../types/round4Expedition.types';
+import type { ExpeditionProgress } from '../../../types/round4Expedition.types';
 import { EXPEDITION_ROUTES } from './ExpeditionRouteConfiguration';
-import { soundController } from '../../../utils/soundController';
 
 interface RouteNavigationProps {
   progress: ExpeditionProgress;
-  onSelectRoute: (routeId: string) => void;
-  isMuted: boolean;
+  assignedRoute: { routeId: string; routeName: string; routeSubtitle: string };
 }
 
 export const RouteNavigation: React.FC<RouteNavigationProps> = ({
   progress,
-  onSelectRoute,
-  isMuted,
+  assignedRoute,
 }) => {
-  const handleRouteClick = (route: ExpeditionRoute, isUnlocked: boolean) => {
-    if (!isUnlocked) return;
-    if (!isMuted) {
-      soundController.playClick();
-    }
-    onSelectRoute(route.routeId);
-  };
 
   return (
     <nav
@@ -39,26 +29,18 @@ export const RouteNavigation: React.FC<RouteNavigationProps> = ({
         <div className="absolute top-2 bottom-2 w-[1.5px] bg-gradient-to-b from-[#d4af37]/40 via-[#b8974a]/60 to-[#d4af37]/40 z-0" />
 
         {EXPEDITION_ROUTES.map((route) => {
-          const isActive = progress.activeRouteId === route.routeId;
+          const isAssigned = assignedRoute.routeId === route.routeId;
+          const isActive = isAssigned && progress.activeRouteId === assignedRoute.routeId;
           const isCompleted = progress.completedRouteIds.includes(route.routeId);
-          // Phase 2 Strict Route Isolation: Only the squad's assigned route is playable
-          const isUnlocked = isActive;
+          // The server assignment is the only playable route; local clicks cannot change it.
+          const isUnlocked = isAssigned;
 
           return (
             <div
               key={route.routeId}
-              className="relative z-10 flex items-center group cursor-pointer"
-              onClick={() => handleRouteClick(route, isUnlocked)}
-              role="button"
-              tabIndex={isUnlocked ? 0 : -1}
-              aria-label={`${route.routeName}: ${route.routeSubtitle}`}
+              className="relative z-10 flex items-center group"
+              aria-label={`${isAssigned ? assignedRoute.routeName : route.routeName}: ${isAssigned ? assignedRoute.routeSubtitle : route.routeSubtitle}${isAssigned ? ' (assigned by server)' : ' (not assigned)'}`}
               aria-current={isActive ? 'step' : undefined}
-              onKeyDown={(e) => {
-                if (isUnlocked && (e.key === 'Enter' || e.key === ' ')) {
-                  e.preventDefault();
-                  handleRouteClick(route, isUnlocked);
-                }
-              }}
             >
               {/* Circular Ancient Compass Seal Medallion */}
               <div
@@ -136,7 +118,7 @@ export const RouteNavigation: React.FC<RouteNavigationProps> = ({
                   }`}
                 >
                   <span className="font-cinzel text-[11px] sm:text-xs tracking-[0.16em] uppercase whitespace-nowrap">
-                    {route.routeName.toUpperCase()}
+                    {(isAssigned ? assignedRoute.routeName : route.routeName).toUpperCase()}
                   </span>
                 </div>
               </div>

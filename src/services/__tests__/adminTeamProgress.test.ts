@@ -36,8 +36,9 @@ describe('admin team progress actions', () => {
       credits: 0,
     });
     expect(resetTeam?.stages['stage-1'].status).toBe('not_started');
-    expect(resetGameState.credits).toBe(0);
-    expect(resetGameState.stage1State.trials[0].attemptsUsed).toBe(0);
+    // Browser state is a cache only; a local admin mock must not rewrite it as authoritative state.
+    expect(resetGameState.credits).toBe(100);
+    expect(resetGameState.stage1State.trials[0].attemptsUsed).toBe(1);
   });
 
   it('demotes a Round 2 team to the last stage of Round 1 and preserves earned progress', () => {

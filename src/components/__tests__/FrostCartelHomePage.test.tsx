@@ -1,9 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { FrostCartelHomePage } from '../home/FrostCartelHomePage';
 import { authService } from '../../services/authService';
-import { adminService } from '../../services/adminService';
+import { round1Service } from '../../services/round1Service';
 
 vi.mock('../game/round3/runtime/components/screens/GameScreen', () => ({
   default: ({ teamName }: { teamName: string }) => <div data-testid="round3-game">PARADOX GAME · {teamName}</div>,
@@ -17,6 +17,19 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     window.scrollTo = () => {};
     Element.prototype.scrollIntoView = () => {};
   });
+
+  const stubRound1Server = () => {
+    round1Service.beginRound1('server-test-team', 'ShadowSquad', true);
+    const session = round1Service.getTeamSession('server-test-team', 'ShadowSquad');
+    const progression = { success: true, teamId: 'server-test-team', rounds: [1, 2, 3, 4].map((round_id) => ({ round_id, status: round_id === 1 ? 'IN_PROGRESS' : 'LOCKED', eligible_at: null, completed_at: null })), hunts: [1, 2, 3].map((hunt_id) => ({ hunt_id, status: 'LOCKED', completed_at: null })) };
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.includes('/api/progression/me') ? progression
+        : url.includes('/api/round1/state') ? { success: true, round: { id: 1, name: 'Round 1', isActive: true, totalDurationSeconds: 3600, remainingSeconds: 3600 }, team: { score: 0, maxCredits: 500, isPaused: false }, session, config: { stage1: round1Service.getStage1Config(), stage2: round1Service.getStage2Config(), stage3: round1Service.getStage3Config() } }
+          : { success: true };
+      return { ok: true, status: 200, json: async () => body };
+    }));
+  };
 
   it('renders branding, tagline, and corner quick navigation', () => {
     render(<FrostCartelHomePage />);
@@ -34,32 +47,12 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     expect(screen.queryByTitle('Admin Control Vault')).not.toBeInTheDocument();
   });
 
-  it('renders the three circular portals with correct status and availability', () => {
+  it('requires a verified team session before showing round access', () => {
     render(<FrostCartelHomePage />);
 
-    // Round 1
-    expect(screen.getByText('THE GRAVEYARD ESCAPE')).toBeInTheDocument();
-    expect(screen.getByText('ROUND 01 ACTIVE • READY')).toBeInTheDocument();
-    const enterRound1Btn = screen.getByRole('button', { name: /ENTER ROUND 01/i });
-    expect(enterRound1Btn).toBeEnabled();
-
-    // Round 2
-    expect(screen.getByText('THE HAUNTED AUCTION')).toBeInTheDocument();
-    expect(screen.getByText('ROUND 02 ACTIVE • READY')).toBeInTheDocument();
-    const round2Btn = screen.getByRole('button', { name: /ENTER ROUND 02/i });
-    expect(round2Btn).toBeEnabled();
-
-    // Round 3
-    expect(screen.getByText('PARADOX LAB')).toBeInTheDocument();
-    expect(screen.getByText('ROUND 03 FOUNDATION • READY')).toBeInTheDocument();
-    const round3Btn = screen.getByRole('button', { name: /ENTER ROUND 03/i });
-    expect(round3Btn).toBeEnabled();
-
-    // Round 4
-    expect(screen.getByText('THE RADIANT TREASURE HUNT')).toBeInTheDocument();
-    expect(screen.getByText('ROUND 04 ACTIVE • READY')).toBeInTheDocument();
-    const round4Btn = screen.getByRole('button', { name: /ENTER ROUND 04/i });
-    expect(round4Btn).toBeEnabled();
+    expect(screen.getAllByText('SIGN IN TO CHECK ACCESS')).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: 'SIGN IN' })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: 'SIGN IN' }).every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
   });
 
   it('opens the Round 3 foundation from the player portal', async () => {
@@ -73,14 +66,27 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
       },
       inventory: [], cards: [],
     };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state });
+    const progression = { success: true, teamId: 'paradox-test', rounds: [1, 2, 3, 4].map((round_id) => ({ round_id, status: round_id === 3 ? 'AVAILABLE' : 'LOCKED', eligible_at: null, completed_at: null })), hunts: [1, 2, 3].map((hunt_id) => ({ hunt_id, status: hunt_id === 1 ? 'AVAILABLE' : 'LOCKED', completed_at: null })) };
+    const signedIn = authService.getCurrentSession()!;
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      const payload = url.includes('/api/progression/me/rounds/3/start') ? progression
+        : url.includes('/api/progression/me') ? progression
+          : url.includes('/api/auth/session') ? { success: true, playerNumber: 1, team: { id: signedIn.teamId, teamName: signedIn.teamName, score: 0, totalCredits: 0, maxCredits: 500, isPaused: false } }
+            : state;
+      return { ok: true, json: async () => payload };
+    });
     vi.stubGlobal('fetch', fetchMock);
     render(<FrostCartelHomePage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /ENTER ROUND 03/i }));
+    const rounds = screen.getByRole('region', { name: 'Frost Cartel Game Rounds' });
+    const round3Card = Array.from(rounds.querySelectorAll('h3'))
+      .find((heading) => heading.textContent === 'PARADOX LAB')?.closest('.group');
+    expect(round3Card).toBeTruthy();
+    await within(round3Card as HTMLElement).findByText('AVAILABLE');
+    fireEvent.click(within(round3Card as HTMLElement).getByRole('button', { name: 'ENTER ROUND' }));
 
-    expect(await screen.findByText('PARADOX LAB')).toBeInTheDocument();
-    expect(await screen.findByText('Paradox Test Team')).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/progression/me/rounds/3/start'), expect.anything()));
+    expect(await screen.findByTestId('round3-game')).toHaveTextContent('Paradox Test Team');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/round3/session'), expect.objectContaining({ method: 'POST' })));
     vi.unstubAllGlobals();
   });
@@ -117,7 +123,7 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
   });
 
   it('authenticates team and displays gothic crypt portal with unsealed status', async () => {
-    adminService.updateRound1Status('running');
+    stubRound1Server();
     render(<FrostCartelHomePage />);
 
     const teamInput = screen.getByLabelText(/TEAM NAME \/ LOGIN ID/i);
@@ -139,7 +145,7 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     expect(screen.getAllByText('ShadowSquad').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('THE GATES ARE UNSEALED')).toBeInTheDocument();
     expect(screen.getAllByText('THE GRAVEYARD ESCAPE').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('UP TO 500 CR')).toBeInTheDocument();
+    expect(screen.getByText('WALLET: 0 CR')).toBeInTheDocument();
 
     // Signing out returns to unauthenticated state
     const signOutBtn = screen.getByRole('button', { name: /SIGN OUT/i });
@@ -171,7 +177,7 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
   });
 
   it('enters Round 1: The Graveyard Escape when clicking Enter Round 1 button', async () => {
-    adminService.updateRound1Status('running');
+    stubRound1Server();
     render(<FrostCartelHomePage />);
 
     const teamInput = screen.getByLabelText(/TEAM NAME \/ LOGIN ID/i);
@@ -190,10 +196,10 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     fireEvent.click(enterRoundBtn);
 
     // Modal closes and Round 1 Master Dashboard is rendered
-    expect(screen.getByText('ROUND 01 • MASTER PORTAL')).toBeInTheDocument();
-    expect(screen.getByText('PORTAL 01')).toBeInTheDocument();
-    expect(screen.getByText('PORTAL 02')).toBeInTheDocument();
-    expect(screen.getByText('PORTAL 03')).toBeInTheDocument();
+    expect(await screen.findByText('ROUND 01 • MASTER PORTAL')).toBeInTheDocument();
+    expect(await screen.findByText('PORTAL 01')).toBeInTheDocument();
+    expect(await screen.findByText('PORTAL 02')).toBeInTheDocument();
+    expect(await screen.findByText('PORTAL 03')).toBeInTheDocument();
 
     // Clicking Exit returns to homepage
     const exitBtn = screen.getByRole('button', { name: /Exit/i });

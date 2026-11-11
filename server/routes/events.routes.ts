@@ -1,20 +1,21 @@
 import { Router } from 'express';
 import * as crypto from 'node:crypto';
-import { db } from '../../database/db.ts';
+import { postgresPool } from '../../database/postgres/pool.ts';
 import { eventBus } from '../services/eventBus.ts';
 
 export const eventsRouter = Router();
 
-eventsRouter.get('/stream', (req, res) => {
+eventsRouter.get('/stream', async (req, res) => {
   const token = (req.query.token as string) || req.headers.authorization?.replace(/^Bearer\s+/i, '') || req.cookies?.fc_team_token;
 
   let teamId: string | undefined;
 
   if (token) {
-    const session = db.prepare('SELECT team_id FROM team_sessions WHERE token = ?').get(token) as { team_id: string } | undefined;
-    if (session) {
-      teamId = session.team_id;
-    }
+    if (!postgresPool) { res.status(503).json({ success: false, message: 'Authentication service is unavailable.' }); return; }
+    const session = await postgresPool.query<{ team_id: string }>(
+      'SELECT team_id FROM team_sessions WHERE token=$1 AND expires_at>now()', [token]);
+    if (!session.rowCount) { res.status(401).json({ success: false, message: 'Invalid or expired squad session.' }); return; }
+    teamId = session.rows[0].team_id;
   }
 
   // Set SSE Headers
@@ -22,8 +23,6 @@ eventsRouter.get('/stream', (req, res) => {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': req.headers.origin || '*',
-    'Access-Control-Allow-Credentials': 'true',
   });
 
   const clientId = crypto.randomUUID();

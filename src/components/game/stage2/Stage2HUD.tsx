@@ -1,8 +1,9 @@
 import React from 'react';
 import { soundController } from '../../../utils/soundController';
+import { type Round1TimerStore, useRound1TimerSeconds } from '../round1TimerStore';
 
 interface Stage2HUDProps {
-  secondsRemaining: number;
+  timerStore: Round1TimerStore;
   stageCleared: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -11,13 +12,14 @@ interface Stage2HUDProps {
 }
 
 export const Stage2HUD: React.FC<Stage2HUDProps> = ({
-  secondsRemaining,
+  timerStore,
   stageCleared,
   isMuted,
   onToggleMute,
   onReturnDashboard,
   onOpenCalibration,
 }) => {
+  const secondsRemaining=useRound1TimerSeconds(timerStore);
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;

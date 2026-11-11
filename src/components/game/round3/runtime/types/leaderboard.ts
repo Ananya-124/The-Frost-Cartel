@@ -12,6 +12,6 @@ export interface EndSummary {
   captures: number;
   bonus: number;
   penalties: number;
-  rank: number;
+  rank: number | null;
   leaderboard: LeaderboardEntry[];
 }

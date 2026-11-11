@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { HuntImage, Hotspot, Stage2Config } from '../../../types/round1.types';
-import { round1Service } from '../../../services/round1Service';
+import type { Round1ActionResponse } from '../../../services/round1ApiService';
 import { soundController } from '../../../utils/soundController';
 import { Stage2HUD } from './Stage2HUD';
+import { useRound1TimerStore, type Round1TimerStore } from '../round1TimerStore';
 import { RelicChecklistBar } from './RelicChecklistBar';
 import { HauntedEvidenceTable } from './HauntedEvidenceTable';
 import { PhotoInspectionViewer } from './PhotoInspectionViewer';
@@ -16,6 +17,9 @@ interface Stage2HauntedImageHuntProps {
   teamId: string;
   config: Stage2Config;
   initialFoundTargetIds: string[];
+  timerStore?: Round1TimerStore;
+  secondsRemaining?: number;
+  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   isCompleted: boolean;
   onReturnDashboard: () => void;
   onSkipStage: () => void;
@@ -23,14 +27,18 @@ interface Stage2HauntedImageHuntProps {
 }
 
 export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
-  teamId,
+  teamId: _teamId,
   config,
   initialFoundTargetIds,
+  timerStore,
+  secondsRemaining = 25 * 60,
+  onAction,
   isCompleted,
   onReturnDashboard,
   onSkipStage,
   onStageCompleted,
 }) => {
+  const resolvedTimerStore = useRound1TimerStore(timerStore, secondsRemaining);
   const [foundIds, setFoundIds] = useState<string[]>(initialFoundTargetIds);
   const [activeImage, setActiveImage] = useState<HuntImage | null>(null);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
@@ -40,9 +48,6 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
   const [activeHintImageId, setActiveHintImageId] = useState<string | null>(null);
   const [stageCleared, setStageCleared] = useState(isCompleted);
   const [isMuted, setIsMuted] = useState(soundController.isMuted());
-  const [secondsRemaining, setSecondsRemaining] = useState(() =>
-    round1Service.getTimeRemainingSeconds(teamId)
-  );
 
   // Keyboard shortcut Ctrl+Shift+C to toggle calibration modal
   useEffect(() => {
@@ -56,13 +61,7 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Synchronize master round countdown every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsRemaining(round1Service.getTimeRemainingSeconds(teamId));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [teamId]);
+  useEffect(() => setFoundIds(initialFoundTargetIds), [initialFoundTargetIds]);
 
   const showToast = (msg: string) => {
     setToastNotice(msg);
@@ -85,8 +84,9 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
   };
 
   // Hotspot Click Handler inside Photo Inspector
-  const handleHotspotClick = (hotspot: Hotspot) => {
-    if (stageCleared) return;
+  const actionPendingRef = useRef(false);
+  const handleHotspotClick = async (hotspot: Hotspot) => {
+    if (stageCleared || actionPendingRef.current) return;
 
     const normTargetId = normalizeTargetId(hotspot.targetId);
     const targetItem = config.targets.find(
@@ -105,76 +105,46 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
     }
 
     // New valid discovery!
-    soundController.playDiscover();
-    const res = round1Service.registerStage2Discovery(
-      teamId,
-      normTargetId,
-      activeImage?.id || ''
-    );
-    const updatedFound = [...foundIds, hotspot.targetId, normTargetId];
-    setFoundIds(updatedFound);
-    showToast(`🎯 Uncovered: ${targetName} (${res.totalFound}/${config.targets.length})`);
-
-    if (res.completed) {
-      soundController.playVictory();
-      setStageCleared(true);
-      onStageCompleted();
-    }
+    actionPendingRef.current = true;
+    try {
+      const res = await onAction('stage2.discover', { targetId: normTargetId, imageId: activeImage?.id || '' });
+      const updated = res.session.stage2State.foundTargetIds;
+      setFoundIds(updated);
+      soundController.playDiscover();
+      showToast(`🎯 Uncovered: ${targetName} (${updated.length}/${config.targets.length})`);
+      if (res.session.stages['stage-2'].status === 'completed') { soundController.playVictory(); setStageCleared(true); onStageCompleted(); }
+    } catch (error) { showToast(error instanceof Error ? error.message : 'Discovery could not be confirmed.'); }
+    finally { actionPendingRef.current = false; }
   };
 
   // Click on background of photo (missed click)
-  const handleMissedClick = () => {
-    if (stageCleared) return;
-
-    if (config.incorrectClickPenalty > 0) {
+  const handleMissedClick = async () => {
+    if (stageCleared || actionPendingRef.current) return;
+    actionPendingRef.current = true;
+    try {
       soundController.playError();
-      const { penalty } = round1Service.recordPenalty(
-        teamId,
-        'stage-2',
-        'Incorrect artifact click in search board'
-      );
+      const result = await onAction('stage2.missed');
+      const penalty = Number(result.penalty ?? config.incorrectClickPenalty);
       showToast(`False discovery. The crypt mists stir (-${penalty} CR).`);
-    } else {
-      soundController.playClick();
-      showToast('Nothing hidden here. Inspect another shadow.');
-    }
+    } catch (error) { showToast(error instanceof Error ? error.message : 'Miss could not be recorded.'); }
+    finally { actionPendingRef.current = false; }
   };
 
   // Confirm and deliver hint
-  const handleConfirmHint = () => {
+  const handleConfirmHint = async () => {
     setIsHintModalOpen(false);
-    const unfound = config.targets.find(
-      (t) =>
-        !foundIds.some(
-          (id) => normalizeTargetId(id) === normalizeTargetId(t.id) || id === t.id
-        )
-    );
-    if (!unfound) {
-      showToast('All 12 cursed relics have already been found!');
-      return;
-    }
-
-    const hostImage = config.images.find((img) =>
-      img.hotspots.some(
-        (h) =>
-          normalizeTargetId(h.targetId) === normalizeTargetId(unfound.id) ||
-          h.targetId === unfound.id
-      )
-    );
-
-    if (hostImage) {
-      const { deduction } = round1Service.useHint(
-        teamId,
-        'stage-2',
-        `Revealed container for ${unfound.name}`
-      );
+    if (actionPendingRef.current) return;
+    actionPendingRef.current = true;
+    try {
+      const result = await onAction('stage2.hint');
+      const hostImage = config.images.find((img) => img.id === result.imageId);
+      if (!hostImage) throw new Error('The server returned an unavailable clue image.');
       setActiveHintImageId(hostImage.id);
       soundController.playDiscover();
-      showToast(
-        `Clue unsealed! Look closely inside "${hostImage.title}" (-${deduction} CR).`
-      );
+      showToast(`Clue unsealed! Look closely inside "${hostImage.title}" (-${Number(result.deduction ?? config.hintDeduction)} CR).`);
       setTimeout(() => setActiveHintImageId(null), 14000);
-    }
+    } catch (error) { showToast(error instanceof Error ? error.message : 'Hint could not be loaded.'); }
+    finally { actionPendingRef.current = false; }
   };
 
   return (
@@ -194,7 +164,7 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
       />
       {/* 1. Header with Stage Branding & Synchronized Round HUD */}
       <Stage2HUD
-        secondsRemaining={secondsRemaining}
+        timerStore={resolvedTimerStore}
         stageCleared={stageCleared}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { adminService } from '../../../services/adminService';
+import { adminReadService } from '../../../services/adminReadService';
 import { useNativeDialog } from '../../../hooks/useNativeDialog';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTeamCreated?: () => void;
-  onSuccess?: () => void;
+  onTeamCreated?: () => void | Promise<void>;
+  onSuccess?: () => void | Promise<void>;
 }
 
 export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
@@ -25,7 +25,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -54,18 +54,18 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
     }
 
     setIsSubmitting(true);
-    const result = adminService.createTeam(trimmedName, trimmedPass);
-    setIsSubmitting(false);
-
-    if (result.success) {
+    try {
+      await adminReadService.createTeam(trimmedName, trimmedPass);
       setTeamName('');
       setPassword('');
       setConfirmPassword('');
-      onTeamCreated?.();
-      onSuccess?.();
+      await onTeamCreated?.();
+      await onSuccess?.();
       onClose();
-    } else {
-      setErrorMessage(result.message);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to create the squad. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

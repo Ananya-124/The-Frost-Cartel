@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import type { AdminTeam, Round1Status, StageId } from '../../../types/admin';
-import { STAGE_NAMES } from '../../../constants/rounds.constants';
-import { adminService } from '../../../services/adminService';
-import { round1Service } from '../../../services/round1Service';
+import React, { useEffect, useRef, useState } from 'react';
+import type { AdminTeam, Round1Status } from '../../../types/admin';
+import { adminReadService } from '../../../services/adminReadService';
+import { round1Api } from '../../../services/round1ApiService';
+import { AdminProgressionControls } from '../teams/AdminProgressionControls';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
 import { AdminStageConfigPanel } from './AdminStageConfigPanel';
 
@@ -42,37 +42,54 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
   preselectedTeamId,
   onRefresh,
 }) => {
-  const { teams } = adminService.getTeams('', 'all', 1, 100);
+  const [teams, setTeams] = useState<AdminTeam[]>([]);
+  const [teamLoadError, setTeamLoadError] = useState<string | null>(null);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>(
     preselectedTeamId || (teams[0]?.id ?? '')
   );
-  const [roundDuration, setRoundDuration] = useState<number>(() => round1Service.getDurationMinutes());
-  const [targetDestination, setTargetDestination] = useState<StageId | 'round-2'>('stage-1');
-  const [movementReason, setMovementReason] = useState('Administrator realignment');
+  const [roundDuration, setRoundDuration] = useState<number>(22);
+  const [serverStatus, setServerStatus] = useState<Round1Status>(round1Status);
+  const [timerBusy, setTimerBusy] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [roundError, setRoundError] = useState<string | null>(null);
+  const actionInFlight = useRef(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void adminReadService.getTeams().then((result) => { if (active) { setTeams(result); setSelectedTeamId((current) => preselectedTeamId ?? (result.some((team) => team.id === current) ? current : result[0]?.id ?? '')); } })
+      .catch((error: unknown) => { if (active) setTeamLoadError(error instanceof Error ? error.message : 'Could not load the server team roster.'); });
+    return () => { active = false; };
+  }, [preselectedTeamId]);
+  React.useEffect(() => {
+    void round1Api.adminConfig().then(({ configuration }) => {
+      setRoundDuration(configuration.durationMinutes);
+      if (configuration.lifecycle) setServerStatus(configuration.lifecycle === 'running' ? 'running' : configuration.lifecycle === 'paused' ? 'paused' : configuration.lifecycle === 'completed' ? 'completed' : 'not_started');
+    })
+      .catch((error: unknown) => setRoundError(error instanceof Error ? error.message : 'Could not load Round 1 settings.'));
+  }, []);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
     message: string;
-    action: () => void;
+    action: () => Promise<void>;
     isDanger?: boolean;
     confirmLabel?: string;
   }>({
     isOpen: false,
     title: '',
     message: '',
-    action: () => {},
+    action: async () => {},
   });
 
   const selectedTeam: AdminTeam | undefined = teams.find((t) => t.id === selectedTeamId);
-  const roundBadge = getRound1BadgeStyle(round1Status);
+  const roundBadge = getRound1BadgeStyle(serverStatus);
 
   const requestConfirmation = (
     title: string,
     message: string,
-    action: () => void,
+    action: () => void | Promise<void>,
     isDanger = false,
     confirmLabel = 'Confirm Action'
   ) => {
@@ -80,10 +97,16 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
       isOpen: true,
       title,
       message,
-      action: () => {
-        action();
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-        onRefresh();
+      action: async () => {
+        if (actionInFlight.current) return;
+        actionInFlight.current = true; setActionBusy(true); setRoundError(null);
+        try {
+          await action();
+          await onRefresh();
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        } catch (error) {
+          setRoundError(error instanceof Error ? error.message : 'Round 1 action failed.');
+        } finally { actionInFlight.current = false; setActionBusy(false); }
       },
       isDanger,
       confirmLabel,
@@ -118,49 +141,20 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
     requestConfirmation(
       config.title,
       config.message,
-      () => {
-        const res = adminService.updateRound1Status(status);
-        setFeedbackNotice(res.message);
-        setTimeout(() => setFeedbackNotice(null), 3500);
+      async () => {
+        setTimerBusy(true); setRoundError(null);
+        try {
+          const action = status === 'running' ? (serverStatus === 'paused' ? 'resume' : 'start') : status === 'paused' ? 'pause' : 'end';
+          await round1Api.timer(action);
+          setServerStatus(action === 'start' || action === 'resume' ? 'running' : action === 'pause' ? 'paused' : 'completed');
+          setFeedbackNotice(`Round 1 timer ${action === 'start' ? 'started' : action === 'resume' ? 'resumed' : action === 'pause' ? 'paused' : 'ended'} successfully.`);
+          setTimeout(() => setFeedbackNotice(null), 3500);
+        } catch (error) { setRoundError(error instanceof Error ? error.message : 'Timer action failed.'); throw error; }
+        finally { setTimerBusy(false); }
       },
       config.danger,
       config.title
     );
-  };
-
-  const handleExecuteMove = () => {
-    if (!selectedTeam) return;
-
-    if (targetDestination === 'round-2') {
-      requestConfirmation(
-        `TRANSFER SQUAD TO ROUND 2`,
-        `Are you sure you want to transfer "${selectedTeam.name}" to Round 2: The Haunted Auction? Their earned balance of ${selectedTeam.credits} credits will carry over intact.`,
-        () => {
-          const res = adminService.moveTeamToRound2(selectedTeam.id);
-          setFeedbackNotice(res.message);
-          setTimeout(() => setFeedbackNotice(null), 3500);
-        },
-        false,
-        'Transfer to Round 2'
-      );
-    } else {
-      const destinationName = STAGE_NAMES[targetDestination as StageId];
-      requestConfirmation(
-        `STAGE MOVEMENT: ${selectedTeam.name}`,
-        `Move "${selectedTeam.name}" from [${selectedTeam.currentStage}] to [${destinationName}]? Earned credits will be preserved; completion credits are NOT automatically awarded.`,
-        () => {
-          const res = adminService.moveTeamStage(
-            selectedTeam.id,
-            targetDestination,
-            movementReason.trim() || 'Administrator realignment'
-          );
-          setFeedbackNotice(res.message);
-          setTimeout(() => setFeedbackNotice(null), 3500);
-        },
-        false,
-        'Move Squad'
-      );
-    }
   };
 
   return (
@@ -175,6 +169,8 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
           <span>{feedbackNotice}</span>
         </output>
       )}
+      {roundError && <output role="alert" className="text-xs text-red-300">{roundError}</output>}
+      {teamLoadError && <div role="alert" className="rounded border border-red-500/40 bg-red-950/30 p-3 text-xs text-red-200">{teamLoadError}</div>}
 
       {/* 1. Global Round State Bar */}
       <div className="stone-panel rounded-xl p-5 border border-cartel-frostBorder/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -197,19 +193,21 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
-          {round1Status !== 'running' && (
+          {serverStatus !== 'running' && (
             <button
               type="button"
+              disabled={timerBusy}
               onClick={() => handleGlobalStatusChange('running')}
               className="px-3.5 py-2 rounded bg-gradient-to-r from-cartel-pumpkin via-cartel-amber to-cartel-pumpkin text-cartel-void font-cinzel font-black text-xs uppercase tracking-wider shadow-pumpkinGlow hover:scale-102 transition-all cursor-pointer"
             >
-              {round1Status === 'paused' ? 'Resume Round 1' : 'Start Round 1'}
+              {serverStatus === 'paused' ? 'Resume Round 1' : 'Start Round 1'}
             </button>
           )}
 
-          {round1Status === 'running' && (
+          {serverStatus === 'running' && (
             <button
               type="button"
+              disabled={timerBusy}
               onClick={() => handleGlobalStatusChange('paused')}
               className="px-3.5 py-2 rounded bg-amber-600/90 hover:bg-amber-500 text-cartel-void font-cinzel font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
             >
@@ -217,9 +215,10 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
             </button>
           )}
 
-          {round1Status !== 'completed' && (
+          {serverStatus !== 'completed' && (
             <button
               type="button"
+              disabled={timerBusy}
               onClick={() => handleGlobalStatusChange('completed')}
               className="px-3.5 py-2 rounded bg-red-950/80 hover:bg-red-900 border border-red-500/50 text-red-200 font-cinzel font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
             >
@@ -237,9 +236,13 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
               value={roundDuration}
               onChange={(e) => {
                 const val = Number(e.target.value);
-                setRoundDuration(val);
-                round1Service.setDurationMinutes(val);
+                setTimerBusy(true); setRoundError(null);
+                void round1Api.updateAdminConfig('duration', { durationMinutes: val })
+                  .then(() => setRoundDuration(val))
+                  .catch((error: unknown) => setRoundError(error instanceof Error ? error.message : 'Duration could not be saved.'))
+                  .finally(() => setTimerBusy(false));
               }}
+              disabled={timerBusy}
               className="bg-cartel-charcoal border border-white/20 rounded px-2 py-1 text-xs font-mono text-white focus:outline-none"
             >
               <option value={20}>20m</option>
@@ -334,120 +337,14 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
       {/* 3. Round 1 Chamber Rules & Puzzle Configuration */}
       <AdminStageConfigPanel />
 
-      {/* 4. Manual Team Stage & Round Movement Console */}
+      {/* 4. Server-authoritative team progression */}
       <div className="stone-panel rounded-xl p-5 border border-white/10 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-white/10">
-          <div className="flex items-center space-x-2">
-            <span className="text-base text-cartel-amber" aria-hidden="true">⚙️</span>
-            <h3 className="text-sm font-cinzel font-bold text-white tracking-wide uppercase">
-              MANUAL SQUAD STAGE REALIGNMENT & ROUND 2 TRANSFER
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono text-cartel-silver/50">
-            ADMINISTRATOR PRIVILEGED ACTION
-          </span>
+        <div className="pb-3 border-b border-white/10">
+          <h3 className="text-sm font-cinzel font-bold text-white uppercase">Team round and hunt progression</h3>
+          <p className="mt-1 text-xs text-cartel-silver/70">Changes are recorded through the authenticated progression API. Stage-level realignment is unavailable because no protected stage-movement endpoint exists. Round 2 remains disabled.</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
-          {/* Select Squad */}
-          <div className="md:col-span-4">
-            <label
-              htmlFor="select-team-dropdown"
-              className="block text-[10px] font-cinzel font-bold text-cartel-amber uppercase mb-1"
-            >
-              SELECT OPERATIVE SQUAD
-            </label>
-            <select
-              id="select-team-dropdown"
-              name="selectedTeam"
-              value={selectedTeamId}
-              onChange={(e) => setSelectedTeamId(e.target.value)}
-              className="w-full px-3 py-2 bg-cartel-charcoal border border-cartel-frostBorder/50 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin cursor-pointer"
-            >
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.currentRound} • {t.currentStage} • {t.credits} CR)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Target Destination */}
-          <div className="md:col-span-4">
-            <label
-              htmlFor="target-destination-dropdown"
-              className="block text-[10px] font-cinzel font-bold text-cartel-amber uppercase mb-1"
-            >
-              TARGET DESTINATION
-            </label>
-            <select
-              id="target-destination-dropdown"
-              name="targetDestination"
-              value={targetDestination}
-              onChange={(e) => setTargetDestination(e.target.value as StageId | 'round-2')}
-              className="w-full px-3 py-2 bg-cartel-charcoal border border-cartel-frostBorder/50 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin cursor-pointer"
-            >
-              <option value="stage-1">Stage 1: The Crypt Chamber (100 CR)</option>
-              <option value="stage-2">Stage 2: The Mausoleum Decipher (150 CR)</option>
-              <option value="stage-3">Stage 3: The Arch-Lich Gate (250 CR)</option>
-              <option value="round-2">Round 2: The Haunted Auction (Transfer)</option>
-            </select>
-          </div>
-
-          {/* Reason / Note */}
-          <div className="md:col-span-2">
-            <label
-              htmlFor="movement-reason-input"
-              className="block text-[10px] font-cinzel font-bold text-cartel-silver uppercase mb-1"
-            >
-              REASON NOTE
-            </label>
-            <input
-              id="movement-reason-input"
-              name="movementReason"
-              type="text"
-              value={movementReason}
-              onChange={(e) => setMovementReason(e.target.value)}
-              placeholder="e.g. Workstation reset"
-              className="w-full px-2.5 py-2 bg-cartel-charcoal border border-white/10 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin"
-            />
-          </div>
-
-          {/* Execute Button */}
-          <div className="md:col-span-2">
-            <button
-              type="button"
-              onClick={handleExecuteMove}
-              disabled={!selectedTeam}
-              aria-label="Execute stage movement or transfer"
-              className="w-full py-2.5 px-3 rounded bg-gradient-to-r from-cartel-pumpkin via-cartel-amber to-cartel-pumpkin text-cartel-void font-cinzel font-black text-xs uppercase tracking-wider shadow-pumpkinGlow hover:scale-102 transition-all cursor-pointer disabled:opacity-50"
-            >
-              Execute Move →
-            </button>
-          </div>
-        </div>
-
-        {/* Source vs Destination preview */}
-        {selectedTeam && (
-          <div className="p-3 bg-cartel-midnight/50 rounded border border-white/5 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
-            <div className="flex items-center space-x-2">
-              <span className="text-cartel-silver/60">Source Stage:</span>
-              <span className="text-cartel-amber font-bold uppercase">
-                {selectedTeam.currentStage} ({selectedTeam.currentRound})
-              </span>
-              <span className="text-cartel-silver/30" aria-hidden="true">→</span>
-              <span className="text-cartel-silver/60">Destination:</span>
-              <span className="text-emerald-400 font-bold uppercase">
-                {targetDestination === 'round-2'
-                  ? 'Round 2: The Haunted Auction'
-                  : STAGE_NAMES[targetDestination as StageId]}
-              </span>
-            </div>
-            <div className="text-[11px] text-cartel-silver/60">
-              Current balance preserved: <strong className="text-white">{selectedTeam.credits} CR</strong>
-            </div>
-          </div>
-        )}
+        {teams.length === 0 && !teamLoadError && <p role="status" className="text-xs text-cartel-silver/60">Loading teams…</p>}
+        {selectedTeam && <AdminProgressionControls key={selectedTeam.id} teamId={selectedTeam.id} teamName={selectedTeam.name} onProgressChanged={async () => { await onRefresh(); await round1Api.adminConfig(); }} />}
       </div>
 
       <ConfirmationModal
@@ -458,6 +355,8 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
         onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
         isDanger={confirmModal.isDanger}
         confirmLabel={confirmModal.confirmLabel}
+        isSubmitting={actionBusy}
+        errorMessage={roundError}
       />
     </div>
   );

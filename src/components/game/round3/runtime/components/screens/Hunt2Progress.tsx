@@ -82,7 +82,7 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
   const [profile, setProfile] = useState({ frequency: '', light: '', temperature: '' });
   const panelReadiness = useRef<{ challenge: Hunt2Challenge | null; archivist: boolean; tracker: boolean }>({ challenge: null, archivist: false, tracker: false });
   const hasState = state !== null; const stateCompleted = state?.completed ?? false;
-  useEffect(() => { if (!hasState || stateCompleted) return; const initialize = window.setTimeout(() => setClockNow(Date.now()), 0); const timer = window.setInterval(() => setClockNow(Date.now()), 500); return () => { window.clearTimeout(initialize); window.clearInterval(timer); }; }, [hasState, stateCompleted]);
+  useEffect(() => { if (!hasState || stateCompleted) return; const initialize = window.setTimeout(() => setClockNow(Date.now()), 0); const timer = window.setInterval(() => setClockNow(Date.now()), 1000); return () => { window.clearTimeout(initialize); window.clearInterval(timer); }; }, [hasState, stateCompleted]);
   useEffect(() => { const reset = window.setTimeout(() => { setSingle(''); setOrder(['', '', '', '', '', '']); setProfile({ frequency: '', light: '', temperature: '' }); }, 0); return () => window.clearTimeout(reset); }, [pending?.kind, pending?.actor, state?.currentChallenge]);
   useEffect(() => {
     if (!state || state.completed) return;

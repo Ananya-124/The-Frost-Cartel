@@ -1,61 +1,52 @@
-import React, { useState } from 'react';
-import { round1Service } from '../../../services/round1Service';
+import React, { useEffect, useState } from 'react';
+import { round1Api } from '../../../services/round1ApiService';
 
 export const AdminStageConfigPanel: React.FC = () => {
   const [activeStageTab, setActiveStageTab] = useState<'stage-1' | 'stage-2' | 'stage-3'>('stage-1');
-  const [stage1Title, setStage1Title] = useState(() => round1Service.getStage1Config().title);
-  const [stage1Desc, setStage1Desc] = useState(() => round1Service.getStage1Config().description);
-  const [stage1Instructions, setStage1Instructions] = useState(() => round1Service.getStage1Config().instructions);
-  const [stage1Ready, setStage1Ready] = useState(() => round1Service.getStage1Config().isReadyForPublication);
+  const [stage1Title, setStage1Title] = useState('');
+  const [stage1Desc, setStage1Desc] = useState('');
+  const [stage1Instructions, setStage1Instructions] = useState('');
+  const [stage1Ready, setStage1Ready] = useState(false);
 
-  const [stage2HintDeduction, setStage2HintDeduction] = useState(() => round1Service.getStage2Config().hintDeduction);
-  const [stage2Penalty, setStage2Penalty] = useState(() => round1Service.getStage2Config().incorrectClickPenalty);
+  const [stage2HintDeduction, setStage2HintDeduction] = useState(0);
+  const [stage2Penalty, setStage2Penalty] = useState(0);
 
-  const [stage3Code, setStage3Code] = useState(() => round1Service.getStage3Config().grave2.correctCode);
-  const [stage3FinalAnswer, setStage3FinalAnswer] = useState(() => round1Service.getStage3Config().finalGate.acceptedAnswer);
-  const [stage3Penalty, setStage3Penalty] = useState(() => round1Service.getStage3Config().incorrectAnswerPenalty);
+  const [stage3Code, setStage3Code] = useState('');
+  const [stage3FinalAnswer, setStage3FinalAnswer] = useState('');
+  const [stage3Penalty, setStage3Penalty] = useState(0);
 
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveStage1 = (e: React.FormEvent) => {
+  useEffect(() => {
+    void round1Api.adminConfig().then(({ configuration }) => {
+      setStage1Title(configuration.stage1.title); setStage1Desc(configuration.stage1.description);
+      setStage1Instructions(configuration.stage1.instructions); setStage1Ready(configuration.stage1.isReadyForPublication);
+      setStage2HintDeduction(configuration.stage2.hintDeduction); setStage2Penalty(configuration.stage2.incorrectClickPenalty);
+      setStage3Code(configuration.stage3.grave2.correctCode); setStage3FinalAnswer(configuration.stage3.finalGate.acceptedAnswer);
+      setStage3Penalty(configuration.stage3.incorrectAnswerPenalty);
+    }).catch((error: unknown) => setErrorMessage(error instanceof Error ? error.message : 'Could not load trusted puzzle configuration.'));
+  }, []);
+
+  const save = async (e: React.FormEvent, group: 'stage1' | 'stage2' | 'stage3', patch: Record<string, unknown>, label: string) => {
     e.preventDefault();
-    round1Service.updateStage1Config({
-      title: stage1Title,
-      description: stage1Desc,
-      instructions: stage1Instructions,
-      isReadyForPublication: stage1Ready,
-    });
-    setSaveMessage('Stage 1 Configuration Saved Successfully.');
-    setTimeout(() => setSaveMessage(null), 3000);
+    setSaving(true); setErrorMessage(null);
+    try { await round1Api.updateAdminConfig(group, patch); setSaveMessage(`${label} Configuration Saved Successfully.`); setTimeout(() => setSaveMessage(null), 3000); }
+    catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Configuration could not be saved.'); }
+    finally { setSaving(false); }
   };
 
-  const handleSaveStage2 = (e: React.FormEvent) => {
-    e.preventDefault();
-    round1Service.updateStage2Config({
+  const handleSaveStage1 = (e: React.FormEvent) => save(e, 'stage1', {
+      title: stage1Title, description: stage1Desc, instructions: stage1Instructions, isReadyForPublication: stage1Ready,
+    }, 'Stage 1');
+  const handleSaveStage2 = (e: React.FormEvent) => save(e, 'stage2', {
       hintDeduction: Number(stage2HintDeduction),
       incorrectClickPenalty: Number(stage2Penalty),
-    });
-    setSaveMessage('Stage 2 Configuration Saved Successfully.');
-    setTimeout(() => setSaveMessage(null), 3000);
-  };
-
-  const handleSaveStage3 = (e: React.FormEvent) => {
-    e.preventDefault();
-    const current = round1Service.getStage3Config();
-    round1Service.updateStage3Config({
-      grave2: {
-        ...current.grave2,
-        correctCode: stage3Code.trim(),
-      },
-      finalGate: {
-        ...current.finalGate,
-        acceptedAnswer: stage3FinalAnswer.trim().toUpperCase(),
-      },
-      incorrectAnswerPenalty: Number(stage3Penalty),
-    });
-    setSaveMessage('Stage 3 Configuration Saved Successfully.');
-    setTimeout(() => setSaveMessage(null), 3000);
-  };
+    }, 'Stage 2');
+  const handleSaveStage3 = (e: React.FormEvent) => save(e, 'stage3', {
+    correctCode: stage3Code.trim(), acceptedAnswer: stage3FinalAnswer.trim().toUpperCase(), incorrectAnswerPenalty: Number(stage3Penalty),
+  }, 'Stage 3');
 
   return (
     <div className="stone-panel rounded-xl p-5 border border-white/10 shadow-xl space-y-4">
@@ -74,6 +65,7 @@ export const AdminStageConfigPanel: React.FC = () => {
             {saveMessage}
           </span>
         )}
+        {errorMessage && <span role="alert" className="text-xs text-red-300">{errorMessage}</span>}
       </div>
 
       {/* Stage Selector Tabs */}
@@ -172,7 +164,7 @@ export const AdminStageConfigPanel: React.FC = () => {
             </label>
 
             <button
-              type="submit"
+              type="submit" disabled={saving}
               className="px-4 py-1.5 rounded bg-cartel-pumpkin text-cartel-void font-cinzel font-black text-xs uppercase"
             >
               Save Stage 1
@@ -225,7 +217,7 @@ export const AdminStageConfigPanel: React.FC = () => {
 
           <div className="flex justify-end pt-2">
             <button
-              type="submit"
+              type="submit" disabled={saving}
               className="px-4 py-1.5 rounded bg-cartel-amber text-cartel-void font-cinzel font-black text-xs uppercase"
             >
               Save Stage 2 Settings
@@ -286,7 +278,7 @@ export const AdminStageConfigPanel: React.FC = () => {
 
           <div className="flex justify-end pt-2">
             <button
-              type="submit"
+              type="submit" disabled={saving}
               className="px-4 py-1.5 rounded bg-cartel-cyan text-cartel-void font-cinzel font-black text-xs uppercase"
             >
               Save Stage 3 Settings

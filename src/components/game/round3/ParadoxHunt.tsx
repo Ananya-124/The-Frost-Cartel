@@ -4,6 +4,7 @@ import type { Round3StateResponse } from '../../../types/round3.types';
 import type { Round3RunState } from '../../../types/round3.types';
 import { round3Service } from '../../../services/round3Service';
 import { authService } from '../../../services/authService';
+import { progressionService, type TeamProgression } from '../../../services/progressionService';
 import { inventoryToPowerCards } from './runtime/inventoryCards';
 import GameScreen from './runtime/components/screens/GameScreen';
 import './runtime/styles/game.css';
@@ -51,8 +52,15 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
   const [run, setRun] = useState<Round3RunState | null>(null);
   const [playerNumber, setPlayerNumber] = useState<1 | 2 | null>(session.playerNumber ?? null);
   const [error, setError] = useState('');
-  const [testCardIds, setTestCardIds] = useState<TestPowerCardId[]>(() => readTestingInventory(session.teamName));
-  const [usedTestCards, setUsedTestCards] = useState<TestPowerCardId[]>(() => readUsedTestingCards(session.teamName));
+  const [progression, setProgression] = useState<TeamProgression | null>(null);
+  const [progressionError, setProgressionError] = useState('');
+  const [testCardIds, setTestCardIds] = useState<TestPowerCardId[]>(() => import.meta.env.DEV ? readTestingInventory(session.teamName) : []);
+  const [usedTestCards, setUsedTestCards] = useState<TestPowerCardId[]>(() => import.meta.env.DEV ? readUsedTestingCards(session.teamName) : []);
+
+  const refreshProgression = useCallback(async () => {
+    try { setProgression(await progressionService.getMine()); setProgressionError(''); }
+    catch (reason) { setProgressionError(reason instanceof Error ? reason.message : 'Could not refresh team progression.'); }
+  }, []);
 
   const connect = useCallback(async () => {
     setError('');
@@ -65,25 +73,25 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
       setState(sessionState);
       setRun(parseRunState(runState));
       setPlayerNumber(authenticatedPlayer);
+      void refreshProgression();
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'Could not open the Round 3 session.';
       setError(message.includes('No squad token') || message.includes('Authentication required')
         ? 'Your browser session is not connected to the game server. Sign out, then log in again with the backend running.'
         : message);
     }
-  }, [session.playerNumber]);
+  }, [session.playerNumber, refreshProgression]);
 
   useEffect(() => { void connect(); }, [connect]);
 
-  const loadDevelopmentSample = async () => {
-    setError('');
-    try { setState(await round3Service.loadDevelopmentSample()); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Round 3 action failed.'); }
-  };
-
   const saveGameState = useCallback((gameState: unknown) => round3Service.saveGameState(gameState), []);
-  const completeHunt = useCallback(() => round3Service.completeHunt(), []);
+  const completeHunt = useCallback(async () => {
+    const result = await round3Service.completeHunt();
+    await refreshProgression();
+    return result;
+  }, [refreshProgression]);
   const handleTestingCardUsed = useCallback((id: TestPowerCardId) => {
+    if (!import.meta.env.DEV) return;
     setUsedTestCards(markTestingCardUsed(session.teamName, id));
   }, [session.teamName]);
 
@@ -91,11 +99,13 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
     return (
       <div className="ph-game-root">
         <GameScreen
+          teamId={session.teamId}
           teamName={session.teamName}
           cards={testCardIds.length ? cardsFromTestingInventory(testCardIds, usedTestCards) : inventoryToPowerCards(state.inventory)}
           testingCardIds={testCardIds}
           onTestingCardUsed={handleTestingCardUsed}
           onToggleTestingCard={(id) => setTestCardIds((current) => {
+            if (!import.meta.env.DEV) return current;
             const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
             if (!next.includes(id)) setUsedTestCards((used) => {
               const nextUsed = used.filter((value) => value !== id);
@@ -108,12 +118,14 @@ export const ParadoxHunt: React.FC<ParadoxHuntProps> = ({ session, onReturnHome 
           inventory={state.inventory}
           savedGameState={state.session.playerProgress.engine}
           initialRun={run}
-          externalError={error}
+          huntProgression={progression?.hunts ?? []}
+          onProgressionRefresh={refreshProgression}
+          externalError={error || progressionError}
           onExit={onReturnHome}
           onSaveGameState={saveGameState}
           onComplete={completeHunt}
-          onLoadDevelopmentSample={() => { void loadDevelopmentSample(); }}
         />
+        {progressionError && <button type="button" onClick={() => { void refreshProgression(); }} className="fixed bottom-20 right-3 z-[25] rounded border border-amber-400/60 bg-black/90 px-3 py-2 text-xs text-amber-100 shadow-lg">Progression status unavailable · Retry</button>}
       </div>
     );
   }

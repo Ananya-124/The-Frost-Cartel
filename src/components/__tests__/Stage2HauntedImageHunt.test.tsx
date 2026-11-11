@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Stage2HauntedImageHunt } from '../game/stage2/Stage2HauntedImageHunt';
 import { round1Service } from '../../services/round1Service';
 
@@ -15,6 +15,17 @@ describe('Stage 2: The Haunted Image Hunt Component', () => {
     round1Service.beginRound1('test_team_s2', 'Hunt Masters');
   });
 
+  const onAction = vi.fn(async (type: string) => ({
+    success: true,
+    penalty: 0,
+    deduction: 15,
+    imageId: round1Service.getStage2Config().images[0].id,
+    session: {
+      stage2State: { foundTargetIds: type === 'stage2.discover' ? [round1Service.getStage2Config().targets[0].id] : [] },
+      stages: { 'stage-2': { status: 'in_progress' } },
+    },
+  }));
+
   it('renders target checklist, scattered photos, and hud controls', () => {
     const config = round1Service.getStage2Config();
     render(
@@ -22,6 +33,8 @@ describe('Stage 2: The Haunted Image Hunt Component', () => {
         teamId="test_team_s2"
         config={config}
         initialFoundTargetIds={[]}
+        secondsRemaining={1200}
+        onAction={onAction}
         isCompleted={false}
         onReturnDashboard={mockReturn}
         onSkipStage={mockSkip}
@@ -36,13 +49,15 @@ describe('Stage 2: The Haunted Image Hunt Component', () => {
     expect(screen.getByText('The Alchemist\'s Crypt')).toBeInTheDocument();
   });
 
-  it('opens enlarged image viewer and discovers target object on click', () => {
+  it('opens enlarged image viewer and discovers target object on click', async () => {
     const config = round1Service.getStage2Config();
     render(
       <Stage2HauntedImageHunt
         teamId="test_team_s2"
         config={config}
         initialFoundTargetIds={[]}
+        secondsRemaining={1200}
+        onAction={onAction}
         isCompleted={false}
         onReturnDashboard={mockReturn}
         onSkipStage={mockSkip}
@@ -61,7 +76,7 @@ describe('Stage 2: The Haunted Image Hunt Component', () => {
     fireEvent.click(pumpkinHotspot);
 
     // Should update discovered count
-    expect(screen.getByText(/OBJECTS DISCOVERED: 1 \/ 12/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/OBJECTS DISCOVERED: 1 \/ 12/i)).toBeInTheDocument());
 
     // Clicking already discovered target does not duplicate
     fireEvent.click(pumpkinHotspot);
@@ -75,6 +90,8 @@ describe('Stage 2: The Haunted Image Hunt Component', () => {
         teamId="test_team_s2"
         config={config}
         initialFoundTargetIds={[]}
+        secondsRemaining={1200}
+        onAction={onAction}
         isCompleted={false}
         onReturnDashboard={mockReturn}
         onSkipStage={mockSkip}
@@ -101,6 +118,8 @@ describe('Stage 2: The Haunted Image Hunt Component', () => {
         teamId="test_team_s2"
         config={config}
         initialFoundTargetIds={[]}
+        secondsRemaining={1200}
+        onAction={onAction}
         isCompleted={false}
         onReturnDashboard={mockReturn}
         onSkipStage={mockSkip}

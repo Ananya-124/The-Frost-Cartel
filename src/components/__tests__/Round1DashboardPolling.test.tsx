@@ -1,0 +1,50 @@
+import '@testing-library/jest-dom/vitest';
+import { act, render, screen } from '@testing-library/react';
+import React, { useState } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Round1Dashboard } from '../game/Round1Dashboard';
+import { Round1Service } from '../../services/round1Service';
+import { round1Api, type Round1StateResponse } from '../../services/round1ApiService';
+import type { TeamSession } from '../../types/team.types';
+
+vi.mock('../../services/round1ApiService', () => ({ round1Api: { getState: vi.fn(), action: vi.fn() } }));
+
+describe('Round 1 state polling', () => {
+  afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
+
+  it('keeps one thirty-second recovery poll even when the parent recreates the credit callback', async () => {
+    vi.useFakeTimers();
+    const game = new Round1Service();
+    const gameSession = game.getTeamSession('poll-team', 'Polling Team');
+    const state = {
+      success: true,
+      round: { id: 1, name: 'The Graveyard Escape', isActive: true, totalDurationSeconds: 1320, remainingSeconds: 1320 },
+      team: { score: 0, totalCredits: 500, maxCredits: 500, isPaused: false },
+      session: gameSession,
+      config: { stage1: game.getStage1Config(), stage2: game.getStage2Config(), stage3: game.getStage3Config() },
+    } as Round1StateResponse;
+    vi.mocked(round1Api.getState).mockResolvedValue(state);
+
+    const Wrapper = () => {
+      const [session, setSession] = useState({ teamId: 'poll-team', teamName: 'Polling Team', credits: 500 } as TeamSession);
+      return <Round1Dashboard session={session} onReturnHome={() => undefined} onUpdateCredits={(credits) => setSession((current) => ({ ...current, credits }))} />;
+    };
+
+    render(<Wrapper />);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+    expect(round1Api.getState).toHaveBeenCalledTimes(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+    expect(round1Api.getState).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(round1Api.getState).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows a retryable error instead of crashing on an incomplete state response', async () => {
+    vi.mocked(round1Api.getState).mockResolvedValue({ success: true } as Round1StateResponse);
+    const session = { teamId: 'bad-state-team', teamName: 'Incomplete Response' } as TeamSession;
+    render(<Round1Dashboard session={session} onReturnHome={() => undefined} onUpdateCredits={() => undefined} />);
+    expect(await screen.findByText(/server returned incomplete game state/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+});

@@ -9,7 +9,8 @@ export interface TeamSession {
   playerNumber?: 1 | 2;
   player1Name?: string;
   player2Name?: string;
-  credits: number;
+  /** Spendable wallet credits; null until the server's wallet field is available. */
+  credits: number | null;
   currentRound: number;
   gameStatus: TeamStatus;
   loginTime: string;

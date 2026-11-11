@@ -3,11 +3,12 @@ import type { Round3RunState, Round3StateResponse, Round3Timeline } from '../typ
 import type { Hunt1ActionResult } from '../types/hunt1.types';
 import type { Hunt2ActionResult } from '../types/hunt2.types';
 import type { Hunt3ActionResult, Hunt3Actor, Hunt3State } from '../types/hunt3.types';
+import { apiUrl } from './apiBaseUrl';
 
-const API = `${import.meta.env.VITE_API_URL ?? ''}/api/round3`;
+const API = '/api/round3';
 
 async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const response = await fetch(`${API}${path}`, {
+  const response = await fetch(apiUrl(`${API}${path}`), {
     method,
     credentials: 'include',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
@@ -41,19 +42,121 @@ export const round3Service = {
     });
   },
   discoverEvidence: (evidenceId: string) => call<{ success: boolean; evidenceDiscoveries: string[] }>(`/evidence/${encodeURIComponent(evidenceId)}/discover`, 'POST', {}),
-  activateCard: (cardId: Round3CardId, source?: 'auction' | 'development') => call<{ success: boolean; state: Round3StateResponse }>(`/cards/${cardId}/activate`, 'POST', { source }),
+  activateCard: (() => {
+    const pending = new Map<string, Promise<{ success: boolean; usage: { remainingQuantity: number }; state: Round3StateResponse }>>();
+    const requestIds = new Map<string, string>();
+    const storageKey = (key: string) => `frost:round3:card-activation:${encodeURIComponent(key)}`;
+    return (cardId: Round3CardId, source?: 'auction' | 'development' | 'admin') => {
+      const key = `${cardId}:${source ?? 'any'}`;
+      const current = pending.get(key);
+      if (current) return current;
+      let requestId: string;
+      try { requestId = sessionStorage.getItem(storageKey(key)) ?? requestIds.get(key) ?? crypto.randomUUID(); }
+      catch { requestId = requestIds.get(key) ?? crypto.randomUUID(); }
+      requestIds.set(key, requestId);
+      try { sessionStorage.setItem(storageKey(key), requestId); } catch { /* Server-side inventory remains authoritative. */ }
+      const request = call<{ success: boolean; usage: { remainingQuantity: number }; state: Round3StateResponse }>(`/cards/${cardId}/activate`, 'POST', { source, requestId })
+        .then((result) => {
+          requestIds.delete(key);
+          try { if (sessionStorage.getItem(storageKey(key)) === requestId) sessionStorage.removeItem(storageKey(key)); } catch { /* A stale id is safely deduplicated by the server. */ }
+          return result;
+        })
+        .finally(() => pending.delete(key));
+      pending.set(key, request);
+      return request;
+    };
+  })(),
   loadDevelopmentSample: () => call<Round3StateResponse>('/development/sample-inventory', 'POST', {}),
   completeHunt: () => call<{ success: boolean; completed: boolean; completedAt: string }>('/complete', 'POST', {}),
   openHunt1Session: () => call<{ success: boolean; state: import('../types/hunt1.types').Hunt1State }>('/hunt1/session', 'POST', {}),
   getHunt1State: () => call<{ success: boolean; state: import('../types/hunt1.types').Hunt1State }>('/hunt1/state'),
-  hunt1Action: (action: { type: string; actor: string; objectId?: string; value?: unknown }) =>
-    call<Hunt1ActionResult>('/hunt1/action', 'POST', action),
+  hunt1Action: (() => {
+    const pending = new Map<string, { actionId: string; promise?: Promise<Hunt1ActionResult> }>();
+    const storageKey = (key: string) => `frost:round3:hunt1:pending:${encodeURIComponent(key)}`;
+    const readStoredId = (key: string) => {
+      try { return typeof sessionStorage === 'undefined' ? undefined : sessionStorage.getItem(storageKey(key)) ?? undefined; }
+      catch { return undefined; }
+    };
+    const storeId = (key: string, id: string) => {
+      try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(storageKey(key), id); }
+      catch { /* the server remains the authority if browser storage is unavailable */ }
+    };
+    const clearStoredId = (key: string, id: string) => {
+      try { if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(storageKey(key)) === id) sessionStorage.removeItem(storageKey(key)); }
+      catch { /* a stale ID remains safe because the server deduplicates it */ }
+    };
+    return (action: { type: string; actor: string; objectId?: string; value?: unknown; actionId?: string }) => {
+      const key = JSON.stringify({ type: action.type, actor: action.actor, objectId: action.objectId, value: action.value });
+      const existing = pending.get(key);
+      if (existing?.promise) return existing.promise;
+      const actionId = action.actionId ?? existing?.actionId ?? readStoredId(key) ?? crypto.randomUUID();
+      storeId(key, actionId);
+      const promise = call<Hunt1ActionResult>('/hunt1/action', 'POST', { ...action, actionId })
+        .then((result) => { if (pending.get(key)?.actionId === actionId) pending.delete(key); clearStoredId(key, actionId); return result; })
+        .catch((error: unknown) => { pending.set(key, { actionId }); throw error; });
+      // Keep the same ID after transport failures so a retry cannot duplicate a committed action.
+      pending.set(key, { actionId, promise });
+      return promise;
+    };
+  })(),
   openHunt2Session: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/session', 'POST', { sharedView: true }),
   getHunt2State: () => call<{ success: boolean; state: import('../types/hunt2.types').Hunt2State }>('/hunt2/state?sharedView=true'),
-  hunt2Action: (action: { type: string; actor: string; objectId?: string; value?: unknown }) =>
-    call<Hunt2ActionResult>('/hunt2/action', 'POST', action),
-  openHunt3Session: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/session', 'POST', {}),
-  getHunt3State: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/state'),
-  hunt3Action: (actor: Hunt3Actor, action: { type: string; id: string; value?: unknown }) =>
-    call<Hunt3ActionResult>('/hunt3/action', 'POST', { ...action, actor }),
+  hunt2Action: (() => {
+    const pending = new Map<string, { actionId: string; promise?: Promise<Hunt2ActionResult> }>();
+    const storageKey = (key: string) => `frost:round3:hunt2:pending:${encodeURIComponent(key)}`;
+    const readStoredId = (key: string) => {
+      try { return typeof sessionStorage === 'undefined' ? undefined : sessionStorage.getItem(storageKey(key)) ?? undefined; }
+      catch { return undefined; }
+    };
+    const storeId = (key: string, id: string) => {
+      try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(storageKey(key), id); }
+      catch { /* server-side idempotency still protects actions */ }
+    };
+    const clearStoredId = (key: string, id: string) => {
+      try { if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(storageKey(key)) === id) sessionStorage.removeItem(storageKey(key)); }
+      catch { /* stale action IDs remain deduplicated on the server */ }
+    };
+    return (action: { type: string; actor: string; objectId?: string; value?: unknown; actionId?: string }) => {
+      const key = JSON.stringify({ type: action.type, actor: action.actor, objectId: action.objectId, value: action.value });
+      const existing = pending.get(key);
+      if (existing?.promise) return existing.promise;
+      const actionId = action.actionId ?? existing?.actionId ?? readStoredId(key) ?? crypto.randomUUID();
+      storeId(key, actionId);
+      const promise = call<Hunt2ActionResult>('/hunt2/action', 'POST', { ...action, actionId })
+        .then((result) => { if (pending.get(key)?.actionId === actionId) pending.delete(key); clearStoredId(key, actionId); return result; })
+        .catch((error: unknown) => { pending.set(key, { actionId }); throw error; });
+      pending.set(key, { actionId, promise });
+      return promise;
+    };
+  })(),
+  openHunt3Session: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/session', 'POST', { sharedView: true }),
+  getHunt3State: () => call<{ success: boolean; state: Hunt3State }>('/hunt3/state?sharedView=true'),
+  hunt3Action: (() => {
+    const pending = new Map<string, { actionId: string; promise?: Promise<Hunt3ActionResult> }>();
+    const storageKey = (key: string) => `frost:round3:hunt3:pending:${encodeURIComponent(key)}`;
+    const readStoredId = (key: string) => {
+      try { return typeof sessionStorage === 'undefined' ? undefined : sessionStorage.getItem(storageKey(key)) ?? undefined; }
+      catch { return undefined; }
+    };
+    const storeId = (key: string, id: string) => {
+      try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(storageKey(key), id); }
+      catch { /* server-side idempotency still protects actions */ }
+    };
+    const clearStoredId = (key: string, id: string) => {
+      try { if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(storageKey(key)) === id) sessionStorage.removeItem(storageKey(key)); }
+      catch { /* stale action IDs remain deduplicated on the server */ }
+    };
+    return (actor: Hunt3Actor, action: { type: string; id: string; value?: unknown; actionId?: string }) => {
+      const key = JSON.stringify({ type: action.type, id: action.id, actor, value: action.value });
+      const existing = pending.get(key);
+      if (existing?.promise) return existing.promise;
+      const actionId = action.actionId ?? existing?.actionId ?? readStoredId(key) ?? crypto.randomUUID();
+      storeId(key, actionId);
+      const promise = call<Hunt3ActionResult>('/hunt3/action', 'POST', { ...action, actor, actionId, sharedView: true })
+        .then((result) => { if (pending.get(key)?.actionId === actionId) pending.delete(key); clearStoredId(key, actionId); return result; })
+        .catch((error: unknown) => { pending.set(key, { actionId }); throw error; });
+      pending.set(key, { actionId, promise });
+      return promise;
+    };
+  })(),
 };

@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Stage3Config } from '../../../types/round1.types';
-import { round1Service } from '../../../services/round1Service';
+import type { Round1ActionResponse } from '../../../services/round1ApiService';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
+import type { Round1TimerStore } from '../round1TimerStore';
 import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
 
 interface Grave2BuriedDiaryProps {
   teamId: string;
+  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   config: Stage3Config;
   collectedFragments: string[];
   dugSoils: string[];
   isCofferUnlocked: boolean;
-  secondsRemaining: number;
+  timerStore: Round1TimerStore;
   stageCleared: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -220,12 +222,13 @@ export const TARGET_REGISTRY: Record<string, ImageEvidenceTarget> = Object.fromE
 );
 
 export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
-  teamId,
+  teamId: _teamId,
+  onAction,
   config: _config,
   collectedFragments,
   dugSoils: _dugSoils,
   isCofferUnlocked,
-  secondsRemaining,
+  timerStore,
   stageCleared,
   isMuted,
   onToggleMute,
@@ -301,7 +304,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
   };
 
   // Combination submission
-  const handleUnlock = (e?: React.FormEvent) => {
+  const handleUnlock = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isCofferUnlocked) {
       setIsChestRewardOpen(true);
@@ -310,13 +313,16 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
 
     soundController.playClick();
     const code = digits.join('');
-    const { success } = round1Service.unlockGrave2Coffer(teamId, code);
+    let result: Round1ActionResponse;
+    try { result = await onAction('stage3.unlockCoffer', { code }); }
+    catch (error) { setCofferError(true); showToast(error instanceof Error ? error.message : 'The coffer could not be checked.'); return; }
+    const success = Boolean(result.success);
 
-    if (success || code === '1749') {
+    if (success) {
       soundController.playDiscover();
       onCofferUnlocked();
       if (!collectedFragments.includes('EMBER')) {
-        onFragmentUnlocked('EMBER');
+        onFragmentUnlocked(String(result.fragment ?? 'EMBER'));
       }
       setCofferError(false);
       setIsChestRewardOpen(true);
@@ -324,7 +330,8 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
     } else {
       soundController.playError();
       setCofferError(true);
-      showToast('The tumblers jam. The year remains lost to time.');
+      const penalty = Math.abs(Number(result.creditsDelta ?? 0));
+      showToast(`The tumblers jam. The year remains lost to time.${penalty ? ` (-${penalty} CR)` : ''}`);
       setTimeout(() => setCofferError(false), 1500);
     }
   };
@@ -551,7 +558,7 @@ export const Grave2BuriedDiary: React.FC<Grave2BuriedDiaryProps> = ({
       {/* 4. Top Header HUD (Single source of truth) */}
       <CoffinHeaderHUD
         title="THE BURIED DIARY"
-        secondsRemaining={secondsRemaining}
+        timerStore={timerStore}
         stageCleared={stageCleared}
         isMuted={isMuted}
         onToggleMute={onToggleMute}

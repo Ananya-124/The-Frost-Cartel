@@ -1,6 +1,6 @@
 export type Round1Status = 'not_started' | 'running' | 'paused' | 'completed';
 
-export type CurrentRound = 'Round 1' | 'Round 2';
+export type CurrentRound = 'Round 1' | 'Round 2' | 'Round 3' | 'Round 4';
 
 export type StageId = 'stage-1' | 'stage-2' | 'stage-3';
 
@@ -22,7 +22,7 @@ export interface RoundConfig {
   title: string;
   tagline: string;
   statusText: string;
-  statusBadge: 'active' | 'upcoming' | 'locked';
+  statusBadge: 'active' | 'upcoming' | 'locked' | 'completed';
   duration: string;
   bounty: string;
   teamFormat: string;

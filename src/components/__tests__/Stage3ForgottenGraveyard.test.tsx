@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Stage3ForgottenGraveyard } from '../game/stage3/Stage3ForgottenGraveyard';
 import { round1Service } from '../../services/round1Service';
 
@@ -15,12 +15,25 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     round1Service.beginRound1('test_team_s3', 'Graveyard Walkers');
   });
 
+  const serverSession = () => round1Service.getTeamSession('test_team_s3', 'Graveyard Walkers');
+  const onAction = vi.fn(async (type: string) => {
+    const session = serverSession();
+    if (type === 'stage3.solveRiddle') session.stage3State.grave1RiddleSolved = true;
+    if (type === 'stage3.unlockChest') session.stage3State.grave1ChestUnlocked = true;
+    if (type === 'stage3.unlockCoffer') session.stage3State.grave2CofferUnlocked = true;
+    if (type === 'stage3.finalAnswer') session.stage3State.isGateUnlocked = true;
+    return { success: true, message: 'Accepted', fragment: 'BENEATH', session, score: session.credits, completed: false };
+  });
+
   it('renders graveyard grounds overview and grave navigation options', () => {
     const config = round1Service.getStage3Config();
     render(
       <Stage3ForgottenGraveyard
         teamId="test_team_s3"
         config={config}
+        initialSession={serverSession()}
+        secondsRemaining={1200}
+        onAction={onAction}
         initialCollectedFragments={[]}
         isCompleted={false}
         onReturnDashboard={mockReturn}
@@ -37,13 +50,15 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     expect(screen.getByText('The Rune Tombstone')).toBeInTheDocument();
   });
 
-  it('allows navigating to Grave 1, reading scripture, solving riddle, and unlocking chest', () => {
-    sessionStorage.setItem('frost_cartel_coffin1_opened', 'true');
+  it('allows navigating to Grave 1, reading scripture, solving riddle, and unlocking chest', async () => {
     const config = round1Service.getStage3Config();
     render(
       <Stage3ForgottenGraveyard
         teamId="test_team_s3"
         config={config}
+        initialSession={serverSession()}
+        secondsRemaining={1200}
+        onAction={onAction}
         initialCollectedFragments={[]}
         isCompleted={false}
         onReturnDashboard={mockReturn}
@@ -86,26 +101,28 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     fireEvent.change(input, { target: { value: 'ASH' } });
     fireEvent.click(unsealBtn);
 
-    expect(screen.getByText(/✓ RIDDLE SOLVED/i)).toBeInTheDocument();
+    expect(await screen.findByText(/✓ RIDDLE SOLVED/i)).toBeInTheDocument();
 
     // 3. Unlock with Skeleton Key
     const keyBtn = screen.getByRole('button', { name: /Antique Brass Skeleton Key/i });
     fireEvent.click(keyBtn);
 
     // 4. Open Chest
-    const chestBtn = screen.getByRole('button', { name: /Open unlocked treasure chest/i });
+    const chestBtn = await screen.findByRole('button', { name: /Open unlocked treasure chest/i });
     fireEvent.click(chestBtn);
 
-    expect(screen.getAllByText(/BENEATH/i).length).toBeGreaterThanOrEqual(1);
+    expect((await screen.findAllByText(/BENEATH/i)).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('allows navigating to Grave 2, reading diary, inspecting clues, and unlocking coffer with 1749', () => {
-    sessionStorage.setItem('frost_cartel_coffin2_opened', 'true');
+  it('allows navigating to Grave 2, reading diary, inspecting clues, and unlocking coffer with 1749', async () => {
     const config = round1Service.getStage3Config();
     render(
       <Stage3ForgottenGraveyard
         teamId="test_team_s3"
         config={config}
+        initialSession={serverSession()}
+        secondsRemaining={1200}
+        onAction={onAction}
         initialCollectedFragments={[]}
         isCompleted={false}
         onReturnDashboard={mockReturn}
@@ -154,16 +171,20 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     fireEvent.click(unlockBtn);
 
     // Verify Fragment II EMBER unsealed
-    expect(screen.getByText('EMBER')).toBeInTheDocument();
+    expect(await screen.findByText('EMBER')).toBeInTheDocument();
     expect(screen.getByText(/COVENANT YEAR 1749 UNLOCKED/i)).toBeInTheDocument();
   });
 
-  it('toggles evidence journal drawer', () => {
+  it('toggles evidence journal drawer', async () => {
     const config = round1Service.getStage3Config();
+    serverSession().stage3State.collectedFragments = ['THE'];
     render(
       <Stage3ForgottenGraveyard
         teamId="test_team_s3"
         config={config}
+        initialSession={serverSession()}
+        secondsRemaining={1200}
+        onAction={onAction}
         initialCollectedFragments={['THE']}
         isCompleted={false}
         onReturnDashboard={mockReturn}
@@ -176,7 +197,7 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     fireEvent.click(journalBtn);
 
     expect(screen.getByText('EVIDENCE JOURNAL')).toBeInTheDocument();
-    expect(screen.getByText('THE')).toBeInTheDocument();
+    expect(await screen.findByText('THE')).toBeInTheDocument();
 
     const closeBtn = screen.getByRole('button', { name: /✕ Close/i });
     fireEvent.click(closeBtn);
@@ -184,12 +205,15 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     expect(screen.queryByText('EVIDENCE JOURNAL')).not.toBeInTheDocument();
   });
 
-  it('submits final gate incantation and unlocks gate', () => {
+  it('submits final gate incantation and unlocks gate', async () => {
     const config = round1Service.getStage3Config();
     render(
       <Stage3ForgottenGraveyard
         teamId="test_team_s3"
         config={config}
+        initialSession={serverSession()}
+        secondsRemaining={1200}
+        onAction={onAction}
         initialCollectedFragments={['THE', 'NIGHT', 'RETURNS']}
         isCompleted={false}
         onReturnDashboard={mockReturn}
@@ -209,7 +233,7 @@ describe('Stage 3: The Forgotten Graveyard Component', () => {
     fireEvent.change(input, { target: { value: 'THE NIGHT RETURNS' } });
     fireEvent.click(submitBtn);
 
-    expect(mockComplete).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Arch-Lich Gate Shattered • Escaped!/i)).toBeInTheDocument();
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/Arch-Lich Gate Shattered • Escaped!/i)).toBeInTheDocument();
   });
 });

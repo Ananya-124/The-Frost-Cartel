@@ -57,9 +57,7 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
   };
 
   // Calculate solved clues count for current route
-  const solvedCountInRoute = currentRoute.steps.filter((s) =>
-    progress.solvedStepIds.includes(s.stepId)
-  ).length;
+  const solvedCountInRoute = progress.solvedStepIds.length;
 
   return (
     <aside

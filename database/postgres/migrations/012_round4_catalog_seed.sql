@@ -1,0 +1,56 @@
+-- Seed the Round 4 route/clue catalog from database/db.ts seedRound4Data().
+-- Deliberately does not release the round or create qualifications, progress, or a winner.
+
+INSERT INTO round4_routes (id, route_number, roman_numeral, route_name, route_subtitle)
+VALUES
+  ('route-1', 1, 'I', 'Route I', 'The Celestial Meridian & Solar Horizon'),
+  ('route-2', 2, 'II', 'Route II', 'The Cartographer''s Traverse'),
+  ('route-3', 3, 'III', 'Route III', 'The Alchemical Cryptogram'),
+  ('route-4', 4, 'IV', 'Route IV', 'The Scriptorium Cipher'),
+  ('route-5', 5, 'V', 'Route V', 'The Platinum Block Chronology'),
+  ('route-6', 6, 'VI', 'Route VI', 'The Astronomer''s Needle'),
+  ('route-7', 7, 'VII', 'Route VII', 'The Keystone Pilgrimage')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO round4_steps (
+  id, route_id, clue_index, floor_id, location_name, target_x, target_y,
+  trigger_radius, riddle_text, field_location_hint, accepted_answers,
+  is_case_sensitive, is_common_final
+)
+VALUES
+  ('r1_s1', 'route-1', 1, 'floor-7', 'Lecture Hall 701 — North Slate', 500, 130, 36, 'Where the lecturer’s chalk marks the morning equinox, find the brass inscription engraved beneath the northern slate.', 'Level 07 • Room 701 (Lecture Hall) • Northern Chalkboard Frame', '["RIVET7","EQUINOX","701"]'::jsonb, false, false),
+  ('r1_s2', 'route-1', 2, 'floor-7', 'Central Atrium — Mosaic Compass Rose', 280, 260, 36, 'Stand upon the carved marble needle pointing to true north. Read the four Roman initials etched into the bronze meridian ring.', 'Level 07 • Central Courtyard Balcony • Bronze Floor Meridian', '["MERIDIAN","NORTH","AZIMUTH"]'::jsonb, false, false),
+  ('r1_s3', 'route-1', 3, 'floor-7', 'Informatics Bay — Terminal 04', 155, 330, 36, 'Behind the fourth workstation where cathode screens once hummed, discover the serial number stamped into the metal chassis.', 'Level 07 • Room 704 (Computer Lab) • Terminal 04 Chassis Tag', '["BAY4","SILICON","TERMINAL"]'::jsonb, false, false),
+  ('r1_s4', 'route-1', 4, 'floor-7', 'Western Reading Hall — Antiquities Cabinet', 165, 135, 36, 'Between folio volumes of 1947 and 1952, a locked wooden vitrine holds the founder’s surveying compass. Enter its calibration year.', 'Level 07 • Room 702 (Western Reading Hall) • Vitrine Plaque', '["1947","COMPASS","PLATINUM"]'::jsonb, false, false),
+  ('r1_s5', 'route-1', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'Ascend the ceremonial stairs to the observatory doorway. The keystone bears a winged cipher. Decode the three letters.', 'Level 07 • North Archway • Final Keystone Inscription', '["BSN","KEYSTONE","APEX"]'::jsonb, false, true),
+  ('r2_s1', 'route-2', 1, 'floor-6', 'Astrolabe Draft Station', 420, 140, 36, 'On the curved drafting desk overlooking the canopy, count the radial degrees etched on the brass protractor.', 'Level 06 • East Scriptorium • Drafting Desk 02', '["180","RADIAL","CHART"]'::jsonb, false, false),
+  ('r2_s2', 'route-2', 2, 'floor-6', 'Architectural Archive Stacks — Aisle D', 135, 150, 36, 'Follow shelf column D to the blue binding titled "Structural Elevations 1965". What is the folio stamp number?', 'Level 06 • Archive Room • Shelf Column D', '["65D","BLUE","ELEVATION"]'::jsonb, false, false),
+  ('r2_s3', 'route-2', 3, 'floor-6', 'Faculty Seminar Room — Podium Drawer', 490, 310, 36, 'Beneath the mahogany lecturer podium, a brass plate conceals a four-letter guild motto.', 'Level 06 • Room 603 (Seminar Hall) • Podium Base', '["LUX","ORDO","MIND"]'::jsonb, false, false),
+  ('r2_s4', 'route-2', 4, 'floor-6', 'Southern Balcony Balustrade', 280, 360, 36, 'Look towards the courtyard fountain from the stone railing. The southern plinth holds an iron mason mark.', 'Level 06 • South Colonnade • Balustrade Stone Center', '["MASON","PLINTH","STONE"]'::jsonb, false, false),
+  ('r2_s5', 'route-2', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'At the high skylight alignment, count the brass celestial rings suspended beneath the dome.', 'Level 07 • North Archway • Final Celestial Dome Rings', '["SEVEN","ORBIT","CELESTIAL"]'::jsonb, false, true),
+  ('r3_s1', 'route-3', 1, 'floor-5', 'Organic Synthesis Lab — Cabinet 09', 140, 140, 36, 'Inside the copper reagent cabinet, locate bottle labeled with the atomic weight of silver.', 'Level 05 • Room 501 • Copper Reagent Locker', '["108","ARGENTUM","SILVER"]'::jsonb, false, false),
+  ('r3_s2', 'route-3', 2, 'floor-5', 'Analytical Balance Chamber', 220, 320, 36, 'On the vibration-free granite slab, calibrate the balance needle to read the zero point tare value.', 'Level 05 • Balance Niche • Granite Calibration Plate', '["TARE","ZERO","BALANCE"]'::jsonb, false, false),
+  ('r3_s3', 'route-3', 3, 'floor-5', 'Central Corridor — Herbarium Display', 380, 220, 36, 'Examine the dried belladonna leaf mounted in the botanical frame. Identify the collector’s field number.', 'Level 05 • Center Hall • Glass Vitrine 03', '["BELL42","NIGHTSHADE","FLORA"]'::jsonb, false, false),
+  ('r3_s4', 'route-3', 4, 'floor-5', 'East Distillation Tower', 505, 280, 36, 'Where condensers rise through the mezzanine ceiling, count the cooling coils wrapped in brass wire.', 'Level 05 • East Lab • Condenser Column 01', '["TWELVE","12","SPIRAL"]'::jsonb, false, false),
+  ('r3_s5', 'route-3', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'Before the vault threshold, decipher the Latin motto carved into the archway lintel.', 'Level 07 • North Archway • Final Lintel Inscription', '["VERITAS","ARCHWAY","LINTEL"]'::jsonb, false, true),
+  ('r4_s1', 'route-4', 1, 'floor-4', 'Manuscript Conservation Lab', 440, 130, 36, 'On the illuminated parchment easel, align the watermark grid with the golden ratio cipher.', 'Level 04 • Conservation Lab • Easel 01', '["PHI","WATERMARK","1618"]'::jsonb, false, false),
+  ('r4_s2', 'route-4', 2, 'floor-4', 'Rare Bindings Stack — Row 14', 150, 230, 36, 'Locate the heavy leather-bound ledger labeled "Faculty Minutes 1958". What is the monogram on the brass clasp?', 'Level 04 • Stack 14 • Brass Clasp', '["FMC","MONOGRAM","CLASP"]'::jsonb, false, false),
+  ('r4_s3', 'route-4', 3, 'floor-4', 'Central Scriptorium — Great Oak Table', 280, 270, 36, 'Carved into the underside of the central oak table is an eight-digit grid coordinate.', 'Level 04 • Center Reading Table • Underside Plaque', '["884126","COORD","CENTRAL"]'::jsonb, false, false),
+  ('r4_s4', 'route-4', 4, 'floor-4', 'Printing Press Exhibition', 495, 330, 36, 'The cast-iron Gutenberg reproduction lever points to a letter case. What metal typeset letter is locked inside?', 'Level 04 • East Annex • Press Bed Frame', '["OMEGA","LEVER","TYPE"]'::jsonb, false, false),
+  ('r4_s5', 'route-4', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'On the bronze astrolabe pedestal in the final chamber, note the meridian angle.', 'Level 07 • North Archway • Final Astrolabe Pedestal', '["ANGLE360","MERIDIAN","ZENITH"]'::jsonb, false, true),
+  ('r5_s1', 'route-5', 1, 'floor-3', 'Dean of Engineering Suite — Fireplace Mantle', 160, 130, 36, 'Behind the brass clock on the ceremonial stone mantle, find the founder’s initials stamped into the brickwork.', 'Level 03 • Room 301 • Mantle Clock', '["BSN1962","MANTLE","CLOCK"]'::jsonb, false, false),
+  ('r5_s2', 'route-5', 2, 'floor-3', 'Civil Engineering Materials Lab', 480, 140, 36, 'The hydraulic press pressure dial has a red calibration tick. Enter the maximum metric tonnage.', 'Level 03 • Materials Lab • Pressure Gauge', '["500T","HYDRAULIC","PRESSURE"]'::jsonb, false, false),
+  ('r5_s3', 'route-5', 3, 'floor-3', 'Founders Memorial Gallery', 280, 260, 36, 'Read the fifth line inscribed on the foundation bronze tablet unveiled in 1962.', 'Level 03 • Central Gallery • Bronze Plaque', '["DEDICATION","FOUNDATION","1962"]'::jsonb, false, false),
+  ('r5_s4', 'route-5', 4, 'floor-3', 'Surveying Instrument Armory', 180, 340, 36, 'Inside the transit theodolite case #3, find the serial number on the optical prism barrel.', 'Level 03 • Armory Locker 03 • Theodolite Case', '["PRISM03","TRANSIT","OPTIC"]'::jsonb, false, false),
+  ('r5_s5', 'route-5', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'The observatory ledger rests upon the central lectern. Read the final accession date.', 'Level 07 • North Archway • Final Central Lectern', '["1974","ARCHIVE","RECORD"]'::jsonb, false, true),
+  ('r6_s1', 'route-6', 1, 'floor-2', 'Applied Physics Wave Tank', 460, 135, 36, 'Where acoustic transducers generate harmonic waves, count the resonant nodal lines marked on the acrylic wall.', 'Level 02 • Room 204 • Acrylic Tank', '["HARMONIC","NODAL","ACOUSTIC"]'::jsonb, false, false),
+  ('r6_s2', 'route-6', 2, 'floor-2', 'Laser Interferometer Darkroom', 150, 160, 36, 'Inspect the helium-neon optical beam splitter base. Enter the wavelength engraved in nanometers.', 'Level 02 • Optics Darkroom • Beam Splitter 01', '["633NM","633","HELIOS"]'::jsonb, false, false),
+  ('r6_s3', 'route-6', 3, 'floor-2', 'Cryogenic Storage Bay', 340, 300, 36, 'On the vacuum flask relief valve, check the pressure safety seal stamp.', 'Level 02 • Cryo Bay • Flask 02 Valve', '["CRYO","VACUUM","NITROGEN"]'::jsonb, false, false),
+  ('r6_s4', 'route-6', 4, 'floor-2', 'West Faculty Lounge — Grandfather Clock', 135, 320, 36, 'Open the pendulum cabinet door. Note the engraved weight maker name.', 'Level 02 • Lounge West • Clock Cabinet', '["CHRONOS","PENDULUM","TIME"]'::jsonb, false, false),
+  ('r6_s5', 'route-6', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'Beneath the glass dome, inspect the primary telescope brass mounting plate.', 'Level 07 • North Archway • Final Telescope Mounting', '["REFRACTOR","HORIZON","OPTIC"]'::jsonb, false, true),
+  ('r7_s1', 'route-7', 1, 'floor-1', 'Main Foyer — Granite Foundation Stone', 280, 350, 36, 'At the grand glass entrance beneath the canopy, locate the cornerstone laid in memory of the founders.', 'Level 01 • Main Entrance Foyer • Cornerstone', '["CORNERSTONE","PLATINUM","FOUNDER"]'::jsonb, false, false),
+  ('r7_s2', 'route-7', 2, 'floor-1', 'Auditorium Projection Booth', 480, 220, 36, 'Behind the twin 35mm carbon-arc projectors, check the lens focal length stencil on the steel casing.', 'Level 01 • Auditorium Balcony • Booth Lens Stencil', '["75MM","CARBON","CINEMA"]'::jsonb, false, false),
+  ('r7_s3', 'route-7', 3, 'floor-1', 'Historical Trophy Cabinet', 150, 250, 36, 'Find the 1968 Inter-Collegiate Debating Chalice. Read the inscription on the silver base.', 'Level 01 • Trophy Corridor • Glass Cabinet 02', '["CHALICE","1968","ORATORY"]'::jsonb, false, false),
+  ('r7_s4', 'route-7', 4, 'floor-1', 'Dean’s Executive Boardroom', 160, 140, 36, 'Behind the presidential portrait, a discreet safe bears a 4-dial letter combination.', 'Level 01 • Boardroom North • Behind Portrait', '["DEAN","SAFE","COUNCIL"]'::jsonb, false, false),
+  ('r7_s5', 'route-7', 5, 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'Upon the vault portal seal, translate the four celestial runes surrounding the sun emblem.', 'Level 07 • North Archway • Final Sun Emblem Seal', '["SOLARIS","CROWN","RADIANT"]'::jsonb, false, true)
+ON CONFLICT (id) DO NOTHING;

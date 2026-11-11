@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
 .menu {
   position: fixed;
   inset: 0;
@@ -8,11 +10,33 @@
   display: none;
 }
 
+/* .background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+} */
 .background {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  /* Deep midnight laboratory wall texture/gradient */
+  background: 
+    radial-gradient(circle at 50% 30%, rgba(68, 19, 9, 0.8) 0%, rgba(5, 3, 2, 0.95) 70%),
+    linear-gradient(to bottom, #3e2620, #131212);
+  z-index: -1; /* Ensures it stays strictly behind all menu content */
+}
+
+/* Optional: Add a subtle film grain or spooky fog overlay effect */
+.background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .content {
@@ -24,23 +48,40 @@
   align-items: center;
   padding: 24px 18px;
   text-align: center;
-  background: radial-gradient(#0006, #000e);
+  background: 
+    radial-gradient(ellipse at 50% 15%, rgba(60, 10, 40, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 60%, rgba(5, 3, 2, 0.92) 20%, #020101 90%);
 }
 
 .title {
+  font-family: 'Cinzel Decorative', Georgia, 'Times New Roman', serif;
   font-size: clamp(34px, 7vw, 84px);
   letter-spacing: 0.22em;
   margin: 0;
-  color: var(--gold);
-  font-weight: 400;
-  text-shadow: 0 0 30px #e0a45888, 4px 0 #f003, -4px 0 #08f3;
-  animation: flicker 5s infinite;
+  color: #f2e6d0;
+  font-weight: 700;
+  text-shadow: 
+    0 0 10px #000,
+    0 0 35px rgba(189, 21, 21, 0.65),
+    0 0 70px rgba(70, 10, 70, 0.5),
+    3px 0 rgba(255, 0, 0, 0.4), -3px 0 rgba(0, 240, 255, 0.3);
+  animation: flicker 4.5s infinite, titleDrift 8s ease-in-out infinite;
+}
+
+@keyframes titleDrift {
+  0%, 100% { letter-spacing: .22em; }
+  50% { letter-spacing: .24em; }
 }
 
 .story {
+  font-family: 'Special Elite', Courier, monospace;
   max-width: 620px;
-  margin: 12px 0;
-  opacity: 0.88;
+  margin: 14px 0;
+  color: #d6ccb0;
+  font-style: normal;
+  line-height: 1.8;
+  text-shadow: 0 2px 10px #000;
+  opacity: 0.92;
 }
 
 .controls {
@@ -48,142 +89,168 @@
   gap: 14px;
   flex-wrap: wrap;
   justify-content: center;
-  margin: 10px 0;
-}
-
-.controls div {
-  background: var(--panel);
-  border: 1px solid var(--border-soft);
-  padding: 10px 14px;
-  border-radius: 6px;
-  min-width: 260px;
-  text-align: left;
-  font-size: 13px;
-}
-
-.controls b {
-  color: var(--gold-bright);
-}
-
-.controls kbd {
-  background: #2a2218;
-  border: 1px solid var(--border);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 12px;
-}
-
-.past {
-  color: var(--past-amber);
-}
-
-.future {
-  color: var(--future-teal);
-}
-
-.team {
-  margin: 8px 0;
-}
-
-.start {
-  font-size: 18px;
-  padding: 10px 28px;
   margin: 12px 0;
 }
 
+.controls div {
+  background: 
+    radial-gradient(ellipse at 0 0, rgba(140, 42, 31, 0.15), transparent 60%),
+    linear-gradient(145deg, #1c1512, #0b0807);
+  border: 1px solid #543822;
+  border-top: 3px solid #8b1e1e;
+  padding: 12px 16px;
+  border-radius: 4px;
+  min-width: 260px;
+  text-align: left;
+  font-size: 13px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.controls b {
+  color: #ffca7a;
+  letter-spacing: 0.06em;
+  font-family: 'Cinzel Decorative', serif;
+}
+
+.controls kbd {
+  font-family: 'Courier Prime', monospace;
+  background: #14100c;
+  border: 1px solid #664627;
+  color: #f7e7c4;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  box-shadow: inset 0 -2px #000;
+}
+
+.past {
+  color: #ff9e3b;
+  text-shadow: 0 0 12px rgba(255, 158, 59, 0.4);
+}
+
+.future {
+  color: #00ffcc;
+  text-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+}
+
+.team {
+  margin: 10px 0;
+  font-family: 'Special Elite', monospace;
+  color: #c9b49b;
+}
+
+.start {
+  font-family: 'Cinzel Decorative', Georgia, serif;
+  font-size: 19px;
+  letter-spacing: 0.28em;
+  padding: 14px 36px;
+  margin: 18px 0;
+  color: #ffebb3;
+  background: linear-gradient(to bottom, #6a1a12, #210503);
+  border: 1.5px solid #d93824;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 
+    0 0 25px rgba(217, 56, 36, 0.45), 
+    inset 0 1px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 10px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 8px rgba(255, 235, 179, 0.6);
+  animation: startPulse 3s ease-in-out infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.start:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #8f2318, #3b0805);
+  border-color: #ff4d30;
+  color: #ffffff;
+  letter-spacing: 0.32em; /* Expands menacingly on hover */
+  box-shadow: 
+    0 0 45px rgba(255, 50, 30, 0.85), 
+    0 0 15px rgba(255, 200, 100, 0.4),
+    inset 0 1px rgba(255, 255, 255, 0.4),
+    inset 0 -3px 15px rgba(0, 0, 0, 0.9);
+  transform: translateY(-2px);
+}
+
+.start:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 20px rgba(217, 56, 36, 0.8);
+  border-radius: 6px;
+}
+
+@keyframes startPulse {
+  0%, 100% { 
+    box-shadow: 0 0 18px rgba(176, 48, 31, 0.4), inset 0 1px rgba(255, 255, 255, 0.2); 
+    border-color: #b0301f;
+  }
+  50% { 
+    box-shadow: 0 0 38px rgba(230, 60, 40, 0.75), inset 0 1px rgba(255, 255, 255, 0.3); 
+    border-color: #ff5533;
+  }
+}
 .details {
+  font-family: 'Courier Prime', monospace;
   max-width: 560px;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
+  color: #b8ac93;
   opacity: 0.85;
 }
 
 .details textarea {
   width: 100%;
+  background: #0d0a08;
+  border: 1px solid #4a3321;
+  color: #f0e6d2;
+  padding: 8px;
+  font-family: 'Courier Prime', monospace;
 }
 
 @keyframes flicker {
-  0%,
-  92%,
-  100% {
-    opacity: 1;
-  }
-  93% {
-    opacity: 0.55;
-  }
-  95% {
-    opacity: 0.9;
-  }
-  97% {
-    opacity: 0.4;
-  }
+  0%, 92%, 100% { opacity: 1; }
+  93% { opacity: 0.55; }
+  95% { opacity: 0.9; }
+  97% { opacity: 0.4; }
 }
 
-/* Keep authenticated Round 3 inventory controls in the original menu style. */
-.inventory { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 800px; margin: 8px 0; font-size: 12px; opacity: .9; }
-.inventory b { flex-basis: 100%; color: var(--gold-bright); }
-.inventory span { padding: 4px 8px; background: var(--panel); border: 1px solid var(--border-soft); }
-.inventory label { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--panel); border: 1px solid var(--border-soft); cursor: pointer; }
-.inventory small { flex-basis: 100%; opacity: .75; }
-.devSample { margin: 4px; padding: 5px 9px; color: var(--gold-bright); background: var(--panel); border: 1px solid var(--border-soft); }
+.inventory { 
+  display: flex; 
+  flex-wrap: wrap; 
+  justify-content: center; 
+  gap: 6px; 
+  max-width: 800px; 
+  margin: 8px 0; 
+  font-size: 12px; 
+  opacity: .9; 
+}
 
-/* ==========================================================================
-   CINEMATIC HORROR MENU (visual only)
-   ========================================================================== */
-.content {
-  background:
-    radial-gradient(ellipse at 50% 18%, #5a0f0a33 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, #0008 20%, #000f 85%);
+.inventory b { 
+  flex-basis: 100%; 
+  color: #ffca7a; 
 }
-.title {
-  font-family: Cinzel, Georgia, 'Times New Roman', serif;
-  color: #e9d3a4;
-  text-shadow:
-    0 0 6px #000,
-    0 0 28px #b0301f99,
-    0 0 60px #7a100a77,
-    3px 0 #ff1a1a33, -3px 0 #1ad0ff2a;
-  animation: flicker 5s infinite, titleDrift 9s ease-in-out infinite;
+
+.inventory span, .inventory label, .devSample { 
+  background: #100b08; 
+  border-color: #543822; 
+  color: #d1c2a5; 
 }
-@keyframes titleDrift {
-  0%, 100% { letter-spacing: .22em; }
-  50% { letter-spacing: .235em; }
+
+.inventory label { 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  padding: 4px 8px; 
+  cursor: pointer; 
 }
-.story {
-  color: #d9cdb2;
-  font-style: italic;
-  line-height: 1.7;
-  text-shadow: 0 2px 8px #000;
-  opacity: .92;
+
+.inventory small { 
+  flex-basis: 100%; 
+  opacity: .75; 
 }
-.controls div {
-  background:
-    radial-gradient(ellipse at 0 0, #8c2a1f26, transparent 50%),
-    linear-gradient(145deg, #2c231a, #120f0b);
-  border: 1px solid #6e5232;
-  border-top: 3px solid #8c2a1f;
-  border-radius: 3px;
-  box-shadow: 0 10px 30px #000c, inset 0 0 30px #000a;
+
+.devSample { 
+  margin: 4px; 
+  padding: 5px 9px; 
+  color: #ffca7a; 
 }
-.controls b { color: #ffd9a0; letter-spacing: .08em; }
-.controls kbd { background: #1a130c; border-color: #7a5a36; color: #f3e3bf; box-shadow: inset 0 -2px #000a; }
-.past { color: #f5ac48; text-shadow: 0 0 10px #f5ac4855; }
-.future { color: #5fe0d2; text-shadow: 0 0 10px #46c9bd55; }
-.start {
-  font-family: Cinzel, Georgia, serif;
-  letter-spacing: .25em;
-  color: #ffe2b0;
-  background: linear-gradient(#6a1d14, #2b0a07);
-  border: 1px solid #d6402e;
-  box-shadow: 0 0 24px #b0301f88, inset 0 1px #ffffff22;
-  animation: startPulse 3.2s ease-in-out infinite;
-}
-.start:hover:not(:disabled) { background: linear-gradient(#8a281b, #3c0e09); box-shadow: 0 0 36px #e0402eaa; }
-@keyframes startPulse {
-  0%, 100% { box-shadow: 0 0 18px #9c2b1f66, inset 0 1px #ffffff22; }
-  50% { box-shadow: 0 0 34px #d6402eaa, inset 0 1px #ffffff22; }
-}
-.details { color: #cfc4aa; }
-.inventory span, .inventory label, .devSample { background: #140e09; border-color: #6e5232; }
-.inventory b { color: #ffd9a0; }

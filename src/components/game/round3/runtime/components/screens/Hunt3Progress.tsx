@@ -136,7 +136,7 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
     const deadlineAt = state?.boss.deadlineAt ?? null;
     const update = () => setSecondsLeft(deadlineAt ? Math.max(0, Math.ceil((deadlineAt - Date.now()) / 1000)) : 0);
     update();
-    const interval = window.setInterval(update, 250);
+    const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
   }, [state?.boss.deadlineAt]);
 

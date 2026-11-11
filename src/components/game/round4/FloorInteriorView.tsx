@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { FloorDefinition } from './FloorConfiguration';
 import type { ExpeditionProgress, WinnerRecord } from '../../../types/round4Expedition.types';
 import { round4Service } from '../../../services/round4Service';
-import { authService } from '../../../services/authService';
-import { getExpeditionRoute } from './ExpeditionRouteConfiguration';
 import { getFloorMapConfig } from './FloorMapConfiguration';
 import { RouteNavigation } from './RouteNavigation';
 import { CampusFloorMap } from './CampusFloorMap';
@@ -27,33 +25,17 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   onToggleMute,
   onExit,
 }) => {
-  const session = authService.getCurrentSession();
-  const teamId = session?.teamId || 'fc_team_001';
-
-  const [progress, setProgress] = useState<ExpeditionProgress>(() =>
-    round4Service.getProgress(teamId)
-  );
+  const [progress, setProgress] = useState<ExpeditionProgress | null>(null);
+  const [routeState, setRouteState] = useState<Awaited<ReturnType<typeof round4Service.fetchMyRouteState>> | null>(null);
   const [winner, setWinner] = useState<WinnerRecord | null>(() => round4Service.getWinner());
   const [isAccessDenied, setIsAccessDenied] = useState<boolean>(false);
+  const [accessMessage, setAccessMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [discoveryBusy, setDiscoveryBusy] = useState(false);
 
   // Authoritative server route & qualification check on mount
-  useEffect(() => {
-    let isMounted = true;
-    round4Service.fetchMyRouteState(teamId).then((res) => {
-      if (!isMounted) return;
-      if (res?.qualified === false) {
-        setIsAccessDenied(true);
-      }
-      if (res?.winner) {
-        setWinner(res.winner);
-      }
-    }).catch(() => {});
-
-    return () => {
-      isMounted = false;
-    };
-  }, [teamId]);
-
   // Subscribe to service progress updates and winner events
   useEffect(() => {
     const unsubProgress = round4Service.subscribe((updated) => {
@@ -68,41 +50,68 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     };
   }, []);
 
-  const currentRoute = getExpeditionRoute(progress.activeRouteId);
-  const currentStep = currentRoute.steps[progress.activeStepIndex] || currentRoute.steps[0];
-  const activeFloorId = currentStep.floorId || floor.id;
+  const loadAuthoritativeState = useCallback(async () => {
+    setIsLoading(true); setLoadError(null); setIsAccessDenied(false);
+    try {
+      const status = await round4Service.getStatus();
+      if (!status.qualified || !status.isReleased) {
+        setIsAccessDenied(true);
+        setAccessMessage(status.message ?? (!status.isReleased ? 'Round 04 has not been released by the event administrators.' : 'Your team has not been qualified for Round 04.'));
+        if (status.winner) setWinner(status.winner);
+        return;
+      }
+      const state = await round4Service.fetchMyRouteState();
+      setRouteState(state);
+      setProgress({ teamId: '', activeRouteId: state.route.routeId, activeStepIndex: state.progress.currentStepIndex,
+        targetDiscovered: state.progress.targetDiscovered, solvedStepIds: state.progress.solvedStepIds,
+        completedRouteIds: state.progress.isFinished ? [state.route.routeId] : [],
+        lastUpdated: state.progress.finishedAt ?? new Date().toISOString() });
+      setWinner(state.winner);
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : 'Round 04 state could not be loaded.');
+    } finally { setIsLoading(false); }
+  }, []);
+
+  useEffect(() => { void loadAuthoritativeState(); }, [loadAuthoritativeState]);
+
+  const currentRoute = routeState ? { ...routeState.route, steps: routeState.activeStep ? [{ ...routeState.activeStep, acceptedCodes: [] }] : [] } : null;
+  const currentStep = currentRoute?.steps[0] ?? null;
+  const activeFloorId = currentStep?.floorId || floor.id;
   const mapConfig = getFloorMapConfig(activeFloorId);
 
   // Map Explorer avatar touches the glowing target point
   const handleTargetReached = useCallback(() => {
-    if (!progress.targetDiscovered) {
-      const updated = round4Service.markTargetDiscovered(teamId);
-      setProgress({ ...updated });
-    }
-  }, [teamId, progress.targetDiscovered]);
+    if (!routeState || routeState.progress.targetDiscovered || discoveryBusy || routeState.progress.isFinished) return;
+    setDiscoveryBusy(true); setActionError(null);
+    void round4Service.markTargetDiscovered().then((updated) => {
+      setRouteState(updated);
+      setProgress({ teamId: '', activeRouteId: updated.route.routeId, activeStepIndex: updated.progress.currentStepIndex,
+        targetDiscovered: updated.progress.targetDiscovered, solvedStepIds: updated.progress.solvedStepIds,
+        completedRouteIds: updated.progress.isFinished ? [updated.route.routeId] : [], lastUpdated: new Date().toISOString() });
+    }).catch((cause: unknown) => setActionError(cause instanceof Error ? cause.message : 'Target discovery was not confirmed.'))
+      .finally(() => setDiscoveryBusy(false));
+  }, [routeState, discoveryBusy]);
 
   // Player 1 submits answer code received from Field Partner
   const handleSubmitAnswer = useCallback(
-    (answer: string): Promise<{ success: boolean; message: string }> => {
-      const result = round4Service.submitAnswer(teamId, answer);
-      setProgress({ ...result.progress });
-      if ((result.isWinner || result.raceClosed) && result.winner) {
-        setWinner(result.winner);
-      }
-      return Promise.resolve({ success: result.success, message: result.message });
+    async (answer: string): Promise<{ success: boolean; message: string }> => {
+      if (!routeState?.activeStep || !progress) return { success: false, message: 'Round 04 state is unavailable. Retry loading before submitting.' };
+      setActionError(null);
+      const result = await round4Service.submitAnswer(routeState.activeStep.stepId, answer);
+      if (result.success && result.state) {
+        const updated = result.state;
+        setRouteState(updated);
+        setProgress({ teamId: '', activeRouteId: updated.route.routeId, activeStepIndex: updated.progress.currentStepIndex,
+          targetDiscovered: updated.progress.targetDiscovered, solvedStepIds: updated.progress.solvedStepIds,
+          completedRouteIds: updated.progress.isFinished ? [updated.route.routeId] : [], lastUpdated: updated.progress.finishedAt ?? new Date().toISOString() });
+        setWinner(updated.winner);
+      } else if (result.success) {
+        setActionError('The answer was accepted by the server, but current progress could not be refreshed. Reloading server state…');
+        void loadAuthoritativeState();
+      } else setActionError(result.message);
+      return { success: result.success, message: result.message };
     },
-    [teamId]
-  );
-
-  // Player switches route from RouteNavigation
-  const handleSelectRoute = useCallback(
-    (routeId: string) => {
-      const result = round4Service.selectRoute(teamId, routeId);
-      if (result.success) {
-        setProgress({ ...result.progress });
-      }
-    },
-    [teamId]
+    [routeState, progress, loadAuthoritativeState]
   );
 
   const handleReturn = () => {
@@ -111,6 +120,9 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     }
     onReturnToExterior();
   };
+
+  if (isLoading) return <main className="min-h-screen flex items-center justify-center bg-[#faf5ea] text-[#3d2a14] font-cinzel" role="status">Loading your server-verified Round 04 route…</main>;
+  if (loadError) return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]"><p role="alert" className="max-w-lg text-sm">{loadError}</p><div className="flex gap-3"><button type="button" onClick={() => { void loadAuthoritativeState(); }} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Retry</button><button type="button" onClick={handleReturn} className="rounded border border-stone-500 px-4 py-2 text-xs">Return to Exterior</button></div></main>;
 
   if (isAccessDenied) {
     return (
@@ -121,7 +133,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             ACCESS RESTRICTED
           </h2>
           <p className="text-xs text-[#d4c6a0] font-sans mb-6 leading-relaxed">
-            Round 04 (The Campus Expedition) is available strictly to the seven qualified squads from Round 03.
+            {accessMessage ?? 'Round 04 is not currently available to this team.'}
           </p>
           <button
             type="button"
@@ -134,6 +146,14 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
       </div>
     );
   }
+
+  if (!routeState || !progress || !currentRoute) return null;
+  if (!currentStep) return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]">
+    <h2 className="font-cinzel text-xl font-bold">Assigned expedition complete</h2>
+    <p className="max-w-md text-sm">The server confirms that all five clues on your assigned route are complete. Await the official result.</p>
+    {winner && <p className="text-sm font-bold">Official winner: {winner.teamName}</p>}
+    <button type="button" onClick={handleReturn} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Return to Exterior</button>
+  </main>;
 
   return (
     <div className="relative min-h-screen w-full bg-[#faf5ea] text-[#3d2a14] font-sans flex flex-col justify-between overflow-x-hidden selection:bg-amber-500 selection:text-black select-none">
@@ -258,6 +278,8 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
 
       {/* 2. Main Exploration Stage (3-Column Layout: Left Routes, Center Map, Right Panel) */}
       <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-between p-3 sm:p-5 lg:p-6 gap-4 max-w-[1720px] mx-auto w-full overflow-hidden">
+        {actionError && <div role="alert" className="absolute left-4 right-4 top-2 z-30 rounded border border-red-500/50 bg-red-950/80 p-2 text-xs text-red-100">{actionError} <button type="button" onClick={() => setActionError(null)} className="ml-2 underline">Dismiss</button></div>}
+        {discoveryBusy && <div role="status" className="absolute left-4 top-12 z-30 rounded bg-amber-950/80 px-3 py-1 text-xs text-amber-100">Confirming target discovery…</div>}
         
         {/* Left Section (~14% width): Vertical Ancient Relic Route Selector */}
         <section
@@ -266,8 +288,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
         >
           <RouteNavigation
             progress={progress}
-            onSelectRoute={handleSelectRoute}
-            isMuted={isMuted}
+            assignedRoute={routeState.route}
           />
         </section>
 
@@ -280,7 +301,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             key={mapConfig.floorId}
             mapConfig={mapConfig}
             currentStep={currentStep}
-            isTargetDiscovered={progress.targetDiscovered}
+            isTargetDiscovered={routeState.progress.targetDiscovered}
             onTargetReached={handleTargetReached}
             isMuted={isMuted}
           />
@@ -295,7 +316,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             currentRoute={currentRoute}
             currentStep={currentStep}
             progress={progress}
-            isTargetDiscovered={progress.targetDiscovered}
+            isTargetDiscovered={routeState.progress.targetDiscovered}
             onSubmitAnswer={handleSubmitAnswer}
             isMuted={isMuted}
           />
@@ -305,7 +326,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
 
       {/* 3. Championship Winner & Non-Winner Result Overlays */}
       {winner && (
-        winner.teamId === teamId ? (
+        routeState.isWinner ? (
           <WinnerCelebrationModal
             winner={winner}
             routeRomanNumeral={currentRoute.romanNumeral}

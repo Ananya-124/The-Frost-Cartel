@@ -11,6 +11,7 @@ export function createPostgresPoolConfig(env: PostgresEnvironment = process.env)
   const url = new URL(connectionString);
   const mode = (env.PGSSLMODE || 'verify-full').toLowerCase();
   const rootCertPath = env.PGSSLROOTCERT || url.searchParams.get('sslrootcert') || undefined;
+  const rootCertContent = env.PGSSLROOTCERT_CONTENT;
   // pg-connection-string handles sslmode itself and may override the explicit
   // TLS options below. Consume these libpq parameters here so our policy wins.
   url.searchParams.delete('sslmode');
@@ -26,12 +27,12 @@ export function createPostgresPoolConfig(env: PostgresEnvironment = process.env)
       ssl = { rejectUnauthorized: false };
       break;
     case 'verify-ca':
-      if (!rootCertPath) throw new Error('PGSSLROOTCERT is required when PGSSLMODE=verify-ca.');
-      ssl = { ca: readFileSync(rootCertPath, 'utf8'), rejectUnauthorized: true, checkServerIdentity: () => undefined };
+      if (!rootCertPath && !rootCertContent) throw new Error('PGSSLROOTCERT or PGSSLROOTCERT_CONTENT is required when PGSSLMODE=verify-ca.');
+      ssl = { ca: rootCertContent || readFileSync(rootCertPath!, 'utf8'), rejectUnauthorized: true, checkServerIdentity: () => undefined };
       break;
     case 'verify-full':
-      if (!rootCertPath) throw new Error('PGSSLROOTCERT is required when PGSSLMODE=verify-full.');
-      ssl = { ca: readFileSync(rootCertPath, 'utf8'), rejectUnauthorized: true };
+      if (!rootCertPath && !rootCertContent) throw new Error('PGSSLROOTCERT or PGSSLROOTCERT_CONTENT is required when PGSSLMODE=verify-full.');
+      ssl = { ca: rootCertContent || readFileSync(rootCertPath!, 'utf8'), rejectUnauthorized: true };
       break;
     default:
       throw new Error(`Unsupported PGSSLMODE "${mode}". Use disable, require, verify-ca, or verify-full.`);

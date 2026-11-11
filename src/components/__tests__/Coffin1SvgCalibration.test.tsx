@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import {
   Grave1MarkedRemains,
   COFFIN_ORIGINAL_WIDTH,
@@ -23,6 +23,9 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
     sessionStorage.clear();
     round1Service.beginRound1('team_test_calib', 'Calibration Squad');
   });
+
+  const initialSession = () => round1Service.getTeamSession('team_test_calib', 'Calibration Squad');
+  const onAction = vi.fn(async () => ({ success: true, session: initialSession(), score: 0, completed: false }));
 
   it('declares exact intrinsic 1024 x 576 coordinate space and viewBox', () => {
     expect(COFFIN_ORIGINAL_WIDTH).toBe(1024);
@@ -55,6 +58,8 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
       <Grave1MarkedRemains
         teamId="team_test_calib"
         config={config}
+        initialSession={initialSession()}
+        onAction={onAction}
         collectedFragments={[]}
         placedBones={{}}
         secondsRemaining={1185}
@@ -89,6 +94,8 @@ describe('Coffin I: SVG Precision Geometry and Coordinate Calibration', () => {
       <Grave1MarkedRemains
         teamId="team_test_calib"
         config={config}
+        initialSession={initialSession()}
+        onAction={onAction}
         collectedFragments={[]}
         placedBones={{}}
         secondsRemaining={1185}

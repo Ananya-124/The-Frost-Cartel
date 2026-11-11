@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Stage1Config, Stage1State } from '../../../types/round1.types';
 import { DEFAULT_STAGE1_TRIALS } from '../../../constants/stage1.constants';
-import { round1Service } from '../../../services/round1Service';
+import type { Round1ActionResponse } from '../../../services/round1ApiService';
 import { soundController } from '../../../utils/soundController';
 import { SkipStageModal } from '../common/SkipStageModal';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
 import { LedClock } from './LedClock';
+import { type Round1TimerStore, useRound1TimerSeconds, useRound1TimerStore } from '../round1TimerStore';
 import { PumpkinSvg, S1Defs, SkullSvg } from './PumpkinArt';
 import {
   buildShufflePlan,
@@ -25,10 +26,13 @@ interface Stage1PumpkinShuffleProps {
   onSkipStage: () => void;
   /** Called whenever a trial is won and credits were added. */
   onCreditsAwarded: () => void;
+  initialState: Stage1State;
+  timerStore?: Round1TimerStore;
+  secondsRemaining?: number;
+  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   /** Random source for the shuffle — only replaced in tests. */
   rng?: () => number;
   /** Chooses which pumpkin hides the skull — only replaced in tests. */
-  pickSkull?: (count: number) => number;
 }
 
 type Phase = 'intro' | 'reveal' | 'shuffle' | 'guess' | 'smashing' | 'missed' | 'trial_end' | 'summary';
@@ -99,23 +103,38 @@ const Pips: React.FC<{ used: number; total: number }> = ({ used, total }) => (
   </span>
 );
 
+const Round1TimerClock: React.FC<{ timerStore: Round1TimerStore }> = ({ timerStore }) => {
+  const secondsRemaining=useRound1TimerSeconds(timerStore);
+  return <LedClock value={fmt(secondsRemaining)} warn={secondsRemaining <= 60} label={`Round time left ${fmt(secondsRemaining)}`} />;
+};
+
+const Round1TimerButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { timerStore: Round1TimerStore }> = ({ timerStore, disabled, ...props }) => {
+  const secondsRemaining=useRound1TimerSeconds(timerStore);
+  return <button {...props} disabled={disabled || secondsRemaining <= 0} />;
+};
+
+const Round1ExpiredNotice: React.FC<{ timerStore: Round1TimerStore }> = ({ timerStore }) => {
+  const secondsRemaining=useRound1TimerSeconds(timerStore);
+  return secondsRemaining <= 0 ? <p className="s1-body text-sm text-red-300 mt-2">{NOTICE.expired}</p> : null;
+};
+
 export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
-  teamId,
+  teamId: _teamId,
   config,
   onReturnDashboard,
   onSkipStage,
   onCreditsAwarded,
+  initialState,
+  timerStore,
+  secondsRemaining = 25 * 60,
+  onAction,
   rng = Math.random,
-  pickSkull,
 }) => {
+  const resolvedTimerStore = useRound1TimerStore(timerStore, secondsRemaining);
   const trials = config.trials && config.trials.length > 0 ? config.trials : DEFAULT_STAGE1_TRIALS;
   const revealMs = clampSeconds(config.revealSeconds, 3, 1, 10) * 1000;
 
-  const [state, setState] = useState<Stage1State>(() => {
-    round1Service.settleAbandonedStage1(teamId); // a try that was started and abandoned counts as used
-    const s = round1Service.getStage1State(teamId);
-    return s ? cloneState(s) : { trials: trials.map(() => ({ attemptsUsed: 0, status: 'pending' as const, earnedCredits: 0 })) };
-  });
+  const [state, setState] = useState<Stage1State>(() => cloneState(initialState));
   const firstPending = state.trials.findIndex((t) => t.status === 'pending');
   const [trialIdx, setTrialIdx] = useState(() => (firstPending === -1 ? trials.length - 1 : firstPending));
   const [phase, setPhase] = useState<Phase>(() => (firstPending === -1 ? 'summary' : 'intro'));
@@ -137,7 +156,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
   const [progress, setProgress] = useState(0);
   const [lastResult, setLastResult] = useState<{ won: boolean; awarded: number; expired: boolean } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = useState(() => round1Service.getTimeRemainingSeconds(teamId));
+  const [actionPending, setActionPending] = useState(false);
   const [isMuted, setIsMuted] = useState(soundController.isMuted());
   const [isSkipModalOpen, setIsSkipModalOpen] = useState(false);
 
@@ -147,6 +166,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
   const skullRef = useRef(0);
   const hopRefs = useRef<Record<number, HTMLSpanElement | null>>({});
   const btnRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const actionPendingRef = useRef(false);
 
   const schedule = useCallback((fn: () => void, ms: number) => {
     timers.current.push(setTimeout(fn, ms));
@@ -158,15 +178,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
   }, []);
   useEffect(() => clearAll, [clearAll]);
 
-  useEffect(() => {
-    const t = setInterval(() => setSecondsRemaining(round1Service.getTimeRemainingSeconds(teamId)), 1000);
-    return () => clearInterval(t);
-  }, [teamId]);
-
-  const refreshState = () => {
-    const s = round1Service.getStage1State(teamId);
-    if (s) setState(cloneState(s));
-  };
+  useEffect(() => setState(cloneState(initialState)), [initialState]);
 
   const hop = (id: number, up: boolean, ms: number) => {
     const el = hopRefs.current[id];
@@ -220,15 +232,15 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
     }, at + 500);
   };
 
-  const startAttempt = () => {
-    const res = round1Service.beginStage1Attempt(teamId, trialIdx); // spends one try right now
-    if (!res.ok) {
-      setNotice(NOTICE[res.reason] ?? 'Cannot start this trial.');
-      refreshState();
-      return;
-    }
+  const startAttempt = async () => {
+    if (actionPendingRef.current) return;
+    if(resolvedTimerStore.getSnapshot()<=0){setNotice(NOTICE.expired);return;}
+    actionPendingRef.current = true;
+    setActionPending(true);
+    try {
+    const res = await onAction('stage1.begin', { trialIndex: trialIdx });
+    setState(cloneState(res.session.stage1State));
     setNotice(null);
-    refreshState();
     clearAll();
     soundController.playClick();
     const start = identitySlots(count);
@@ -242,7 +254,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
     setShuffleLeft(Math.round(shuffleMs / 1000));
     setProgress(0);
 
-    const id = pickSkull ? pickSkull(count) : Math.min(count - 1, Math.floor(rng() * count));
+    const id = Number(res.skullId);
     skullRef.current = id;
     setSkullId(id);
     setPhase('reveal');
@@ -255,6 +267,8 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
     }, LEAD_MS);
     schedule(() => setLifted(null), LEAD_MS + revealMs);
     schedule(() => beginShuffle(swaps, plan), LEAD_MS + revealMs + LEAD_MS);
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Cannot start this trial.'); }
+    finally { actionPendingRef.current = false; setActionPending(false); }
   };
 
   const smash = (id: number) => {
@@ -265,27 +279,19 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
     soundController.playClick();
     schedule(() => {
       setBurst(true);
-      const hit = id === skullRef.current;
-      if (hit) {
-        soundController.playDiscover();
-        const res = round1Service.resolveStage1Trial(teamId, trialIdx, true);
-        setLastResult({ won: true, awarded: res.creditsAwarded, expired: res.reason === 'expired' });
-        if (res.success && res.creditsAwarded > 0) onCreditsAwarded();
-        refreshState();
-        schedule(() => setPhase('trial_end'), 1800);
-        return;
-      }
-      soundController.playError();
-      schedule(() => setLifted(skullRef.current), 700); // show where the skull really was
-      const used = round1Service.getStage1State(teamId)?.trials[trialIdx].attemptsUsed ?? trial.tries;
-      if (used >= trial.tries) {
-        const res = round1Service.resolveStage1Trial(teamId, trialIdx, false);
-        setLastResult({ won: false, awarded: 0, expired: res.reason === 'expired' });
-        refreshState();
-        schedule(() => setPhase('trial_end'), 2000);
-      } else {
-        schedule(() => setPhase('missed'), 1800);
-      }
+      void (async () => {
+        try {
+          const res = await onAction('stage1.guess', { trialIndex: trialIdx, guessId: id });
+          const nextState = res.session.stage1State;
+          setState(cloneState(nextState));
+          const won = nextState.trials[trialIdx].status === 'won';
+          if (won) soundController.playDiscover(); else soundController.playError();
+          if (won && Number(res.creditsAwarded ?? 0) > 0) onCreditsAwarded();
+          setLastResult({ won, awarded: Number(res.creditsAwarded ?? 0), expired: Boolean(res.expired) });
+          if (!won && nextState.trials[trialIdx].status === 'pending') schedule(() => setLifted(skullRef.current), 700);
+          schedule(() => setPhase(won || nextState.trials[trialIdx].status !== 'pending' ? 'trial_end' : 'missed'), 1800);
+        } catch (error) { setNotice(error instanceof Error ? error.message : 'The guess could not be submitted.'); setPhase('guess'); }
+      })();
     }, SMASH_MS);
   };
 
@@ -326,7 +332,6 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
     else if (e.key === 'ArrowLeft') { e.preventDefault(); focusSlot(Math.max(0, slot - 1)); }
   };
 
-  const expired = secondsRemaining <= 0;
   const canPick = phase === 'guess';
   const totalEarned = state.trials.reduce((a, t) => a + t.earnedCredits, 0);
   const totalPossible = trials.reduce((a, t) => a + t.reward, 0);
@@ -366,7 +371,7 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
           </div>
 
           <div className="order-1 lg:order-none justify-self-center lg:justify-self-end flex flex-wrap items-center justify-center gap-2.5">
-            <LedClock value={fmt(Math.max(0, secondsRemaining))} warn={secondsRemaining <= 60} label={`Round time left ${fmt(Math.max(0, secondsRemaining))}`} />
+            <Round1TimerClock timerStore={resolvedTimerStore} />
             <button type="button" onClick={() => setIsMuted(soundController.toggleMute())} aria-label={isMuted ? 'Unmute sounds' : 'Mute sounds'} className="s1-icon-btn">
               <SoundIcon muted={isMuted} />
             </button>
@@ -525,22 +530,23 @@ export const Stage1PumpkinShuffle: React.FC<Stage1PumpkinShuffleProps> = ({
         <section className="mt-6 flex flex-col items-center text-center gap-3">
           {phase === 'intro' && (
             <div className="s1-panel px-6 py-4 max-w-lg w-full">
-              <button type="button" onClick={startAttempt} disabled={expired || triesLeft <= 0} className="s1-btn-primary">
+              <Round1TimerButton type="button" onClick={startAttempt} disabled={actionPending || triesLeft <= 0} className="s1-btn-primary" timerStore={resolvedTimerStore}>
                 {trialState.attemptsUsed === 0 ? `Begin trial ${ROMAN[trialIdx]}` : 'Take the next try'}
-              </button>
+              </Round1TimerButton>
               <p className="s1-label mt-3 !text-[12px]">
                 {trial.reward} credits · {trial.tries} tries · {Math.round(shuffleMs / 1000)}s shuffle
               </p>
               <p className="s1-body text-base mt-1.5 leading-snug">
                 {trialState.attemptsUsed === 0 ? 'The skull is shown once. A try is used as soon as the trial starts.' : `${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left in this trial.`}
               </p>
-              {(expired || notice) && <p className="s1-body text-sm text-red-300 mt-2">{notice ?? NOTICE.expired}</p>}
+              {notice && <p className="s1-body text-sm text-red-300 mt-2">{notice}</p>}
+              <Round1ExpiredNotice timerStore={resolvedTimerStore} />
             </div>
           )}
 
           {phase === 'missed' && (
             <div className="s1-panel px-6 py-4 max-w-lg w-full">
-              <button type="button" onClick={startAttempt} disabled={expired} className="s1-btn-primary">Take the last try</button>
+              <Round1TimerButton type="button" onClick={startAttempt} disabled={actionPending} className="s1-btn-primary" timerStore={resolvedTimerStore}>Take the last try</Round1TimerButton>
               <p className="s1-label mt-3 !text-[12px]">One try left</p>
               <p className="s1-body text-base mt-1 leading-snug">Win this trial on the last try and the {trial.reward} credits are still yours.</p>
             </div>

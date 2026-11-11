@@ -34,6 +34,25 @@ describe('Round 3 authoritative run timer', () => {
     expect(result.current.remainingMs).toBe(987_000);
   });
 
+  it('keeps the countdown local and synchronizes at a thirty-second recovery interval', async () => {
+    vi.useFakeTimers();
+    vi.mocked(round3Service.getRun).mockResolvedValue({ success: true, run: makeRun('running', 120_000) });
+    const { result } = renderHook(() => useRound3RunTimer(makeRun('running', 120_000)));
+    await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+    expect(result.current.remainingSeconds).toBeGreaterThan(90);
+    expect(round3Service.getRun).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(round3Service.getRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not poll while the shared run is paused', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useRound3RunTimer(makeRun('paused', 60_000)));
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(result.current.remainingSeconds).toBe(60);
+    expect(round3Service.getRun).not.toHaveBeenCalled();
+  });
+
   it('starts only when the gameplay entry is requested and coalesces repeats', async () => {
     const running = makeRun('running', 1_500_000);
     vi.mocked(round3Service.startRun).mockResolvedValue({ success: true, run: running });

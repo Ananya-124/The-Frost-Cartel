@@ -2,7 +2,7 @@
 
 ## Architectural Overview
 
-**FROST CARTEL** is an AAA Halloween-themed, competitive multiplayer web gaming platform engineered with **React 19**, **TypeScript**, **Tailwind CSS**, and an **Authoritative Express / Node.js backend** backed by **SQLite** (WAL mode) with optional **PostgreSQL** compatibility.
+**FROST CARTEL** is an AAA Halloween-themed, competitive multiplayer web gaming platform engineered with **React 19**, **TypeScript**, **Tailwind CSS**, and an **Authoritative Express / Node.js backend** backed by **PostgreSQL**.
 
 The platform provides a dual-portal architecture:
 1. **Player Portal (`/`)**: Squad authentication, gothic graveyard portals, Stage 1 (The Unknown Challenge - 100 CR unconfigured), Stage 2 (The Haunted Image Hunt - 150 CR), and Stage 3 (The Forgotten Graveyard - 250 CR) with interactive coffin investigations, bone assembly, rune deciphering, and horror jump scares.
@@ -19,7 +19,7 @@ winter arc/
 │       └── ci.yml                 # GitHub Actions automated CI (Lint, Test, Build)
 ├── .editorconfig                  # Code formatting standard across IDEs
 ├── .gitattributes                 # Cross-platform line endings (LF/CRLF normalization)
-├── .gitignore                     # Git exclusion rules (build, secrets, SQLite DB, logs)
+├── .gitignore                     # Git exclusion rules (build, secrets, logs)
 ├── .oxlintrc.json                 # Oxlint high-performance AST linter configuration
 ├── index.html                     # HTML5 entry with Cinzel & MedievalSharp typography
 ├── package.json                   # Dependencies, scripts, and project metadata
@@ -30,10 +30,8 @@ winter arc/
 ├── tsconfig.node.json             # Tooling and configuration compiler options
 ├── vite.config.ts                 # Vite bundler, proxy configuration, and Vitest setup
 │
-├── database/                      # Authoritative Database Layer
-│   ├── schema.sql                 # DDL schema (admins, teams, stages, transactions, sessions)
-│   ├── db.ts                      # SQLite DatabaseSync connection, scrypt hashing, seeds
-│   └── frost_cartel.db            # Persistent SQLite database (WAL mode, ignored in git)
+├── database/                      # PostgreSQL schema, migrations and repositories
+│   └── postgres/                  # Central persistent data layer
 │
 ├── server/                        # Authoritative Express 5 API Server
 │   ├── index.ts                   # Express application entry, CORS, and cookie parsing
@@ -48,7 +46,7 @@ winter arc/
 │   │   └── eventBus.ts            # Pub/Sub event bus for live multiplayer sync
 │   └── __tests__/
 │       ├── database_and_api.test.ts # API integration tests (health, auth, scoring, admin)
-│       └── persistence_restart.test.ts # Database restart & durability verification
+│       └── progression_api.integration.test.ts # Isolated PostgreSQL API integration tests
 │
 ├── public/                        # Static Assets (Images, Audio, Textures)
 │   └── assets/                    # High-fidelity Halloween artwork & audio

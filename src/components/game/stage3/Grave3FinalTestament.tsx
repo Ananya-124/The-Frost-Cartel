@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Stage3Config } from '../../../types/round1.types';
 import { soundController } from '../../../utils/soundController';
 import { CoffinHeaderHUD } from './CoffinHeaderHUD';
+import { useRound1TimerStore, type Round1TimerStore } from '../round1TimerStore';
 import { FlyingBat } from '../haunted/FlyingBat';
 import { FlyingCrow } from '../haunted/FlyingCrow';
 
@@ -134,7 +135,8 @@ interface Grave3FinalTestamentProps {
   collectedFragments: string[];
   ringIndices: number[];
   isGrave3Unlocked: boolean;
-  secondsRemaining: number;
+  timerStore?: Round1TimerStore;
+  secondsRemaining?: number;
   stageCleared: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -160,7 +162,8 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
   collectedFragments,
   ringIndices,
   isGrave3Unlocked: _isGrave3Unlocked,
-  secondsRemaining,
+  timerStore,
+  secondsRemaining = 25 * 60,
   stageCleared,
   isMuted,
   onToggleMute,
@@ -170,6 +173,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
   onFragmentUnlocked,
   onOpenJournal,
 }) => {
+  const resolvedTimerStore = useRound1TimerStore(timerStore, secondsRemaining);
   // Modal & Inspection State
   const [inspectedTarget, setInspectedTarget] = useState<ImageEvidenceTarget | null>(null);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
@@ -286,7 +290,7 @@ export const Grave3FinalTestament: React.FC<Grave3FinalTestamentProps> = ({
       {/* 4. Top HUD Header (Single source of truth, 3-column CSS Grid, zero GRAVE III) */}
       <CoffinHeaderHUD
         title="THE FINAL TESTAMENT"
-        secondsRemaining={secondsRemaining}
+        timerStore={resolvedTimerStore}
         stageCleared={stageCleared}
         isMuted={isMuted}
         onToggleMute={onToggleMute}

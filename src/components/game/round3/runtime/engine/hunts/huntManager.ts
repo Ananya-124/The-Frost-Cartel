@@ -1,6 +1,5 @@
 import { HUNT_COUNT, HUNT_INTRO_FREEZE, HUNT_INTRO_VISIBLE_MS, TIMELINES } from '../../config/constants';
 import { START_MESSAGE } from '../../config/messages';
-import { recordScore } from '../../services/leaderboardStorage';
 import type { HuntIndex } from '../../types';
 import type { GameContext } from '../context';
 import { spawnEntities } from '../entities/entityAI';
@@ -54,7 +53,6 @@ export function advanceHunt(ctx: GameContext): void {
 /** Final screen: totals and the leaderboard. */
 export function endGame(ctx: GameContext): void {
   const { state } = ctx;
-  const { entries, rank } = recordScore(state.teamName, state.score);
   state.summary = {
     teamName: state.teamName,
     totalScore: state.score,
@@ -63,8 +61,8 @@ export function endGame(ctx: GameContext): void {
     captures: state.captures,
     bonus: state.bonus,
     penalties: state.penalty,
-    rank,
-    leaderboard: entries,
+    rank: null,
+    leaderboard: [],
   };
   state.phase = 'ended';
   state.puzzles = [null, null];

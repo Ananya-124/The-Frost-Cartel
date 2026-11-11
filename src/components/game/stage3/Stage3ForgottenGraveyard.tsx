@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Stage3Config } from '../../../types/round1.types';
-import { round1Service } from '../../../services/round1Service';
+import type { Round1TeamSessionState } from '../../../types/round1.types';
+import type { Round1ActionResponse } from '../../../services/round1ApiService';
 import { soundController } from '../../../utils/soundController';
 import { Stage3HUD } from './Stage3HUD';
 import { HauntedStage3Atmosphere } from './HauntedStage3Atmosphere';
@@ -11,10 +12,15 @@ import { Grave3FinalTestament } from './Grave3FinalTestament';
 import { EvidenceJournalModal } from './EvidenceJournalModal';
 import { FinalGateModal } from './FinalGateModal';
 import { SkipStageModal } from '../common/SkipStageModal';
+import { useRound1TimerStore, type Round1TimerStore } from '../round1TimerStore';
 
 interface Stage3ForgottenGraveyardProps {
   teamId: string;
   config: Stage3Config;
+  initialSession: Round1TeamSessionState;
+  timerStore?: Round1TimerStore;
+  secondsRemaining?: number;
+  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   initialCollectedFragments: string[];
   isCompleted: boolean;
   onReturnDashboard: () => void;
@@ -25,12 +31,17 @@ interface Stage3ForgottenGraveyardProps {
 export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> = ({
   teamId,
   config,
+  initialSession,
+  timerStore,
+  secondsRemaining = 25 * 60,
+  onAction,
   initialCollectedFragments,
   isCompleted,
   onReturnDashboard,
   onSkipStage,
   onStageCompleted,
 }) => {
+  const resolvedTimerStore = useRound1TimerStore(timerStore, secondsRemaining);
   // Navigation / Active View State: 'overview' or focused coffin investigation
   const [activeView, setActiveView] = useState<'overview' | 'coffin1' | 'coffin2' | 'coffin3'>('overview');
 
@@ -41,43 +52,38 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
 
   // Sound and Timer states
   const [isMuted, setIsMuted] = useState(soundController.isMuted());
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
-    return round1Service.getTimeRemainingSeconds(teamId);
-  });
 
   // Game progression states
-  const [collectedFragments, setCollectedFragments] = useState<string[]>(initialCollectedFragments);
+  const [collectedFragments, setCollectedFragments] = useState<string[]>(initialSession.stage3State.collectedFragments ?? initialCollectedFragments);
   const [stageCleared, setStageCleared] = useState(isCompleted);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
   // Coffin 1: Placed Bones
   const [placedBones, setPlacedBones] = useState<Record<string, string>>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return session.stage3State?.placedBoneSlots ?? {};
+    return initialSession.stage3State?.placedBoneSlots ?? {};
   });
 
   // Coffin 2: Dug Soils & Coffer
   const [dugSoils, setDugSoils] = useState<string[]>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return session.stage3State?.dugSoilIds ?? [];
+    return initialSession.stage3State?.dugSoilIds ?? [];
   });
   const [isCofferUnlocked, setIsCofferUnlocked] = useState<boolean>(() => {
-    const session = round1Service.getTeamSession(teamId, '');
-    return session.stage3State?.grave2CofferUnlocked ?? false;
+    return initialSession.stage3State?.grave2CofferUnlocked ?? false;
   });
 
   // Coffin 3: Rune Rings
-  const [ringIndices, setRingIndices] = useState<number[]>([0, 0, 0]);
-  const [isGrave3Unlocked, setIsGrave3Unlocked] = useState(false);
+  const [ringIndices, setRingIndices] = useState<number[]>(initialSession.stage3State.grave3RingIndices ?? [0, 0, 0]);
+  const [isGrave3Unlocked, setIsGrave3Unlocked] = useState(Boolean(initialSession.stage3State.grave3Unlocked));
 
-  // Live countdown timer sync
   useEffect(() => {
-    const timer = setInterval(() => {
-      const remaining = round1Service.getTimeRemainingSeconds(teamId);
-      setSecondsRemaining(remaining);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [teamId]);
+    const state = initialSession.stage3State;
+    setCollectedFragments(state.collectedFragments ?? initialCollectedFragments);
+    setPlacedBones(state.placedBoneSlots ?? {});
+    setDugSoils(state.dugSoilIds ?? []);
+    setIsCofferUnlocked(Boolean(state.grave2CofferUnlocked));
+    setRingIndices(state.grave3RingIndices ?? [0, 0, 0]);
+    setIsGrave3Unlocked(Boolean(state.grave3Unlocked));
+  }, [initialSession, initialCollectedFragments]);
 
   const showToast = (msg: string) => {
     setToastNotice(msg);
@@ -102,7 +108,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
     onStageCompleted();
   };
 
-  const session = round1Service.getTeamSession(teamId, '');
+  const session = initialSession;
   const journalData = {
     grave1Fragment: collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : session.evidenceJournal?.grave1Fragment),
     grave2Fragment: collectedFragments.includes('EMBER')
@@ -127,7 +133,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
       {/* 1. Master Top HUD Header (Shown on Graveyard Overview) */}
       {activeView === 'overview' && (
         <Stage3HUD
-          secondsRemaining={secondsRemaining}
+          timerStore={resolvedTimerStore}
           stageCleared={stageCleared}
           isMuted={isMuted}
           onToggleMute={handleToggleMute}
@@ -193,10 +199,12 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
           <Grave1MarkedRemains
             key="grave1"
             teamId={teamId}
+            onAction={onAction}
+            initialSession={initialSession}
             config={config}
             collectedFragments={collectedFragments}
             placedBones={placedBones}
-            secondsRemaining={secondsRemaining}
+            timerStore={resolvedTimerStore}
             stageCleared={stageCleared}
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
@@ -212,11 +220,12 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
           <Grave2BuriedDiary
             key="grave2"
             teamId={teamId}
+            onAction={onAction}
             config={config}
             collectedFragments={collectedFragments}
             dugSoils={dugSoils}
             isCofferUnlocked={isCofferUnlocked}
-            secondsRemaining={secondsRemaining}
+            timerStore={resolvedTimerStore}
             stageCleared={stageCleared}
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
@@ -237,19 +246,20 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
             collectedFragments={collectedFragments}
             ringIndices={ringIndices}
             isGrave3Unlocked={isGrave3Unlocked}
-            secondsRemaining={secondsRemaining}
+            timerStore={resolvedTimerStore}
             stageCleared={stageCleared}
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
             onReturnDashboard={onReturnDashboard}
             onReturnCemetery={() => setActiveView('overview')}
-            onRotateRing={(ringIdx, dir) => {
-              setRingIndices((prev) => {
-                const copy = [...prev];
-                copy[ringIdx] = dir === 'cw' ? ((copy[ringIdx] ?? 0) + 1) % 4 : ((copy[ringIdx] ?? 0) + 3) % 4;
-                return copy;
-              });
-              setIsGrave3Unlocked(true);
+            onRotateRing={async (ringIdx, dir) => {
+              try {
+                const result = await onAction('stage3.rotateRune', { ringIndex: ringIdx, direction: dir });
+                setRingIndices(result.session.stage3State.grave3RingIndices);
+                setIsGrave3Unlocked(Boolean(result.session.stage3State.grave3Unlocked));
+                setCollectedFragments(result.session.stage3State.collectedFragments);
+                if (result.session.stage3State.grave3Unlocked) handleFragmentUnlocked('RETURNS');
+              } catch (error) { showToast(error instanceof Error ? error.message : 'Rune rotation could not be saved.'); }
             }}
             onFragmentUnlocked={handleFragmentUnlocked}
             onOpenJournal={() => setIsJournalOpen(true)}
@@ -269,6 +279,7 @@ export const Stage3ForgottenGraveyard: React.FC<Stage3ForgottenGraveyardProps> =
       <FinalGateModal
         isOpen={isFinalGateOpen}
         teamId={teamId}
+        onAction={onAction}
         collectedFragments={collectedFragments}
         isCompleted={stageCleared}
         onGateUnlocked={handleGateUnlocked}

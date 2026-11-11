@@ -47,8 +47,35 @@ const credits = (id: string) => round1Service.getTeamSession(id, 'Test Squad').c
 /** `skulls` lists which pumpkin hides the skull on each attempt, in order. */
 function setup(teamId: string, skulls: number[] = [0, 0, 0, 0]) {
   round1Service.beginRound1(teamId, 'Test Squad', true);
+  const session = round1Service.getTeamSession(teamId, 'Test Squad');
+  const serverState = { ...session.stage1State, trials: session.stage1State.trials.map((trial) => ({ ...trial })) };
+  let serverCredits = 0;
+  let activeTarget = 0;
   const onAward = vi.fn();
   const queue = [...skulls];
+  const onAction = vi.fn(async (type: string, fields: Record<string, unknown> = {}) => {
+    let skullId: number | undefined;
+    let creditsAwarded = 0;
+    const trialIndex = Number(fields.trialIndex ?? 0);
+    const trial = serverState.trials[trialIndex];
+    if (type === 'stage1.begin') {
+      trial.attemptsUsed += 1;
+      activeTarget = queue.shift() ?? 0;
+      skullId = activeTarget;
+      serverState.activeTrial = trialIndex;
+      serverState.activeTarget = activeTarget;
+    } else if (type === 'stage1.guess') {
+      const won = Number(fields.guessId) === activeTarget;
+      if (won) {
+        trial.status = 'won';
+        trial.earnedCredits = config.trials[trialIndex].reward;
+        creditsAwarded = trial.earnedCredits;
+        serverCredits += creditsAwarded;
+      } else if (trial.attemptsUsed >= config.trials[trialIndex].tries) trial.status = 'lost';
+    }
+    const response = { success: true, session: { ...session, credits: serverCredits, stage1State: { ...serverState, trials: serverState.trials.map((item) => ({ ...item })) } }, score: serverCredits, completed: false, skullId, creditsAwarded };
+    return response;
+  });
   const ui = (
     <Stage1PumpkinShuffle
       teamId={teamId}
@@ -58,11 +85,14 @@ function setup(teamId: string, skulls: number[] = [0, 0, 0, 0]) {
       onCreditsAwarded={onAward}
       rng={seeded(11)}
       pickSkull={() => queue.shift() ?? 0}
+      initialState={serverState}
+      secondsRemaining={1200}
+      onAction={onAction}
     />
   );
   const utils = render(ui);
   const pumpkin = (id: number) => utils.container.querySelector(`[data-pumpkin="${id}"]`) as HTMLButtonElement;
-  return { ...utils, ui, onAward, pumpkin };
+  return { ...utils, ui, onAward, pumpkin, onAction, serverState, getServerCredits: () => serverCredits, session };
 }
 
 /** Starts the shown trial, waits for the shuffle to end, then smashes `pick`. */
@@ -106,9 +136,11 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
   });
 
   it('spends a try as soon as the trial starts', async () => {
-    setup('s1-spend');
+    const { serverState, onAction } = setup('s1-spend');
     fireEvent.click(screen.getByRole('button', { name: /Begin trial I/i }));
-    expect(round1Service.getStage1State('s1-spend')?.trials[0].attemptsUsed).toBe(1);
+    await act(async () => { await Promise.resolve(); });
+    expect(onAction).toHaveBeenCalledWith('stage1.begin', { trialIndex: 0 });
+    expect(serverState.trials[0].attemptsUsed).toBe(1);
   });
 
   it('winning Trial I on the first try shows the skull and awards 40 credits', async () => {
@@ -127,30 +159,30 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
     expect(screen.getByText('Trial I cleared')).toBeInTheDocument();
     expect(screen.getByText('+40 credits')).toBeInTheDocument();
     expect(onAward).toHaveBeenCalledTimes(1);
-    expect(credits('s1-win1')).toBe(40);
+    expect(credits('s1-win1')).toBe(0); // browser cache is not the gameplay authority
   });
 
   it('a wrong pumpkin on try 1 leaves one try; winning on try 2 still pays 40', async () => {
-    const { container, pumpkin } = setup('s1-try2', [1, 3]);
+    const { container, pumpkin, getServerCredits, serverState } = setup('s1-try2', [1, 3]);
     await attempt(pumpkin, /Begin trial I/i, 0); // wrong
     expect(container.querySelectorAll('.s1-dust').length).toBeGreaterThan(0);
     expect(container.querySelector('.s1-skull-emerge')).toBeNull();
     expect(screen.getByText('One try left')).toBeInTheDocument();
-    expect(credits('s1-try2')).toBe(0);
+    expect(getServerCredits()).toBe(0);
 
     await attempt(pumpkin, /Take the last try/i, 3); // right
     expect(screen.getByText('Trial I cleared')).toBeInTheDocument();
-    expect(credits('s1-try2')).toBe(40);
-    expect(round1Service.getStage1State('s1-try2')?.trials[0].attemptsUsed).toBe(2);
+    expect(getServerCredits()).toBe(40);
+    expect(serverState.trials[0].attemptsUsed).toBe(2);
   });
 
   it('two wrong guesses lose Trial I (no credits) and Trial II unlocks with 7 pumpkins', async () => {
-    const { container, pumpkin } = setup('s1-lose1', [1, 1]);
+    const { container, pumpkin, getServerCredits } = setup('s1-lose1', [1, 1]);
     await attempt(pumpkin, /Begin trial I/i, 0);
     await attempt(pumpkin, /Take the last try/i, 0, 2800);
     expect(screen.getByText('Trial I lost')).toBeInTheDocument();
     expect(screen.getByText('No credits this trial')).toBeInTheDocument();
-    expect(credits('s1-lose1')).toBe(0);
+    expect(getServerCredits()).toBe(0);
 
     fireEvent.click(screen.getByRole('button', { name: /Continue to trial II/i }));
     expect(screen.getByText('Trial II — 7 pumpkins')).toBeInTheDocument();
@@ -159,7 +191,7 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
   });
 
   it('winning both trials gives 100 credits and the summary', async () => {
-    const { pumpkin, onAward } = setup('s1-both', [0, 6]);
+    const { pumpkin, onAward, getServerCredits, serverState } = setup('s1-both', [0, 6]);
     await attempt(pumpkin, /Begin trial I/i, 0);
     fireEvent.click(screen.getByRole('button', { name: /Continue to trial II/i }));
     await attempt(pumpkin, /Begin trial II/i, 6);
@@ -170,8 +202,8 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
     expect(screen.getByText('Stage 1 finished')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(onAward).toHaveBeenCalledTimes(2);
-    expect(credits('s1-both')).toBe(100);
-    expect(round1Service.getTeamSession('s1-both', 'Test Squad').stages['stage-1'].status).toBe('completed');
+    expect(getServerCredits()).toBe(100);
+    expect(serverState.trials.every((trial) => trial.status === 'won')).toBe(true);
   });
 
   it('ignores clicks while the pumpkins are still shuffling', async () => {
@@ -190,20 +222,16 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
     await advance(1000);
     first.unmount();
 
-    render(
-      <Stage1PumpkinShuffle teamId="s1-leave" config={config} onReturnDashboard={() => {}} onSkipStage={() => {}} onCreditsAwarded={() => {}} />
-    );
+    render(<Stage1PumpkinShuffle teamId="s1-leave" config={config} initialState={first.serverState} secondsRemaining={1200} onAction={first.onAction} onReturnDashboard={() => {}} onSkipStage={() => {}} onCreditsAwarded={() => {}} />);
     expect(screen.getByText(/1 try left in this trial/i)).toBeInTheDocument();
   });
 
   it('opens straight on the summary when both trials are already finished', () => {
     round1Service.beginRound1('s1-done', 'Test Squad', true);
-    round1Service.beginStage1Attempt('s1-done', 0);
-    round1Service.resolveStage1Trial('s1-done', 0, true);
-    round1Service.beginStage1Attempt('s1-done', 1);
-    round1Service.resolveStage1Trial('s1-done', 1, true);
+    const completed = round1Service.getStage1State('s1-done')!;
+    completed.trials.forEach((trial) => { trial.status = 'won'; });
     render(
-      <Stage1PumpkinShuffle teamId="s1-done" config={config} onReturnDashboard={() => {}} onSkipStage={() => {}} onCreditsAwarded={() => {}} />
+      <Stage1PumpkinShuffle teamId="s1-done" config={config} initialState={completed} secondsRemaining={1200} onAction={vi.fn()} onReturnDashboard={() => {}} onSkipStage={() => {}} onCreditsAwarded={() => {}} />
     );
     expect(screen.getByText('Stage 1 finished')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Begin trial/i })).toBeNull();
