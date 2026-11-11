@@ -19,18 +19,26 @@ export interface ClueStep {
   stepId: string;
   clueIndex: number; // 1 through 5
   floorId: string;
+  floorName?: string;
+  mapImage?: string;
   locationName: string;
-  targetPoint: Point2D; // in map coordinate space (0..618, 0..430)
-  triggerRadius: number; // distance in pixels to trigger discovery
+  targetPoint: Point2D; // in canonical map coordinate space (1024 x 774)
+  triggerRadius: number; // distance in map units to trigger discovery
   riddle: string;
   fieldLocationHint: string;
+  validationWord?: string;
+  qrToken?: string;
+  hasScannedQr?: boolean;
+  scannedValidationWord?: string | null;
   acceptedCodes: string[];
+  isCommonFinal?: boolean;
+  physicalEntryInstructions?: string;
 }
 
 export interface ExpeditionRoute {
   routeId: string;
-  routeNumber: number; // 1 through 7
-  romanNumeral: string; // 'I' through 'VII'
+  routeNumber: number; // 1 through 5
+  romanNumeral: string; // 'I' through 'V'
   routeName: string;
   routeSubtitle: string;
   steps: ClueStep[];
@@ -52,6 +60,7 @@ export interface ExpeditionProgress {
   activeRouteId: string;
   activeStepIndex: number; // 0 to 4
   targetDiscovered: boolean;
+  scannedQrToken?: string | null;
   solvedStepIds: string[];
   completedRouteIds: string[];
   lastUpdated: string;

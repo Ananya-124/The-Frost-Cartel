@@ -30,19 +30,20 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
 
     // Top Header Elements
     expect(screen.getByText('FROST CARTEL')).toBeInTheDocument();
-    expect(screen.getByText(/ROUND 04 • SEVENTH FLOOR/i)).toBeInTheDocument();
+    expect(screen.getByText(/ROUND 04/i)).toBeInTheDocument();
     expect(screen.getByText('02:58')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Return to Exterior/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Exit Round 04/i })).toBeInTheDocument();
 
-    // Left Navigation: Exactly 7 Routes
-    expect(EXPEDITION_ROUTES.length).toBe(7);
-    expect(screen.getAllByText(/ROUTE I/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/ROUTE VII/i)).toBeInTheDocument();
+    // Exactly 5 Secret Routes in authoritative system
+    expect(EXPEDITION_ROUTES.length).toBe(5);
+
+    // Left Telemetry: Confidential Squad Progress
+    expect(screen.getByText('SQUAD TELEMETRY')).toBeInTheDocument();
+    expect(screen.getByText(/OBJECTIVE 1 OF 5/i)).toBeInTheDocument();
 
     // Central Map Area
     expect(screen.getByText(/✦ CAMPUS FLOOR MAP/i)).toBeInTheDocument();
-    expect(screen.getByText(/CLUE 1 OF 5/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Zoom Map In/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Zoom Map Out/i })).toBeInTheDocument();
 
@@ -114,21 +115,21 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
 
     // Shows error feedback and keeps Clue 1
     expect(screen.getByText(/Incorrect code or cipher/i)).toBeInTheDocument();
-    expect(screen.getByText(/CLUE 1 OF 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/OBJECTIVE 1 OF 5/i)).toBeInTheDocument();
 
-    // 3. Submit correct answer ("RIVET7")
-    fireEvent.change(input, { target: { value: 'RIVET7' } });
+    // 3. Submit correct answer ("WRAITH")
+    fireEvent.change(input, { target: { value: 'WRAITH' } });
     await act(async () => {
       fireEvent.click(submitBtn);
       await Promise.resolve();
     });
 
-    // Should advance to Clue 2 of 5
-    expect(screen.getByText(/CLUE 2 OF 5/i)).toBeInTheDocument();
+    // Should advance to Objective 2 of 5
+    expect(screen.getByText(/OBJECTIVE 2 OF 5/i)).toBeInTheDocument();
     expect(screen.getByText('1 / 5 SOLVED')).toBeInTheDocument();
   });
 
-  it('completes the entire route when all 5 clues are verified and unlocks the next route', () => {
+  it('completes the entire route when all 5 clues are verified and declares champion', () => {
     render(
       <FloorInteriorView
         floor={testFloor}
@@ -155,36 +156,14 @@ describe('Round 04 Floor Interior: The Campus Expedition Map & Cooperative Treas
 
     const updated = round4Service.getProgress(teamId);
     expect(updated.completedRouteIds).toContain('route-1');
-    // Advances to Route 2
-    expect(updated.activeRouteId).toBe('route-2');
-    expect(updated.activeStepIndex).toBe(0);
-  });
-
-  it('prevents navigation to locked routes until prior routes conclude', () => {
-    render(
-      <FloorInteriorView
-        floor={testFloor}
-        onReturnToExterior={mockReturn}
-        isMuted={false}
-        onToggleMute={mockToggleMute}
-        onExit={mockExit}
-      />
-    );
-
-    const teamId = 'fc_team_001';
-    // Route 3 is locked initially
-    const result = round4Service.selectRoute(teamId, 'route-3');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('locked');
-
-    // Progress remains on route-1
-    expect(round4Service.getProgress(teamId).activeRouteId).toBe('route-1');
+    expect(updated.activeStepIndex).toBe(4);
+    expect(round4Service.getWinner()?.teamId).toBe(teamId);
   });
 
   it('persists progress across reloads using localStorage', () => {
     const teamId = 'fc_team_001';
     round4Service.markTargetDiscovered(teamId);
-    round4Service.submitAnswer(teamId, 'RIVET7');
+    round4Service.submitAnswer(teamId, 'WRAITH');
 
     // Verify stored progress
     const reloaded = round4Service.getProgress(teamId);

@@ -10,8 +10,8 @@ interface CampusFloorMapProps {
   isMuted: boolean;
 }
 
-const AVATAR_SPEED = 145; // pixels per second
-const AVATAR_RADIUS = 12;
+const AVATAR_SPEED = 75; // pixels per second (controlled human walking pace per Part 10)
+const AVATAR_RADIUS = 8;
 
 function isPositionValid(pos: Point2D, config: FloorMapConfig): boolean {
   // Check bounds
@@ -24,15 +24,29 @@ function isPositionValid(pos: Point2D, config: FloorMapConfig): boolean {
     return false;
   }
 
+  // If walkable regions defined, avatar MUST be inside at least one walkable corridor or room
+  if (config.walkableRegions && config.walkableRegions.length > 0) {
+    const isWalkable = config.walkableRegions.some(
+      (r) =>
+        pos.x >= r.x &&
+        pos.x <= r.x + r.width &&
+        pos.y >= r.y &&
+        pos.y <= r.y + r.height
+    );
+    if (!isWalkable) return false;
+  }
+
   // Check collision regions (walls/obstacles)
-  for (const col of config.collisionRegions) {
-    if (
-      pos.x >= col.x - AVATAR_RADIUS &&
-      pos.x <= col.x + col.width + AVATAR_RADIUS &&
-      pos.y >= col.y - AVATAR_RADIUS &&
-      pos.y <= col.y + col.height + AVATAR_RADIUS
-    ) {
-      return false;
+  if (config.collisionRegions) {
+    for (const col of config.collisionRegions) {
+      if (
+        pos.x >= col.x - AVATAR_RADIUS &&
+        pos.x <= col.x + col.width + AVATAR_RADIUS &&
+        pos.y >= col.y - AVATAR_RADIUS &&
+        pos.y <= col.y + col.height + AVATAR_RADIUS
+      ) {
+        return false;
+      }
     }
   }
 
@@ -129,28 +143,42 @@ export const CampusFloorMap: React.FC<CampusFloorMapProps> = ({
       if (dx !== 0 || dy !== 0) {
         // Normalize diagonal speed
         const length = Math.hypot(dx, dy);
-        const normDx = (dx / length) * AVATAR_SPEED * dt;
-        const normDy = (dy / length) * AVATAR_SPEED * dt;
+        const totalDx = (dx / length) * AVATAR_SPEED * dt;
+        const totalDy = (dy / length) * AVATAR_SPEED * dt;
 
         setAvatarAngle(Math.atan2(dy, dx) * (180 / Math.PI) + 90);
 
-        const current = posRef.current;
-        const nextX = current.x + normDx;
-        const nextY = current.y + normDy;
+        // Substep movement (max 2 units per substep) to prevent wall tunneling
+        const maxStepSize = 2.0;
+        const numSubSteps = Math.max(1, Math.ceil(Math.hypot(totalDx, totalDy) / maxStepSize));
+        const subDx = totalDx / numSubSteps;
+        const subDy = totalDy / numSubSteps;
 
-        // Try direct movement
-        if (isPositionValid({ x: nextX, y: nextY }, mapConfig)) {
-          posRef.current = { x: nextX, y: nextY };
-          setAvatarPos({ x: nextX, y: nextY });
-        } else if (isPositionValid({ x: nextX, y: current.y }, mapConfig)) {
-          // Slide along X axis
-          posRef.current = { x: nextX, y: current.y };
-          setAvatarPos({ x: nextX, y: current.y });
-        } else if (isPositionValid({ x: current.x, y: nextY }, mapConfig)) {
-          // Slide along Y axis
-          posRef.current = { x: current.x, y: nextY };
-          setAvatarPos({ x: current.x, y: nextY });
+        let curX = posRef.current.x;
+        let curY = posRef.current.y;
+
+        for (let i = 0; i < numSubSteps; i++) {
+          const nextX = curX + subDx;
+          const nextY = curY + subDy;
+
+          // Try direct movement
+          if (isPositionValid({ x: nextX, y: nextY }, mapConfig)) {
+            curX = nextX;
+            curY = nextY;
+          } else if (isPositionValid({ x: nextX, y: curY }, mapConfig)) {
+            // Slide along X axis
+            curX = nextX;
+          } else if (isPositionValid({ x: curX, y: nextY }, mapConfig)) {
+            // Slide along Y axis
+            curY = nextY;
+          } else {
+            // Blocked in this substep
+            break;
+          }
         }
+
+        posRef.current = { x: curX, y: curY };
+        setAvatarPos({ x: curX, y: curY });
       }
 
       // Check Proximity to Target Point

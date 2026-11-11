@@ -8,6 +8,8 @@ interface FieldRiddlePanelProps {
   progress: ExpeditionProgress;
   isTargetDiscovered: boolean;
   onSubmitAnswer: (answer: string) => Promise<{ success: boolean; message: string }>;
+  onOpenScanner?: () => void;
+  scannedValidationWord?: string | null;
   isMuted: boolean;
 }
 
@@ -17,12 +19,25 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
   progress,
   isTargetDiscovered,
   onSubmitAnswer,
+  onOpenScanner,
+  scannedValidationWord,
   isMuted,
 }) => {
   const [answerInput, setAnswerInput] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
+
+  // Sync scanned validation word if provided
+  React.useEffect(() => {
+    if (scannedValidationWord) {
+      setAnswerInput(scannedValidationWord);
+      setFeedback({
+        type: 'success',
+        message: `Checkpoint confirmed! Validation word: ${scannedValidationWord}`,
+      });
+    }
+  }, [scannedValidationWord]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +131,17 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
 
           {/* Answer Code Input Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
+            {onOpenScanner && isTargetDiscovered && (
+              <button
+                type="button"
+                onClick={onOpenScanner}
+                className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-[#b8860b] to-[#d4af37] hover:from-[#c9971c] hover:to-[#e5c158] text-[#1c1208] font-cinzel text-xs font-bold tracking-[0.16em] border border-[#ffd866] shadow-sm flex items-center justify-center gap-2 cursor-pointer uppercase transition-all"
+              >
+                <span>📷</span>
+                <span>SCAN PHYSICAL QR CHECKPOINT</span>
+              </button>
+            )}
+
             <div className="relative">
               <input
                 type="text"
@@ -217,9 +243,9 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
             })}
           </div>
 
-          {/* Footer Metadata: ROUTE I / VII | X / 5 SOLVED */}
+          {/* Footer Metadata: CURRENT SECTOR | X / 5 SOLVED */}
           <div className="flex items-center justify-between text-[11px] font-cinzel font-semibold tracking-wider text-[#5c401d] pt-1">
-            <span>{currentRoute.routeName.toUpperCase()} / VII</span>
+            <span>SECTOR OBJECTIVE</span>
             <div className="h-3 w-[1px] bg-[#b8974a]/50" />
             <span>{solvedCountInRoute} / 5 SOLVED</span>
           </div>

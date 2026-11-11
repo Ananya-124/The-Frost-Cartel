@@ -96,25 +96,28 @@ CREATE INDEX IF NOT EXISTS idx_transactions_team ON score_transactions(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_sessions_token ON team_sessions(token);
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(token);
 
--- ROUND 04: THE CAMPUS EXPEDITION — 7 TEAMS, 7 ROUTES, 1 COMMON TREASURE
+-- ROUND 04: THE CAMPUS EXPEDITION — 5 TEAMS, 5 ROUTES, 1 COMMON TREASURE
 CREATE TABLE IF NOT EXISTS round4_settings (
   id TEXT PRIMARY KEY,
   is_released INTEGER NOT NULL DEFAULT 1,
   common_final_location_id TEXT NOT NULL DEFAULT 'room-final-700',
-  common_final_floor_id TEXT NOT NULL DEFAULT 'floor-7',
-  common_final_room_name TEXT NOT NULL DEFAULT 'The Celestial Archives & Observatory Vault',
-  common_final_x REAL NOT NULL DEFAULT 280,
-  common_final_y REAL NOT NULL DEFAULT 125,
-  common_final_radius REAL NOT NULL DEFAULT 36,
-  physical_entry_instructions TEXT NOT NULL DEFAULT 'Level 07 • North Archway • Final Chamber Doors',
+  common_final_floor_id TEXT NOT NULL DEFAULT 'floor-07',
+  common_final_room_name TEXT NOT NULL DEFAULT 'Main Event Venue (Anchor Ceiling Fan)',
+  common_final_x REAL NOT NULL DEFAULT 800,
+  common_final_y REAL NOT NULL DEFAULT 510,
+  common_final_radius REAL NOT NULL DEFAULT 42,
+  physical_entry_instructions TEXT NOT NULL DEFAULT 'Level 07 • Main Event Hall • Underneath 3-Blade Anchor Ceiling Fan Bay',
+  final_riddle TEXT NOT NULL DEFAULT 'Standing at the pinnacle on floor number seven, Underneath the tiled expanse of the room''s white heaven. Find the white spinners anchored high overhead, Whose three wide arms rest while the final steps are tread. Reach above the still blade hovering over the crowd, To pull down the victory and claim your title proud.',
+  final_accepted_answers_json TEXT NOT NULL DEFAULT '["ANCHOR","CEILING FAN","WHITE SPINNERS","PINNACLE"]',
+  final_qr_token TEXT NOT NULL DEFAULT 'fc_qr_final_7th_relic',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS round4_routes (
-  id TEXT PRIMARY KEY, -- 'route-1' through 'route-7'
-  route_number INTEGER NOT NULL UNIQUE, -- 1 through 7
-  roman_numeral TEXT NOT NULL UNIQUE, -- 'I' through 'VII'
+  id TEXT PRIMARY KEY, -- 'route-1' through 'route-5'
+  route_number INTEGER NOT NULL UNIQUE, -- 1 through 5
+  roman_numeral TEXT NOT NULL UNIQUE, -- 'I' through 'V'
   route_name TEXT NOT NULL,
   route_subtitle TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -133,6 +136,11 @@ CREATE TABLE IF NOT EXISTS round4_steps (
   riddle_text TEXT NOT NULL,
   field_location_hint TEXT NOT NULL,
   accepted_answers_json TEXT NOT NULL, -- JSON array of valid answer variants
+  validation_word TEXT NOT NULL DEFAULT '',
+  qr_token TEXT NOT NULL DEFAULT '',
+  physical_location TEXT NOT NULL DEFAULT '',
+  safety_notes TEXT NOT NULL DEFAULT '',
+  is_verified INTEGER NOT NULL DEFAULT 1,
   is_case_sensitive INTEGER NOT NULL DEFAULT 0,
   is_common_final INTEGER NOT NULL DEFAULT 0, -- 1 for step 5
   created_at TEXT NOT NULL,
@@ -155,6 +163,7 @@ CREATE TABLE IF NOT EXISTS round4_team_progress (
   current_step_index INTEGER NOT NULL DEFAULT 0, -- 0 to 4 (step 1 to 5)
   target_discovered INTEGER NOT NULL DEFAULT 0,
   solved_steps_json TEXT NOT NULL DEFAULT '[]', -- JSON array of solved stepIds
+  scanned_qr_token TEXT,
   common_room_arrived INTEGER NOT NULL DEFAULT 0,
   is_finished INTEGER NOT NULL DEFAULT 0,
   finished_at TEXT,

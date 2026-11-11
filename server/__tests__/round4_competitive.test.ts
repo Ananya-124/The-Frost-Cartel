@@ -5,12 +5,12 @@ import * as crypto from 'node:crypto';
 import { app } from '../index.ts';
 import { db, initDatabase, hashPassword } from '../../database/db.ts';
 
-describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race', () => {
+describe('FROST CARTEL — Round 04: Five Teams, Five Routes, Atomic Winner Race', () => {
   let server: Server;
   let baseUrl: string;
   let adminToken: string;
 
-  // Track 8 distinct test teams (7 to qualify + 1 unqualified)
+  // Track 6 distinct test teams (5 to qualify + 1 unqualified)
   const testTeams: Array<{ id: string; name: string; pass: string; token: string }> = [];
 
   beforeAll(async () => {
@@ -39,9 +39,9 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
     const adminData = await adminRes.json();
     adminToken = adminData.token;
 
-    // 2. Create 8 distinct tournament teams (7 to qualify + 1 unqualified)
+    // 2. Create 6 distinct tournament teams (5 to qualify + 1 unqualified)
     const now = new Date().toISOString();
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 6; i++) {
       const teamId = `r4-team-test-${i}-${Date.now()}`;
       const name = `Squad Omega ${i} ${Date.now()}`;
       const pass = `Password#${i}#2026`;
@@ -68,11 +68,11 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
     });
   });
 
-  describe('Phase 1: Qualification of Seven Teams & Strict Limit Enforcement', () => {
-    it('rejects an 8th team from being qualified (maximum 7 enforced)', async () => {
-      const eightAssignments = testTeams.map((t, idx) => ({
+  describe('Phase 1: Qualification of Five Teams & Strict Limit Enforcement', () => {
+    it('rejects a 6th team from being qualified (maximum 5 enforced)', async () => {
+      const sixAssignments = testTeams.map((t, idx) => ({
         teamId: t.id,
-        routeId: `route-${(idx % 7) + 1}`,
+        routeId: `route-${(idx % 5) + 1}`,
       }));
 
       const res = await fetch(`${baseUrl}/api/round4/admin/qualify-teams`, {
@@ -81,13 +81,13 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ assignments: eightAssignments }),
+        body: JSON.stringify({ assignments: sixAssignments }),
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data.success).toBe(false);
-      expect(data.message).toMatch(/Limit Exceeded.*seven qualified teams/i);
+      expect(data.message).toMatch(/Limit Exceeded.*five qualified teams/i);
     });
 
     it('rejects duplicate route assignment (1 team = 1 unique route, 1 route = 1 team)', async () => {
@@ -111,8 +111,8 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       expect(data.message).toMatch(/Duplicate route assignment/i);
     });
 
-    it('successfully qualifies exactly 7 teams with unique routes I to VII', async () => {
-      const validSeven = testTeams.slice(0, 7).map((t, idx) => ({
+    it('successfully qualifies exactly 5 teams with unique routes I to V', async () => {
+      const validFive = testTeams.slice(0, 5).map((t, idx) => ({
         teamId: t.id,
         routeId: `route-${idx + 1}`,
       }));
@@ -123,17 +123,17 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ assignments: validSeven }),
+        body: JSON.stringify({ assignments: validFive }),
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      expect(data.message).toMatch(/Successfully qualified 7 squads/i);
+      expect(data.message).toMatch(/Successfully saved 5 qualified squads/i);
     });
 
-    it('blocks an unqualified 8th team from accessing Round 04 (403 Forbidden)', async () => {
-      const unqualifiedTeam = testTeams[7]; // Team 8 was not in the qualified list
+    it('blocks an unqualified 6th team from accessing Round 04 (403 Forbidden)', async () => {
+      const unqualifiedTeam = testTeams[5]; // Team 6 was not in the qualified list
 
       const res = await fetch(`${baseUrl}/api/round4/my-route`, {
         headers: {
@@ -144,7 +144,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       expect(res.status).toBe(403);
       const data = await res.json();
       expect(data.success).toBe(false);
-      expect(data.message).toMatch(/not among the seven qualified teams/i);
+      expect(data.message).toMatch(/five qualified teams/i);
     });
   });
 
@@ -229,7 +229,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
 
     it('solves Clues 1 through 4 sequentially for Team 1 and arrives at Common Final Room (Step 5)', async () => {
       const team1 = testTeams[0];
-      const answers = ['RIVET7', 'MERIDIAN', 'BAY4', '1947'];
+      const answers = ['WRAITH', 'CANDLE', 'RAVEN', 'HEX'];
 
       for (let i = 0; i < 4; i++) {
         const stepId = `r1_s${i + 1}`;
@@ -267,12 +267,12 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       expect(routeData.progress.currentStepIndex).toBe(4); // Clue 5
       expect(routeData.activeStep.clueIndex).toBe(5);
       expect(routeData.activeStep.isCommonFinal).toBe(true);
-      expect(routeData.activeStep.locationName).toBe('The Celestial Archives & Observatory Vault');
+      expect(routeData.activeStep.locationName).toContain('Main Event Venue');
     });
 
     it('advances Team 2 (Route II) through clues 1-4 with its own independent answers and reaches the SAME common final room', async () => {
       const team2 = testTeams[1];
-      const answers = ['180', '65D', 'LUX', 'MASON'];
+      const answers = ['GHOUL', 'COVEN', 'PHANTOM', 'GRIMOIRE'];
 
       for (let i = 0; i < 4; i++) {
         const stepId = `r2_s${i + 1}`;
@@ -305,7 +305,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       const routeData2 = await routeRes2.json();
       expect(routeData2.activeStep.clueIndex).toBe(5);
       expect(routeData2.activeStep.isCommonFinal).toBe(true);
-      expect(routeData2.activeStep.locationName).toBe('The Celestial Archives & Observatory Vault');
+      expect(routeData2.activeStep.locationName).toContain('Main Event Venue');
     });
   });
 
@@ -324,9 +324,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
         headers: { Authorization: `Bearer ${team2.token}` },
       });
 
-      // Submit both valid final answers concurrently
-      // Team 1 Route I final answer: "BSN"
-      // Team 2 Route II final answer: "SEVEN"
+      // Submit valid final answer "ANCHOR" concurrently
       const [res1, res2] = await Promise.all([
         fetch(`${baseUrl}/api/round4/submit-clue`, {
           method: 'POST',
@@ -334,7 +332,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
             'Content-Type': 'application/json',
             Authorization: `Bearer ${team1.token}`,
           },
-          body: JSON.stringify({ stepId: 'r1_s5', answer: 'BSN' }),
+          body: JSON.stringify({ stepId: 'r1_s5', answer: 'ANCHOR' }),
         }),
         fetch(`${baseUrl}/api/round4/submit-clue`, {
           method: 'POST',
@@ -342,7 +340,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
             'Content-Type': 'application/json',
             Authorization: `Bearer ${team2.token}`,
           },
-          body: JSON.stringify({ stepId: 'r2_s5', answer: 'SEVEN' }),
+          body: JSON.stringify({ stepId: 'r2_s5', answer: 'ANCHOR' }),
         }),
       ]);
 
@@ -370,7 +368,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
           'Content-Type': 'application/json',
           Authorization: `Bearer ${team3.token}`,
         },
-        body: JSON.stringify({ stepId: 'r3_s5', answer: 'VERITAS' }),
+        body: JSON.stringify({ stepId: 'r3_s5', answer: 'ANCHOR' }),
       });
 
       const data = await res.json();
@@ -389,7 +387,7 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
       expect(data.success).toBe(true);
       expect(data.winner).toBeDefined();
       expect(data.winner.team_name || data.winner.teamName).toBeDefined();
-      expect(data.qualifiedTeams.length).toBe(7);
+      expect(data.qualifiedTeams.length).toBe(5);
     });
   });
 });

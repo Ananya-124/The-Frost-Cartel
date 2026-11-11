@@ -5,9 +5,10 @@ import { round4Service } from '../../../services/round4Service';
 import { authService } from '../../../services/authService';
 import { getExpeditionRoute } from './ExpeditionRouteConfiguration';
 import { getFloorMapConfig } from './FloorMapConfiguration';
-import { RouteNavigation } from './RouteNavigation';
 import { CampusFloorMap } from './CampusFloorMap';
 import { FieldRiddlePanel } from './FieldRiddlePanel';
+import { NextFloorModal } from './NextFloorModal';
+import { QRScannerModal } from './QRScannerModal';
 import { WinnerCelebrationModal } from './WinnerCelebrationModal';
 import { NonWinnerModal } from './NonWinnerModal';
 import { soundController } from '../../../utils/soundController';
@@ -35,6 +36,24 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   );
   const [winner, setWinner] = useState<WinnerRecord | null>(() => round4Service.getWinner());
   const [isAccessDenied, setIsAccessDenied] = useState<boolean>(false);
+
+  // Transition & Scanner Modals
+  const [showNextFloorModal, setShowNextFloorModal] = useState<boolean>(false);
+  const [nextFloorInfo, setNextFloorInfo] = useState<{ floorId: string; floorName: string } | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState<boolean>(false);
+  const [scannedValidationWord, setScannedValidationWord] = useState<string | null>(null);
+
+  // Current floor state
+  const currentRoute = getExpeditionRoute(progress.activeRouteId);
+  const currentStep = currentRoute.steps[progress.activeStepIndex] || currentRoute.steps[0];
+  const [currentFloorId, setCurrentFloorId] = useState<string>(() => currentStep.floorId || floor.id);
+
+  // Keep floor in sync if active step floor changes
+  useEffect(() => {
+    if (currentStep?.floorId && currentStep.floorId !== currentFloorId) {
+      setCurrentFloorId(currentStep.floorId);
+    }
+  }, [currentStep?.floorId]);
 
   // Authoritative server route & qualification check on mount
   useEffect(() => {
@@ -68,10 +87,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
     };
   }, []);
 
-  const currentRoute = getExpeditionRoute(progress.activeRouteId);
-  const currentStep = currentRoute.steps[progress.activeStepIndex] || currentRoute.steps[0];
-  const activeFloorId = currentStep.floorId || floor.id;
-  const mapConfig = getFloorMapConfig(activeFloorId);
+  const mapConfig = getFloorMapConfig(currentFloorId);
 
   // Map Explorer avatar touches the glowing target point
   const handleTargetReached = useCallback(() => {
@@ -89,21 +105,28 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
       if ((result.isWinner || result.raceClosed) && result.winner) {
         setWinner(result.winner);
       }
+
+      // Check if unlocked next floor
+      if (result.success && !result.isRouteCompleted && result.nextFloorId) {
+        setNextFloorInfo({
+          floorId: result.nextFloorId,
+          floorName: result.nextFloorName || 'Next Floor',
+        });
+        setShowNextFloorModal(true);
+      }
+
       return Promise.resolve({ success: result.success, message: result.message });
     },
     [teamId]
   );
 
-  // Player switches route from RouteNavigation
-  const handleSelectRoute = useCallback(
-    (routeId: string) => {
-      const result = round4Service.selectRoute(teamId, routeId);
-      if (result.success) {
-        setProgress({ ...result.progress });
-      }
-    },
-    [teamId]
-  );
+  const handleProceedToNextFloor = () => {
+    if (nextFloorInfo) {
+      setCurrentFloorId(nextFloorInfo.floorId);
+      setShowNextFloorModal(false);
+      setScannedValidationWord(null);
+    }
+  };
 
   const handleReturn = () => {
     if (!isMuted) {
@@ -121,7 +144,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             ACCESS RESTRICTED
           </h2>
           <p className="text-xs text-[#d4c6a0] font-sans mb-6 leading-relaxed">
-            Round 04 (The Campus Expedition) is available strictly to the seven qualified squads from Round 03.
+            Round 04 (The Campus Expedition) is available strictly to the five qualified squads from Round 03.
           </p>
           <button
             type="button"
@@ -202,12 +225,12 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
           </div>
         </div>
 
-        {/* Center: Gilded Cartouche Badge (ROUND 04 • SEVENTH FLOOR) */}
+        {/* Center: Gilded Cartouche Badge (ROUND 04 • ACTIVE FLOOR) */}
         <div className="hidden md:flex items-center justify-center">
           <div className="px-5 py-1 rounded-full bg-gradient-to-r from-[#2c1e11] via-[#1a120b] to-[#2c1e11] border border-[#d4af37] shadow-[0_2px_10px_rgba(70,45,15,0.25)] flex items-center gap-2">
             <span className="text-[#ffd866] text-xs">✦</span>
             <span className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.22em] text-[#ffd866] uppercase">
-              ROUND 04 • {floor.label.toUpperCase()}
+              ROUND 04 • {floor?.label ? floor.label.toUpperCase() : mapConfig.floorName.toUpperCase()}
             </span>
             <span className="text-[#ffd866] text-xs">✦</span>
           </div>
@@ -256,19 +279,51 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
         </div>
       </header>
 
-      {/* 2. Main Exploration Stage (3-Column Layout: Left Routes, Center Map, Right Panel) */}
+      {/* 2. Main Exploration Stage (3-Column Layout: Left Telemetry, Center Map, Right Panel) */}
       <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-between p-3 sm:p-5 lg:p-6 gap-4 max-w-[1720px] mx-auto w-full overflow-hidden">
         
-        {/* Left Section (~14% width): Vertical Ancient Relic Route Selector */}
+        {/* Left Section: Confidential Squad Expedition Telemetry (Strict Route Secrecy) */}
         <section
-          aria-label="Expedition Routes"
-          className="flex-shrink-0 flex items-center justify-center w-full lg:w-auto"
+          aria-label="Squad Expedition Telemetry"
+          className="flex-shrink-0 flex flex-col items-center justify-center w-full lg:w-[230px] p-5 rounded-2xl bg-gradient-to-b from-[#fdf7ea] via-[#f7ecd6] to-[#ebdcc4] border-2 border-[#d4af37]/80 shadow-md text-center"
         >
-          <RouteNavigation
-            progress={progress}
-            onSelectRoute={handleSelectRoute}
-            isMuted={isMuted}
-          />
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#2a1c10] to-[#120b06] border border-[#d4af37] flex items-center justify-center shadow-inner mb-2">
+            <span className="text-xl">🛡️</span>
+          </div>
+          <span className="font-cinzel text-xs font-bold tracking-[0.2em] text-[#3d2a14] uppercase block">
+            SQUAD TELEMETRY
+          </span>
+          <span className="font-cinzel text-sm font-black text-[#85531b] block mb-3">
+            {session?.teamName || 'EXPEDITION SQUAD'}
+          </span>
+
+          <div className="w-full h-[1px] bg-[#d4af37]/40 mb-3" />
+
+          <span className="font-cinzel text-[10px] font-bold tracking-wider text-[#634825] uppercase block mb-1">
+            ACTIVE FLOOR
+          </span>
+          <span className="font-cinzel text-xs font-black text-[#2e1d0f] block mb-3 leading-snug">
+            {mapConfig.floorName.toUpperCase()}
+          </span>
+
+          <div className="w-full p-2.5 rounded-lg bg-[#f0e3cc]/90 border border-[#b8974a]/40 text-center mb-3 shadow-inner">
+            <span className="text-[10px] font-cinzel font-bold text-[#8a5d20] uppercase block">
+              OBJECTIVE {progress.activeStepIndex + 1} OF 5
+            </span>
+            <span className="text-xs font-bold text-[#3d2a14] block mt-0.5">
+              {progress.targetDiscovered ? 'MARKER REACHED ✓' : 'APPROACH GOLD MARKER'}
+            </span>
+          </div>
+
+          {/* Quick Scanner Shortcut */}
+          <button
+            type="button"
+            onClick={() => setShowQRScanner(true)}
+            className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-[#2c1e11] to-[#140c06] hover:from-[#3d2a17] hover:to-[#1a1008] text-[#ffd866] font-cinzel text-xs font-bold tracking-wider border border-[#d4af37]/70 shadow-sm flex items-center justify-center gap-1.5 cursor-pointer uppercase transition-all"
+          >
+            <span>📷</span>
+            <span>SCANNER</span>
+          </button>
         </section>
 
         {/* Central Section (~60% width): Interactive Campus Floor Map */}
@@ -297,13 +352,35 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             progress={progress}
             isTargetDiscovered={progress.targetDiscovered}
             onSubmitAnswer={handleSubmitAnswer}
+            onOpenScanner={() => setShowQRScanner(true)}
+            scannedValidationWord={scannedValidationWord}
             isMuted={isMuted}
           />
         </section>
 
       </main>
 
-      {/* 3. Championship Winner & Non-Winner Result Overlays */}
+      {/* 3. New Passage Transition Modal */}
+      <NextFloorModal
+        isOpen={showNextFloorModal}
+        nextFloorId={nextFloorInfo?.floorId || ''}
+        nextFloorName={nextFloorInfo?.floorName || ''}
+        onProceed={handleProceedToNextFloor}
+        isMuted={isMuted}
+      />
+
+      {/* 4. Physical QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={showQRScanner}
+        teamId={teamId}
+        onClose={() => setShowQRScanner(false)}
+        onScanSuccess={(word) => {
+          setScannedValidationWord(word);
+        }}
+        isMuted={isMuted}
+      />
+
+      {/* 5. Championship Winner & Non-Winner Result Overlays */}
       {winner && (
         winner.teamId === teamId ? (
           <WinnerCelebrationModal
