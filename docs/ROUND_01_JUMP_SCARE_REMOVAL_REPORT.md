@@ -97,3 +97,4 @@ When a player reaches the end of Stage 03 and unseals the Arch-Lich Escape Gate:
 5. **UI Transition:** Success notice `"Arch-Lich Gate Shattered • Escaped!"` displays.
 6. **No Flash / No Screech:** Screen remains stable, atmospheric, and free of horror lunges or strobing.
 7. **Progression:** Stage 3 is marked completed; user advances smoothly to the next round/dashboard.
+

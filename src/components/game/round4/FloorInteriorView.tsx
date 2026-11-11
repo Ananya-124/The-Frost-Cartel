@@ -34,7 +34,20 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   const [progress, setProgress] = useState<ExpeditionProgress>(() =>
     round4Service.getProgress(teamId)
   );
-  const [winner, setWinner] = useState<WinnerRecord | null>(() => round4Service.getWinner());
+  const [winner, setWinner] = useState<WinnerRecord | null>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('celebration') === '1' || p.get('winner') === '1') {
+        return {
+          teamId,
+          teamName: p.get('teamName') || session?.teamName || 'Team AI',
+          routeId: progress.activeRouteId || 'route-1',
+          solvedAt: new Date().toISOString(),
+        };
+      }
+    }
+    return round4Service.getWinner();
+  });
   const [isAccessDenied, setIsAccessDenied] = useState<boolean>(false);
 
   // Transition & Scanner Modals
@@ -386,6 +399,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
           <WinnerCelebrationModal
             winner={winner}
             routeRomanNumeral={currentRoute.romanNumeral}
+            isMuted={isMuted}
             onExit={onExit}
           />
         ) : (

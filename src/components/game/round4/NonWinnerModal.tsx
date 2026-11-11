@@ -18,6 +18,9 @@ export const NonWinnerModal: React.FC<NonWinnerModalProps> = ({
     ? new Date(winner.solvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : 'Recently';
 
+  const rawName = winner.teamName.trim().toUpperCase();
+  const cleanWinnerName = rawName.startsWith('TEAM ') ? rawName : `TEAM ${rawName}`;
+
   return (
     <div
       role="dialog"
@@ -50,7 +53,7 @@ export const NonWinnerModal: React.FC<NonWinnerModalProps> = ({
         <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 mb-6 text-left">
           <div className="flex items-center justify-between text-xs mb-1">
             <span className="text-amber-400/80 uppercase font-sans font-semibold">Champions:</span>
-            <span className="font-cinzel text-amber-200 font-bold text-sm">TEAM {winner.teamName.toUpperCase()}</span>
+            <span className="font-cinzel text-amber-200 font-bold text-sm">{cleanWinnerName}</span>
           </div>
           <div className="flex items-center justify-between text-xs mb-1">
             <span className="text-amber-400/80 uppercase font-sans font-semibold">Victory Recorded:</span>
