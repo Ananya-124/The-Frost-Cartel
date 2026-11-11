@@ -167,6 +167,7 @@ export const RoundFourIntro: React.FC<RoundFourIntroProps> = ({
             state={state}
             onBeginHunt={handleBeginHunt}
             isMuted={isMuted}
+            reducedMotion={reducedMotion}
           />
         </div>
       </CinematicBlurTransition>
