@@ -1,4 +1,4 @@
-# FROST CARTEL — Stage 03 Atmosphere Redesign & Horror Jumpscare Report
+# FROST CARTEL — Stage 03 Atmosphere Redesign Report
 
 ## 1. Executive Summary
 In response to user feedback on Stage 03 (**The Forgotten Graveyard**), we completed four critical visual and interactive enhancements:
@@ -9,13 +9,12 @@ In response to user feedback on Stage 03 (**The Forgotten Graveyard**), we compl
    - **Soaring Crows / Ravens (`FlyingCrow.tsx`)**: High-detail animated ravens gliding and flapping past the full moon and castle spires.
    - **Translucent Ghosts (`FloatingGhost.tsx`)**: Ethereal apparitions drifting through the graveyard tombstones and spires.
    - **Rolling Fog & Volumetric Mist**: Dynamic mist drifting across the cemetery floor.
-4. **Bone-Chilling AAA Horror Jumpscare (`HorrorJumpscareModal.tsx` & `soundController.playHorrorJumpscare()`)**:
-   - Triggered when the player chants the final phrase (`THE NIGHT RETURNS`).
-   - Sudden blackout and silence suspense (150ms).
-   - Deafening multi-layered horror audio scream: 60Hz earthquake sub-bass drop + 2100Hz-780Hz banshee shrieking sawtooth with violent 16Hz vibrato + 2850Hz square dissonance + gut-wrenching white noise burst.
-   - Terrifying screaming demonic skull entity lunging forward with needle fangs, gaping bloody maw, and blazing crimson pupils (`animate-jumpscare-lunge`).
-   - Strobe lighting flashes (`animate-jumpscare-strobe`), violent viewport vibration (`animate-jumpscare-shake`), and chromatic aberration glitching.
-   - Transitions into a triumphant seal-shattering victory sequence rewarding +250 Credits.
+4. **Streamlined Final Gate Victory (Jump Scare Permanently Removed)**:
+   - Previously implemented horror jumpscare was permanently removed per user specifications.
+   - Stage 03 final challenge now cleanly transitions directly upon chanting the correct incantation:
+     - Triumphant seal-shattering sound effects (`playSecretFound()` and `playVictory()`).
+     - Clear escape feedback banner: `"Arch-Lich Gate Shattered • Escaped!"`.
+     - Direct awarding of +250 Credits with no flashing, screen shaking, or jarring screech audio.
 
 ---
 

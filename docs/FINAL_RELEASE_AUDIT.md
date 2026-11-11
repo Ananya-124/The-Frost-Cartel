@@ -12,7 +12,7 @@
 FROST CARTEL has undergone complete end-to-end repository consolidation, branch synchronization, quality remediation, and multi-round verification. All legitimate engineering work from `origin/round2`, `origin/round-3`, and local master development has been consolidated into the authoritative `main` branch.
 
 All four tournament rounds are active, connected, and verified:
-- **Round 1 (The Graveyard Escape)**: 3 Crypt stages, real-time timer, 500 CR limit, horror jumpscare gate.
+- **Round 1 (The Graveyard Escape)**: 3 Crypt stages, real-time timer, 500 CR limit, Arch-Lich final gate.
 - **Round 2 (The Haunted Auction House)**: Real-time credit bidding, 6 power cards, anti-sniping protection, admin auction master controls.
 - **Round 3 (Paradox Hunt)**: Dual past/future split-screen engine, Hunt 1 & Hunt 2 cooperative progression, ambient audio, and power-card consumption.
 - **Round 4 (The Radiant Treasure Hunt)**: Light antique parchment environment, cinematic dove flight and letter landing on stone pedestal, 8-floor interactive selection, direct open-window camera traversal, 7-team competition, 7 independent routes, 35 clue steps, common final room convergence, atomic winner declaration, and Admin Master Suite.
