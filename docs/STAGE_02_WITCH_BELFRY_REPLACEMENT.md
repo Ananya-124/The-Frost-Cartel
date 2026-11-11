@@ -68,3 +68,4 @@ M 408 376 C 410 376 412 377 413 378 C 414 379 412 380 411 381 C 413 381.5 414 38
 - **TypeScript Typecheck:** `npx tsc --noEmit` → 0 errors.
 - **Linter:** `npm run lint` → 0 errors.
 - **Production Build:** `npm run build` → SUCCESS.
+
