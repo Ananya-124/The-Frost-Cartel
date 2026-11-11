@@ -204,3 +204,4 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
     );
   });
 });
+
