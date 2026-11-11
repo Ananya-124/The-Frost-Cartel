@@ -223,8 +223,11 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
             </div>
           </div>
 
-          {/* Printable Scroll Content - Safely positioned below the roll with natural vertical rhythm */}
-          <div className="w-full h-full pt-[19%] sm:pt-[21%] md:pt-[22%] pb-[8%] px-[12%] sm:px-[14%] flex flex-col items-center text-center">
+          {/* Printable Scroll Content - Natural coherent document layout with balanced vertical rhythm */}
+          <div
+            className="absolute inset-x-[10%] sm:inset-x-[12%] top-[21%] bottom-[7%] flex flex-col items-center justify-start text-center select-none"
+            style={{ containerType: 'inline-size' }}
+          >
             
             {/* Header Section: Title, Subtle Antique Divider, and Subtitle */}
             <div ref={headingRef} className="w-full flex flex-col items-center flex-shrink-0">
@@ -232,67 +235,73 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
               {/* Main Heading: THE DAWN AWAKENS */}
               <h2
                 id="letter-heading"
-                className="font-cinzel text-[clamp(19px,2.8vw,36px)] font-black tracking-[0.16em] text-[#2c170a] drop-shadow-[0_1px_1px_rgba(255,245,220,0.6)] uppercase leading-tight whitespace-nowrap"
+                className="font-cinzel text-[clamp(19px,5.2cqw,30px)] font-black tracking-[0.15em] text-[#38200F] drop-shadow-[0_1px_1px_rgba(255,248,230,0.85)] uppercase leading-tight whitespace-nowrap"
               >
                 THE DAWN AWAKENS
               </h2>
 
               {/* Subtle Antique-Gold Decorative Divider */}
-              <div className="flex items-center justify-center gap-2 sm:gap-3 my-1 sm:my-1.5 opacity-75" aria-hidden="true">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 my-2 sm:my-2.5" aria-hidden="true">
                 <div className="w-8 sm:w-14 h-px bg-gradient-to-r from-transparent to-[#8a5d24]" />
-                <span className="text-[9px] sm:text-xs text-[#8a5d24]">❖</span>
+                <span className="text-[10px] sm:text-xs text-[#8a5d24] select-none">❖</span>
                 <div className="w-8 sm:w-14 h-px bg-gradient-to-l from-transparent to-[#8a5d24]" />
               </div>
 
               {/* Storyline Subtitle: The darkness has finally faded. */}
-              <p className="font-cormorant italic text-[clamp(13.5px,1.8vw,20px)] font-bold text-[#3d200e] tracking-[0.03em] leading-tight">
+              <p className="font-cormorant italic text-[clamp(14.5px,3.6cqw,20.5px)] font-bold text-[#49301D] tracking-[0.02em] leading-snug">
                 The darkness has finally faded.
               </p>
             </div>
 
-            {/* Storyline Body Narrative (Grouped Closely as One Balanced Reading Block) */}
-            <div ref={storyRef} className="w-full flex flex-col items-center text-center space-y-2 sm:space-y-3 mt-2 sm:mt-3.5 max-w-[450px]">
+            {/* Storyline Body Narrative (Grouped as One Balanced Reading Block) */}
+            <div
+              ref={storyRef}
+              className="w-full flex flex-col items-center text-center space-y-3 sm:space-y-4 md:space-y-4.5 mt-3.5 sm:mt-5 max-w-[450px] px-1"
+            >
               
               {/* Paragraph 1 */}
-              <p className="font-cormorant text-[clamp(12.5px,1.65vw,18px)] leading-[1.42] sm:leading-[1.54] text-[#2e190b] font-medium">
+              <p className="font-cormorant text-[clamp(13.5px,3.3cqw,18px)] leading-[1.52] sm:leading-[1.62] text-[#49301D] font-bold">
                 Beyond the graveyard, a new dawn awaits. Hidden within the walls of your own college lies a forgotten treasure — a relic of knowledge, mystery and unimaginable value.
               </p>
 
               {/* Paragraph 2 */}
-              <p className="font-cormorant text-[clamp(12.5px,1.65vw,18px)] leading-[1.42] sm:leading-[1.54] text-[#2e190b] font-medium">
+              <p className="font-cormorant text-[clamp(13.5px,3.3cqw,18px)] leading-[1.52] sm:leading-[1.62] text-[#49301D] font-bold">
                 Explore the floors, uncover the scattered clues, and follow the ancient trail to discover the Golden Relic.
               </p>
 
               {/* Paragraph 3 */}
-              <p className="font-cormorant italic text-[clamp(12.5px,1.65vw,18px)] leading-[1.42] sm:leading-[1.54] text-[#2e190b] font-bold tracking-[0.02em]">
+              <p className="font-cormorant italic text-[clamp(13.5px,3.3cqw,18px)] leading-[1.52] sm:leading-[1.62] text-[#38200F] font-bold tracking-[0.015em]">
                 Your next journey begins where your own story was written.
               </p>
             </div>
 
             {/* Action Section: Centered Integrated "✦ BEGIN THE HUNT ✦" Button */}
-            <div ref={buttonRef} className="w-full flex flex-col items-center mt-3.5 sm:mt-5 md:mt-6 flex-shrink-0">
+            <div ref={buttonRef} className="w-full flex flex-col items-center flex-shrink-0 mt-4 sm:mt-6 md:mt-7">
               <button
                 type="button"
                 onClick={handleBeginHuntClick}
                 disabled={isSubmitting || isTransitioning}
                 aria-label="Begin the hunt through time and space"
-                className="group relative transition-all duration-300 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg"
+                className="group relative transition-all duration-300 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#c5a059] rounded-md"
               >
-                {/* Subtle Golden Ambient Illumination */}
+                {/* Restrained Golden Ambient Illumination */}
                 <div
-                  className="absolute -inset-1 rounded-lg bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.45)_0%,rgba(180,120,20,0.15)_50%,transparent_75%)] blur-sm group-hover:blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  className="absolute -inset-1 rounded-md bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.3)_0%,transparent_70%)] blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                   aria-hidden="true"
                 />
 
-                {/* Integrated Burgundy Button Body with Gold Border */}
+                {/* Royal Seal / Engraved Parchment Action Control */}
                 <div
-                  className={`relative rounded-md bg-gradient-to-b from-[#3c0e14] via-[#2a070c] to-[#1a0306] border-2 border-[#c59e47] px-6 sm:px-9 md:px-10 py-2 sm:py-2.5 md:py-3 shadow-[0_4px_14px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,235,170,0.4)] transform transition-all duration-200 ${
+                  className={`relative rounded-md bg-gradient-to-b from-[#3a151b] via-[#280c10] to-[#1c060a] border border-[#c5a059] px-7 sm:px-9 py-2 sm:py-2.5 shadow-[0_5px_14px_rgba(25,10,5,0.45),inset_0_1px_1px_rgba(255,235,175,0.3)] transform transition-all duration-200 ${
                     isTransitioning
-                      ? 'opacity-85 scale-95 pointer-events-none'
-                      : 'group-hover:scale-[1.02] group-hover:border-[#ffd778] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.55),inset_0_1px_2px_rgba(255,245,190,0.6)] group-active:scale-[0.98]'
+                      ? 'opacity-80 scale-95 pointer-events-none'
+                      : 'group-hover:scale-[1.02] group-hover:border-[#e2bc68] group-hover:shadow-[0_0_16px_rgba(212,175,55,0.4),inset_0_1px_1px_rgba(255,245,190,0.5)] group-active:scale-[0.98] group-active:translate-y-[1px]'
                   }`}
                 >
-                  <span className="font-cinzel text-[clamp(11.5px,1.4vw,15px)] font-bold tracking-[0.2em] text-[#fae4a8] group-hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] uppercase whitespace-nowrap">
+                  {/* Subtle Inner Engraved Border */}
+                  <div className="absolute inset-[2.5px] rounded-[3px] border border-[#d4af37]/25 pointer-events-none" />
+
+                  <span className="relative z-10 font-cinzel text-[clamp(11.5px,2.9cqw,14.5px)] font-bold tracking-[0.2em] text-[#f5ebd7] group-hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] uppercase whitespace-nowrap">
                     ✦ BEGIN THE HUNT ✦
                   </span>
                 </div>
