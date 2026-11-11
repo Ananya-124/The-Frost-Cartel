@@ -238,20 +238,24 @@ export const STAGE2_TARGET_DEFINITIONS: Stage2TargetDefinition[] = [
   },
 ];
 
+const TARGET_ICONS: Record<string, string> = {
+  pumpkin: '🎃',
+  skull: '💀',
+  ghost: '👻',
+  bat: '🦇',
+  witch_hat: '🧙‍♀️',
+  spider: '🕷️',
+  spider_web: '🕸️',
+  coffin: '⚰️',
+  black_cat: '🐈‍⬛',
+  potion_bottle: '🧪',
+  candle: '🕯️',
+};
+
 export const STAGE2_CANONICAL_TARGETS: TargetItem[] = STAGE2_TARGET_DEFINITIONS.map((def) => ({
   id: def.targetId,
   name: def.shortName,
-  icon: def.targetId === 'pumpkin' ? '🎃' :
-        def.targetId === 'skull' ? '💀' :
-        def.targetId === 'ghost' ? '👻' :
-        def.targetId === 'bat' ? '🦇' :
-        def.targetId === 'witch_hat' ? '🧙‍♀️' :
-        def.targetId === 'spider' ? '🕷️' :
-        def.targetId === 'spider_web' ? '🕸️' :
-        def.targetId === 'coffin' ? '⚰️' :
-        def.targetId === 'black_cat' ? '🐈‍⬛' :
-        def.targetId === 'potion_bottle' ? '🧪' :
-        def.targetId === 'candle' ? '🕯️' : '🗝️',
+  icon: TARGET_ICONS[def.targetId] ?? '🗝️',
   isFound: false,
 }));
 

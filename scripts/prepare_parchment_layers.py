@@ -74,7 +74,8 @@ inpainted = inpaint_biharmonic(arr, inpaint_mask, channel_axis=-1)
 inpainted = np.clip(inpainted, 0.0, 1.0)
 
 # Add back natural subtle parchment grain to inpainted regions
-noise = np.random.normal(0, 0.015, arr.shape)
+rng = np.random.default_rng()
+noise = rng.normal(0, 0.015, arr.shape)
 inpainted_with_grain = np.clip(inpainted + noise * inpaint_mask[:, :, None], 0.0, 1.0)
 
 # Convert to uint8 RGBA
@@ -109,3 +110,4 @@ body_img = Image.fromarray(body_rgba, 'RGBA')
 body_path = os.path.join(out_dir, 'parchment_body.png')
 body_img.save(body_path)
 print(f'Saved parchment body to: {body_path}')
+

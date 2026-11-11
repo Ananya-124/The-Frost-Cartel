@@ -39,7 +39,7 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
     }
   }, [scannedValidationWord]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!answerInput.trim() || isSubmitting || !isTargetDiscovered) return;
 
@@ -218,26 +218,32 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
               const isCompleted = idx < progress.activeStepIndex || progress.completedRouteIds.includes(currentRoute.routeId);
               const isCurrent = idx === progress.activeStepIndex && !progress.completedRouteIds.includes(currentRoute.routeId);
 
+              let dotContent: React.ReactNode;
+              if (isCurrent) {
+                dotContent = (
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-200 to-white border border-[#b8860b] shadow-[0_0_10px_rgba(255,215,0,0.95)] flex items-center justify-center animate-pulse">
+                    <div className="w-2 h-2 rounded-full bg-[#3d270c]" />
+                  </div>
+                );
+              } else if (isCompleted) {
+                dotContent = (
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border border-[#b8860b] shadow-sm flex items-center justify-center">
+                    <span className="text-[#3d270c] text-[9px] font-bold">✓</span>
+                  </div>
+                );
+              } else {
+                dotContent = (
+                  <div className="w-4 h-4 rounded-full bg-[#3d2a17]/40 border border-[#b8974a]/40" />
+                );
+              }
+
               return (
                 <div
                   key={`clue-dot-${stepNumber}`}
                   className="relative flex items-center justify-center"
                   title={`Clue ${stepNumber} of 5`}
                 >
-                  {isCurrent ? (
-                    // Active Pulsing Clue Dot
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-200 to-white border border-[#b8860b] shadow-[0_0_10px_rgba(255,215,0,0.95)] flex items-center justify-center animate-pulse">
-                      <div className="w-2 h-2 rounded-full bg-[#3d270c]" />
-                    </div>
-                  ) : isCompleted ? (
-                    // Solved Step Dot
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border border-[#b8860b] shadow-sm flex items-center justify-center">
-                      <span className="text-[#3d270c] text-[9px] font-bold">✓</span>
-                    </div>
-                  ) : (
-                    // Locked Future Step Dot
-                    <div className="w-4 h-4 rounded-full bg-[#3d2a17]/40 border border-[#b8974a]/40" />
-                  )}
+                  {dotContent}
                 </div>
               );
             })}

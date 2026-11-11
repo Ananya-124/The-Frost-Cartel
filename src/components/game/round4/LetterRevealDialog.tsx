@@ -161,11 +161,10 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      open
       aria-labelledby="letter-heading"
-      className="fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden select-none"
+      className="fixed inset-0 z-40 bg-transparent p-0 m-0 border-none max-w-none max-h-none w-full h-full flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden select-none"
     >
       {/* 1. Deep Warm Charcoal Backdrop Vignette with Subtle Candlelight Radiance */}
       <div
@@ -348,6 +347,6 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };
