@@ -141,6 +141,21 @@ async function reconcileRoundCompletion(pool: Pool, teamId: string, roundId: num
   }
 }
 
+/**
+ * Polled every few seconds by every squad, so keep the steady state to a single
+ * status read: only rounds that are IN_PROGRESS can need server-side completion,
+ * and the locking transactions run only once completion evidence exists.
+ */
+async function reconcileInProgressRounds(pool: Pool, teamId: string): Promise<void> {
+  const statuses = await pool.query<{ round_id: number }>(
+    "SELECT round_id FROM round_progress WHERE team_id=$1 AND round_id IN (1,3,4) AND status='IN_PROGRESS'", [teamId]);
+  const inProgress = new Set(statuses.rows.map((row) => Number(row.round_id)));
+  if (inProgress.has(1) && await completeEvidence(teamId, 1, pool)) await completeRound1FromEvidence(pool, teamId);
+  // completeEvidence(3) also reconciles finished Round 3 hunts.
+  if (inProgress.has(3) && await completeEvidence(teamId, 3, pool)) await completeRound(pool, teamId, 3);
+  if (inProgress.has(4) && await completeEvidence(teamId, 4, pool)) await completeRound(pool, teamId, 4);
+}
+
 teamRouter.use(requireTeamAuth);
 
 teamRouter.get('/me', asyncHandler(async (req, res) => {
@@ -151,8 +166,7 @@ teamRouter.get('/me', asyncHandler(async (req, res) => {
   }
   const pool = configuredPool();
   const teamId = authenticatedTeam(req);
-  await reconcileRound3Hunts(pool, teamId);
-  for (const roundId of [1, 3, 4]) await reconcileRoundCompletion(pool, teamId, roundId);
+  await reconcileInProgressRounds(pool, teamId);
   return res.json({ success: true, teamId, ...(await getTeamProgression(pool, teamId)) });
 }));
 

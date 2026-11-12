@@ -10,7 +10,8 @@ function resolveCertFile(certPath?: string): string | undefined {
   if (existsSync(cleanPath)) {
     return readFileSync(cleanPath, 'utf8');
   }
-  const filename = path.basename(cleanPath);
+  // Split on both separators so a Windows path in a shared .env still resolves on Linux/macOS.
+  const filename = cleanPath.split(/[\\/]/).pop() || cleanPath;
   const bundled = path.resolve(process.cwd(), 'certs', filename);
   if (existsSync(bundled)) {
     return readFileSync(bundled, 'utf8');

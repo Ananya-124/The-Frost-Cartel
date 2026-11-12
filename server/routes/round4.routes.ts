@@ -64,8 +64,11 @@ export function createRound4Router(
 
   router.get('/my-route', auth.team, asyncRoute(async (req, res) => {
     const dbPool = requirePool();
-    await ensureReleased(dbPool);
-    res.json(await getRound4TeamRoute(dbPool, teamId(req)));
+    // Run the release gate alongside the route read; the gate's error still takes precedence.
+    const [released, state] = await Promise.allSettled([ensureReleased(dbPool), getRound4TeamRoute(dbPool, teamId(req))]);
+    if (released.status === 'rejected') throw released.reason;
+    if (state.status === 'rejected') throw state.reason;
+    res.json(state.value);
   }));
 
   router.post('/discover-target', auth.team, asyncRoute(async (req, res) => {

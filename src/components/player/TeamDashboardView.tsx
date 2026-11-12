@@ -71,6 +71,12 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     const syncStatus = async () => {
       if (disposed || inFlight) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      // Round 1 status cannot change once it is completed; stop polling it.
+      if (progressionRef.current?.rounds.find((round) => round.round_id === 1)?.status === 'COMPLETED') {
+        setRoundStatus('completed');
+        if (intervalId) { clearInterval(intervalId); intervalId = null; }
+        return;
+      }
       inFlight = true;
       try {
         const state = await round1Api.getState();

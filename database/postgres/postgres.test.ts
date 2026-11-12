@@ -34,6 +34,19 @@ describe('PostgreSQL connection settings', () => {
     expect(config.idleTimeoutMillis).toBe(30_000);
   });
 
+  it('falls back to the bundled CA for missing Windows and POSIX certificate paths', async () => {
+    const bundled = await readFile(path.resolve(process.cwd(), 'certs', 'prod-ca-2021.crt'), 'utf8');
+    for (const missingPath of [
+      'C:\\Users\\someone\\Downloads\\prod-ca-2021.crt',
+      '"C:\\Users\\someone\\Downloads\\prod-ca-2021.crt"',
+      'C:/Users/someone/Downloads/prod-ca-2021.crt',
+      '/home/someone/Downloads/missing-dir/prod-ca-2021.crt',
+    ]) {
+      const config = createPostgresPoolConfig({ DATABASE_URL: 'postgres://u:p@localhost/db', PGSSLROOTCERT: missingPath });
+      expect(config.ssl).toMatchObject({ ca: bundled, rejectUnauthorized: true });
+    }
+  });
+
   it('accepts a secret CA certificate supplied as environment content', () => {
     const config = createPostgresPoolConfig({
       DATABASE_URL: 'postgres://u:p@localhost/db',

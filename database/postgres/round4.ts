@@ -97,29 +97,29 @@ export async function getRound4ReleaseState(pool: Pool): Promise<boolean> {
   return result.rows[0].is_released;
 }
 
+const QUALIFICATION_SQL = `
+  SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name,r.route_subtitle FROM round4_qualified_teams q
+  JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`;
+
+type Qualification = { route_id: string; route_number: number; roman_numeral: string; route_name: string; route_subtitle: string };
+
+/** Read the team's route, lazily qualifying a squad that is eligible but not yet assigned. */
+async function getOrQualifyRoute(pool: Pool, teamId: string): Promise<Qualification | undefined> {
+  const qualification = await pool.query<Qualification>(QUALIFICATION_SQL, [teamId]);
+  if (qualification.rowCount) return qualification.rows[0];
+  const eligible = await pool.query(
+    "SELECT 1 FROM round_progress WHERE team_id=$1 AND round_id=4 AND status IN ('AVAILABLE', 'IN_PROGRESS')", [teamId]);
+  if (!eligible.rowCount) return undefined;
+  await withPostgresTransaction(pool, (client) => qualifyTeamForRound4(client, teamId));
+  return (await pool.query<Qualification>(QUALIFICATION_SQL, [teamId])).rows[0];
+}
+
 export async function getRound4Status(pool: Pool, teamId: string) {
-  const released = await getRound4ReleaseState(pool);
-  let qualification = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string }>(`
-    SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name FROM round4_qualified_teams q
-    JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
-
-  if (!qualification.rowCount) {
-    const eligible = await pool.query<{ status: string }>(
-      "SELECT status FROM round_progress WHERE team_id=$1 AND round_id=4 AND status IN ('AVAILABLE', 'IN_PROGRESS')",
-      [teamId]
-    );
-    if (eligible.rowCount) {
-      await withPostgresTransaction(pool, async (client) => {
-        await qualifyTeamForRound4(client, teamId);
-      });
-      qualification = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string }>(`
-        SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name FROM round4_qualified_teams q
-        JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
-    }
-  }
-
-  const qual = qualification.rows[0];
-  const winner = await getRound4Winner(pool);
+  const [released, qual, winner] = await Promise.all([
+    getRound4ReleaseState(pool),
+    getOrQualifyRoute(pool, teamId),
+    getRound4Winner(pool),
+  ]);
   if (!qual) return {
     success: true, qualified: false, isReleased: released, assignedRouteId: null, winner: winner ?? null,
     message: 'Your squad has not been qualified for Round 04 (The Campus Expedition). Only five qualified squads may enter.',
@@ -137,41 +137,20 @@ export async function getRound4Winner(pool: Pool): Promise<Winner | null> {
 }
 
 export async function getRound4TeamRoute(pool: Pool, teamId: string) {
-  let qual = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string; route_subtitle: string }>(`
-    SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name,r.route_subtitle
-    FROM round4_qualified_teams q JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
-
-  if (!qual.rowCount) {
-    const eligible = await pool.query<{ status: string }>(
-      "SELECT status FROM round_progress WHERE team_id=$1 AND round_id=4 AND status IN ('AVAILABLE', 'IN_PROGRESS')",
-      [teamId]
-    );
-    if (eligible.rowCount) {
-      await withPostgresTransaction(pool, async (client) => {
-        await qualifyTeamForRound4(client, teamId);
-      });
-      qual = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string; route_subtitle: string }>(`
-        SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name,r.route_subtitle
-        FROM round4_qualified_teams q JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
-    }
-  }
-
-  const assignment = qual.rows[0];
+  const assignment = await getOrQualifyRoute(pool, teamId);
   if (!assignment) throw new Round4Error('Access Denied: Your squad is not among the five qualified teams for Round 04.', 'FORBIDDEN');
-  const progressResult = await pool.query<{ current_step_index: number; target_discovered: boolean; solved_steps: string[]; common_room_arrived: boolean; is_finished: boolean; finished_at: Date | null }>(
-    'SELECT current_step_index,target_discovered,solved_steps,common_room_arrived,is_finished,finished_at FROM round4_team_progress WHERE team_id=$1 AND route_id=$2',
-    [teamId, assignment.route_id],
-  );
-  const progress = progressResult.rows[0];
-  if (!progress) throw new Round4Error('Round 04 progress is not initialized for this team.', 'FORBIDDEN');
-
-  const [stepsResult, settingsResult, winner] = await Promise.all([
+  const [progressResult, stepsResult, settingsResult, winner] = await Promise.all([
+    pool.query<{ current_step_index: number; target_discovered: boolean; solved_steps: string[]; common_room_arrived: boolean; is_finished: boolean; finished_at: Date | null }>(
+      'SELECT current_step_index,target_discovered,solved_steps,common_room_arrived,is_finished,finished_at FROM round4_team_progress WHERE team_id=$1 AND route_id=$2',
+      [teamId, assignment.route_id]),
     pool.query<{ id: string; clue_index: number; floor_id: string; location_name: string; target_x: number; target_y: number; trigger_radius: number; riddle_text: string; field_location_hint: string; is_common_final: boolean }>(
       'SELECT id,clue_index,floor_id,location_name,target_x,target_y,trigger_radius,riddle_text,field_location_hint,is_common_final FROM round4_steps WHERE route_id=$1 ORDER BY clue_index', [assignment.route_id]),
     pool.query<{ common_final_floor_id: string; common_final_room_name: string; common_final_x: number; common_final_y: number; common_final_radius: number; physical_entry_instructions: string }>(
       'SELECT common_final_floor_id,common_final_room_name,common_final_x,common_final_y,common_final_radius,physical_entry_instructions FROM round4_settings WHERE id=1'),
     getRound4Winner(pool),
   ]);
+  const progress = progressResult.rows[0];
+  if (!progress) throw new Round4Error('Round 04 progress is not initialized for this team.', 'FORBIDDEN');
   const settings = settingsResult.rows[0];
   if (!settings) throw new Round4Error('Round 4 settings are unavailable.', 'NOT_FOUND');
   const active = stepsResult.rows[progress.current_step_index] ?? null;
