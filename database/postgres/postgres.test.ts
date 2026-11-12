@@ -31,7 +31,15 @@ describe('PostgreSQL connection settings', () => {
     expect(config.connectionString).not.toContain('sslmode=');
     expect(config.ssl).toMatchObject({ ca: 'test CA', rejectUnauthorized: true });
     expect(config.max).toBe(4);
+    expect(config.min).toBe(3);
     expect(config.idleTimeoutMillis).toBe(30_000);
+  });
+
+  it('keeps warm connections within the pool maximum', () => {
+    const env = { DATABASE_URL: 'postgres://u:p@localhost/db', PGSSLMODE: 'disable' };
+    expect(createPostgresPoolConfig({ ...env, PG_POOL_MAX: '2' }).min).toBe(2);
+    expect(createPostgresPoolConfig({ ...env, PG_POOL_MIN: '0' }).min).toBe(0);
+    expect(() => createPostgresPoolConfig({ ...env, PG_POOL_MIN: '-1' })).toThrow(/PG_POOL_MIN/);
   });
 
   it('falls back to the bundled CA for missing Windows and POSIX certificate paths', async () => {

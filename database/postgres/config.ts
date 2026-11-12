@@ -63,11 +63,17 @@ export function createPostgresPoolConfig(env: PostgresEnvironment = process.env)
 
   const max = Number(env.PG_POOL_MAX || 10);
   if (!Number.isInteger(max) || max < 1) throw new Error('PG_POOL_MAX must be a positive integer.');
+  // Keep a few connections open past the idle timeout: reconnecting to a hosted
+  // pooler costs a TLS handshake (~300 ms), which otherwise lands on the first
+  // click after every 30 s pause.
+  const min = Math.min(Number(env.PG_POOL_MIN || 3), max);
+  if (!Number.isInteger(min) || min < 0) throw new Error('PG_POOL_MIN must be a non-negative integer.');
 
   return {
     connectionString: url.toString(),
     ssl,
     max,
+    min,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
     keepAlive: true,
