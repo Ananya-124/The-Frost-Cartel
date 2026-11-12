@@ -87,9 +87,6 @@ class ProgressionDb {
           row.status = String(values[2]);
           if (values[3] === true) row.completed_at ??= 'completed';
           if (values[3] === false) row.completed_at = null;
-          if (Number(values[1]) === 2 && (row.status === 'AVAILABLE' || row.status === 'IN_PROGRESS')) {
-            this.auctionEnabled = true;
-          }
         }
         return this.result([]);
       }

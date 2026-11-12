@@ -32,10 +32,12 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     const status = initialProgression?.rounds.find((round) => round.round_id === 1)?.status;
     return status === 'IN_PROGRESS' || status === 'AVAILABLE' ? 'running' : status === 'COMPLETED' ? 'completed' : 'not_started';
   });
+  const [progression, setProgression] = useState<TeamProgression | null>(initialProgression);
   const progressionRef = useRef<TeamProgression | null>(initialProgression);
 
   useEffect(() => {
     if (initialProgression) {
+      setProgression(initialProgression);
       progressionRef.current = initialProgression;
       const status = initialProgression.rounds.find((round) => round.round_id === 1)?.status;
       if (status === 'IN_PROGRESS' || status === 'AVAILABLE') setRoundStatus('running');
@@ -47,6 +49,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     try {
       const value = await progressionService.getMine();
       progressionRef.current = value;
+      setProgression(value);
     } catch {
       // Ignore background refresh failure
     }
@@ -412,11 +415,6 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
             <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
           </button>
         </div>
-        <details className="mt-3 w-full max-w-2xl rounded border border-amber-500/25 bg-black/45 px-3 py-2 text-left">
-          <summary className="cursor-pointer text-[10px] font-cinzel font-bold uppercase tracking-wider text-amber-200">View team progression</summary>
-          <TeamProgressionSummary progression={progression} loading={progressionLoading} error={progressionError} onRetry={() => { void refreshProgression(); }} />
-        </details>
->>>>>>> 9e960b6 (feat: enable global Round 2 tournament unlock and dynamic squad console entry)
       </div>
     </dialog>
   );
