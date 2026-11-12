@@ -169,14 +169,36 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
           </span>
         </div>
 
-        {/* Create Team CTA */}
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="px-4 py-2 rounded bg-gradient-to-r from-cartel-pumpkin via-cartel-amber to-cartel-pumpkin text-cartel-void font-cinzel font-black text-xs uppercase tracking-wider shadow-pumpkinGlow hover:scale-102 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
-        >
-          + Create Team
-        </button>
+        {/* Team Actions CTA */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!window.confirm('⚠️ Reset progress for EVERY squad across all rounds? This will return all squads back to Round 1 staged.')) return;
+              try {
+                setActionBusy(true); setActionError(null);
+                const res = await progressionService.adminResetAllTeamsProgress('Tournament Master Reset from Teams Tab');
+                setActionNotice(`Master Reset Complete! All ${res.resetCount} squads reset to Round 1 staged.`);
+                await handleRefresh();
+              } catch (err) {
+                setActionError(err instanceof Error ? err.message : 'Tournament reset failed.');
+              } finally {
+                setActionBusy(false);
+              }
+            }}
+            disabled={actionBusy}
+            className="px-3 py-2 rounded bg-red-950/70 hover:bg-red-900 border border-red-500/50 text-red-300 font-cinzel font-bold text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
+          >
+            ⚠️ Reset All Progress
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="px-4 py-2 rounded bg-gradient-to-r from-cartel-pumpkin via-cartel-amber to-cartel-pumpkin text-cartel-void font-cinzel font-black text-xs uppercase tracking-wider shadow-pumpkinGlow hover:scale-102 transition-all cursor-pointer whitespace-nowrap"
+          >
+            + Create Team
+          </button>
+        </div>
       </div>
 
       {/* Team Table */}

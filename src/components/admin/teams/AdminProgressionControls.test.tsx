@@ -31,37 +31,30 @@ function state(round2EligibleAt: string | null, round2Status: 'LOCKED' | 'AVAILA
 describe('Admin Round 2 team progression controls', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('allows Round 2 unlock for the shared tournament auction while keeping subsequent rounds gated', async () => {
+  it('allows advancing to next eligible round and shows reset every team option', async () => {
     vi.mocked(progressionService.getAdminTeam).mockResolvedValue(state(null));
     render(<AdminProgressionControls teamId="team-42" teamName="North Hall" />);
 
-    const unlockRound2 = await screen.findByRole('button', { name: 'unlock Round 2' });
-    expect(unlockRound2).toBeEnabled();
-    expect(unlockRound2).toHaveAttribute('title', 'Unlock Round 2 for all squads across the tournament');
+    const moveButton = await screen.findByRole('button', { name: 'Move North Hall to Round 2' });
+    expect(moveButton).toBeEnabled();
 
-    const unlockRound3 = screen.getByRole('button', { name: 'unlock Round 3' });
-    expect(unlockRound3).toBeDisabled();
-    expect(unlockRound3).toHaveAttribute('title', 'Complete Round 2 before unlocking this round.');
-
-    expect(screen.getByText(/Round 2 is a shared tournament auction/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '⚠️ Reset Every Team' })).toBeInTheDocument();
     expect(progressionService.getAdminTeam).toHaveBeenCalledWith('team-42');
-    expect(progressionService.getAdminTeams).not.toHaveBeenCalled();
   });
 
-  it('unlocks an eligible team through the authenticated server action and displays the confirmed state', async () => {
+  it('moves an eligible team forward through the authenticated server action', async () => {
     vi.mocked(progressionService.getAdminTeam).mockResolvedValue(state('2026-11-12T10:00:00.000Z'));
     vi.mocked(progressionService.adminAction).mockResolvedValue(state('2026-11-12T10:00:00.000Z', 'AVAILABLE'));
     const onProgressChanged = vi.fn();
     render(<AdminProgressionControls teamId="team-42" teamName="North Hall" onProgressChanged={onProgressChanged} />);
 
-    fireEvent.change(await screen.findByLabelText('Audit reason (optional)'), { target: { value: 'Round 1 verified' } });
-    fireEvent.click(screen.getByRole('button', { name: 'unlock Round 2' }));
+    const moveButton = await screen.findByRole('button', { name: 'Move North Hall to Round 2' });
+    fireEvent.click(moveButton);
 
     await waitFor(() => expect(progressionService.adminAction).toHaveBeenCalledWith(
-      'team-42', 'ROUND', 2, 'unlock', 'Round 1 verified',
+      'team-42', 'ROUND', 2, 'unlock',
     ));
-    expect(await screen.findByText(/Round 2 unlock recorded/i)).toBeInTheDocument();
-    expect(screen.getByText('AVAILABLE')).toBeInTheDocument();
+    expect(await screen.findByText(/North Hall moved to Round 2/i)).toBeInTheDocument();
     expect(onProgressChanged).toHaveBeenCalledTimes(1);
   });
 });

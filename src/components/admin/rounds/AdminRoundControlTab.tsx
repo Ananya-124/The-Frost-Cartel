@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { AdminTeam, Round1Status } from '../../../types/admin';
 import { adminReadService } from '../../../services/adminReadService';
 import { round1Api } from '../../../services/round1ApiService';
-import { progressionService } from '../../../services/progressionService';
 import { AdminProgressionControls } from '../teams/AdminProgressionControls';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
 import { AdminStageConfigPanel } from './AdminStageConfigPanel';
@@ -51,9 +50,6 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
   );
   const [roundDuration, setRoundDuration] = useState<number>(22);
   const [serverStatus, setServerStatus] = useState<Round1Status>(round1Status);
-  const [round2Active, setRound2Active] = useState(false);
-  const [round3Active, setRound3Active] = useState(false);
-  const [round4Active, setRound4Active] = useState(false);
   const [timerBusy, setTimerBusy] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [roundError, setRoundError] = useState<string | null>(null);
@@ -72,104 +68,6 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
     })
       .catch((error: unknown) => setRoundError(error instanceof Error ? error.message : 'Could not load Round 1 settings.'));
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    if (selectedTeamId) {
-      void progressionService.getAdminTeam(selectedTeamId).then((data) => {
-        if (!active) return;
-        const r2 = data.rounds.find((r) => r.round_id === 2);
-        setRound2Active(r2?.status === 'AVAILABLE' || r2?.status === 'IN_PROGRESS');
-        const r3 = data.rounds.find((r) => r.round_id === 3);
-        setRound3Active(r3?.status === 'AVAILABLE' || r3?.status === 'IN_PROGRESS');
-        const r4 = data.rounds.find((r) => r.round_id === 4);
-        setRound4Active(r4?.status === 'AVAILABLE' || r4?.status === 'IN_PROGRESS');
-      }).catch(() => undefined);
-    }
-    return () => { active = false; };
-  }, [selectedTeamId]);
-
-  const handleGlobalRound2Action = (action: 'unlock' | 'lock') => {
-    requestConfirmation(
-      action === 'unlock' ? 'UNLOCK ROUND 2 FOR ALL SQUADS' : 'LOCK ROUND 2 FOR ALL SQUADS',
-      action === 'unlock'
-        ? 'This will unlock Round 2: The Haunted Auction for ALL squads across the tournament simultaneously.'
-        : 'This will lock Round 2 for all squads.',
-      async () => {
-        setTimerBusy(true); setRoundError(null);
-        try {
-          const res = await progressionService.adminRound2Global(action);
-          setRound2Active(res.isActive);
-          setFeedbackNotice(`Round 2 ${action === 'unlock' ? 'unlocked' : 'locked'} for all squads across the tournament.`);
-          setTimeout(() => setFeedbackNotice(null), 4000);
-          await onRefresh();
-        } catch (error) {
-          setRoundError(error instanceof Error ? error.message : `Round 2 ${action} failed.`);
-          throw error;
-        } finally {
-          setTimerBusy(false);
-        }
-      },
-      action === 'lock',
-      action === 'unlock' ? 'UNLOCK FOR ALL SQUADS' : 'LOCK ROUND 2'
-    );
-  };
-
-  const handleGlobalRound3Action = (action: 'advance' | 'lock') => {
-    requestConfirmation(
-      action === 'lock' ? 'LOCK ROUND 3 FOR ALL SQUADS' : 'ADVANCE ALL SQUADS TO ROUND 3 (SYNC AUCTION CARDS)',
-      action === 'lock'
-        ? 'This will lock Round 3 for all squads across the tournament.'
-        : 'This will complete Round 2, transfer all won auction cards into each squad\'s Round 3 inventory, and unlock Round 3 (Paradox Hunt) for ALL squads across the tournament.',
-      async () => {
-        setTimerBusy(true); setRoundError(null);
-        try {
-          const res = await progressionService.adminRound3Global(action);
-          setRound3Active(res.isActive);
-          if (res.isActive) {
-            setFeedbackNotice(`Advanced all squads to Round 3! Synced ${res.cardsSynced} auction cards into squad inventories.`);
-          } else {
-            setFeedbackNotice('Round 3 locked for all squads.');
-          }
-          setTimeout(() => setFeedbackNotice(null), 4000);
-          await onRefresh();
-        } catch (error) {
-          setRoundError(error instanceof Error ? error.message : `Round 3 ${action} failed.`);
-          throw error;
-        } finally {
-          setTimerBusy(false);
-        }
-      },
-      action === 'lock',
-      action === 'lock' ? 'LOCK ROUND 3' : 'ADVANCE TO ROUND 3'
-    );
-  };
-
-  const handleGlobalRound4Action = (action: 'advance' | 'lock') => {
-    requestConfirmation(
-      action === 'lock' ? 'LOCK ROUND 4 FOR ALL SQUADS' : 'ADVANCE ALL SQUADS TO ROUND 4',
-      action === 'lock'
-        ? 'This will lock Round 4 for all squads.'
-        : 'This will finalize Round 3 and unlock Round 4 (The Campus Expedition) for ALL squads across the tournament.',
-      async () => {
-        setTimerBusy(true); setRoundError(null);
-        try {
-          const res = await progressionService.adminRound4Global(action);
-          setRound4Active(res.isActive);
-          setFeedbackNotice(`Round 4 ${res.isActive ? 'unlocked' : 'locked'} for all squads across the tournament.`);
-          setTimeout(() => setFeedbackNotice(null), 4000);
-          await onRefresh();
-        } catch (error) {
-          setRoundError(error instanceof Error ? error.message : `Round 4 ${action} failed.`);
-          throw error;
-        } finally {
-          setTimerBusy(false);
-        }
-      },
-      action === 'lock',
-      action === 'lock' ? 'LOCK ROUND 4' : 'ADVANCE TO ROUND 4'
-    );
-  };
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;

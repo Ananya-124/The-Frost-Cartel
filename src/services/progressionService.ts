@@ -55,6 +55,8 @@ export const progressionService = {
     request<{ success: true; action: string; isActive: boolean; updatedCount: number }>(`/api/admin/progression/round4/${action}`, 'POST', { reason }),
   adminAdvanceTeam: (teamId: string, roundId: number, reason?: string) =>
     request<{ success: true; teamId: string; roundId: number } & TeamProgression>(`/api/admin/progression/teams/${encodeURIComponent(teamId)}/advance/${roundId}`, 'POST', { reason }),
+  adminResetAllTeamsProgress: (reason?: string) =>
+    request<{ success: true; message: string; resetCount: number }>('/api/admin/progression/reset-all', 'POST', { reason }),
 };
 
 export const adminAuthService = {

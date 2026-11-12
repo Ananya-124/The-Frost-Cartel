@@ -473,6 +473,89 @@ export async function adminProgressRound4Global(
   });
 }
 
+export async function adminResetAllTeamsProgress(
+  pool: Pool,
+  adminSessionToken: string,
+  reason?: string,
+): Promise<{ success: boolean; resetCount: number }> {
+  return withPostgresTransaction(pool, async (client) => {
+    const adminId = await requireAdminSession(client, adminSessionToken);
+
+    // 1. Reset Global Rounds & Timers
+    await client.query('UPDATE rounds SET is_active=false, start_time=NULL, updated_at=now()');
+    await client.query(`
+      UPDATE round1_configuration
+      SET configuration=jsonb_set(configuration - 'pausedGlobalTimer', '{lifecycle}', '"not_started"'::jsonb, true),
+          updated_by=$1, updated_at=now()
+      WHERE singleton_id=1
+    `, [adminId]);
+
+    // 2. Reset Round 3 State & Cards (before deleting auction records)
+    await client.query("DELETE FROM round3_card_inventory WHERE source='auction'");
+    await client.query('DELETE FROM round3_card_usage');
+    await client.query('DELETE FROM round3_cooperation_ledger');
+    await client.query('DELETE FROM round3_hunt_state');
+    await client.query("UPDATE round3_sessions SET current_hunt=1, is_completed=false, completed_at=NULL, evidence='[]'::jsonb, updated_at=now()");
+    await client.query("UPDATE round3_runs SET status='not_started', remaining_ms=1500000, started_at=NULL, version=1, updated_at=now()");
+
+    // 3. Reset Round 2 Auction
+    await client.query('UPDATE round2_auction_config SET enabled=false, updated_at=now() WHERE id=1');
+    await client.query("UPDATE round2_auction_lots SET status='PENDING', active_at=NULL, ends_at=NULL, settled_at=NULL");
+    await client.query('DELETE FROM round2_settlements');
+    await client.query('DELETE FROM round2_bids');
+    await client.query("DELETE FROM team_power_cards WHERE source='auction' AND purchased_round_id=2");
+
+    // 4. Reset Round 4 Expedition
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended('round4-winner',0))");
+    await client.query('DELETE FROM round4_winner WHERE singleton_id=1');
+    await client.query('DELETE FROM round4_team_progress');
+    await client.query('DELETE FROM round4_qualified_teams');
+    await client.query('UPDATE round4_settings SET is_released=false, updated_at=now() WHERE id=1');
+    await client.query("DELETE FROM activity_history WHERE action IN ('ROUND4_TARGET_DISCOVERED','ROUND4_CLUE_SUBMISSION')");
+
+    // 5. Reset Round 1 Stages & Events
+    await client.query(`
+      UPDATE round1_stage_progress
+      SET status='AVAILABLE', score=0, time_spent_seconds=0, completed_at=NULL, fragment_unlocked=false,
+          state='{}'::jsonb, updated_at=now()
+    `);
+    await client.query('DELETE FROM round1_action_events');
+
+    // 6. Reset Per-Team Progression for ALL Teams
+    await client.query(`
+      UPDATE round_progress
+      SET status='AVAILABLE', eligible_at=now(), completed_at=NULL, time_spent_seconds=0, updated_at=now()
+      WHERE round_id=1
+    `);
+    await client.query(`
+      UPDATE round_progress
+      SET status='LOCKED', eligible_at=NULL, completed_at=NULL, time_spent_seconds=0, updated_at=now()
+      WHERE round_id IN (2, 3, 4)
+    `);
+    await client.query(`
+      UPDATE team_hunt_progress
+      SET status='LOCKED', completed_at=NULL, updated_at=now()
+    `);
+
+    // 7. Audit log for every team
+    const teams = await client.query<{ id: string; team_name: string }>('SELECT id, team_name FROM teams ORDER BY team_name');
+    for (const t of teams.rows) {
+      await audit(client, {
+        adminId,
+        teamId: t.id,
+        entity: 'ROUND',
+        entityId: 1,
+        previous: null,
+        next: 'AVAILABLE',
+        action: 'RESET',
+        reason: reason || 'Master Tournament Reset: All team progress reset to Round 1 staged',
+      });
+    }
+
+    return { success: true, resetCount: teams.rowCount ?? 0 };
+  });
+}
+
 export async function adminAdvanceTeamToRound(
   pool: Pool,
   adminSessionToken: string,
@@ -559,31 +642,6 @@ export async function adminProgress(pool: Pool, adminSessionToken: string, teamI
         if (previous.rows[0]?.status !== 'COMPLETED') throw new ProgressionError('The previous hunt must be completed first.', 'CONFLICT');
       }
       await setState(client, teamId, entity, entityId, 'AVAILABLE');
-      if (entity === 'ROUND' && entityId === 2) {
-        await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=2');
-        const otherLocked = await client.query<{ team_id: string; status: ProgressStatus }>(
-          'SELECT team_id, status FROM round_progress WHERE round_id=2 AND team_id != $1 FOR UPDATE',
-          [teamId],
-        );
-        for (const other of otherLocked.rows) {
-          if (other.status === 'LOCKED') {
-            await client.query(
-              "UPDATE round_progress SET status='AVAILABLE', eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=2",
-              [other.team_id],
-            );
-            await audit(client, {
-              adminId,
-              teamId: other.team_id,
-              entity: 'ROUND',
-              entityId: 2,
-              previous: other.status,
-              next: 'AVAILABLE',
-              action: 'UNLOCK',
-              reason: reason ? `${reason} (global Round 2 tournament unlock)` : 'Tournament Round 2 unlocked for all squads',
-            });
-          }
-        }
-      }
       if (entity === 'ROUND' && entityId === 3) {
         await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=3');
         await syncRound2CardsToRound3Inventory(client, teamId);
@@ -609,31 +667,6 @@ export async function adminProgress(pool: Pool, adminSessionToken: string, teamI
       if (status === 'LOCKED') throw new ProgressionError('Progression is already locked.', 'CONFLICT');
       await setState(client, teamId, entity, entityId, 'LOCKED');
       await audit(client, { adminId, teamId, entity, entityId, previous: status, next: 'LOCKED', action, reason });
-      if (entity === 'ROUND' && entityId === 2) {
-        await client.query('UPDATE rounds SET is_active=false, updated_at=now() WHERE round_id=2');
-        const otherTeams = await client.query<{ team_id: string; status: ProgressStatus }>(
-          'SELECT team_id, status FROM round_progress WHERE round_id=2 AND team_id != $1 FOR UPDATE',
-          [teamId],
-        );
-        for (const other of otherTeams.rows) {
-          if (other.status !== 'LOCKED') {
-            await client.query(
-              "UPDATE round_progress SET status='LOCKED', updated_at=now() WHERE team_id=$1 AND round_id=2",
-              [other.team_id],
-            );
-            await audit(client, {
-              adminId,
-              teamId: other.team_id,
-              entity: 'ROUND',
-              entityId: 2,
-              previous: other.status,
-              next: 'LOCKED',
-              action: 'LOCK',
-              reason: reason ? `${reason} (global Round 2 tournament lock)` : 'Tournament Round 2 locked for all squads',
-            });
-          }
-        }
-      }
       return;
     }
     await setState(client, teamId, entity, entityId, 'LOCKED', false);

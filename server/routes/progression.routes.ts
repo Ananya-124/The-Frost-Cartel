@@ -6,6 +6,7 @@ import { db } from '../../database/db.ts';
 import { getRound3Run, getRound3Session } from '../../database/postgres/round3-repository.ts';
 import {
   adminAdvanceTeamToRound, adminProgress, adminProgressRound2Global, adminProgressRound3Global, adminProgressRound4Global,
+  adminResetAllTeamsProgress,
   assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
   getTeamProgressionAudit, ProgressionError, startHunt, startRound,
 } from '../../database/postgres/progression.ts';
@@ -251,6 +252,28 @@ adminRouter.post('/round4/:action', asyncHandler(async (req, res) => {
   const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
   const result = await adminProgressRound4Global(pool, req.adminSessionToken, action as 'advance' | 'unlock' | 'lock', reason);
   return res.json({ success: true, action, ...result });
+}));
+
+adminRouter.post('/reset-all', asyncHandler(async (req, res) => {
+  const pool = configuredPool();
+  if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  try {
+    db.prepare("UPDATE stages_progress SET status='NOT_STARTED'").run();
+  } catch {}
+  const result = await adminResetAllTeamsProgress(pool, req.adminSessionToken, reason);
+  return res.json({ success: true, message: 'All squad progress reset to Round 1 staged.', ...result });
+}));
+
+adminRouter.post('/tournament/reset', asyncHandler(async (req, res) => {
+  const pool = configuredPool();
+  if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  try {
+    db.prepare("UPDATE stages_progress SET status='NOT_STARTED'").run();
+  } catch {}
+  const result = await adminResetAllTeamsProgress(pool, req.adminSessionToken, reason);
+  return res.json({ success: true, message: 'All squad progress reset to Round 1 staged.', ...result });
 }));
 
 adminRouter.post('/teams/:teamId/advance/:roundId', asyncHandler(async (req, res) => {
