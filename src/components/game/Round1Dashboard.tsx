@@ -78,14 +78,19 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   useEffect(() => {
     void refreshState();
     const poll = setInterval(() => { void refreshState(); }, 30000);
-    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void refreshState(); };
+    let lastRefreshTime = Date.now();
+    const refreshWhenVisible = () => {
+      const now = Date.now();
+      if (document.visibilityState === 'visible' && now - lastRefreshTime > 10000) {
+        lastRefreshTime = now;
+        void refreshState();
+      }
+    };
     document.addEventListener('visibilitychange', refreshWhenVisible);
-    window.addEventListener('focus', refreshWhenVisible);
     window.addEventListener('online', refreshWhenVisible);
     return () => {
       clearInterval(poll);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
-      window.removeEventListener('focus', refreshWhenVisible);
       window.removeEventListener('online', refreshWhenVisible);
     };
   }, [refreshState, session.teamId, session.teamName]);

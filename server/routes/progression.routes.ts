@@ -216,6 +216,13 @@ export function roundAccessGuard(roundId: number) {
           }
         }
         let state = await pool.query<{ status: string }>('SELECT status FROM round_progress WHERE team_id=$1 AND round_id=$2', [teamId, roundId]);
+        if (roundId === 1 && state.rows[0]?.status === 'LOCKED') {
+          const r1 = await pool.query<{ is_active: boolean }>('SELECT is_active FROM rounds WHERE round_id=1');
+          if (r1.rows[0]?.is_active) {
+            await pool.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE team_id=$1 AND round_id=1", [teamId]);
+            state = await pool.query<{ status: string }>('SELECT status FROM round_progress WHERE team_id=$1 AND round_id=1', [teamId]);
+          }
+        }
         if (state.rows[0]?.status === 'AVAILABLE') await startRound(pool, teamId, roundId);
         await assertRoundAccessible(pool, teamId, roundId);
         if (roundId === 2 && req.team) {

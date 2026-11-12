@@ -135,7 +135,7 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     const row=result.rows[0];
     if(!row)throw new Round1GameError('Team not found.',404);
     if(row.stage_rows.length!==3||!row.progress_status)throw new Round1GameError('Round 1 team records are not initialized.',409);
-    if(row.progress_status!=='IN_PROGRESS')throw new Round1GameError('Round 1 is locked or not active for this team.',423);
+    if(row.progress_status!=='IN_PROGRESS'&&row.progress_status!=='AVAILABLE')throw new Round1GameError('Round 1 is locked or not active for this team.',423);
     const base=defaults(),stored=row.configuration??{};
     const config:Round1Config={...base,...stored,
       stage1:{...base.stage1,...(stored.stage1??{}),trials:stored.stage1?.trials??base.stage1.trials},
@@ -291,6 +291,8 @@ export async function setRound1Timer(pool:Pool,adminId:string,action:'start'|'pa
       const seconds=Number(configuration.durationMinutes??22)*60;
       await client.query('UPDATE rounds SET is_active=true,duration_seconds=$1,start_time=now(),updated_at=now() WHERE round_id=1',[seconds]);
       await client.query("UPDATE round1_configuration SET configuration=jsonb_set(configuration - 'pausedGlobalTimer','{lifecycle}','\"running\"'::jsonb,true),updated_by=$1,updated_at=now() WHERE singleton_id=1",[adminId]);
+      await client.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE round_id=1 AND status != 'COMPLETED'");
+      await client.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE round_id=1 AND status != 'COMPLETED'");
     }else if(action==='pause'){
       if(!current.rows[0].is_active&&!['not_started','running'].includes(configuration.lifecycle))throw new Round1GameError('Round 1 is not running.',409);
       const sessions=await client.query<{team_id:string;state:Record<string,unknown>}>('SELECT team_id,state FROM round1_stage_progress WHERE stage_id=1 FOR UPDATE');
@@ -316,6 +318,7 @@ export async function setRound1Timer(pool:Pool,adminId:string,action:'start'|'pa
       }
       if(configuration.pausedGlobalTimer)await client.query('UPDATE rounds SET is_active=true,start_time=now(),updated_at=now() WHERE round_id=1');
       await client.query("UPDATE round1_configuration SET configuration=jsonb_set(configuration - 'pausedGlobalTimer','{lifecycle}','\"running\"'::jsonb,true),updated_by=$1,updated_at=now() WHERE singleton_id=1",[adminId]);
+      await client.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE round_id=1 AND status != 'COMPLETED'");
     }else{
       if(configuration.lifecycle==='completed')throw new Round1GameError('Round 1 has already ended.',409);
       await client.query('UPDATE rounds SET is_active=false,start_time=NULL,updated_at=now() WHERE round_id=1');
@@ -354,6 +357,7 @@ export async function setRound1TimerActive(pool:Pool,adminId:string,isActive:boo
         await client.query('UPDATE rounds SET is_active=true,duration_seconds=$1,start_time=now(),updated_at=now() WHERE round_id=1',[seconds]);
       }
       await client.query("UPDATE round1_configuration SET configuration=jsonb_set(configuration - 'pausedGlobalTimer','{lifecycle}','\"running\"'::jsonb,true),updated_by=$1,updated_at=now() WHERE singleton_id=1",[adminId]);
+      await client.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE round_id=1 AND status != 'COMPLETED'");
     }else{
       const sessions=await client.query<{team_id:string;state:Record<string,unknown>}>('SELECT team_id,state FROM round1_stage_progress WHERE stage_id=1 FOR UPDATE');
       for(const row of sessions.rows){

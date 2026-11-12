@@ -193,6 +193,7 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText('THE GATES ARE UNSEALED')).toBeInTheDocument();
     });
 
     const enterRoundBtn = screen.getByRole('button', { name: /ENTER THE GRAVEYARD/i });

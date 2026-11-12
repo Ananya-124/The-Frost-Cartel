@@ -3,7 +3,6 @@ import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { useNativeDialog } from '../../hooks/useNativeDialog';
 import { round1Api } from '../../services/round1ApiService';
-import { FlyingBat } from '../game/haunted/FlyingBat';
 import { progressionService, errorStatus, type TeamProgression } from '../../services/progressionService';
 import { TeamProgressionSummary } from './TeamProgressionSummary';
 
@@ -14,6 +13,7 @@ interface TeamDashboardViewProps {
   onEnterRound1: () => void;
   onClose: () => void;
   isRound1GameActive?: boolean;
+  progression?: TeamProgression | null;
 }
 
 export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
@@ -23,14 +23,22 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   onEnterRound1,
   onClose,
   isRound1GameActive = false,
+  progression: initialProgression = null,
 }) => {
   const { dialogRef } = useNativeDialog(true, onClose);
 
   const [roundStatus, setRoundStatus] = useState<'not_started' | 'running' | 'paused' | 'completed'>('not_started');
-  const [progression, setProgression] = useState<TeamProgression | null>(null);
+  const [progression, setProgression] = useState<TeamProgression | null>(initialProgression);
   const [progressionLoading, setProgressionLoading] = useState(false);
   const [progressionError, setProgressionError] = useState<string | null>(null);
-  const progressionRef = useRef<TeamProgression | null>(null);
+  const progressionRef = useRef<TeamProgression | null>(initialProgression);
+
+  useEffect(() => {
+    if (initialProgression) {
+      setProgression(initialProgression);
+      progressionRef.current = initialProgression;
+    }
+  }, [initialProgression]);
 
   const refreshProgression = useCallback(async () => {
     setProgressionLoading(true); setProgressionError(null);
@@ -44,18 +52,34 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     } finally { setProgressionLoading(false); }
   }, []);
 
-  useEffect(() => { void refreshProgression(); }, [refreshProgression, session.teamId]);
+  // Only fetch progression on mount if parent didn't already supply it
+  useEffect(() => {
+    if (!initialProgression) {
+      void refreshProgression();
+    }
+  }, [initialProgression, refreshProgression, session.teamId]);
 
   useEffect(() => {
     if (isRound1GameActive) return;
     let disposed = false;
     let inFlight = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
     const syncStatus = async () => {
-      if (disposed || inFlight || document.visibilityState !== 'visible') return;
+      if (disposed || inFlight) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       inFlight = true;
       try {
         const state = await round1Api.getState();
-        if (!disposed) setRoundStatus(state.round.isActive ? 'running' : state.session.status === 'completed' ? 'completed' : 'paused');
+        if (!disposed) {
+          const next = state.round.isActive ? 'running' : state.session.status === 'completed' ? 'completed' : 'paused';
+          setRoundStatus(next);
+          // If Round 1 is unsealed, stop polling — gates are open and ready for entry
+          if (next === 'running' && intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+        }
       } catch {
         if (!disposed) {
           const status = progressionRef.current?.rounds.find((round) => round.round_id === 1)?.status;
@@ -63,11 +87,16 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
         }
       } finally { inFlight = false; }
     };
+
     void syncStatus();
-    const interval = setInterval(() => { void syncStatus(); }, 10000);
+    intervalId = setInterval(() => { void syncStatus(); }, 15000);
     const syncWhenVisible = () => { if (document.visibilityState === 'visible') void syncStatus(); };
     document.addEventListener('visibilitychange', syncWhenVisible);
-    return () => { disposed = true; clearInterval(interval); document.removeEventListener('visibilitychange', syncWhenVisible); };
+    return () => {
+      disposed = true;
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', syncWhenVisible);
+    };
   }, [session.teamId, isRound1GameActive]);
 
   const isRoundActive = isRound1GameActive || roundStatus === 'running';
@@ -99,9 +128,6 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
         className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-teal-950/40 via-teal-900/15 to-transparent pointer-events-none"
       />
 
-      {/* Ambient Flying Bats High In Cloudy Sky */}
-      <FlyingBat startYPercent={8} durationSeconds={18} delaySeconds={1} scale={0.6} flightDirection="right-to-left" />
-      <FlyingBat startYPercent={14} durationSeconds={24} delaySeconds={6} scale={0.5} flightDirection="left-to-right" />
 
       {/* Subtle Flickering Candle Glow Accents on Foreground Rock Ledges */}
       <div

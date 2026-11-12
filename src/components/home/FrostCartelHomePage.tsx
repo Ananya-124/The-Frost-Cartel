@@ -253,6 +253,7 @@ export const FrostCartelHomePage: React.FC = () => {
         {isDashboardOpen && (
           <TeamDashboardView
             session={session}
+            progression={progression}
             isRound1GameActive
             round1Config={ROUNDS_DATA[0]}
             onLogout={handleLogout}
@@ -311,6 +312,7 @@ export const FrostCartelHomePage: React.FC = () => {
       {isDashboardOpen && session && (
         <TeamDashboardView
           session={session}
+          progression={progression}
           round1Config={ROUNDS_DATA[0]}
           onLogout={handleLogout}
           onEnterRound1={handleEnterRound1}
