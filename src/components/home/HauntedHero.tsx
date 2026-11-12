@@ -10,7 +10,6 @@ interface HauntedHeroProps {
   onLoginSuccess: (session: TeamSession) => void;
   onOpenDashboard: () => void;
   onSelectRound: (round: RoundConfig) => void;
-  progressionSummary?: React.ReactNode;
 }
 
 export const HauntedHero: React.FC<HauntedHeroProps> = ({
@@ -19,7 +18,6 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
   onLoginSuccess,
   onOpenDashboard,
   onSelectRound,
-  progressionSummary,
 }) => {
   return (
     <section className="relative z-10 w-full min-h-screen flex flex-col justify-between py-3 sm:py-5 lg:py-6">
@@ -63,7 +61,6 @@ export const HauntedHero: React.FC<HauntedHeroProps> = ({
             onSelectRound={onSelectRound}
           />
         </div>
-        {progressionSummary}
 
         {/* 3. Integrated Player Login — Ancient Haunted Access Console */}
         <div className="w-full max-w-3xl mx-auto" id="login-section">

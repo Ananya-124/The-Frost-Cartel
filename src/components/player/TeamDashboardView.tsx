@@ -3,8 +3,7 @@ import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { useNativeDialog } from '../../hooks/useNativeDialog';
 import { round1Api } from '../../services/round1ApiService';
-import { progressionService, errorStatus, type TeamProgression } from '../../services/progressionService';
-import { TeamProgressionSummary } from './TeamProgressionSummary';
+import { progressionService, type TeamProgression } from '../../services/progressionService';
 
 interface TeamDashboardViewProps {
   session: TeamSession;
@@ -31,14 +30,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     const status = initialProgression?.rounds.find((round) => round.round_id === 1)?.status;
     return status === 'IN_PROGRESS' || status === 'AVAILABLE' ? 'running' : status === 'COMPLETED' ? 'completed' : 'not_started';
   });
-  const [progression, setProgression] = useState<TeamProgression | null>(initialProgression);
-  const [progressionLoading, setProgressionLoading] = useState(false);
-  const [progressionError, setProgressionError] = useState<string | null>(null);
   const progressionRef = useRef<TeamProgression | null>(initialProgression);
 
   useEffect(() => {
     if (initialProgression) {
-      setProgression(initialProgression);
       progressionRef.current = initialProgression;
       const status = initialProgression.rounds.find((round) => round.round_id === 1)?.status;
       if (status === 'IN_PROGRESS' || status === 'AVAILABLE') setRoundStatus('running');
@@ -47,15 +42,12 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   }, [initialProgression]);
 
   const refreshProgression = useCallback(async () => {
-    setProgressionLoading(true); setProgressionError(null);
     try {
       const value = await progressionService.getMine();
       progressionRef.current = value;
-      setProgression(value);
+    } catch {
+      // Ignore background refresh failure
     }
-    catch (error) {
-      setProgressionError(errorStatus(error) === 401 ? 'Your team session expired. Sign in again to refresh progression.' : error instanceof Error ? error.message : 'Could not load team progression.');
-    } finally { setProgressionLoading(false); }
   }, []);
 
   // Only fetch progression on mount if parent didn't already supply it
@@ -306,10 +298,6 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           <span>SIGN OUT</span>
           <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
         </button>
-        <details className="mt-3 w-full max-w-2xl rounded border border-amber-500/25 bg-black/45 px-3 py-2 text-left">
-          <summary className="cursor-pointer text-[10px] font-cinzel font-bold uppercase tracking-wider text-amber-200">View team progression</summary>
-          <TeamProgressionSummary progression={progression} loading={progressionLoading} error={progressionError} onRetry={() => { void refreshProgression(); }} />
-        </details>
       </div>
     </dialog>
   );

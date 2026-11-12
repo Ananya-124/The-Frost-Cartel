@@ -14,6 +14,7 @@ class ProgressionDb {
   rounds = new Map<string, Row>();
   hunts = new Map<string, Row>();
   history: Array<Record<string, unknown>> = [];
+  auctionEnabled = false;
   failAudit = false;
   private snapshot: unknown;
   private key(team: string, id: number) { return `${team}:${id}`; }
@@ -23,7 +24,7 @@ class ProgressionDb {
       for (let id = 1; id <= 3; id++) this.hunts.set(this.key(team, id), { status: 'LOCKED', completed_at: null });
     }
   }
-  private copy() { return structuredClone({ rounds: this.rounds, hunts: this.hunts, history: this.history }); }
+  private copy() { return structuredClone({ rounds: this.rounds, hunts: this.hunts, history: this.history, auctionEnabled: this.auctionEnabled }); }
   readonly client = {
     query: async (sql: string, values: unknown[] = []): Promise<QueryResult<any>> => {
       const q = sql.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -43,7 +44,8 @@ class ProgressionDb {
       if (q.startsWith('select round_id, status from round_progress')) return this.result([...this.rounds.entries()].filter(([k]) => k.startsWith(`${values[0]}:`) && Number(k.split(':')[1]) > Number(values[1])).map(([k, v]) => ({ round_id: Number(k.split(':')[1]), status: v.status })));
       if (q.startsWith('select hunt_id, status from team_hunt_progress')) return this.result([...this.hunts.entries()].filter(([k]) => k.startsWith(`${values[0]}:`) && Number(k.split(':')[1]) > Number(values[1])).map(([k, v]) => ({ hunt_id: Number(k.split(':')[1]), status: v.status })));
       if (q.startsWith('select rp.round_id')) return this.result(this.rounds.has(this.key(String(values[0]), Number(values[1]))) ? [{ round_id: values[1], status: this.rounds.get(this.key(String(values[0]), Number(values[1])))!.status }] : []);
-      if (q.startsWith('select enabled from round2_auction_config')) return this.result([{ enabled: false }]);
+      if (q.startsWith('select enabled from round2_auction_config')) return this.result([{ enabled: this.auctionEnabled }]);
+      if (q.startsWith('update round2_auction_config')) { this.auctionEnabled = true; return this.result([]); }
       if (q.startsWith('select eligible_at from round_progress')) return this.result([{ eligible_at: this.rounds.get(this.key(String(values[0]), Number(values[1])))?.eligible_at ?? null }]);
       if (q.startsWith('select status from round_progress')) return this.result([{ status: this.rounds.get(this.key(String(values[0]), Number(values[1])))?.status }].filter((r) => r.status));
       if (q.startsWith('select count(*) from team_hunt_progress')) return this.result([{ count: [...this.hunts.entries()].filter(([k, v]) => k.startsWith(`${values[0]}:`) && v.status === 'COMPLETED').length }]);
@@ -59,7 +61,13 @@ class ProgressionDb {
       }
       if (q.startsWith('update round_progress set status=$3, eligible_at')) {
         const row = this.rounds.get(this.key(String(values[0]), Number(values[1])));
-        if (row) { row.status = String(values[2]); row.eligible_at ??= 'eligible'; }
+        if (row) {
+          row.status = String(values[2]);
+          row.eligible_at ??= 'eligible';
+          if (Number(values[1]) === 2 && row.status === 'AVAILABLE') {
+            this.auctionEnabled = true;
+          }
+        }
         return this.result([]);
       }
       if (q.startsWith('update round_progress set eligible_at')) {
@@ -69,7 +77,14 @@ class ProgressionDb {
       }
       if (q.startsWith('update round_progress set status=')) {
         const row = this.rounds.get(this.key(String(values[0]), Number(values[1])));
-        if (row) { row.status = String(values[2]); if (values[3] === true) row.completed_at ??= 'completed'; if (values[3] === false) row.completed_at = null; }
+        if (row) {
+          row.status = String(values[2]);
+          if (values[3] === true) row.completed_at ??= 'completed';
+          if (values[3] === false) row.completed_at = null;
+          if (Number(values[1]) === 2 && (row.status === 'AVAILABLE' || row.status === 'IN_PROGRESS')) {
+            this.auctionEnabled = true;
+          }
+        }
         return this.result([]);
       }
       if (q.startsWith('update team_hunt_progress set status=')) {

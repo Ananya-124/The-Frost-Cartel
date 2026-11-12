@@ -12,7 +12,6 @@ import { Round1DeferredBoundary } from '../game/Round1DeferredBoundary';
 import { CornerQuickNav } from '../layout/CornerQuickNav';
 import { GothicLeaderboardModal } from '../leaderboard/GothicLeaderboardModal';
 import { progressionService, errorStatus, type TeamProgression } from '../../services/progressionService';
-import { TeamProgressionSummary } from '../player/TeamProgressionSummary';
 
 const RoundFourIntro = lazy(() => import('../game/round4/RoundFourIntro').then((module) => ({ default: module.RoundFourIntro })));
 const Round2Auction = lazy(() => import('../game/round2/Round2Auction').then((module) => ({ default: module.Round2Auction })));
@@ -75,8 +74,6 @@ export const FrostCartelHomePage: React.FC = () => {
   });
   const [notice, setNotice] = useState<string | null>(null);
   const [progression, setProgression] = useState<TeamProgression | null>(null);
-  const [progressionLoading, setProgressionLoading] = useState(false);
-  const [progressionError, setProgressionError] = useState<string | null>(null);
   const handleRound1CreditUpdate = useCallback((credits: number) => {
     setSession((previous) => previous && previous.credits !== credits ? { ...previous, credits } : previous);
   }, []);
@@ -91,8 +88,6 @@ export const FrostCartelHomePage: React.FC = () => {
 
   const refreshProgression = useCallback(async () => {
     if (!session) { setProgression(null); return; }
-    setProgressionLoading(true);
-    setProgressionError(null);
     try {
       setProgression(await progressionService.getMine());
     } catch (error) {
@@ -100,11 +95,8 @@ export const FrostCartelHomePage: React.FC = () => {
         authService.logout();
         setSession(null);
         setProgression(null);
-        setProgressionError('Your team session expired. Sign in again to load your progression.');
-      } else {
-        setProgressionError(error instanceof Error ? error.message : 'Could not load team progression.');
       }
-    } finally { setProgressionLoading(false); }
+    }
   }, [session]);
 
   useEffect(() => { void refreshProgression(); }, [refreshProgression]);
@@ -141,7 +133,6 @@ export const FrostCartelHomePage: React.FC = () => {
     setSession(null);
     setIsDashboardOpen(false);
     setActiveChamberRound(null);
-    setProgressionError(null);
   };
 
   const navigateToChamber = (roundNum: number, hash: string) => {
@@ -304,7 +295,6 @@ export const FrostCartelHomePage: React.FC = () => {
           onLoginSuccess={handleLoginSuccess}
           onOpenDashboard={() => setIsDashboardOpen(true)}
           onSelectRound={handleSelectRound}
-          progressionSummary={<TeamProgressionSummary progression={progression} loading={progressionLoading} error={progressionError} onRetry={() => { void refreshProgression(); }} />}
         />
       </main>
 

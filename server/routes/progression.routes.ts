@@ -2,6 +2,7 @@ import { Router, type Response, type NextFunction } from 'express';
 import type { Pool } from 'pg';
 import type { PoolClient } from 'pg';
 import { postgresPool } from '../../database/postgres/pool.ts';
+import { db } from '../../database/db.ts';
 import { getRound3Run, getRound3Session } from '../../database/postgres/round3-repository.ts';
 import {
   adminProgress, assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
@@ -16,6 +17,33 @@ const configuredPool = (pool: Pool | null = postgresPool): Pool => {
   if (!pool) throw new ProgressionError('PostgreSQL progression is unavailable.', 'UNAVAILABLE');
   return pool;
 };
+
+function getSqliteTeamProgression(teamId: string) {
+  let stages: Array<{ stage_id: number; status: string }> = [];
+  try {
+    stages = db.prepare('SELECT stage_id, status FROM stages_progress WHERE team_id=?').all(teamId) as Array<{ stage_id: number; status: string }>;
+  } catch {
+    stages = [];
+  }
+  const r1Done = stages.length === 3 && stages.every((s) => s.status === 'COMPLETED');
+  const r1Started = stages.some((s) => s.status === 'COMPLETED' || s.status === 'IN_PROGRESS');
+  const r1Status = r1Done ? 'COMPLETED' : r1Started ? 'IN_PROGRESS' : 'AVAILABLE';
+  const now = new Date().toISOString();
+
+  return {
+    rounds: [
+      { round_id: 1, status: r1Status, eligible_at: null, completed_at: r1Done ? now : null },
+      { round_id: 2, status: r1Done ? 'AVAILABLE' : 'LOCKED', eligible_at: null, completed_at: null },
+      { round_id: 3, status: 'LOCKED', eligible_at: null, completed_at: null },
+      { round_id: 4, status: 'LOCKED', eligible_at: null, completed_at: null },
+    ],
+    hunts: [
+      { hunt_id: 1, status: 'LOCKED', completed_at: null },
+      { hunt_id: 2, status: 'LOCKED', completed_at: null },
+      { hunt_id: 3, status: 'LOCKED', completed_at: null },
+    ],
+  };
+}
 
 function failure(res: Response, error: unknown): void {
   if (error instanceof ProgressionError) {
@@ -114,6 +142,11 @@ async function reconcileRoundCompletion(pool: Pool, teamId: string, roundId: num
 teamRouter.use(requireTeamAuth);
 
 teamRouter.get('/me', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.team) throw new ProgressionError('Squad authentication required.', 'FORBIDDEN');
+    const teamId = req.team.id;
+    return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
+  }
   const pool = configuredPool();
   const teamId = await authenticatedTeam(req, pool);
   await reconcileRound3Hunts(pool, teamId);
@@ -122,6 +155,11 @@ teamRouter.get('/me', asyncHandler(async (req, res) => {
 }));
 
 teamRouter.post('/me/rounds/:roundId/start', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.team) throw new ProgressionError('Squad authentication required.', 'FORBIDDEN');
+    const teamId = req.team.id;
+    return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
+  }
   const pool = configuredPool();
   const teamId = await authenticatedTeam(req, pool);
   const roundId = numberParam(req.params.roundId, 'round', 1, 4);
@@ -130,6 +168,11 @@ teamRouter.post('/me/rounds/:roundId/start', asyncHandler(async (req, res) => {
 }));
 
 teamRouter.post('/me/rounds/:roundId/complete', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.team) throw new ProgressionError('Squad authentication required.', 'FORBIDDEN');
+    const teamId = req.team.id;
+    return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
+  }
   const pool = configuredPool();
   const teamId = await authenticatedTeam(req, pool);
   const roundId = numberParam(req.params.roundId, 'round', 1, 4);
@@ -147,6 +190,11 @@ teamRouter.post('/me/rounds/:roundId/complete', asyncHandler(async (req, res) =>
 }));
 
 teamRouter.post('/me/hunts/:huntId/start', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.team) throw new ProgressionError('Squad authentication required.', 'FORBIDDEN');
+    const teamId = req.team.id;
+    return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
+  }
   const pool = configuredPool();
   const teamId = await authenticatedTeam(req, pool);
   const huntId = numberParam(req.params.huntId, 'hunt', 1, 3);
@@ -156,6 +204,11 @@ teamRouter.post('/me/hunts/:huntId/start', asyncHandler(async (req, res) => {
 }));
 
 teamRouter.post('/me/hunts/:huntId/complete', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.team) throw new ProgressionError('Squad authentication required.', 'FORBIDDEN');
+    const teamId = req.team.id;
+    return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
+  }
   const pool = configuredPool();
   const teamId = await authenticatedTeam(req, pool);
   const huntId = numberParam(req.params.huntId, 'hunt', 1, 3);
@@ -170,6 +223,13 @@ teamRouter.post('/me/hunts/:huntId/complete', asyncHandler(async (req, res) => {
 adminRouter.use(requireAdminAuth);
 
 adminRouter.get('/:teamId', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+    const rawTeamId = Array.isArray(req.params.teamId) ? req.params.teamId[0] : req.params.teamId;
+    const team = db.prepare('SELECT id FROM teams WHERE id=?').get(rawTeamId);
+    if (!team) throw new ProgressionError('Team not found.', 'NOT_FOUND');
+    return res.json({ success: true, teamId: rawTeamId, ...getSqliteTeamProgression(rawTeamId), audit: [] });
+  }
   const pool = configuredPool();
   if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
   const rawTeamId = Array.isArray(req.params.teamId) ? req.params.teamId[0] : req.params.teamId;
@@ -178,6 +238,13 @@ adminRouter.get('/:teamId', asyncHandler(async (req, res) => {
 }));
 
 adminRouter.post('/:teamId/:entity/:entityId/:action', asyncHandler(async (req, res) => {
+  if (!postgresPool) {
+    if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+    const teamId = Array.isArray(req.params.teamId) ? req.params.teamId[0] : req.params.teamId;
+    const team = db.prepare('SELECT id FROM teams WHERE id=?').get(teamId);
+    if (!team) throw new ProgressionError('Team not found.', 'NOT_FOUND');
+    return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId), audit: [] });
+  }
   const pool = configuredPool();
   if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
   const teamId = Array.isArray(req.params.teamId) ? req.params.teamId[0] : req.params.teamId;
