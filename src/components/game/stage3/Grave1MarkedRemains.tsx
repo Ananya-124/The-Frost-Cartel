@@ -170,7 +170,10 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
 
   const handleBookFullyRead = useCallback(() => {
     if (!isBookRead) {
-      void onAction('stage3.readBook').then(() => { setIsBookRead(true); soundController.playDiscover(); showToast('✦ Grimoire deciphered! The skeletal remains may now be shifted. ✦'); }).catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The book reading could not be saved.'));
+      setIsBookRead(true);
+      soundController.playDiscover();
+      showToast('✦ Grimoire deciphered! The skeletal remains may now be shifted. ✦');
+      void onAction('stage3.readBook').catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The book reading could not be saved.'));
     }
   }, [isBookRead, onAction, showToast]);
 
@@ -210,7 +213,8 @@ export const Grave1MarkedRemains: React.FC<Grave1MarkedRemainsProps> = ({
     setSkeletonOffset({ x: clampedX, y: clampedY });
 
     if (!isSkeletonMoved && (Math.abs(clampedX) > 40 || Math.abs(clampedY) > 25)) {
-      void onAction('stage3.moveSkeleton').then(() => setIsSkeletonMoved(true)).catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The remains could not be moved.'));
+      setIsSkeletonMoved(true);
+      void onAction('stage3.moveSkeleton').catch((error: unknown) => showToast(error instanceof Error ? error.message : 'The remains could not be moved.'));
       soundController.playDiscover();
       showToast('✦ Remains shifted! Hidden inscription uncovered: "ASH" ✦');
     }

@@ -1,55 +1,43 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { errorStatus, progressionService, type ProgressAction, type ProgressEntity, type TeamProgression, type ServerTeamOption } from '../../../services/progressionService';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { errorStatus, progressionService, type ProgressAction, type ProgressEntity, type TeamProgression } from '../../../services/progressionService';
 
 interface Props { teamId: string; teamName: string; onProgressChanged?: () => void | Promise<void> }
 const huntNames = ['Hunt I · The Forgotten Incident', 'Hunt II · The False Memory', 'Hunt III · The Final Containment'];
 
 export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, onProgressChanged }) => {
-  const [serverTeams, setServerTeams] = useState<ServerTeamOption[]>([]);
-  const [targetTeamId, setTargetTeamId] = useState('');
   const [progression, setProgression] = useState<TeamProgression | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void progressionService.getAdminTeams().then((teams) => {
-      if (!active) return;
-      setServerTeams(teams);
-      const exact = teams.find((team) => team.teamName.toLocaleLowerCase() === teamName.toLocaleLowerCase());
-      const localId = teams.find((team) => team.id === teamId);
-      setTargetTeamId(exact?.id ?? localId?.id ?? '');
-    }).catch((cause) => {
-      if (active) setError(errorStatus(cause) === 401 ? 'Administrator session expired. Sign in again to continue.' : cause instanceof Error ? cause.message : 'Could not load server teams.');
-    });
-    return () => { active = false; };
-  }, [teamId, teamName]);
+  const actionInFlight = useRef(false);
 
   const load = useCallback(async () => {
-    if (!targetTeamId) { setProgression(null); return; }
+    if (!teamId) { setProgression(null); return; }
     setLoading(true); setError('');
-    try { setProgression(await progressionService.getAdminTeam(targetTeamId)); }
+    try { setProgression(await progressionService.getAdminTeam(teamId)); }
     catch (cause) {
       setError(errorStatus(cause) === 401 ? 'Administrator session expired. Sign in again to continue.' : cause instanceof Error ? cause.message : 'Could not load progression.');
     } finally { setLoading(false); }
-  }, [targetTeamId]);
+  }, [teamId]);
   useEffect(() => { void load(); }, [load]);
 
   const perform = async (entity: ProgressEntity, id: number, action: ProgressAction) => {
+    if (actionInFlight.current || !teamId) return;
     if (action === 'reset' && !window.confirm(`Reset ${entity === 'ROUND' ? `Round ${id}` : `Hunt ${id}`} progression for ${teamName}? Audit history will be retained.`)) return;
     const key = `${entity}-${id}-${action}`;
+    actionInFlight.current = true;
     setBusy(key); setError(''); setNotice('');
     try {
-      const next = await progressionService.adminAction(targetTeamId, entity, id, action, reason);
+      const next = await progressionService.adminAction(teamId, entity, id, action, reason);
       setProgression(next);
-      await onProgressChanged?.();
       setNotice(`${entity === 'ROUND' ? `Round ${id}` : `Hunt ${id}`} ${action} recorded.`);
+      try { await onProgressChanged?.(); }
+      catch { setError('The progression change was saved, but the dashboard summary could not refresh.'); }
     } catch (cause) {
       setError(errorStatus(cause) === 401 ? 'Administrator session expired. Sign in again to continue.' : cause instanceof Error ? cause.message : 'Progression action failed.');
-    } finally { setBusy(null); }
+    } finally { actionInFlight.current = false; setBusy(null); }
   };
 
   const stateFor = (entity: ProgressEntity, id: number) => entity === 'ROUND'
@@ -65,8 +53,9 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
       <div className="mt-2 flex flex-wrap gap-1.5">
         {(['unlock', 'lock', 'complete', 'reset'] as const).map((action) => {
           const key = `${entity}-${id}-${action}`;
-          const forbidden = action === 'unlock' && state?.status !== 'LOCKED' || action === 'lock' && state?.status === 'LOCKED' || action === 'complete' && state?.status === 'COMPLETED';
-          return <button key={action} type="button" disabled={Boolean(busy) || !state || forbidden} onClick={() => { void perform(entity, id, action); }}
+          const eligible = entity !== 'ROUND' || id === 1 || Boolean(state && 'eligible_at' in state && state.eligible_at);
+          const forbidden = action === 'unlock' && (state?.status !== 'LOCKED' || !eligible) || action === 'lock' && state?.status === 'LOCKED' || action === 'complete' && state?.status === 'COMPLETED';
+          return <button key={action} type="button" aria-label={`${action} ${entity === 'ROUND' ? 'Round' : 'Hunt'} ${id}`} title={action === 'unlock' && entity === 'ROUND' && id > 1 && !eligible ? `Complete Round ${id - 1} before unlocking this round.` : undefined} disabled={Boolean(busy) || loading || !state || forbidden} onClick={() => { void perform(entity, id, action); }}
             className="rounded border border-cartel-frostBorder/30 px-2 py-1 text-[10px] font-cinzel uppercase text-cartel-silver enabled:hover:border-cartel-amber/50 enabled:hover:text-cartel-amber disabled:cursor-not-allowed disabled:opacity-35">
             {busy === key ? 'Saving…' : action}
           </button>;
@@ -77,12 +66,11 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
 
   return <section aria-label={`Progression controls for ${teamName}`} className="space-y-3 border-t border-white/10 pt-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <div><h4 className="text-xs font-cinzel font-bold uppercase tracking-wider text-cartel-cyan">Server round & hunt progression</h4><p className="mt-1 text-[10px] text-cartel-silver/60">Round 2 completion is admin-recorded until that round exposes an authoritative completion record.</p></div>
+      <div><h4 className="text-xs font-cinzel font-bold uppercase tracking-wider text-cartel-cyan">Progression · {teamName}</h4><p className="mt-1 text-[10px] text-cartel-silver/60">Unlock only follows verified eligibility. Round 2 stays closed until an administrator starts the auction.</p></div>
       <button type="button" onClick={() => { void load(); }} disabled={loading} className="rounded border border-cartel-amber/40 px-2 py-1 text-[10px] text-cartel-amber disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button>
     </div>
     {error && <div role="alert" className="flex flex-wrap justify-between gap-2 rounded border border-red-500/40 bg-red-950/30 p-2 text-xs text-red-200"><span>{error}</span><button type="button" onClick={() => { void load(); }} className="underline">Retry</button></div>}
     {notice && <output aria-live="polite" className="block rounded border border-emerald-500/30 bg-emerald-950/30 p-2 text-xs text-emerald-200">{notice}</output>}
-    <label className="block text-[10px] text-cartel-silver/70">Server team<select value={targetTeamId} onChange={(event) => setTargetTeamId(event.target.value)} className="mt-1 w-full rounded border border-white/15 bg-[#121316] px-2 py-1.5 text-xs text-white"><option value="">Choose a server team…</option>{serverTeams.map((team) => <option key={team.id} value={team.id}>{team.teamName}</option>)}</select></label>
     <label className="block text-[10px] text-cartel-silver/70">Audit reason (optional)<input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} className="mt-1 w-full rounded border border-white/15 bg-black/40 px-2 py-1.5 text-xs text-white" /></label>
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{[1, 2, 3, 4].map((id) => renderRow('ROUND', id, `Round ${String(id).padStart(2, '0')}`))}</div>
     <h5 className="pt-1 text-[10px] font-cinzel font-bold uppercase tracking-wider text-cartel-amber">Round 3 hunts · sequential</h5>

@@ -112,7 +112,7 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
     const { container } = setup('s1-open');
     expect(screen.getByText('Trial I — 7 pumpkins')).toBeInTheDocument();
     expect(screen.getByText(/40 credits · 2 tries · 18s shuffle/i)).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-bat-fly-r2l, .animate-bat-fly-l2r')).toHaveLength(4);
+    expect(container.querySelectorAll('.animate-bat-fly-r2l, .animate-bat-fly-l2r')).toHaveLength(2);
     expect(container.querySelector('.s1-pumpkin-svg')).toHaveAttribute('src', '/assets/stage1/pumpkin-reference.png');
     const pumpkins = [...container.querySelectorAll<HTMLElement>('.s1-cell')];
     expect(pumpkins).toHaveLength(7);

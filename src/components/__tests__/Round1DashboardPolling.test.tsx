@@ -67,6 +67,29 @@ describe('Round 1 state polling', () => {
     expect(round1Api.getState).toHaveBeenCalledTimes(1);
   });
 
+  it('shows server wallet credits and forwards confirmed action balances to the team session', async () => {
+    const game = new Round1Service();
+    const gameSession = game.beginRound1('wallet-team', 'Wallet Team');
+    gameSession.credits = 20; // Official score is distinct from the spendable wallet.
+    const state = {
+      success: true,
+      round: { id: 1, name: 'The Graveyard Escape', isActive: true, totalDurationSeconds: 1320, remainingSeconds: 1320, endsAt: gameSession.roundDeadline },
+      team: { score: 20, totalCredits: 545, maxCredits: 500, isPaused: false },
+      session: gameSession,
+      config: { stage1: game.getStage1Config(), stage2: game.getStage2Config(), stage3: game.getStage3Config() },
+    } as Round1StateResponse;
+    vi.mocked(round1Api.getState).mockResolvedValue(state);
+    const updatedSession = { ...gameSession, credits: 60 };
+    vi.mocked(round1Api.action).mockResolvedValue({ success: true, session: updatedSession, score: 60, totalCredits: 585, completed: false });
+    const onUpdateCredits = vi.fn();
+    render(<Round1Dashboard session={{ teamId: 'wallet-team', teamName: 'Wallet Team' } as TeamSession} onReturnHome={() => undefined} onUpdateCredits={onUpdateCredits} />);
+
+    expect(await screen.findByText('WALLET 545 CR')).toBeInTheDocument();
+    await act(async () => { screen.getByRole('button', { name: /Enter Stage 1:/i }).click(); });
+    expect(round1Api.action).toHaveBeenCalledWith('enter', { stageId: 'stage-1' });
+    expect(onUpdateCredits).toHaveBeenCalledWith(585);
+  });
+
   it('shows a retryable error instead of crashing on an incomplete state response', async () => {
     vi.mocked(round1Api.getState).mockResolvedValue({ success: true } as Round1StateResponse);
     const session = { teamId: 'bad-state-team', teamName: 'Incomplete Response' } as TeamSession;

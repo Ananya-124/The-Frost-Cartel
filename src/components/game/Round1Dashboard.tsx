@@ -164,6 +164,10 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   };
 
   const handleSelectStage = async (stageId: StageId) => {
+    if (isExpired) {
+      setRequestError('Round 1 timer has expired. Crypt gates are sealed.');
+      return;
+    }
     soundController.playClick();
     try { await performAction('enter', { stageId }); changeActiveStage(stageId); }
     catch (error) { setRequestError(error instanceof Error ? error.message : 'Could not enter this stage.'); }
@@ -182,11 +186,34 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
 
   if (loading || !teamSession || !stage1Config || !stage2Config || !stage3Config) return <div className="min-h-screen bg-black text-stone-100 flex flex-col items-center justify-center gap-4"><p>{loading ? 'Loading your Round 1 progress…' : requestError ?? 'Round 1 state is unavailable.'}</p>{!loading && <button className="px-4 py-2 border border-amber-500 rounded" onClick={() => { setLoading(true); void refreshState(); }}>Retry</button>}{requestError?.includes('session has expired') && <button onClick={onReturnHome}>Return to sign in</button>}</div>;
 
+  const isTeamStarted = Boolean(teamSession.roundStartTime);
+  const isExpired = teamSession.status === 'expired' || secondsRemaining <= 0;
+
+  const renderExpiredOverlay = () => (
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fadeIn select-none">
+      <span className="text-4xl sm:text-5xl mb-3" aria-hidden="true">⌛</span>
+      <h2 className="text-xl sm:text-3xl font-gothic font-bold text-red-500 uppercase tracking-widest mb-2 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]">
+        TIME EXPIRED • GATES ARE SEALED
+      </h2>
+      <p className="text-xs sm:text-sm font-cinzel text-stone-300 max-w-md mb-6 leading-relaxed">
+        The sands of time have run out. This chamber has been sealed by the ancient forces.
+      </p>
+      <button
+        type="button"
+        onClick={() => changeActiveStage(null)}
+        className="px-6 py-2.5 rounded-lg bg-red-950 border border-red-500/70 text-amber-300 font-cinzel text-xs font-bold uppercase tracking-widest hover:bg-red-900 transition-all cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+      >
+        Return to Crypt Overview
+      </button>
+    </div>
+  );
+
   // Active Stage 1 View
   if (activeStageId === 'stage-1') {
     return (
       <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
+        {isExpired && teamSession.stages['stage-1'].status !== 'completed' && renderExpiredOverlay()}
         {teamSession.stages['stage-1'].status === 'not_configured' ? (
           <Round1DeferredBoundary stageLabel="Stage 1"><Suspense fallback={<StageChunkLoading label="Stage 1" />}>
             <Stage1Framework config={stage1Config} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} />
@@ -205,6 +232,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     return (
       <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
+        {isExpired && teamSession.stages['stage-2'].status !== 'completed' && renderExpiredOverlay()}
         <Round1DeferredBoundary stageLabel="Stage 2"><Suspense fallback={<StageChunkLoading label="Stage 2" />}>
           <Stage2HauntedImageHunt teamId={session.teamId} config={stage2Config} initialFoundTargetIds={teamSession.stage2State.foundTargetIds} timerStore={timerStore} onAction={performAction} isCompleted={teamSession.stages['stage-2'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-2'); }} onStageCompleted={handleStageCompleted} />
         </Suspense></Round1DeferredBoundary>
@@ -217,6 +245,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     return (
       <div className="relative min-h-screen bg-black text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
+        {isExpired && teamSession.stages['stage-3'].status !== 'completed' && renderExpiredOverlay()}
         <Round1DeferredBoundary stageLabel="Stage 3"><Suspense fallback={<StageChunkLoading label="Stage 3" />}>
           <Stage3ForgottenGraveyard teamId={session.teamId} config={stage3Config} initialSession={teamSession} timerStore={timerStore} onAction={performAction} initialCollectedFragments={teamSession.stage3State.collectedFragments} isCompleted={teamSession.stages['stage-3'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-3'); }} onStageCompleted={handleStageCompleted} />
         </Suspense></Round1DeferredBoundary>
@@ -225,8 +254,6 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   }
 
   // Main Round 1 Dashboard View
-  const isTeamStarted = Boolean(teamSession.roundStartTime);
-  const isExpired = teamSession.status === 'expired' || secondsRemaining <= 0;
 
   return (
     <div className="relative min-h-screen md:h-screen w-full bg-black text-stone-100 flex flex-col justify-between font-sans overflow-y-auto md:overflow-hidden select-none">
@@ -238,7 +265,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
         session={session}
         secondsRemaining={secondsRemaining}
         isTeamStarted={isTeamStarted}
-        credits={serverState.team.totalCredits}
+        walletCredits={serverState.team.totalCredits}
         isMuted={isMuted}
         durationMinutes={durationMinutes}
         onToggleMute={handleToggleMute}

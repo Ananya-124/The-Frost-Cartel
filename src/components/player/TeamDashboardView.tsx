@@ -27,7 +27,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
 }) => {
   const { dialogRef } = useNativeDialog(true, onClose);
 
-  const [roundStatus, setRoundStatus] = useState<'not_started' | 'running' | 'paused' | 'completed'>('not_started');
+  const [roundStatus, setRoundStatus] = useState<'not_started' | 'running' | 'paused' | 'completed'>(() => {
+    const status = initialProgression?.rounds.find((round) => round.round_id === 1)?.status;
+    return status === 'IN_PROGRESS' || status === 'AVAILABLE' ? 'running' : status === 'COMPLETED' ? 'completed' : 'not_started';
+  });
   const [progression, setProgression] = useState<TeamProgression | null>(initialProgression);
   const [progressionLoading, setProgressionLoading] = useState(false);
   const [progressionError, setProgressionError] = useState<string | null>(null);
@@ -37,6 +40,9 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     if (initialProgression) {
       setProgression(initialProgression);
       progressionRef.current = initialProgression;
+      const status = initialProgression.rounds.find((round) => round.round_id === 1)?.status;
+      if (status === 'IN_PROGRESS' || status === 'AVAILABLE') setRoundStatus('running');
+      else if (status === 'COMPLETED') setRoundStatus('completed');
     }
   }, [initialProgression]);
 
@@ -83,7 +89,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
       } catch {
         if (!disposed) {
           const status = progressionRef.current?.rounds.find((round) => round.round_id === 1)?.status;
-          setRoundStatus(status === 'COMPLETED' ? 'completed' : 'not_started');
+          setRoundStatus(status === 'IN_PROGRESS' || status === 'AVAILABLE' ? 'running' : status === 'COMPLETED' ? 'completed' : 'not_started');
         }
       } finally { inFlight = false; }
     };

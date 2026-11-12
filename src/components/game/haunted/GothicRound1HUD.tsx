@@ -5,7 +5,7 @@ interface GothicRound1HUDProps {
   session: TeamSession;
   secondsRemaining: number;
   isTeamStarted: boolean;
-  credits: number;
+  walletCredits: number;
   isMuted: boolean;
   durationMinutes: number;
   onToggleMute: () => void;
@@ -16,7 +16,7 @@ export const GothicRound1HUD: React.FC<GothicRound1HUDProps> = ({
   session,
   secondsRemaining,
   isTeamStarted,
-  credits,
+  walletCredits,
   isMuted,
   durationMinutes,
   onToggleMute,
@@ -73,13 +73,13 @@ export const GothicRound1HUD: React.FC<GothicRound1HUDProps> = ({
           </span>
         </div>
 
-        {/* Bounty Credits Pill */}
+        {/* Spendable team wallet, kept separate from official score. */}
         <div
           className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md bg-black/90 border border-amber-500/50 text-[9px] sm:text-xs font-mono font-bold text-amber-300 shadow-[0_0_8px_rgba(246,166,58,0.25)]"
-          title="Round 1 Credit Yield"
+          title="Spendable Team Wallet Credits"
         >
           <span aria-hidden="true">💰</span>
-          <span className="tracking-wider">{credits} / 500 CR</span>
+          <span className="tracking-wider">WALLET {walletCredits} CR</span>
         </div>
 
         {/* Audio Mute Toggle Button */}

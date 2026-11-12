@@ -23,7 +23,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
   colorTheme,
   artworkUrl: _artworkUrl,
   progressText,
-  isExpired: _isExpired,
+  isExpired = false,
   onEnterStage,
 }) => {
   // Theme color maps for ambient glow, aura, borders, and pills
@@ -76,24 +76,28 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
     status === 'completed' ? themeStyles.completedRelicImg : themeStyles.relicImg;
 
   const isNotConfigured = status === 'not_configured';
+  const isSealed = isExpired && status !== 'completed';
 
   return (
     <div
       role="button"
-      tabIndex={0}
+      tabIndex={isSealed ? -1 : 0}
+      aria-disabled={isSealed}
       onMouseDown={(e) => {
         // Prevent mouse click from triggering browser default focus ring / outline
         e.preventDefault();
       }}
-      onClick={onEnterStage}
+      onClick={isSealed ? undefined : onEnterStage}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (!isSealed && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onEnterStage();
         }
       }}
-      aria-label={`Enter Stage ${stageNumber}: ${title}`}
-      className="group relative flex flex-col items-center justify-center w-[230px] xs:w-[250px] sm:w-[270px] md:w-[285px] lg:w-[305px] select-none cursor-pointer outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none rounded-3xl"
+      aria-label={`Enter Stage ${stageNumber}: ${title}${isSealed ? ' (Sealed - Time Expired)' : ''}`}
+      className={`group relative flex flex-col items-center justify-center w-[230px] xs:w-[250px] sm:w-[270px] md:w-[285px] lg:w-[305px] select-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none active:outline-none rounded-3xl ${
+        isSealed ? 'cursor-not-allowed opacity-65 grayscale-[40%]' : 'cursor-pointer'
+      }`}
       style={{
         outline: 'none',
         outlineWidth: 0,
@@ -105,15 +109,21 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
       {/* 1. Supernatural Ambient Atmospheric Vapors / Back-Aura */}
       <div
         aria-hidden="true"
-        className={`absolute -inset-4 rounded-3xl ${themeStyles.auraBg} blur-xl opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 pointer-events-none`}
+        className={`absolute -inset-4 rounded-3xl ${themeStyles.auraBg} blur-xl ${
+          isSealed ? 'opacity-20' : 'opacity-60 group-hover:opacity-100 group-hover:scale-105'
+        } transition-all duration-500 pointer-events-none`}
       />
 
       {/* 2. Freestanding Gothic Reliquary Structure & Frame */}
-      <div className="relative w-full z-10 transition-all duration-300 group-hover:scale-[1.03] group-hover:brightness-110 active:scale-[0.98]">
+      <div className={`relative w-full z-10 transition-all duration-300 ${
+        isSealed ? '' : 'group-hover:scale-[1.03] group-hover:brightness-110 active:scale-[0.98]'
+      }`}>
         <img
           src={currentRelicImg}
           alt={`Stage ${stageNumber}: ${title}`}
-          className={`w-full h-auto object-contain filter drop-shadow-[0_12px_28px_rgba(0,0,0,0.95)] ${themeStyles.hoverGlow} transition-all duration-300 pointer-events-none`}
+          className={`w-full h-auto object-contain filter drop-shadow-[0_12px_28px_rgba(0,0,0,0.95)] ${
+            isSealed ? '' : themeStyles.hoverGlow
+          } transition-all duration-300 pointer-events-none`}
           loading="eager"
         />
 
@@ -122,6 +132,12 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
           <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
             <span className="text-[8px] sm:text-[9.5px] font-cinzel font-black tracking-widest uppercase drop-shadow-[0_0_8px_rgba(245,158,11,0.9)] bg-black/85 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.5)]">
               +{rewardCredits} CR SECURED ✓
+            </span>
+          </div>
+        ) : isSealed ? (
+          <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
+            <span className="text-[7.5px] sm:text-[8.5px] font-cinzel text-red-300 tracking-widest font-bold uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,1)] bg-black/90 px-2 py-0.5 rounded-full border border-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.4)]">
+              🔒 SEALED • TIME EXPIRED
             </span>
           </div>
         ) : progressText && !isNotConfigured ? (

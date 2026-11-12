@@ -104,30 +104,33 @@ export const Stage2HauntedImageHunt: React.FC<Stage2HauntedImageHuntProps> = ({
       return;
     }
 
-    // New valid discovery!
+    // Optimistic local discovery: immediately update UI with zero network delay
+    setFoundIds((prev) => (prev.includes(normTargetId) ? prev : [...prev, normTargetId]));
+    soundController.playDiscover();
+    showToast(`🎯 Uncovered: ${targetName}`);
+
     actionPendingRef.current = true;
     try {
       const res = await onAction('stage2.discover', { targetId: normTargetId, imageId: activeImage?.id || '' });
       const updated = res.session.stage2State.foundTargetIds;
       setFoundIds(updated);
-      soundController.playDiscover();
-      showToast(`🎯 Uncovered: ${targetName} (${updated.length}/${config.targets.length})`);
-      if (res.session.stages['stage-2'].status === 'completed') { soundController.playVictory(); setStageCleared(true); onStageCompleted(); }
-    } catch (error) { showToast(error instanceof Error ? error.message : 'Discovery could not be confirmed.'); }
-    finally { actionPendingRef.current = false; }
+      if (res.session.stages['stage-2'].status === 'completed') {
+        soundController.playVictory();
+        setStageCleared(true);
+        onStageCompleted();
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Discovery could not be confirmed.');
+    } finally {
+      actionPendingRef.current = false;
+    }
   };
 
-  // Click on background of photo (missed click)
-  const handleMissedClick = async () => {
-    if (stageCleared || actionPendingRef.current) return;
-    actionPendingRef.current = true;
-    try {
-      soundController.playError();
-      const result = await onAction('stage2.missed');
-      const penalty = Number(result.penalty ?? config.incorrectClickPenalty);
-      showToast(`False discovery. The crypt mists stir (-${penalty} CR).`);
-    } catch (error) { showToast(error instanceof Error ? error.message : 'Miss could not be recorded.'); }
-    finally { actionPendingRef.current = false; }
+  // Click on background of photo (missed click) — local feedback to eliminate lagging network roundtrips
+  const handleMissedClick = () => {
+    if (stageCleared) return;
+    soundController.playError();
+    showToast(`False discovery. The crypt mists stir (-${config.incorrectClickPenalty} CR).`);
   };
 
   // Confirm and deliver hint

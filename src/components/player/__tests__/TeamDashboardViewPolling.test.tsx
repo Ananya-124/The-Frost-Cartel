@@ -15,16 +15,19 @@ vi.mock('../TeamProgressionSummary', () => ({ TeamProgressionSummary: () => null
 describe('team dashboard Round 1 status polling', () => {
   afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 
-  const renderDashboard = (isRound1GameActive: boolean) => render(
-    <TeamDashboardView
+  const renderDashboard = (isRound1GameActive: boolean) => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    return render(
+      <TeamDashboardView
       session={{ teamId: 'team-poll', teamName: 'Polling Team', credits: 500 } as TeamSession}
       round1Config={{} as never}
       onLogout={() => undefined}
       onEnterRound1={() => undefined}
       onClose={() => undefined}
       isRound1GameActive={isRound1GameActive}
-    />,
-  );
+      />
+    );
+  };
 
   it('stops dashboard status requests while Round 1 is actively open', async () => {
     vi.useFakeTimers();
@@ -34,11 +37,12 @@ describe('team dashboard Round 1 status polling', () => {
     expect(round1Api.getState).not.toHaveBeenCalled();
   });
 
-  it('retains the 10-second status check while the team dashboard is outside gameplay', async () => {
+  it('stops status polling after the server confirms Round 1 is running', async () => {
     vi.useFakeTimers();
     vi.mocked(round1Api.getState).mockResolvedValue({ round: { isActive: true } } as never);
     renderDashboard(false);
+    expect(document.visibilityState).toBe('visible');
     await act(async () => { await Promise.resolve(); await vi.advanceTimersByTimeAsync(60_000); });
-    expect(round1Api.getState).toHaveBeenCalledTimes(7);
+    expect(round1Api.getState).toHaveBeenCalledTimes(1);
   });
 });

@@ -344,7 +344,7 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
           <p className="mt-1 text-xs text-cartel-silver/70">Changes are recorded through the authenticated progression API. Stage-level realignment is unavailable because no protected stage-movement endpoint exists. Round 2 remains disabled.</p>
         </div>
         {teams.length === 0 && !teamLoadError && <p role="status" className="text-xs text-cartel-silver/60">Loading teams…</p>}
-        {selectedTeam && <AdminProgressionControls key={selectedTeam.id} teamId={selectedTeam.id} teamName={selectedTeam.name} onProgressChanged={async () => { await onRefresh(); await round1Api.adminConfig(); }} />}
+        {selectedTeam && <AdminProgressionControls key={selectedTeam.id} teamId={selectedTeam.id} teamName={selectedTeam.name} onProgressChanged={onRefresh} />}
       </div>
 
       <ConfirmationModal

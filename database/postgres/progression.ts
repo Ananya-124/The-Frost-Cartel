@@ -112,7 +112,7 @@ async function markNextRoundEligible(client: PoolClient, teamId: string, roundId
 async function complete(client: PoolClient, teamId: string, entity: ProgressEntity, entityId: number,
   status: ProgressStatus, adminId?: string, reason?: string): Promise<void> {
   if (status === 'COMPLETED') return; // idempotent duplicate completion
-  if (status !== 'IN_PROGRESS') throw new ProgressionError('Only in-progress progression can be completed.', 'CONFLICT');
+  if (status !== 'IN_PROGRESS' && status !== 'AVAILABLE') throw new ProgressionError('Only available or in-progress progression can be completed.', 'CONFLICT');
   if (entity === 'ROUND' && entityId === 3) {
     const hunts = await client.query<{ count: string }>("SELECT count(*) FROM team_hunt_progress WHERE team_id=$1 AND status='COMPLETED'", [teamId]);
     if (Number(hunts.rows[0].count) !== 3) throw new ProgressionError('All three Round 3 hunts must be completed first.', 'CONFLICT');
@@ -134,6 +134,16 @@ export async function startRound(pool: Pool, teamId: string, roundId: number): P
   return withPostgresTransaction(pool, async (client) => {
     await assertTeam(client, teamId);
     await lockTeamProgression(client, teamId);
+    if (roundId === 2) {
+      // The auction is the global Round 2 release gate. Keep the row locked
+      // through this transition so an administrator cannot disable it midway.
+      const auction = await client.query<{ enabled: boolean }>(
+        'SELECT enabled FROM round2_auction_config WHERE id=1 FOR SHARE',
+      );
+      if (auction.rows[0]?.enabled !== true) {
+        throw new ProgressionError('Round 2 is unavailable until an administrator starts the auction.', 'LOCKED');
+      }
+    }
     const status = await readAndLock(client, teamId, 'ROUND', roundId);
     if (status === 'IN_PROGRESS') return;
     if (status !== 'AVAILABLE') throw new ProgressionError('This round is locked or not available.', 'LOCKED');
@@ -206,7 +216,9 @@ export async function adminProgress(pool: Pool, adminSessionToken: string, teamI
       if (status !== 'LOCKED') throw new ProgressionError('Only locked progression can be unlocked.', 'CONFLICT');
       if (entity === 'ROUND') {
         const eligible = await client.query('SELECT eligible_at FROM round_progress WHERE team_id=$1 AND round_id=$2', [teamId, entityId]);
-        if (entityId !== 1 && !eligible.rows[0].eligible_at) throw new ProgressionError('The team is not yet eligible for this round.', 'CONFLICT');
+        if (entityId !== 1 && !eligible.rows[0]?.eligible_at) {
+          await client.query('UPDATE round_progress SET eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=$2', [teamId, entityId]);
+        }
       } else if (entityId === 1) {
         const round = await client.query<{ status: ProgressStatus }>('SELECT status FROM round_progress WHERE team_id=$1 AND round_id=3', [teamId]);
         if (round.rows[0]?.status !== 'IN_PROGRESS') throw new ProgressionError('Round 3 must be in progress before Hunt I can unlock.', 'CONFLICT');
@@ -334,6 +346,12 @@ export async function assertRound4Qualified(pool: Pool, teamId: string, routeId?
 }
 
 export async function assertRoundAccessible(pool: Pool, teamId: string, roundId: number): Promise<void> {
+  if (roundId === 2) {
+    const auction = await pool.query<{ enabled: boolean }>('SELECT enabled FROM round2_auction_config WHERE id=1');
+    if (auction.rows[0]?.enabled !== true) {
+      throw new ProgressionError('Round 2 is unavailable until an administrator starts the auction.', 'LOCKED');
+    }
+  }
   const result = await pool.query<{ status: ProgressStatus }>('SELECT status FROM round_progress WHERE team_id=$1 AND round_id=$2', [teamId, roundId]);
   if (!result.rowCount || !['AVAILABLE', 'IN_PROGRESS', 'COMPLETED'].includes(result.rows[0].status)) {
     throw new ProgressionError('This round is locked.', 'LOCKED');
