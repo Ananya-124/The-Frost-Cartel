@@ -13,8 +13,9 @@ vi.mock('../../../services/progressionService', () => ({
   },
 }));
 
-function state(round2EligibleAt: string | null, round2Status: 'LOCKED' | 'AVAILABLE' = 'LOCKED'): TeamProgression {
+function state(round2EligibleAt: string | null, round2Status: 'LOCKED' | 'AVAILABLE' = 'LOCKED'): { success: true } & TeamProgression {
   return {
+    success: true,
     teamId: 'team-42',
     rounds: [1, 2, 3, 4].map((round_id) => ({
       round_id,
