@@ -1,9 +1,10 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { FrostCartelHomePage } from '../components/home/FrostCartelHomePage';
 import { isAdminRoute } from './routes';
 import type { AppView } from './app.types';
+import { lazyWithRetry } from '../utils/lazyRetry';
 
-const AdminPortal = lazy(() => import('../components/admin/AdminPortal').then((module) => ({ default: module.AdminPortal })));
+const AdminPortal = lazyWithRetry(() => import('../components/admin/AdminPortal').then((module) => ({ default: module.AdminPortal })));
 
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(() => {

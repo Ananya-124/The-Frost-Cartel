@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { ROUNDS_DATA } from '../../constants/rounds.constants';
@@ -12,10 +12,11 @@ import { Round1DeferredBoundary } from '../game/Round1DeferredBoundary';
 import { CornerQuickNav } from '../layout/CornerQuickNav';
 import { GothicLeaderboardModal } from '../leaderboard/GothicLeaderboardModal';
 import { progressionService, errorStatus, type TeamProgression } from '../../services/progressionService';
+import { lazyWithRetry } from '../../utils/lazyRetry';
 
-const RoundFourIntro = lazy(() => import('../game/round4/RoundFourIntro').then((module) => ({ default: module.RoundFourIntro })));
-const Round2Auction = lazy(() => import('../game/round2/Round2Auction').then((module) => ({ default: module.Round2Auction })));
-const ParadoxHunt = lazy(() => import('../game/round3/ParadoxHunt').then((module) => ({ default: module.ParadoxHunt })));
+const RoundFourIntro = lazyWithRetry(() => import('../game/round4/RoundFourIntro').then((module) => ({ default: module.RoundFourIntro })));
+const Round2Auction = lazyWithRetry(() => import('../game/round2/Round2Auction').then((module) => ({ default: module.Round2Auction })));
+const ParadoxHunt = lazyWithRetry(() => import('../game/round3/ParadoxHunt').then((module) => ({ default: module.ParadoxHunt })));
 
 function serverRounds(progression: TeamProgression | null, isAuthenticated: boolean): RoundConfig[] {
   if (!progression) return ROUNDS_DATA.map((round) => Number(round.number) === 1 && isAuthenticated

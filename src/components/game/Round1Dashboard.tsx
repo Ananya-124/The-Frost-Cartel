@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { StageId } from '../../types/round.types';
 import { round1Api, type Round1StateResponse } from '../../services/round1ApiService';
@@ -9,15 +9,16 @@ import { GothicRound1HUD } from './haunted/GothicRound1HUD';
 import { HauntedPortalCard } from './haunted/HauntedPortalCard';
 import { createRound1TimerStore } from './round1TimerStore';
 import { Round1DeferredBoundary } from './Round1DeferredBoundary';
+import { lazyWithRetry } from '../../utils/lazyRetry';
 
 const loadStage1Framework = () => import('./stage1/Stage1Framework').then((module) => ({ default: module.Stage1Framework }));
 const loadStage1Game = () => import('./stage1/Stage1PumpkinShuffle').then((module) => ({ default: module.Stage1PumpkinShuffle }));
 const loadStage2 = () => import('./stage2/Stage2HauntedImageHunt').then((module) => ({ default: module.Stage2HauntedImageHunt }));
 const loadStage3 = () => import('./stage3/Stage3ForgottenGraveyard').then((module) => ({ default: module.Stage3ForgottenGraveyard }));
-const Stage1Framework = lazy(loadStage1Framework);
-const Stage1PumpkinShuffle = lazy(loadStage1Game);
-const Stage2HauntedImageHunt = lazy(loadStage2);
-const Stage3ForgottenGraveyard = lazy(loadStage3);
+const Stage1Framework = lazyWithRetry(loadStage1Framework);
+const Stage1PumpkinShuffle = lazyWithRetry(loadStage1Game);
+const Stage2HauntedImageHunt = lazyWithRetry(loadStage2);
+const Stage3ForgottenGraveyard = lazyWithRetry(loadStage3);
 
 const StageChunkLoading: React.FC<{ label: string }> = ({ label }) => (
   <div role="status" className="min-h-screen bg-black text-stone-100 flex items-center justify-center">Loading {label}…</div>
@@ -185,7 +186,19 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
       await Promise.all([performAction('enter', { stageId }), loadStage]);
       changeActiveStage(stageId);
     }
-    catch (error) { setRequestError(error instanceof Error ? error.message : 'Could not enter this stage.'); }
+    catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (
+        msg.includes('dynamically imported module') ||
+        msg.includes('Failed to fetch') ||
+        msg.includes('error loading dynamically imported module') ||
+        msg.includes('Importing a module script failed')
+      ) {
+        window.location.reload();
+        return;
+      }
+      setRequestError(error instanceof Error ? error.message : 'Could not enter this stage.');
+    }
     finally { setEnteringStageId(null); }
   };
 
