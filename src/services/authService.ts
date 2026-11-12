@@ -1,5 +1,5 @@
 import type { AuthResponse, TeamSession } from '../types';
-import { apiUrl } from './apiBaseUrl';
+import { apiUrl, setStoredToken, clearStoredToken } from './apiBaseUrl';
 
 const AUTH_REQUEST_TIMEOUT_MS = 15_000;
 
@@ -99,6 +99,9 @@ class AuthService {
             gameStatus: data.team.isPaused ? 'paused' : 'active',
             loginTime: new Date().toISOString(),
           };
+          if (data.token) {
+            setStoredToken('team', data.token);
+          }
           this.setSession(session);
           return { success: true, team: session, token: data.token, message: data.message };
         }
@@ -192,6 +195,7 @@ class AuthService {
   }
 
   logout(): void {
+    clearStoredToken('team');
     // Revoke the server session as well as clearing the non-sensitive local profile.
     void fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' }).catch(() => undefined);
     this.currentSession = null;

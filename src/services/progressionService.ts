@@ -1,5 +1,5 @@
 export type ProgressStatus = 'LOCKED' | 'AVAILABLE' | 'IN_PROGRESS' | 'COMPLETED';
-import { apiUrl } from './apiBaseUrl';
+import { apiUrl, setStoredToken, clearStoredToken } from './apiBaseUrl';
 export type ProgressEntity = 'ROUND' | 'HUNT';
 export type ProgressAction = 'unlock' | 'lock' | 'complete' | 'reset';
 
@@ -61,7 +61,10 @@ export const progressionService = {
 
 export const adminAuthService = {
   async login(username: string, password: string): Promise<{ username: string; mustChangePassword: boolean }> {
-    const result = await request<{ success: true; admin: { username: string; mustChangePassword: boolean } }>('/api/admin/login', 'POST', { username, password });
+    const result = await request<{ success: true; token?: string; admin: { username: string; mustChangePassword: boolean } }>('/api/admin/login', 'POST', { username, password });
+    if (result.token) {
+      setStoredToken('admin', result.token);
+    }
     return result.admin;
   },
   async validate(): Promise<boolean> {
@@ -69,6 +72,7 @@ export const adminAuthService = {
     return response.ok;
   },
   async logout(): Promise<void> {
+    clearStoredToken('admin');
     await request('/api/admin/logout', 'POST', {});
   },
 };
