@@ -1,7 +1,29 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import * as path from 'node:path';
 import type { PoolConfig } from 'pg';
 
 export type PostgresEnvironment = NodeJS.ProcessEnv;
+
+function resolveCertFile(certPath?: string): string | undefined {
+  if (!certPath) return undefined;
+  const cleanPath = certPath.replace(/^["']|["']$/g, '');
+  if (existsSync(cleanPath)) {
+    return readFileSync(cleanPath, 'utf8');
+  }
+  const filename = path.basename(cleanPath);
+  const bundled = path.resolve(process.cwd(), 'certs', filename);
+  if (existsSync(bundled)) {
+    return readFileSync(bundled, 'utf8');
+  }
+  const userHome = process.env.USERPROFILE || process.env.HOME || '';
+  if (userHome) {
+    const userDownloads = path.join(userHome, 'Downloads', filename);
+    if (existsSync(userDownloads)) {
+      return readFileSync(userDownloads, 'utf8');
+    }
+  }
+  return readFileSync(cleanPath, 'utf8');
+}
 
 /** Build one shared pg configuration for the application and migration runner. */
 export function createPostgresPoolConfig(env: PostgresEnvironment = process.env): PoolConfig {
@@ -28,11 +50,11 @@ export function createPostgresPoolConfig(env: PostgresEnvironment = process.env)
       break;
     case 'verify-ca':
       if (!rootCertPath && !rootCertContent) throw new Error('PGSSLROOTCERT or PGSSLROOTCERT_CONTENT is required when PGSSLMODE=verify-ca.');
-      ssl = { ca: rootCertContent || readFileSync(rootCertPath!, 'utf8'), rejectUnauthorized: true, checkServerIdentity: () => undefined };
+      ssl = { ca: rootCertContent || resolveCertFile(rootCertPath), rejectUnauthorized: true, checkServerIdentity: () => undefined };
       break;
     case 'verify-full':
       if (!rootCertPath && !rootCertContent) throw new Error('PGSSLROOTCERT or PGSSLROOTCERT_CONTENT is required when PGSSLMODE=verify-full.');
-      ssl = { ca: rootCertContent || readFileSync(rootCertPath!, 'utf8'), rejectUnauthorized: true };
+      ssl = { ca: rootCertContent || resolveCertFile(rootCertPath), rejectUnauthorized: true };
       break;
     default:
       throw new Error(`Unsupported PGSSLMODE "${mode}". Use disable, require, verify-ca, or verify-full.`);
