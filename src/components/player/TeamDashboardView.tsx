@@ -120,58 +120,57 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     const r3 = rounds.find((r) => r.round_id === 3 && (r.status === 'IN_PROGRESS' || r.status === 'AVAILABLE'));
     if (r3) return { roundId: 3, status: r3.status };
     const r2 = rounds.find((r) => r.round_id === 2 && (r.status === 'IN_PROGRESS' || r.status === 'AVAILABLE'));
+    if (r2 && (r2.status === 'IN_PROGRESS' || r2.status === 'AVAILABLE')) {
+      return { roundId: 2, status: r2.status };
+    }
     const r1 = rounds.find((r) => r.round_id === 1);
-
-    // If Round 2 is unlocked and Round 1 is not running (or completed, or R2 is already in_progress)
-    if (r2 && (r2.status === 'IN_PROGRESS' || !isRoundActive || r1?.status === 'COMPLETED')) {
-      return { roundId: 2, status: r2.status };
+    if (r1 && (r1.status === 'IN_PROGRESS' || (r1.status === 'AVAILABLE' && isRoundActive))) {
+      return { roundId: 1, status: isRoundActive ? 'IN_PROGRESS' : r1.status };
     }
-    if (isRoundActive || r1?.status === 'IN_PROGRESS' || r1?.status === 'AVAILABLE') {
-      return { roundId: 1, status: isRoundActive ? 'IN_PROGRESS' : (r1?.status ?? 'LOCKED') };
-    }
-    if (r2) {
-      return { roundId: 2, status: r2.status };
-    }
-    return { roundId: 1, status: 'LOCKED' };
+    if (r2) return { roundId: 2, status: r2.status };
+    return { roundId: 1, status: r1?.status ?? 'LOCKED' };
   }, [progression, isRoundActive]);
 
   const roundDetails = React.useMemo(() => {
+    const state = progression?.rounds?.find((r) => r.round_id === targetRound.roundId);
+    const isCompleted = state?.status === 'COMPLETED';
+
     switch (targetRound.roundId) {
       case 2:
         return {
           subtitle: 'THE HAUNTED AUCTION',
-          duration: '15 MIN',
-          isPlayable: targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE',
-          statusText: 'AUCTION FLOOR IS UNSEALED',
-          buttonLabel: targetRound.status === 'IN_PROGRESS' ? 'ENTER THE AUCTION' : 'ENTER THE AUCTION',
+          duration: '',
+          isPlayable: (targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE') && !isCompleted,
+          statusText: isCompleted ? 'ROUND COMPLETED • ACCESS CLOSED' : 'AUCTION FLOOR IS UNSEALED',
+          buttonLabel: isCompleted ? 'ROUND COMPLETED' : 'ENTER THE AUCTION',
         };
       case 3:
         return {
-          subtitle: 'THE PARADOX HUNT',
-          duration: '20 MIN',
-          isPlayable: targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE',
-          statusText: 'PARADOX CHAMBER UNSEALED',
-          buttonLabel: 'ENTER THE HUNT',
+          subtitle: 'PARADOX LAB',
+          duration: '25 MIN',
+          isPlayable: (targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE') && !isCompleted,
+          statusText: isCompleted ? 'ROUND COMPLETED • ACCESS CLOSED' : 'PARADOX CHAMBER UNSEALED',
+          buttonLabel: isCompleted ? 'ROUND COMPLETED' : 'ENTER THE HUNT',
         };
       case 4:
         return {
-          subtitle: "THE MESSENGER'S LETTER",
-          duration: '15 MIN',
-          isPlayable: targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE',
-          statusText: 'FINAL VAULT UNSEALED',
-          buttonLabel: 'ENTER THE CHAMBER',
+          subtitle: "THE RADIANT TREASURE HUNT",
+          duration: '',
+          isPlayable: (targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE') && !isCompleted,
+          statusText: isCompleted ? 'EXPEDITION COMPLETED' : 'FINAL VAULT UNSEALED',
+          buttonLabel: isCompleted ? 'EXPEDITION COMPLETED' : 'ENTER THE CHAMBER',
         };
       case 1:
       default:
         return {
           subtitle: 'THE GRAVEYARD ESCAPE',
-          duration: '20–25 MIN',
-          isPlayable: isRoundActive,
-          statusText: isRoundActive ? 'THE GATES ARE UNSEALED' : 'AWAITING THE SUMMONS',
-          buttonLabel: 'ENTER THE GRAVEYARD',
+          duration: '25 MIN',
+          isPlayable: isRoundActive && !isCompleted,
+          statusText: isCompleted ? 'ROUND COMPLETED • ACCESS CLOSED' : isRoundActive ? 'THE GATES ARE UNSEALED' : 'AWAITING THE SUMMONS',
+          buttonLabel: isCompleted ? 'ROUND COMPLETED' : 'ENTER THE GRAVEYARD',
         };
     }
-  }, [targetRound, isRoundActive]);
+  }, [targetRound, isRoundActive, progression]);
 
   const handleMainAction = () => {
     if (!roundDetails.isPlayable) return;
@@ -288,11 +287,15 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
             <span aria-hidden="true">👥</span>
             <span>2 PLAYERS</span>
           </span>
-          <span className="text-stone-500" aria-hidden="true">•</span>
-          <span className="flex items-center gap-1">
-            <span aria-hidden="true">⏳</span>
-            <span>{roundDetails.duration}</span>
-          </span>
+          {roundDetails.duration ? (
+            <>
+              <span className="text-stone-500" aria-hidden="true">•</span>
+              <span className="flex items-center gap-1">
+                <span aria-hidden="true">⏳</span>
+                <span>{roundDetails.duration}</span>
+              </span>
+            </>
+          ) : null}
           <span className="text-stone-500" aria-hidden="true">•</span>
           <span className="flex items-center gap-1 text-amber-300 font-semibold whitespace-nowrap">
             <span aria-hidden="true">💰</span>
@@ -371,14 +374,32 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           </button>
         </div>
 
-        {/* Quick Multi-Chamber Access if multiple rounds are accessible */}
-        {progression?.rounds && progression.rounds.some((r) => r.round_id !== targetRound.roundId && (r.status === 'AVAILABLE' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || (r.round_id === 1 && isRoundActive))) && (
+        {/* Quick Multi-Chamber Access: ONLY show available/in-progress rounds, NOT completed or past rounds */}
+        {progression?.rounds && (
           <div className="flex items-center justify-center flex-wrap gap-2 mb-3">
             {progression.rounds.map((r) => {
-              const canEnter = r.status === 'AVAILABLE' || r.status === 'IN_PROGRESS' || (r.round_id === 1 && isRoundActive) || r.status === 'COMPLETED';
-              if (!canEnter) return null;
+              const activeRoundIds = progression.rounds
+                .filter((item) => item.status === 'IN_PROGRESS' || item.status === 'COMPLETED')
+                .map((item) => item.round_id);
+              const highestActiveRoundId = activeRoundIds.length > 0 ? Math.max(...activeRoundIds) : 1;
+              const isPastOrCompleted = r.status === 'COMPLETED' || r.round_id < highestActiveRoundId;
+
+              const canEnter = !isPastOrCompleted && (r.status === 'AVAILABLE' || r.status === 'IN_PROGRESS' || (r.round_id === 1 && isRoundActive));
+              if (!canEnter && !isPastOrCompleted) return null;
               const isCurrent = r.round_id === targetRound.roundId;
-              const rName = r.round_id === 1 ? 'Round 1: Crypt' : r.round_id === 2 ? 'Round 2: Auction' : r.round_id === 3 ? 'Round 3: Hunt' : 'Round 4: Letter';
+              const rName = r.round_id === 1 ? 'Round 1: Crypt' : r.round_id === 2 ? 'Round 2: Auction' : r.round_id === 3 ? 'Round 3: Lab' : 'Round 4: Relic';
+
+              if (isPastOrCompleted) {
+                return (
+                  <span
+                    key={r.round_id}
+                    className="text-[10px] font-cinzel font-semibold px-2.5 py-1 rounded border border-white/10 bg-black/40 text-stone-500 cursor-not-allowed select-none"
+                  >
+                    {rName} (Closed)
+                  </span>
+                );
+              }
+
               return (
                 <button
                   key={r.round_id}
@@ -393,7 +414,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
                       : 'border-white/15 bg-black/60 hover:border-amber-400/60 hover:bg-black/90 text-stone-300'
                   }`}
                 >
-                  {rName} {r.status === 'COMPLETED' ? '✓' : ''}
+                  {rName}
                 </button>
               );
             })}

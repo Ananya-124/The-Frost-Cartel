@@ -135,7 +135,10 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     const row=result.rows[0];
     if(!row)throw new Round1GameError('Team not found.',404);
     if(row.stage_rows.length!==3||!row.progress_status)throw new Round1GameError('Round 1 team records are not initialized.',409);
-    if(row.progress_status!=='IN_PROGRESS'&&row.progress_status!=='AVAILABLE')throw new Round1GameError('Round 1 is locked or not active for this team.',423);
+    if(row.progress_status==='LOCKED'){
+      await pool.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE team_id=$1 AND round_id=1",[teamId]);
+      row.progress_status='IN_PROGRESS';
+    }
     const base=defaults(),stored=row.configuration??{};
     const config:Round1Config={...base,...stored,
       stage1:{...base.stage1,...(stored.stage1??{}),trials:stored.stage1?.trials??base.stage1.trials},
@@ -160,17 +163,31 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     }
     session.scoreTransactions=session.scoreTransactions??[];
     game.restoreTeamSession(session);
+
+    // Each squad gets their own timer starting exactly when they enter Round 1
+    if (!session.roundStartTime || !session.roundDeadline) {
+      const now = new Date();
+      session.roundStartTime = now.toISOString();
+      session.roundDeadline = new Date(now.getTime() + config.durationMinutes * 60 * 1000).toISOString();
+      session.status = 'active';
+      game.restoreTeamSession(session);
+      await pool.query(
+        "UPDATE round1_stage_progress SET state=jsonb_set(COALESCE(state, '{}'::jsonb), '{round1Session}', $1::jsonb, true), updated_at=now() WHERE team_id=$2 AND stage_id=1",
+        [JSON.stringify(session), teamId]
+      );
+      await pool.query(
+        "UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE team_id=$1 AND round_id=1 AND status!='COMPLETED'",
+        [teamId]
+      );
+    }
+
     if(metrics)metrics.initializationMs=performance.now()-initializationStartedAt;
     const deadline=session.roundDeadline?new Date(session.roundDeadline).getTime():null;
     const teamRemaining=deadline===null?config.durationMinutes*60:Math.max(0,Math.floor((deadline-Date.now())/1000));
-    const globalDeadline=row.round_is_active&&row.start_time
-      ?row.start_time.getTime()+(row.duration_seconds??0)*1000:null;
-    const effectiveDeadline=deadline===null?globalDeadline:globalDeadline===null?deadline:Math.min(deadline,globalDeadline);
-    const globalRemaining=globalDeadline===null?teamRemaining:Math.max(0,Math.floor((globalDeadline-Date.now())/1000));
     const remainingSeconds=config.lifecycle==='paused'&&typeof session.pausedRemainingSeconds==='number'
-      ?session.pausedRemainingSeconds:Math.min(teamRemaining,globalRemaining);
-    const endsAt=config.lifecycle==='paused'?null:effectiveDeadline===null?null:new Date(effectiveDeadline).toISOString();
-    const roundAcceptsPlay=config.lifecycle==='not_started'||config.lifecycle==='running';
+      ?session.pausedRemainingSeconds:teamRemaining;
+    const endsAt=config.lifecycle==='paused'?null:deadline===null?null:new Date(deadline).toISOString();
+    const roundAcceptsPlay=true;
     return {session,remainingSeconds,endsAt,roundActive:roundAcceptsPlay,score:session.credits,totalCredits:row.total_credits,
       stages:row.stage_rows.map(({stage_id,status,score,max_score,state})=>({stageId:stage_id,status,score,maxScore:max_score,state})),config};
   } finally {if(metrics)metrics.serviceTotalMs=performance.now()-serviceStartedAt;}
@@ -190,11 +207,11 @@ export async function performRound1Action(pool: Pool, teamId: string, action: Ro
     const stage=(id:StageId)=>session.stages[id];
     let result:Record<string,unknown>={success:true};
     const beforeTx=session.scoreTransactions.length;
-    const globalRemaining=live.rows[0]?.is_active
-      ? Math.max(0,live.rows[0].duration_seconds-Math.floor((Date.now()-(live.rows[0].start_time?.getTime()??Date.now()))/1000))
-      : config.durationMinutes*60;
-    const teamRemaining=session.roundStartTime?game.getTimeRemainingSeconds(teamId):globalRemaining;
-    if(teamRemaining<=0||globalRemaining<=0){
+    if (!session.roundStartTime || !session.roundDeadline) {
+      game.beginRound1(teamId, session.teamName);
+    }
+    const teamRemaining=game.getTimeRemainingSeconds(teamId);
+    if(teamRemaining<=0){
       session.status='expired';session.roundEndTime??=new Date().toISOString();
       const snapshot=game.snapshotTeamSession(teamId,session.teamName);
       await client.query("UPDATE round1_stage_progress SET state=jsonb_build_object('round1Session',$2::jsonb),updated_at=now() WHERE team_id=$1",[teamId,JSON.stringify(snapshot)]);

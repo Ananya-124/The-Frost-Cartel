@@ -209,14 +209,20 @@ export async function completeHunt(pool: Pool, teamId: string, huntId: number): 
 export async function adminProgressRound2Global(
   pool: Pool,
   adminSessionToken: string,
-  action: 'unlock' | 'lock' | 'reset',
+  action: 'advance' | 'unlock' | 'lock' | 'reset',
   reason?: string,
 ): Promise<{ isActive: boolean; updatedCount: number }> {
   return withPostgresTransaction(pool, async (client) => {
     const adminId = await requireAdminSession(client, adminSessionToken);
-    if (action === 'unlock') {
+    if (action === 'unlock' || action === 'advance') {
       await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=2');
       await client.query('UPDATE round2_auction_config SET enabled=true, updated_at=now() WHERE id=1');
+
+      // Auto-complete Round 1 so all squads transition cleanly to Round 2
+      await client.query(
+        "UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now() WHERE round_id=1 AND status != 'COMPLETED'",
+      );
+
       const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
         'SELECT team_id, status FROM round_progress WHERE round_id=2 FOR UPDATE',
       );
@@ -234,7 +240,7 @@ export async function adminProgressRound2Global(
             entityId: 2,
             previous: t.status,
             next: 'AVAILABLE',
-            action: 'UNLOCK',
+            action: action === 'advance' ? 'ADVANCE' : 'UNLOCK',
             reason: reason || 'Tournament Round 2 unlocked for all squads',
           });
           updatedCount++;

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { round2Service, subscribeToAuctionChanges, type R2Overview, type R2Result } from '../../../services/round2Service';
+import { progressionService } from '../../../services/progressionService';
 import { CardArt } from '../../game/round2/AuctionCard';
 
 export const AdminAuctionTab: React.FC = () => {
@@ -9,6 +10,7 @@ export const AdminAuctionTab: React.FC = () => {
   const [duration, setDuration] = useState('60');
   const [bump, setBump] = useState(0);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [advancingAll, setAdvancingAll] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -45,6 +47,26 @@ export const AdminAuctionTab: React.FC = () => {
           <label className="text-xs text-cartel-silver/70 font-cinzel">Bidding time (sec, 0 = manual end)
             <input type="number" min={0} value={duration} onChange={(e) => setDuration(e.target.value)} className={`${inputCls} ml-2 w-20`} />
           </label>
+          <button
+            className={`${btnCls} bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:to-indigo-500 text-white font-bold shadow-[0_0_12px_rgba(147,51,234,0.4)] disabled:opacity-50`}
+            disabled={advancingAll}
+            onClick={async () => {
+              if (!window.confirm('⚡ Advance and unlock Round 2 for ALL teams simultaneously? This will finalize Round 1 and make Round 2 available to all squads.')) return;
+              setAdvancingAll(true);
+              try {
+                const res = await progressionService.adminRound2Global('advance', 'Admin advanced all teams to Round 2 from Auction portal');
+                setMsg(`⚡ Successfully updated all teams to Round 2! (${res.updatedCount} squads updated)`);
+                setSessionExpired(false);
+                setBump((n) => n + 1);
+              } catch (err) {
+                setMsg(err instanceof Error ? err.message : 'Failed to update teams to Round 2.');
+              } finally {
+                setAdvancingAll(false);
+              }
+            }}
+          >
+            {advancingAll ? 'UPDATING TEAMS…' : '⚡ UNLOCK ROUND 2 FOR ALL TEAMS'}
+          </button>
           <button className={`${btnCls} border border-red-500/60 text-red-400`} onClick={() => { if (window.confirm('Auction history cannot be erased. Submit a reset request for an audited rejection?')) void act(round2Service.admin.reset()); }}>REQUEST RESET</button>
         </div>
         {msg && <p role="status" className="mt-2 text-sm text-red-400">{sessionExpired ? 'Your administrator session has expired or is not authorized. Sign in again through the admin portal.' : msg}</p>}

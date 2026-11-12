@@ -242,9 +242,14 @@ adminRouter.post('/round2/:action', asyncHandler(async (req, res) => {
   const pool = configuredPool();
   if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
   const action = (Array.isArray(req.params.action) ? req.params.action[0] : req.params.action).toLowerCase();
-  if (!['unlock', 'lock', 'reset'].includes(action)) throw new ProgressionError('Unsupported round 2 action.', 'NOT_FOUND');
+  if (!['advance', 'unlock', 'lock', 'reset'].includes(action)) throw new ProgressionError('Unsupported round 2 action.', 'NOT_FOUND');
   const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
-  const result = await adminProgressRound2Global(pool, req.adminSessionToken, action as 'unlock' | 'lock' | 'reset', reason);
+  if (action === 'advance' || action === 'unlock') {
+    try {
+      db.prepare("UPDATE stages_progress SET status='COMPLETED'").run();
+    } catch {}
+  }
+  const result = await adminProgressRound2Global(pool, req.adminSessionToken, action as 'advance' | 'unlock' | 'lock' | 'reset', reason);
   return res.json({ success: true, action, ...result });
 }));
 
@@ -368,12 +373,9 @@ export function roundAccessGuard(roundId: number) {
           [teamId, roundId],
         );
         let teamRoundStatus = state.rows[0]?.status;
-        if (roundId === 1 && teamRoundStatus === 'LOCKED') {
-          const r1 = await pool.query<{ is_active: boolean }>('SELECT is_active FROM rounds WHERE round_id=1');
-          if (r1.rows[0]?.is_active) {
-            await pool.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE team_id=$1 AND round_id=1", [teamId]);
-            teamRoundStatus = 'IN_PROGRESS';
-          }
+        if (roundId === 1 && (teamRoundStatus === 'LOCKED' || teamRoundStatus === 'AVAILABLE')) {
+          await pool.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE team_id=$1 AND round_id=1", [teamId]);
+          teamRoundStatus = 'IN_PROGRESS';
         }
         if (roundId === 2 && state.rows[0]?.auction_enabled !== true) {
           throw new ProgressionError('Round 2 is unavailable until an administrator starts the auction.', 'LOCKED');

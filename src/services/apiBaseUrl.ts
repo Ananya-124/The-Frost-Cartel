@@ -5,14 +5,20 @@ export function apiUrl(path: string): string {
   return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function getStoredToken(): string | null {
+export function getStoredToken(type?: 'team' | 'admin'): string | null {
   if (typeof window === 'undefined') return null;
   try {
+    if (type === 'admin') {
+      return sessionStorage.getItem('fc_admin_token') || localStorage.getItem('fc_admin_token') || null;
+    }
+    if (type === 'team') {
+      return sessionStorage.getItem('fc_team_token') || localStorage.getItem('fc_team_token') || null;
+    }
     return (
-      sessionStorage.getItem('fc_admin_token') ||
-      localStorage.getItem('fc_admin_token') ||
       sessionStorage.getItem('fc_team_token') ||
       localStorage.getItem('fc_team_token') ||
+      sessionStorage.getItem('fc_admin_token') ||
+      localStorage.getItem('fc_admin_token') ||
       null
     );
   } catch {
@@ -61,7 +67,8 @@ if (typeof window !== 'undefined' && !window.__fc_fetch_patched) {
     const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     if (urlStr.includes('/api/')) {
       const headers = new Headers(init?.headers);
-      const token = getStoredToken();
+      const isAdminRoute = urlStr.includes('/admin');
+      const token = getStoredToken(isAdminRoute ? 'admin' : 'team');
       if (token && !headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${token}`);
       }

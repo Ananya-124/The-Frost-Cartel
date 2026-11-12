@@ -89,9 +89,13 @@ export const RoundPortalCard: React.FC<RoundPortalCardProps> = ({
       {/* 4. Quick Specs / Metadata (Fixed Reserved Height for Horizontal Baseline Alignment) */}
       <div className="w-full h-9 sm:h-10 flex items-center justify-center text-[10px] sm:text-[11px] text-cartel-silver/85 font-mono tracking-wider px-1 text-center mb-3">
         <span className="leading-tight">
-          <span>{round.duration}</span>
-          <span className="mx-1.5 text-cartel-amber" aria-hidden="true">•</span>
-          <span className="text-cartel-amber font-semibold">{round.bounty}</span>
+          {round.duration && <span>{round.duration}</span>}
+          {round.duration && round.bounty && (
+            <span className="mx-1.5 text-cartel-amber" aria-hidden="true">•</span>
+          )}
+          {round.bounty && (
+            <span className="text-cartel-amber font-semibold">{round.bounty}</span>
+          )}
         </span>
       </div>
 

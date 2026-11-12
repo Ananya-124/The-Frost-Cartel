@@ -21,14 +21,37 @@ function serverRounds(progression: TeamProgression | null, isAuthenticated: bool
   if (!progression) return ROUNDS_DATA.map((round) => Number(round.number) === 1 && isAuthenticated
     ? { ...round, isAccessible: true, statusBadge: 'active', statusText: 'AVAILABLE • SERVER VERIFIES ENTRY', actionText: 'ENTER ROUND' }
     : { ...round, isAccessible: false, statusBadge: 'locked', statusText: isAuthenticated ? 'STATUS UNAVAILABLE' : 'SIGN IN TO CHECK ACCESS', actionText: isAuthenticated ? 'RETRY STATUS' : 'SIGN IN' });
+
+  // Calculate highest round that is currently active or completed
+  const activeRoundIds = progression.rounds
+    .filter((item) => item.status === 'IN_PROGRESS' || item.status === 'COMPLETED')
+    .map((item) => item.round_id);
+  const highestActiveRoundId = activeRoundIds.length > 0 ? Math.max(...activeRoundIds) : 1;
+
   return ROUNDS_DATA.map((round) => {
-    const state = progression.rounds.find((item) => item.round_id === Number(round.number));
+    const roundNum = Number(round.number);
+    const state = progression.rounds.find((item) => item.round_id === roundNum);
     if (!state) return { ...round, isAccessible: false, statusBadge: 'locked', statusText: 'STATUS UNAVAILABLE', actionText: 'CHECK STATUS' };
+
+    const isCompleted = state.status === 'COMPLETED';
+    const isPastRound = roundNum < highestActiveRoundId;
+
+    // Once a round is completed or squad moved to a later round, disable/remove access
+    if (isCompleted || isPastRound) {
+      return {
+        ...round,
+        isAccessible: false,
+        statusBadge: isCompleted ? 'completed' : 'locked',
+        statusText: isCompleted ? 'ROUND COMPLETED' : 'ROUND CLOSED',
+        actionText: isCompleted ? 'COMPLETED' : 'LOCKED',
+      };
+    }
+
     const eligible = state.status === 'LOCKED' && Boolean(state.eligible_at);
     const isAccessible = state.status !== 'LOCKED';
     const statusText = eligible ? 'ELIGIBLE • ADMIN UNLOCK REQUIRED' : state.status.replace('_', ' ');
-    const statusBadge = state.status === 'LOCKED' ? (eligible ? 'upcoming' : 'locked') : state.status === 'COMPLETED' ? 'completed' : 'active';
-    const actionText = state.status === 'COMPLETED' ? 'VIEW ROUND' : state.status === 'IN_PROGRESS' ? 'RESUME ROUND' : state.status === 'AVAILABLE' ? 'ENTER ROUND' : eligible ? 'AWAIT UNLOCK' : 'LOCKED';
+    const statusBadge = state.status === 'LOCKED' ? (eligible ? 'upcoming' : 'locked') : 'active';
+    const actionText = state.status === 'IN_PROGRESS' ? 'RESUME ROUND' : state.status === 'AVAILABLE' ? 'ENTER ROUND' : eligible ? 'AWAIT UNLOCK' : 'LOCKED';
     return { ...round, isAccessible, statusText, statusBadge, actionText };
   });
 }
@@ -151,7 +174,9 @@ export const FrostCartelHomePage: React.FC = () => {
 
   const handleLoginSuccess = (newSession: TeamSession) => {
     setSession(newSession);
-    setIsDashboardOpen(true);
+    setIsDashboardOpen(false);
+    window.location.hash = '#/round-1';
+    setActiveChamberRound(1);
   };
 
   const handleLogout = () => {
@@ -167,30 +192,71 @@ export const FrostCartelHomePage: React.FC = () => {
     setActiveChamberRound(roundNum);
   };
 
+  // Route guard: prevent accessing a closed or completed round via direct URL/hash
+  useEffect(() => {
+    if (!session || !progression || activeChamberRound === null) return;
+    const activeRoundIds = progression.rounds
+      .filter((item) => item.status === 'IN_PROGRESS' || item.status === 'COMPLETED')
+      .map((item) => item.round_id);
+    const highestActiveRoundId = activeRoundIds.length > 0 ? Math.max(...activeRoundIds) : 1;
+    const state = progression.rounds.find((item) => item.round_id === activeChamberRound);
+    if (state?.status === 'COMPLETED' || activeChamberRound < highestActiveRoundId) {
+      setNotice(`Access to Round ${activeChamberRound} has closed.`);
+      window.location.hash = '';
+      setActiveChamberRound(null);
+    }
+  }, [session, progression, activeChamberRound]);
+
   const handleSelectRound = (round: RoundConfig) => {
     if (!session) {
       document.getElementById('login-section')?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
-    // The authenticated Round 1 state route validates access and automatically
-    // starts AVAILABLE team progression. Avoid a separate read and start RTT.
-    if (Number(round.number) === 1) {
-      navigateToChamber(1, '#/round-1');
+    const targetRound = Number(round.number);
+    if (!round.isAccessible) {
+      setNotice(`Access to Round ${targetRound} has closed.`);
       return;
     }
+
+    // Check progression to ensure squad hasn't completed or moved past this round
+    if (progression) {
+      const activeRoundIds = progression.rounds
+        .filter((item) => item.status === 'IN_PROGRESS' || item.status === 'COMPLETED')
+        .map((item) => item.round_id);
+      const highestActiveRoundId = activeRoundIds.length > 0 ? Math.max(...activeRoundIds) : 1;
+      const state = progression.rounds.find((item) => item.round_id === targetRound);
+      if (state?.status === 'COMPLETED' || targetRound < highestActiveRoundId) {
+        setNotice(`Access to Round ${targetRound} has closed.`);
+        return;
+      }
+    }
+
+    if (targetRound === 1) {
+      handleEnterRound1();
+      return;
+    }
+
     void (async () => {
       try {
         const fresh = await progressionService.getMine();
         setProgression(fresh);
-        const current = fresh.rounds.find((item) => item.round_id === Number(round.number));
+        const activeRoundIds = fresh.rounds
+          .filter((item) => item.status === 'IN_PROGRESS' || item.status === 'COMPLETED')
+          .map((item) => item.round_id);
+        const highestActiveRoundId = activeRoundIds.length > 0 ? Math.max(...activeRoundIds) : 1;
+        const current = fresh.rounds.find((item) => item.round_id === targetRound);
+
         if (!current || current.status === 'LOCKED') {
           setNotice(current?.eligible_at ? 'This round is eligible and awaits an administrator unlock.' : `${round.title} is locked for your team.`);
+          return;
+        }
+        if (current.status === 'COMPLETED' || targetRound < highestActiveRoundId) {
+          setNotice(`Access to Round ${targetRound} has closed.`);
           return;
         }
         if (current.status === 'AVAILABLE') setProgression(await progressionService.startRound(current.round_id));
         if (round.number === '04') navigateToChamber(4, '#/round-4');
         else {
-          const targetRound = Number(round.number);
           navigateToChamber(targetRound, `#/round-${targetRound}`);
         }
       } catch (error) {
@@ -203,6 +269,17 @@ export const FrostCartelHomePage: React.FC = () => {
   };
 
   const handleEnterRound1 = () => {
+    if (progression) {
+      const activeRoundIds = progression.rounds
+        .filter((item) => item.status === 'IN_PROGRESS' || item.status === 'COMPLETED')
+        .map((item) => item.round_id);
+      const highestActiveRoundId = activeRoundIds.length > 0 ? Math.max(...activeRoundIds) : 1;
+      const r1 = progression.rounds.find((item) => item.round_id === 1);
+      if (r1?.status === 'COMPLETED' || 1 < highestActiveRoundId) {
+        setNotice('Access to Round 1 has closed. Your squad has already progressed.');
+        return;
+      }
+    }
     setIsDashboardOpen(false);
     window.location.hash = '#/round-1';
     setActiveChamberRound(1);

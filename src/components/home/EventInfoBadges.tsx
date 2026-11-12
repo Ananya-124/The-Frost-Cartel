@@ -21,10 +21,10 @@ export const EventInfoBadges: React.FC = () => {
         <span>3 ROUNDS</span>
       </div>
 
-      {/* Round 01: 20-25 Minutes */}
+      {/* Round 01: 25 Minutes */}
       <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-black/60 border border-white/15 text-cartel-silver shadow-sm backdrop-blur-md">
         <span className="text-xs sm:text-sm" aria-hidden="true">⏳</span>
-        <span>ROUND 01: 20–25 MINS</span>
+        <span>ROUND 01: 25 MINS</span>
       </div>
 
       {/* Up to 500 Credits */}
