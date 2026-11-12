@@ -7,9 +7,10 @@ import { progressionService, type TeamProgression } from '../../services/progres
 
 interface TeamDashboardViewProps {
   session: TeamSession;
-  round1Config: RoundConfig;
+  round1Config?: RoundConfig;
   onLogout: () => void;
   onEnterRound1: () => void;
+  onSelectRound?: (roundNum: number) => void;
   onClose: () => void;
   isRound1GameActive?: boolean;
   progression?: TeamProgression | null;
@@ -20,6 +21,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   round1Config: _round1Config,
   onLogout,
   onEnterRound1,
+  onSelectRound,
   onClose,
   isRound1GameActive = false,
   progression: initialProgression = null,
@@ -68,6 +70,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       inFlight = true;
       try {
+        void refreshProgression();
         const state = await round1Api.getState();
         if (!disposed) {
           const next = state.round.isActive ? 'running' : state.session.status === 'completed' ? 'completed' : 'paused';
@@ -98,6 +101,76 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   }, [session.teamId, isRound1GameActive]);
 
   const isRoundActive = isRound1GameActive || roundStatus === 'running';
+
+  // Determine which round is the primary active / accessible target for the squad
+  const targetRound = React.useMemo(() => {
+    const rounds = progression?.rounds ?? [];
+    const r4 = rounds.find((r) => r.round_id === 4 && (r.status === 'IN_PROGRESS' || r.status === 'AVAILABLE'));
+    if (r4) return { roundId: 4, status: r4.status };
+    const r3 = rounds.find((r) => r.round_id === 3 && (r.status === 'IN_PROGRESS' || r.status === 'AVAILABLE'));
+    if (r3) return { roundId: 3, status: r3.status };
+    const r2 = rounds.find((r) => r.round_id === 2 && (r.status === 'IN_PROGRESS' || r.status === 'AVAILABLE'));
+    const r1 = rounds.find((r) => r.round_id === 1);
+
+    // If Round 2 is unlocked and Round 1 is not running (or completed, or R2 is already in_progress)
+    if (r2 && (r2.status === 'IN_PROGRESS' || !isRoundActive || r1?.status === 'COMPLETED')) {
+      return { roundId: 2, status: r2.status };
+    }
+    if (isRoundActive || r1?.status === 'IN_PROGRESS' || r1?.status === 'AVAILABLE') {
+      return { roundId: 1, status: isRoundActive ? 'IN_PROGRESS' : (r1?.status ?? 'LOCKED') };
+    }
+    if (r2) {
+      return { roundId: 2, status: r2.status };
+    }
+    return { roundId: 1, status: 'LOCKED' };
+  }, [progression, isRoundActive]);
+
+  const roundDetails = React.useMemo(() => {
+    switch (targetRound.roundId) {
+      case 2:
+        return {
+          subtitle: 'THE HAUNTED AUCTION',
+          duration: '15 MIN',
+          isPlayable: targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE',
+          statusText: 'AUCTION FLOOR IS UNSEALED',
+          buttonLabel: targetRound.status === 'IN_PROGRESS' ? 'ENTER THE AUCTION' : 'ENTER THE AUCTION',
+        };
+      case 3:
+        return {
+          subtitle: 'THE PARADOX HUNT',
+          duration: '20 MIN',
+          isPlayable: targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE',
+          statusText: 'PARADOX CHAMBER UNSEALED',
+          buttonLabel: 'ENTER THE HUNT',
+        };
+      case 4:
+        return {
+          subtitle: "THE MESSENGER'S LETTER",
+          duration: '15 MIN',
+          isPlayable: targetRound.status === 'IN_PROGRESS' || targetRound.status === 'AVAILABLE',
+          statusText: 'FINAL VAULT UNSEALED',
+          buttonLabel: 'ENTER THE CHAMBER',
+        };
+      case 1:
+      default:
+        return {
+          subtitle: 'THE GRAVEYARD ESCAPE',
+          duration: '20–25 MIN',
+          isPlayable: isRoundActive,
+          statusText: isRoundActive ? 'THE GATES ARE UNSEALED' : 'AWAITING THE SUMMONS',
+          buttonLabel: 'ENTER THE GRAVEYARD',
+        };
+    }
+  }, [targetRound, isRoundActive]);
+
+  const handleMainAction = () => {
+    if (!roundDetails.isPlayable) return;
+    if (targetRound.roundId === 1) {
+      onEnterRound1();
+    } else if (onSelectRound) {
+      onSelectRound(targetRound.roundId);
+    }
+  };
 
   return (
     <dialog
@@ -177,10 +250,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
 
         {/* 3. STATUS (Glowing Teal / Ethereal Flame Wisps) */}
         <div className="mb-2 sm:mb-3">
-          {isRoundActive ? (
+          {roundDetails.isPlayable ? (
             <div className="flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base font-cinzel font-bold text-teal-300 tracking-[0.25em] sm:tracking-[0.3em] uppercase drop-shadow-[0_0_15px_rgba(45,212,191,0.95)]">
               <span className="text-teal-400/80 font-normal select-none" aria-hidden="true">~</span>
-              <span>THE GATES ARE UNSEALED</span>
+              <span>{roundDetails.statusText}</span>
               <span className="text-teal-400/80 font-normal select-none" aria-hidden="true">~</span>
             </div>
           ) : (
@@ -192,10 +265,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           )}
         </div>
 
-        {/* 4. SUBTITLE ("✦ THE GRAVEYARD ESCAPE ✦") */}
+        {/* 4. SUBTITLE */}
         <div className="text-xs sm:text-sm font-cinzel font-semibold text-amber-100/90 tracking-[0.2em] sm:tracking-[0.25em] uppercase drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] mb-3 sm:mb-4 flex items-center justify-center gap-2">
           <span className="text-amber-500/80 text-xs" aria-hidden="true">✦</span>
-          <span>THE GRAVEYARD ESCAPE</span>
+          <span>{roundDetails.subtitle}</span>
           <span className="text-amber-500/80 text-xs" aria-hidden="true">✦</span>
         </div>
 
@@ -208,7 +281,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           <span className="text-stone-500" aria-hidden="true">•</span>
           <span className="flex items-center gap-1">
             <span aria-hidden="true">⏳</span>
-            <span>20–25 MIN</span>
+            <span>{roundDetails.duration}</span>
           </span>
           <span className="text-stone-500" aria-hidden="true">•</span>
           <span className="flex items-center gap-1 text-amber-300 font-semibold whitespace-nowrap">
@@ -217,15 +290,15 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           </span>
         </div>
 
-        {/* 6. MAIN BUTTON ("ENTER THE GRAVEYARD" with Glowing Hex-Beveled Tablet Frame) */}
-        <div className="w-full max-w-[300px] sm:max-w-sm md:max-w-md mb-4 sm:mb-5">
+        {/* 6. MAIN BUTTON (Glowing Hex-Beveled Tablet Frame) */}
+        <div className="w-full max-w-[300px] sm:max-w-sm md:max-w-md mb-3 sm:mb-4">
           <button
             type="button"
-            onClick={isRoundActive ? onEnterRound1 : undefined}
-            disabled={!isRoundActive}
-            aria-disabled={!isRoundActive}
+            onClick={roundDetails.isPlayable ? handleMainAction : undefined}
+            disabled={!roundDetails.isPlayable}
+            aria-disabled={!roundDetails.isPlayable}
             className={`relative group w-full h-11 sm:h-14 flex items-center justify-center transition-all duration-300 select-none ${
-              isRoundActive
+              roundDetails.isPlayable
                 ? 'hover:scale-105 active:scale-95 cursor-pointer'
                 : 'opacity-70 cursor-not-allowed'
             }`}
@@ -282,22 +355,68 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
 
             {/* Glowing Label */}
             <span className="relative z-10 text-[11px] sm:text-sm md:text-base font-cinzel font-black tracking-[0.2em] sm:tracking-[0.28em] text-amber-100 uppercase drop-shadow-[0_0_12px_rgba(255,200,64,0.95)] flex items-center justify-center gap-2">
-              {!isRoundActive && <span className="text-amber-300 text-xs" aria-hidden="true">🔒</span>}
-              ENTER THE GRAVEYARD
+              {!roundDetails.isPlayable && <span className="text-amber-300 text-xs" aria-hidden="true">🔒</span>}
+              {roundDetails.buttonLabel}
             </span>
           </button>
         </div>
 
-        {/* 7. SECONDARY ACTION ("— SIGN OUT —") */}
-        <button
-          type="button"
-          onClick={onLogout}
-          className="text-xs sm:text-sm font-cinzel font-semibold tracking-[0.25em] text-stone-400 hover:text-white uppercase transition-colors cursor-pointer flex items-center gap-2 group py-1"
-        >
-          <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
-          <span>SIGN OUT</span>
-          <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
-        </button>
+        {/* Quick Multi-Chamber Access if multiple rounds are accessible */}
+        {progression?.rounds && progression.rounds.some((r) => r.round_id !== targetRound.roundId && (r.status === 'AVAILABLE' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || (r.round_id === 1 && isRoundActive))) && (
+          <div className="flex items-center justify-center flex-wrap gap-2 mb-3">
+            {progression.rounds.map((r) => {
+              const canEnter = r.status === 'AVAILABLE' || r.status === 'IN_PROGRESS' || (r.round_id === 1 && isRoundActive) || r.status === 'COMPLETED';
+              if (!canEnter) return null;
+              const isCurrent = r.round_id === targetRound.roundId;
+              const rName = r.round_id === 1 ? 'Round 1: Crypt' : r.round_id === 2 ? 'Round 2: Auction' : r.round_id === 3 ? 'Round 3: Hunt' : 'Round 4: Letter';
+              return (
+                <button
+                  key={r.round_id}
+                  type="button"
+                  onClick={() => {
+                    if (r.round_id === 1) onEnterRound1();
+                    else if (onSelectRound) onSelectRound(r.round_id);
+                  }}
+                  className={`text-[10px] font-cinzel font-semibold px-2.5 py-1 rounded border transition-all cursor-pointer ${
+                    isCurrent
+                      ? 'border-amber-400 bg-amber-500/25 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.4)]'
+                      : 'border-white/15 bg-black/60 hover:border-amber-400/60 hover:bg-black/90 text-stone-300'
+                  }`}
+                >
+                  {rName} {r.status === 'COMPLETED' ? '✓' : ''}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 7. SECONDARY ACTIONS ("— VIEW ALL PORTALS • SIGN OUT —") */}
+        <div className="flex items-center justify-center gap-4 py-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-xs sm:text-sm font-cinzel font-semibold tracking-[0.2em] text-amber-400 hover:text-white uppercase transition-colors cursor-pointer flex items-center gap-2 group"
+          >
+            <span className="w-3 h-[1px] bg-amber-500/60 group-hover:bg-amber-300 transition-colors" aria-hidden="true" />
+            <span>VIEW ALL PORTALS</span>
+            <span className="w-3 h-[1px] bg-amber-500/60 group-hover:bg-amber-300 transition-colors" aria-hidden="true" />
+          </button>
+          <span className="text-stone-600" aria-hidden="true">•</span>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="text-xs sm:text-sm font-cinzel font-semibold tracking-[0.25em] text-stone-400 hover:text-white uppercase transition-colors cursor-pointer flex items-center gap-2 group"
+          >
+            <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
+            <span>SIGN OUT</span>
+            <span className="w-4 h-[1px] bg-stone-600 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
+          </button>
+        </div>
+        <details className="mt-3 w-full max-w-2xl rounded border border-amber-500/25 bg-black/45 px-3 py-2 text-left">
+          <summary className="cursor-pointer text-[10px] font-cinzel font-bold uppercase tracking-wider text-amber-200">View team progression</summary>
+          <TeamProgressionSummary progression={progression} loading={progressionLoading} error={progressionError} onRetry={() => { void refreshProgression(); }} />
+        </details>
+>>>>>>> 9e960b6 (feat: enable global Round 2 tournament unlock and dynamic squad console entry)
       </div>
     </dialog>
   );

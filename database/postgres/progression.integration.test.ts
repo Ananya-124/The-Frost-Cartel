@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 import { adminProgress, assertHuntAccessible, assertRound4Qualified, assertRoundAccessible, completeHunt, completeRound, getRound4Qualification, ProgressionError, qualifyRound4Teams, startHunt, startRound } from './progression.ts';
 import { runMigrations } from './migration-runner.ts';
@@ -29,6 +29,7 @@ async function prepareRound3(teamId: string): Promise<void> {
   await startRound(pool, teamId, 1);
   await completeRound(pool, teamId, 1);
   await adminProgress(pool, adminToken, teamId, 'ROUND', 2, 'unlock');
+  await pool.query('UPDATE round2_auction_config SET enabled=true WHERE id=1');
   await startRound(pool, teamId, 2);
   await completeRound(pool, teamId, 2);
   expect(await roundStatus(teamId, 3)).toMatchObject({ status: 'AVAILABLE' });
@@ -49,6 +50,12 @@ suite('PostgreSQL progression integration (isolated local database)', () => {
     await pool.query('INSERT INTO admins(id, username, password_hash, salt) VALUES($1,$2,$3,$4)', [adminId, 'test-admin', 'hash', 'salt']);
     await pool.query('INSERT INTO admin_sessions(id, admin_id, token, expires_at) VALUES($1,$2,$3,now()+interval \'1 hour\')', ['session-id', adminId, adminToken]);
   }, 30_000);
+
+  beforeEach(async () => {
+    // Each case starts with the production-safe default; tests that exercise
+    // activation explicitly enable it within their own isolated schema.
+    await pool.query('UPDATE round2_auction_config SET enabled=false WHERE id=1');
+  });
 
   afterAll(async () => {
     await pool?.end();
@@ -76,6 +83,10 @@ suite('PostgreSQL progression integration (isolated local database)', () => {
     await expect(adminProgress(pool, adminId, team, 'ROUND', 2, 'unlock')).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await adminProgress(pool, adminToken, team, 'ROUND', 2, 'unlock', 'verified');
     expect((await roundStatus(team, 2)).status).toBe('AVAILABLE');
+    await expect(assertRoundAccessible(pool, team, 2)).rejects.toMatchObject({ code: 'LOCKED' });
+    await expect(startRound(pool, team, 2)).rejects.toMatchObject({ code: 'LOCKED' });
+    await pool.query('UPDATE round2_auction_config SET enabled=true WHERE id=1');
+    await expect(assertRoundAccessible(pool, team, 2)).resolves.toBeUndefined();
   });
 
   it('enforces Hunt I, Hunt II, Hunt III sequentially and auto-advances Round 3 and Round 4', async () => {

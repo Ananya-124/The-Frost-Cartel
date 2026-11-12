@@ -32,7 +32,11 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
     try {
       const next = await progressionService.adminAction(teamId, entity, id, action, reason);
       setProgression(next);
-      setNotice(`${entity === 'ROUND' ? `Round ${id}` : `Hunt ${id}`} ${action} recorded.`);
+      setNotice(
+        entity === 'ROUND' && id === 2
+          ? `Round 2 ${action} recorded for ALL squads across the tournament.`
+          : `${entity === 'ROUND' ? `Round ${id}` : `Hunt ${id}`} ${action} recorded.`
+      );
       try { await onProgressChanged?.(); }
       catch { setError('The progression change was saved, but the dashboard summary could not refresh.'); }
     } catch (cause) {
@@ -45,17 +49,25 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
     : progression?.hunts.find((row) => row.hunt_id === id);
   const renderRow = (entity: ProgressEntity, id: number, title: string) => {
     const state = stateFor(entity, id);
+    const isRound2 = entity === 'ROUND' && id === 2;
     return <div key={`${entity}-${id}`} className="rounded-lg border border-white/10 bg-black/25 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs font-cinzel font-bold text-white">{title}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-cinzel font-bold text-white">{title}</span>
+          {isRound2 && (
+            <span className="rounded border border-cyan-500/40 bg-cyan-950/40 px-1.5 py-0.5 text-[9px] font-mono text-cyan-300">
+              ALL SQUADS
+            </span>
+          )}
+        </div>
         <span className="rounded border border-cartel-amber/30 px-2 py-0.5 text-[10px] font-mono text-cartel-amber">{state?.status ?? '—'}{entity === 'ROUND' && state && 'eligible_at' in state && state.eligible_at && state.status === 'LOCKED' ? ' · ELIGIBLE' : ''}</span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {(['unlock', 'lock', 'complete', 'reset'] as const).map((action) => {
           const key = `${entity}-${id}-${action}`;
-          const eligible = entity !== 'ROUND' || id === 1 || Boolean(state && 'eligible_at' in state && state.eligible_at);
+          const eligible = entity !== 'ROUND' || id <= 2 || Boolean(state && 'eligible_at' in state && state.eligible_at);
           const forbidden = action === 'unlock' && (state?.status !== 'LOCKED' || !eligible) || action === 'lock' && state?.status === 'LOCKED' || action === 'complete' && state?.status === 'COMPLETED';
-          return <button key={action} type="button" aria-label={`${action} ${entity === 'ROUND' ? 'Round' : 'Hunt'} ${id}`} title={action === 'unlock' && entity === 'ROUND' && id > 1 && !eligible ? `Complete Round ${id - 1} before unlocking this round.` : undefined} disabled={Boolean(busy) || loading || !state || forbidden} onClick={() => { void perform(entity, id, action); }}
+          return <button key={action} type="button" aria-label={`${action} ${entity === 'ROUND' ? 'Round' : 'Hunt'} ${id}`} title={isRound2 && action === 'unlock' ? 'Unlock Round 2 for all squads across the tournament' : action === 'unlock' && entity === 'ROUND' && id > 1 && !eligible ? `Complete Round ${id - 1} before unlocking this round.` : undefined} disabled={Boolean(busy) || loading || !state || forbidden} onClick={() => { void perform(entity, id, action); }}
             className="rounded border border-cartel-frostBorder/30 px-2 py-1 text-[10px] font-cinzel uppercase text-cartel-silver enabled:hover:border-cartel-amber/50 enabled:hover:text-cartel-amber disabled:cursor-not-allowed disabled:opacity-35">
             {busy === key ? 'Saving…' : action}
           </button>;
@@ -66,7 +78,7 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
 
   return <section aria-label={`Progression controls for ${teamName}`} className="space-y-3 border-t border-white/10 pt-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <div><h4 className="text-xs font-cinzel font-bold uppercase tracking-wider text-cartel-cyan">Progression · {teamName}</h4><p className="mt-1 text-[10px] text-cartel-silver/60">Unlock only follows verified eligibility. Round 2 stays closed until an administrator starts the auction.</p></div>
+      <div><h4 className="text-xs font-cinzel font-bold uppercase tracking-wider text-cartel-cyan">Progression · {teamName}</h4><p className="mt-1 text-[10px] text-cartel-silver/60">Round 2 is a shared tournament auction — unlocking Round 2 unseals it for all tournament squads simultaneously.</p></div>
       <button type="button" onClick={() => { void load(); }} disabled={loading} className="rounded border border-cartel-amber/40 px-2 py-1 text-[10px] text-cartel-amber disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button>
     </div>
     {error && <div role="alert" className="flex flex-wrap justify-between gap-2 rounded border border-red-500/40 bg-red-950/30 p-2 text-xs text-red-200"><span>{error}</span><button type="button" onClick={() => { void load(); }} className="underline">Retry</button></div>}

@@ -45,7 +45,13 @@ class ProgressionDb {
       if (q.startsWith('select hunt_id, status from team_hunt_progress')) return this.result([...this.hunts.entries()].filter(([k]) => k.startsWith(`${values[0]}:`) && Number(k.split(':')[1]) > Number(values[1])).map(([k, v]) => ({ hunt_id: Number(k.split(':')[1]), status: v.status })));
       if (q.startsWith('select rp.round_id')) return this.result(this.rounds.has(this.key(String(values[0]), Number(values[1]))) ? [{ round_id: values[1], status: this.rounds.get(this.key(String(values[0]), Number(values[1])))!.status }] : []);
       if (q.startsWith('select enabled from round2_auction_config')) return this.result([{ enabled: this.auctionEnabled }]);
-      if (q.startsWith('update round2_auction_config')) { this.auctionEnabled = true; return this.result([]); }
+      if (q.startsWith('select team_id, status from round_progress')) {
+        const target = String(values[0]);
+        const others = [...this.rounds.entries()]
+          .filter(([k]) => k.endsWith(':2') && !k.startsWith(`${target}:`))
+          .map(([k, v]) => ({ team_id: k.split(':')[0], status: v.status }));
+        return this.result(others);
+      }
       if (q.startsWith('select eligible_at from round_progress')) return this.result([{ eligible_at: this.rounds.get(this.key(String(values[0]), Number(values[1])))?.eligible_at ?? null }]);
       if (q.startsWith('select status from round_progress')) return this.result([{ status: this.rounds.get(this.key(String(values[0]), Number(values[1])))?.status }].filter((r) => r.status));
       if (q.startsWith('select count(*) from team_hunt_progress')) return this.result([{ count: [...this.hunts.entries()].filter(([k, v]) => k.startsWith(`${values[0]}:`) && v.status === 'COMPLETED').length }]);
@@ -85,6 +91,13 @@ class ProgressionDb {
             this.auctionEnabled = true;
           }
         }
+        return this.result([]);
+      }
+      if (q.startsWith('update rounds set')) return this.result([]);
+      if (q.startsWith('update round2_auction_config set')) return this.result([]);
+      if (q.startsWith("update round_progress set status='available'")) {
+        const row = this.rounds.get(this.key(String(values[0]), 2));
+        if (row) { row.status = 'AVAILABLE'; row.eligible_at ??= 'eligible'; }
         return this.result([]);
       }
       if (q.startsWith('update team_hunt_progress set status=')) {
@@ -140,17 +153,34 @@ describe('PostgreSQL progression service transaction contract', () => {
     await expectCode(startRound(db.pool, 'team-a', 2), 'LOCKED');
   });
 
+  it('keeps Round 2 inaccessible after a team unlock until the auction is enabled', async () => {
+    const db = new ProgressionDb();
+    await startRound(db.pool, 'team-a', 1);
+    await completeRound(db.pool, 'team-a', 1);
+    await adminProgress(db.pool, 'admin-session-1', 'team-a', 'ROUND', 2, 'unlock');
+    await expectCode(assertRoundAccessible(db.pool, 'team-a', 2), 'LOCKED');
+    await expectCode(startRound(db.pool, 'team-a', 2), 'LOCKED');
+    expect(db.rounds.get('team-a:2')?.status).toBe('AVAILABLE');
+
+    db.auctionEnabled = true;
+    await expect(assertRoundAccessible(db.pool, 'team-a', 2)).resolves.toBeUndefined();
+    await startRound(db.pool, 'team-a', 2);
+    expect(db.rounds.get('team-a:2')?.status).toBe('IN_PROGRESS');
+  });
+
   it('requires an existing admin before a manual unlock', async () => {
     const db = new ProgressionDb();
     await expectCode(adminProgress(db.pool, 'admin-1', 'team-a', 'ROUND', 2, 'unlock'), 'FORBIDDEN');
   });
 
-  it('rejects access to a locked round and permits it after admin authorization', async () => {
+  it('requires admin unlock and explicit auction activation before Round 2 access', async () => {
     const db = new ProgressionDb();
     await startRound(db.pool, 'team-a', 1);
     await completeRound(db.pool, 'team-a', 1);
     await expectCode(assertRoundAccessible(db.pool, 'team-a', 2), 'LOCKED');
     await adminProgress(db.pool, 'admin-session-1', 'team-a', 'ROUND', 2, 'unlock', 'Round 1 verified');
+    await expectCode(assertRoundAccessible(db.pool, 'team-a', 2), 'LOCKED');
+    db.auctionEnabled = true;
     await expect(assertRoundAccessible(db.pool, 'team-a', 2)).resolves.toBeUndefined();
   });
 
@@ -159,6 +189,7 @@ describe('PostgreSQL progression service transaction contract', () => {
     await startRound(db.pool, 'team-a', 1);
     await completeRound(db.pool, 'team-a', 1);
     await adminProgress(db.pool, 'admin-session-1', 'team-a', 'ROUND', 2, 'unlock');
+    db.auctionEnabled = true;
     await startRound(db.pool, 'team-a', 2);
     await completeRound(db.pool, 'team-a', 2);
     expect(db.rounds.get('team-a:3')).toMatchObject({ status: 'AVAILABLE', eligible_at: 'eligible' });
@@ -180,6 +211,7 @@ describe('PostgreSQL progression service transaction contract', () => {
     await startRound(db.pool, 'team-a', 1);
     await completeRound(db.pool, 'team-a', 1);
     await adminProgress(db.pool, 'admin-session-1', 'team-a', 'ROUND', 2, 'unlock');
+    db.auctionEnabled = true;
     await startRound(db.pool, 'team-a', 2);
     await completeRound(db.pool, 'team-a', 2);
     await startRound(db.pool, 'team-a', 3);

@@ -47,6 +47,8 @@ export const progressionService = {
   },
   adminAction: (teamId: string, entity: ProgressEntity, entityId: number, action: ProgressAction, reason?: string) =>
     request<{ success: true } & TeamProgression>(`/api/admin/progression/${encodeURIComponent(teamId)}/${entity}/${entityId}/${action}`, 'POST', { reason }),
+  adminRound2Global: (action: 'unlock' | 'lock' | 'reset', reason?: string) =>
+    request<{ success: true; action: string; isActive: boolean; updatedCount: number }>(`/api/admin/progression/round2/${action}`, 'POST', { reason }),
 };
 
 export const adminAuthService = {

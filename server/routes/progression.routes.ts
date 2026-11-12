@@ -5,7 +5,7 @@ import { postgresPool } from '../../database/postgres/pool.ts';
 import { db } from '../../database/db.ts';
 import { getRound3Run, getRound3Session } from '../../database/postgres/round3-repository.ts';
 import {
-  adminProgress, assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
+  adminProgress, adminProgressRound2Global, assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
   getTeamProgressionAudit, ProgressionError, startHunt, startRound,
 } from '../../database/postgres/progression.ts';
 import { requireAdminAuth, requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
@@ -221,6 +221,16 @@ teamRouter.post('/me/hunts/:huntId/complete', asyncHandler(async (req, res) => {
 }));
 
 adminRouter.use(requireAdminAuth);
+
+adminRouter.post('/round2/:action', asyncHandler(async (req, res) => {
+  const pool = configuredPool();
+  if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+  const action = (Array.isArray(req.params.action) ? req.params.action[0] : req.params.action).toLowerCase();
+  if (!['unlock', 'lock', 'reset'].includes(action)) throw new ProgressionError('Unsupported round 2 action.', 'NOT_FOUND');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  const result = await adminProgressRound2Global(pool, req.adminSessionToken, action as 'unlock' | 'lock' | 'reset', reason);
+  return res.json({ success: true, action, ...result });
+}));
 
 adminRouter.get('/:teamId', asyncHandler(async (req, res) => {
   if (!postgresPool) {

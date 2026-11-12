@@ -328,6 +328,8 @@ export async function setRound1Timer(pool:Pool,adminId:string,action:'start'|'pa
       if(configuration.lifecycle==='completed')throw new Round1GameError('Round 1 has already ended.',409);
       await client.query('UPDATE rounds SET is_active=false,start_time=NULL,updated_at=now() WHERE round_id=1');
       await client.query("UPDATE round1_configuration SET configuration=jsonb_set(configuration - 'pausedGlobalTimer','{lifecycle}','\"completed\"'::jsonb,true),updated_by=$1,updated_at=now() WHERE singleton_id=1",[adminId]);
+      await client.query("UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now() WHERE round_id=1 AND status != 'COMPLETED'");
+      await client.query("UPDATE round_progress SET eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE round_id=2");
     }
     return {success:true,action};
   });

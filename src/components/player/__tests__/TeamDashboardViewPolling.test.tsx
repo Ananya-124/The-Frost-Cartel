@@ -45,4 +45,35 @@ describe('team dashboard Round 1 status polling', () => {
     await act(async () => { await Promise.resolve(); await vi.advanceTimersByTimeAsync(60_000); });
     expect(round1Api.getState).toHaveBeenCalledTimes(1);
   });
+
+  it('adapts to Round 2: The Haunted Auction when Round 2 is unlocked or in progress', () => {
+    const onSelectRound = vi.fn();
+    const progression = {
+      rounds: [
+        { round_id: 1, status: 'COMPLETED' as const, eligible_at: null, started_at: null, completed_at: null, score: 0, max_score: 500 },
+        { round_id: 2, status: 'AVAILABLE' as const, eligible_at: '2026-11-12T00:00:00Z', started_at: null, completed_at: null, score: 0, max_score: 500 },
+        { round_id: 3, status: 'LOCKED' as const, eligible_at: null, started_at: null, completed_at: null, score: 0, max_score: 500 },
+        { round_id: 4, status: 'LOCKED' as const, eligible_at: null, started_at: null, completed_at: null, score: 0, max_score: 500 },
+      ],
+      hunts: [],
+    };
+
+    const { getByText, getByRole } = render(
+      <TeamDashboardView
+        session={{ teamId: 'team-r2', teamName: 'Auction Squad', credits: 400 } as TeamSession}
+        onLogout={() => undefined}
+        onEnterRound1={() => undefined}
+        onSelectRound={onSelectRound}
+        onClose={() => undefined}
+        progression={progression}
+      />
+    );
+
+    expect(getByText('THE HAUNTED AUCTION')).toBeInTheDocument();
+    expect(getByText('AUCTION FLOOR IS UNSEALED')).toBeInTheDocument();
+    const enterAuctionBtn = getByRole('button', { name: /ENTER THE AUCTION/i });
+    expect(enterAuctionBtn).not.toBeDisabled();
+    enterAuctionBtn.click();
+    expect(onSelectRound).toHaveBeenCalledWith(2);
+  });
 });

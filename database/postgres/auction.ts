@@ -151,16 +151,17 @@ export async function startAuctionLot(pool: Pool, input: StartAuctionLotInput, a
     }
     if (!config.enabled) {
       await client.query('UPDATE round2_auction_config SET enabled=true,updated_at=now() WHERE id=1');
-      const eligibleTeams = await client.query<{ team_id: string }>(`UPDATE round_progress
-        SET status='AVAILABLE', updated_at=now()
-        WHERE round_id=2 AND status='LOCKED' AND eligible_at IS NOT NULL
-        RETURNING team_id`);
-      for (const eligible of eligibleTeams.rows) {
-        await client.query(`INSERT INTO progression_audit_history
-          (actor_type,admin_id,team_id,entity_type,entity_id,previous_state,new_state,action_performed,reason)
-          VALUES('ADMIN',$1,$2,'ROUND',2,'LOCKED','AVAILABLE','ADVANCE','Round 2 auction started.')`,
-        [adminId, eligible.team_id]);
-      }
+    }
+    await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=2');
+    const eligibleTeams = await client.query<{ team_id: string }>(`UPDATE round_progress
+      SET status='AVAILABLE', eligible_at=COALESCE(eligible_at, now()), updated_at=now()
+      WHERE round_id=2 AND status='LOCKED'
+      RETURNING team_id`);
+    for (const eligible of eligibleTeams.rows) {
+      await client.query(`INSERT INTO progression_audit_history
+        (actor_type,admin_id,team_id,entity_type,entity_id,previous_state,new_state,action_performed,reason)
+        VALUES('ADMIN',$1,$2,'ROUND',2,'LOCKED','AVAILABLE','ADVANCE','Round 2 auction started.')`,
+      [adminId, eligible.team_id]);
     }
     const sequence = await client.query<{ next_number: number }>('SELECT COALESCE(MAX(sequence_number),0)+1 AS next_number FROM round2_auction_lots');
     const priorLot = await client.query<{ status: string }>('SELECT status FROM round2_auction_lots WHERE power_card_id=$1 ORDER BY sequence_number DESC LIMIT 1', [card.id]);

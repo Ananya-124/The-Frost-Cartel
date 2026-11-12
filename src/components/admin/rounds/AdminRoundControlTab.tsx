@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { AdminTeam, Round1Status } from '../../../types/admin';
 import { adminReadService } from '../../../services/adminReadService';
 import { round1Api } from '../../../services/round1ApiService';
+import { progressionService } from '../../../services/progressionService';
 import { AdminProgressionControls } from '../teams/AdminProgressionControls';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
 import { AdminStageConfigPanel } from './AdminStageConfigPanel';
@@ -50,6 +51,7 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
   );
   const [roundDuration, setRoundDuration] = useState<number>(22);
   const [serverStatus, setServerStatus] = useState<Round1Status>(round1Status);
+  const [round2Active, setRound2Active] = useState(false);
   const [timerBusy, setTimerBusy] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [roundError, setRoundError] = useState<string | null>(null);
@@ -68,6 +70,44 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
     })
       .catch((error: unknown) => setRoundError(error instanceof Error ? error.message : 'Could not load Round 1 settings.'));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (selectedTeamId) {
+      void progressionService.getAdminTeam(selectedTeamId).then((data) => {
+        if (!active) return;
+        const r2 = data.rounds.find((r) => r.round_id === 2);
+        setRound2Active(r2?.status === 'AVAILABLE' || r2?.status === 'IN_PROGRESS');
+      }).catch(() => undefined);
+    }
+    return () => { active = false; };
+  }, [selectedTeamId]);
+
+  const handleGlobalRound2Action = (action: 'unlock' | 'lock') => {
+    requestConfirmation(
+      action === 'unlock' ? 'UNLOCK ROUND 2 FOR ALL SQUADS' : 'LOCK ROUND 2 FOR ALL SQUADS',
+      action === 'unlock'
+        ? 'This will unlock Round 2: The Haunted Auction for ALL squads across the tournament simultaneously.'
+        : 'This will lock Round 2 for all squads.',
+      async () => {
+        setTimerBusy(true); setRoundError(null);
+        try {
+          const res = await progressionService.adminRound2Global(action);
+          setRound2Active(res.isActive);
+          setFeedbackNotice(`Round 2 ${action === 'unlock' ? 'unlocked' : 'locked'} for all squads across the tournament.`);
+          setTimeout(() => setFeedbackNotice(null), 4000);
+          await onRefresh();
+        } catch (error) {
+          setRoundError(error instanceof Error ? error.message : `Round 2 ${action} failed.`);
+          throw error;
+        } finally {
+          setTimerBusy(false);
+        }
+      },
+      action === 'lock',
+      action === 'unlock' ? 'UNLOCK FOR ALL SQUADS' : 'LOCK ROUND 2'
+    );
+  };
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -337,11 +377,58 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
       {/* 3. Round 1 Chamber Rules & Puzzle Configuration */}
       <AdminStageConfigPanel />
 
+      {/* Round 2 Tournament Master Orchestration Bar */}
+      <div className="stone-panel rounded-xl p-5 border border-cartel-cyan/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2.5 mb-1">
+            <span className="text-xl" aria-hidden="true">🏛️</span>
+            <h2 className="text-lg font-cinzel font-bold text-white tracking-wide">
+              ROUND 2 MASTER CONTROLS — THE HAUNTED AUCTION
+            </h2>
+            <output
+              aria-live="polite"
+              className={`text-[10px] font-cinzel font-black px-2.5 py-0.5 rounded-full border uppercase inline-block ${
+                round2Active
+                  ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-400'
+                  : 'bg-cartel-charcoal border-white/20 text-cartel-silver'
+              }`}
+            >
+              {round2Active ? 'ACTIVE • UNLOCKED FOR ALL SQUADS' : 'LOCKED • ALL SQUADS'}
+            </output>
+          </div>
+          <p className="text-xs text-cartel-silver/70 font-sans">
+            Round 2 is a shared tournament auction. Unlocking it automatically grants Round 2 access to all tournament squads simultaneously.
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0">
+          {!round2Active ? (
+            <button
+              type="button"
+              disabled={timerBusy || actionBusy}
+              onClick={() => handleGlobalRound2Action('unlock')}
+              className="px-4 py-2 rounded bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-lg cursor-pointer disabled:opacity-40 transition-all"
+            >
+              🔓 UNLOCK ROUND 2 (ALL SQUADS)
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={timerBusy || actionBusy}
+              onClick={() => handleGlobalRound2Action('lock')}
+              className="px-4 py-2 rounded bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-lg cursor-pointer disabled:opacity-40 transition-all"
+            >
+              🔒 LOCK ROUND 2 (ALL SQUADS)
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* 4. Server-authoritative team progression */}
       <div className="stone-panel rounded-xl p-5 border border-white/10 shadow-xl space-y-4">
         <div className="pb-3 border-b border-white/10">
           <h3 className="text-sm font-cinzel font-bold text-white uppercase">Team round and hunt progression</h3>
-          <p className="mt-1 text-xs text-cartel-silver/70">Changes are recorded through the authenticated progression API. Stage-level realignment is unavailable because no protected stage-movement endpoint exists. Round 2 remains disabled.</p>
+          <p className="mt-1 text-xs text-cartel-silver/70">Changes are recorded through the authenticated progression API. Round 2 is unlocked globally for all squads via the controls above or via individual squad controls.</p>
         </div>
         {teams.length === 0 && !teamLoadError && <p role="status" className="text-xs text-cartel-silver/60">Loading teams…</p>}
         {selectedTeam && <AdminProgressionControls key={selectedTeam.id} teamId={selectedTeam.id} teamName={selectedTeam.name} onProgressChanged={onRefresh} />}

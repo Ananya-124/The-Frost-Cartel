@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Server } from 'node:http';
 import { Pool } from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../database/postgres/migration-runner.ts';
 import { hashPassword } from '../auth/password.ts';
 
@@ -71,6 +71,9 @@ async function eligibleTeamForRound3(team: { id: string; token: string }) {
   expect((await request('/api/progression/me/rounds/1/start', { method: 'POST', token: team.token })).status).toBe(200);
   expect((await adminAction(team.id, 'ROUND', 1, 'complete')).status).toBe(200);
   expect((await adminAction(team.id, 'ROUND', 2, 'unlock')).status).toBe(200);
+  // Represent an administrator starting the first auction lot, the global
+  // release event required before teams may enter Round 2.
+  await appPool!.query('UPDATE round2_auction_config SET enabled=true WHERE id=1');
   expect((await request('/api/progression/me/rounds/2/start', { method: 'POST', token: team.token })).status).toBe(200);
   expect((await adminAction(team.id, 'ROUND', 2, 'complete')).status).toBe(200);
   const progression = await request('/api/progression/me', { token: team.token });
@@ -123,6 +126,10 @@ suite('Progression API with PostgreSQL identity sessions', () => {
     await adminPool?.end();
     if (databaseUrlBefore === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = databaseUrlBefore;
     if (sslModeBefore === undefined) delete process.env.PGSSLMODE; else process.env.PGSSLMODE = sslModeBefore;
+  });
+
+  beforeEach(async () => {
+    await appPool!.query('UPDATE round2_auction_config SET enabled=false WHERE id=1');
   });
 
   it('reports readiness only after PostgreSQL connectivity and required migrations are available', async () => {
@@ -227,6 +234,8 @@ suite('Progression API with PostgreSQL identity sessions', () => {
     expect(progression.rounds[1]).toMatchObject({ status: 'LOCKED' });
     expect(new Date(progression.rounds[1].eligible_at).getTime()).toBeGreaterThan(0);
     expect((await adminAction(team.id, 'ROUND', 2, 'unlock')).status).toBe(200);
+    expect((await request('/api/progression/me/rounds/2/start', { method: 'POST', token: team.token })).status).toBe(423);
+    expect((await request('/api/round2/state', { token: team.token })).status).toBe(423);
     expect((await adminAction(team.id, 'ROUND', 2, 'lock', 'admin lock test')).status).toBe(200);
     const state = await request(`/api/admin/progression/${team.id}`, { token: adminToken });
     const data = await state.json();

@@ -99,7 +99,16 @@ export const FrostCartelHomePage: React.FC = () => {
     }
   }, [session]);
 
-  useEffect(() => { void refreshProgression(); }, [refreshProgression]);
+  useEffect(() => {
+    void refreshProgression();
+    if (!session) return;
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void refreshProgression();
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [session, refreshProgression]);
   const displayRounds = useMemo(() => serverRounds(progression, Boolean(session)), [progression, session]);
 
   useEffect(() => {
@@ -249,6 +258,10 @@ export const FrostCartelHomePage: React.FC = () => {
             round1Config={ROUNDS_DATA[0]}
             onLogout={handleLogout}
             onEnterRound1={handleEnterRound1}
+            onSelectRound={(roundNum) => {
+              const cfg = ROUNDS_DATA.find((r) => Number(r.number) === roundNum);
+              if (cfg) handleSelectRound(cfg);
+            }}
             onClose={() => setIsDashboardOpen(false)}
           />
         )}
@@ -306,6 +319,10 @@ export const FrostCartelHomePage: React.FC = () => {
           round1Config={ROUNDS_DATA[0]}
           onLogout={handleLogout}
           onEnterRound1={handleEnterRound1}
+          onSelectRound={(roundNum) => {
+            const cfg = ROUNDS_DATA.find((r) => Number(r.number) === roundNum);
+            if (cfg) handleSelectRound(cfg);
+          }}
           onClose={() => setIsDashboardOpen(false)}
         />
       )}
