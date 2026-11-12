@@ -73,7 +73,6 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       inFlight = true;
       try {
-        void refreshProgression();
         const state = await round1Api.getState();
         if (!disposed) {
           const next = state.round.isActive ? 'running' : state.session.status === 'completed' ? 'completed' : 'paused';
@@ -93,7 +92,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     };
 
     void syncStatus();
-    intervalId = setInterval(() => { void syncStatus(); }, 3000);
+    intervalId = setInterval(() => { void syncStatus(); }, 10_000);
     const syncWhenVisible = () => { if (document.visibilityState === 'visible') void syncStatus(); };
     document.addEventListener('visibilitychange', syncWhenVisible);
     window.addEventListener('focus', syncWhenVisible);

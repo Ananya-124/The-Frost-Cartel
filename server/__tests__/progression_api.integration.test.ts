@@ -225,6 +225,7 @@ suite('Progression API with PostgreSQL identity sessions', () => {
 
   it('requires an authenticated admin for unlock and lock, and stores an audit trail', async () => {
     const team = await createTeam('Admin Gate');
+    const otherTeam = await createTeam('Admin Gate Other');
     await request('/api/round1/state', { token: team.token });
     await expectRetiredStageCompletionHasNoEffects(team);
     expect((await request('/api/progression/me/rounds/1/start', { method: 'POST', token: team.token })).status).toBe(200);
@@ -234,6 +235,11 @@ suite('Progression API with PostgreSQL identity sessions', () => {
     expect(progression.rounds[1]).toMatchObject({ status: 'LOCKED' });
     expect(new Date(progression.rounds[1].eligible_at).getTime()).toBeGreaterThan(0);
     expect((await adminAction(team.id, 'ROUND', 2, 'unlock')).status).toBe(200);
+    const selectedProgress = await request(`/api/admin/progression/${team.id}`, { token: adminToken });
+    expect((await selectedProgress.json()).rounds[1].status).toBe('AVAILABLE');
+    const otherProgress = await request(`/api/admin/progression/${otherTeam.id}`, { token: adminToken });
+    expect((await otherProgress.json()).rounds[1].status).toBe('LOCKED');
+    expect((await appPool!.query('SELECT enabled FROM round2_auction_config WHERE id=1')).rows[0].enabled).toBe(false);
     expect((await request('/api/progression/me/rounds/2/start', { method: 'POST', token: team.token })).status).toBe(423);
     expect((await request('/api/round2/state', { token: team.token })).status).toBe(423);
     expect((await adminAction(team.id, 'ROUND', 2, 'lock', 'admin lock test')).status).toBe(200);

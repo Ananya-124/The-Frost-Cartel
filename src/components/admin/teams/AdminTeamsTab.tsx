@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { AdminTeam, TeamStatus } from '../../../types/team.types';
 import { adminReadService } from '../../../services/adminReadService';
-import { progressionService } from '../../../services/progressionService';
 import { CreateTeamModal } from './CreateTeamModal';
 import { TeamDetailsModal } from './TeamDetailsModal';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
@@ -47,13 +46,12 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<AdminTeam | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{ team: AdminTeam; action: 'reset' | 'delete' } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ team: AdminTeam; action: 'delete' } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const inFlight = useRef(false);
   const [pauseBusyId, setPauseBusyId] = useState<string | null>(null);
-  const [quickR4BusyId, setQuickR4BusyId] = useState<string | null>(null);
   const [allTeams, setAllTeams] = useState<AdminTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -89,13 +87,8 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
     if (!pendingAction || inFlight.current) return;
     inFlight.current = true; setActionBusy(true); setActionError(null); setActionNotice(null);
     try {
-      if (pendingAction.action === 'reset') {
-        await progressionService.adminAction(pendingAction.team.id, 'ROUND', 1, 'reset', 'Admin roster reset');
-        setActionNotice(`Round 1 progression reset for ${pendingAction.team.name}. Historical scores and credit transactions were preserved.`);
-      } else {
-        await adminReadService.deleteTeam(pendingAction.team.id);
-        setActionNotice(`${pendingAction.team.name} was deleted.`);
-      }
+      await adminReadService.deleteTeam(pendingAction.team.id);
+      setActionNotice(`${pendingAction.team.name} was deleted.`);
       await handleRefresh();
       setPendingAction(null);
     } catch (error) {
@@ -113,22 +106,6 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Team pause state could not be changed.');
     } finally { setPauseBusyId(null); }
-  };
-
-  const handleQuickJumpToRound4 = async (team: AdminTeam) => {
-    if (quickR4BusyId || inFlight.current) return;
-    setQuickR4BusyId(team.id);
-    setActionError(null);
-    setActionNotice(null);
-    try {
-      await progressionService.adminAdvanceTeam(team.id, 4, `Quick jump ${team.name} directly to Round 4`);
-      setActionNotice(`⚡ ${team.name} jumped directly to Round 4 (Campus Expedition)! Prior rounds auto-completed and route assigned.`);
-      await handleRefresh();
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : `Could not move ${team.name} to Round 4.`);
-    } finally {
-      setQuickR4BusyId(null);
-    }
   };
 
   return (
@@ -285,15 +262,6 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
                           title="Delete team"
                         >
                           Delete
-                        </button>
-                        <button
-                          type="button"
-                          disabled={quickR4BusyId === team.id || actionBusy}
-                          onClick={() => { void handleQuickJumpToRound4(team); }}
-                          className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 font-cinzel text-[10px] font-bold border border-amber-400/50 cursor-pointer disabled:opacity-50"
-                          title={`Jump ${team.name} directly to Round 4 (Campus Expedition)`}
-                        >
-                          {quickR4BusyId === team.id ? 'Moving…' : '⚡ Jump R4'}
                         </button>
                         <button
                           type="button"

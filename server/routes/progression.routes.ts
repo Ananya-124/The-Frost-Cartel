@@ -7,7 +7,7 @@ import { getRound3Run, getRound3Session } from '../../database/postgres/round3-r
 import {
   adminAdvanceTeamToRound, adminProgress, adminProgressRound2Global, adminProgressRound3Global, adminProgressRound4Global,
   adminResetAllTeamsProgress,
-  assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
+  assertHuntAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
   getTeamProgressionAudit, ProgressionError, startHunt, startRound,
 } from '../../database/postgres/progression.ts';
 import { requireAdminAuth, requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
@@ -62,10 +62,10 @@ const asyncHandler = (handler: (req: AuthenticatedRequest, res: Response) => Pro
     void handler(req, res).catch((error: unknown) => failure(res, error));
   };
 
-async function authenticatedTeam(req: AuthenticatedRequest, pool: Pool): Promise<string> {
+function authenticatedTeam(req: AuthenticatedRequest): string {
   if (!req.team) throw new ProgressionError('Squad authentication required.', 'FORBIDDEN');
-  const exists = await pool.query('SELECT 1 FROM teams WHERE id=$1', [req.team.id]);
-  if (!exists.rowCount) throw new ProgressionError('Team progression is not initialized.', 'NOT_FOUND');
+  // requireTeamAuth joined the live session to the team record for this same
+  // request; repeating that identity lookup adds latency without improving auth.
   return req.team.id;
 }
 
@@ -150,7 +150,7 @@ teamRouter.get('/me', asyncHandler(async (req, res) => {
     return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
   }
   const pool = configuredPool();
-  const teamId = await authenticatedTeam(req, pool);
+  const teamId = authenticatedTeam(req);
   await reconcileRound3Hunts(pool, teamId);
   for (const roundId of [1, 3, 4]) await reconcileRoundCompletion(pool, teamId, roundId);
   return res.json({ success: true, teamId, ...(await getTeamProgression(pool, teamId)) });
@@ -163,7 +163,7 @@ teamRouter.post('/me/rounds/:roundId/start', asyncHandler(async (req, res) => {
     return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
   }
   const pool = configuredPool();
-  const teamId = await authenticatedTeam(req, pool);
+  const teamId = authenticatedTeam(req);
   const roundId = numberParam(req.params.roundId, 'round', 1, 4);
   await startRound(pool, teamId, roundId);
   return res.json({ success: true, ...(await getTeamProgression(pool, teamId)) });
@@ -176,7 +176,7 @@ teamRouter.post('/me/rounds/:roundId/complete', asyncHandler(async (req, res) =>
     return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
   }
   const pool = configuredPool();
-  const teamId = await authenticatedTeam(req, pool);
+  const teamId = authenticatedTeam(req);
   const roundId = numberParam(req.params.roundId, 'round', 1, 4);
   if (roundId === 1) {
     if (!await completeRound1FromEvidence(pool, teamId)) return res.status(409).json({ success: false, message: 'The server has not recorded completion of Round 1.' });
@@ -198,7 +198,7 @@ teamRouter.post('/me/hunts/:huntId/start', asyncHandler(async (req, res) => {
     return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
   }
   const pool = configuredPool();
-  const teamId = await authenticatedTeam(req, pool);
+  const teamId = authenticatedTeam(req);
   const huntId = numberParam(req.params.huntId, 'hunt', 1, 3);
   await reconcileRound3Hunts(pool, teamId);
   await startHunt(pool, teamId, huntId);
@@ -212,7 +212,7 @@ teamRouter.post('/me/hunts/:huntId/complete', asyncHandler(async (req, res) => {
     return res.json({ success: true, teamId, ...getSqliteTeamProgression(teamId) });
   }
   const pool = configuredPool();
-  const teamId = await authenticatedTeam(req, pool);
+  const teamId = authenticatedTeam(req);
   const huntId = numberParam(req.params.huntId, 'hunt', 1, 3);
   await reconcileRound3Hunts(pool, teamId);
   if (!await gameHuntComplete(teamId, huntId, pool)) {
@@ -335,7 +335,7 @@ export function roundAccessGuard(roundId: number) {
       const accessStartedAt = performance.now();
       void (async () => {
         const pool = configuredPool();
-        const teamId = await authenticatedTeam(req, pool);
+        const teamId = authenticatedTeam(req);
         if (roundId === 4 && req.path === '/status') {
           next();
           return;
@@ -347,16 +347,30 @@ export function roundAccessGuard(roundId: number) {
             return;
           }
         }
-        let state = await pool.query<{ status: string }>('SELECT status FROM round_progress WHERE team_id=$1 AND round_id=$2', [teamId, roundId]);
-        if (roundId === 1 && state.rows[0]?.status === 'LOCKED') {
+        const state = await pool.query<{ status: string; auction_enabled: boolean }>(
+          `SELECT rp.status,
+             CASE WHEN $2=2 THEN COALESCE((SELECT enabled FROM round2_auction_config WHERE id=1), false) ELSE true END AS auction_enabled
+           FROM round_progress rp WHERE rp.team_id=$1 AND rp.round_id=$2`,
+          [teamId, roundId],
+        );
+        let teamRoundStatus = state.rows[0]?.status;
+        if (roundId === 1 && teamRoundStatus === 'LOCKED') {
           const r1 = await pool.query<{ is_active: boolean }>('SELECT is_active FROM rounds WHERE round_id=1');
           if (r1.rows[0]?.is_active) {
             await pool.query("UPDATE round_progress SET status='IN_PROGRESS', updated_at=now() WHERE team_id=$1 AND round_id=1", [teamId]);
-            state = await pool.query<{ status: string }>('SELECT status FROM round_progress WHERE team_id=$1 AND round_id=1', [teamId]);
+            teamRoundStatus = 'IN_PROGRESS';
           }
         }
-        if (state.rows[0]?.status === 'AVAILABLE') await startRound(pool, teamId, roundId);
-        await assertRoundAccessible(pool, teamId, roundId);
+        if (roundId === 2 && state.rows[0]?.auction_enabled !== true) {
+          throw new ProgressionError('Round 2 is unavailable until an administrator starts the auction.', 'LOCKED');
+        }
+        if (teamRoundStatus === 'AVAILABLE') {
+          await startRound(pool, teamId, roundId);
+          teamRoundStatus = 'IN_PROGRESS';
+        }
+        if (!teamRoundStatus || !['AVAILABLE', 'IN_PROGRESS', 'COMPLETED'].includes(teamRoundStatus)) {
+          throw new ProgressionError('This round is locked.', 'LOCKED');
+        }
         if (roundId === 2 && req.team) {
           if (req.body && typeof req.body === 'object') req.body.teamName = req.team.teamName;
           if (req.method === 'GET') req.query.team = req.team.teamName;

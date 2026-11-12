@@ -10,10 +10,14 @@ import { HauntedPortalCard } from './haunted/HauntedPortalCard';
 import { createRound1TimerStore } from './round1TimerStore';
 import { Round1DeferredBoundary } from './Round1DeferredBoundary';
 
-const Stage1Framework = lazy(() => import('./stage1/Stage1Framework').then((module) => ({ default: module.Stage1Framework })));
-const Stage1PumpkinShuffle = lazy(() => import('./stage1/Stage1PumpkinShuffle').then((module) => ({ default: module.Stage1PumpkinShuffle })));
-const Stage2HauntedImageHunt = lazy(() => import('./stage2/Stage2HauntedImageHunt').then((module) => ({ default: module.Stage2HauntedImageHunt })));
-const Stage3ForgottenGraveyard = lazy(() => import('./stage3/Stage3ForgottenGraveyard').then((module) => ({ default: module.Stage3ForgottenGraveyard })));
+const loadStage1Framework = () => import('./stage1/Stage1Framework').then((module) => ({ default: module.Stage1Framework }));
+const loadStage1Game = () => import('./stage1/Stage1PumpkinShuffle').then((module) => ({ default: module.Stage1PumpkinShuffle }));
+const loadStage2 = () => import('./stage2/Stage2HauntedImageHunt').then((module) => ({ default: module.Stage2HauntedImageHunt }));
+const loadStage3 = () => import('./stage3/Stage3ForgottenGraveyard').then((module) => ({ default: module.Stage3ForgottenGraveyard }));
+const Stage1Framework = lazy(loadStage1Framework);
+const Stage1PumpkinShuffle = lazy(loadStage1Game);
+const Stage2HauntedImageHunt = lazy(loadStage2);
+const Stage3ForgottenGraveyard = lazy(loadStage3);
 
 const StageChunkLoading: React.FC<{ label: string }> = ({ label }) => (
   <div role="status" className="min-h-screen bg-black text-stone-100 flex items-center justify-center">Loading {label}…</div>
@@ -48,6 +52,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     }
     return null;
   });
+  const [enteringStageId, setEnteringStageId] = useState<StageId | null>(null);
   const stateRequestInFlight = useRef<Promise<void> | null>(null);
   const timerDeadline = useRef<number | null>(null);
   const onUpdateCreditsRef = useRef(onUpdateCredits);
@@ -164,13 +169,24 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   };
 
   const handleSelectStage = async (stageId: StageId) => {
+    if (enteringStageId !== null) return;
     if (isExpired) {
       setRequestError('Round 1 timer has expired. Crypt gates are sealed.');
       return;
     }
     soundController.playClick();
-    try { await performAction('enter', { stageId }); changeActiveStage(stageId); }
+    setEnteringStageId(stageId);
+    const loadStage = stageId === 'stage-1'
+      ? teamSession?.stages['stage-1'].status === 'not_configured' ? loadStage1Framework() : loadStage1Game()
+      : stageId === 'stage-2' ? loadStage2() : loadStage3();
+    try {
+      // Start loading the stage bundle alongside the server's authoritative
+      // entry validation instead of waiting for one before starting the other.
+      await Promise.all([performAction('enter', { stageId }), loadStage]);
+      changeActiveStage(stageId);
+    }
     catch (error) { setRequestError(error instanceof Error ? error.message : 'Could not enter this stage.'); }
+    finally { setEnteringStageId(null); }
   };
 
   const handleSkipStage = async (stageId: StageId) => {
@@ -275,6 +291,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
       {/* 3. Centered Main Header & Three Gothic Arch Portals */}
       <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex flex-col justify-center items-center my-auto">
         {requestError && <div role="alert" className="mb-3 w-full rounded border border-red-500/50 bg-red-950/80 px-4 py-3 text-sm text-red-100">{requestError}<button type="button" className="ml-4 underline" onClick={() => setRequestError(null)}>Dismiss</button></div>}
+        {enteringStageId && <p role="status" className="mb-3 text-xs font-cinzel text-cartel-amber">Opening {enteringStageId.replace('stage-', 'stage ')}…</p>}
         {/* Centered Main Heading (Highest Visual Priority) */}
         <div className="flex flex-col items-center text-center mb-3 sm:mb-5 max-w-full">
           {/* Accessible Screen-Reader Anchor */}

@@ -89,6 +89,20 @@ suite('PostgreSQL progression integration (isolated local database)', () => {
     await expect(assertRoundAccessible(pool, team, 2)).resolves.toBeUndefined();
   });
 
+  it('advances only the selected team to Round 2 and leaves the auction disabled', async () => {
+    const selected = await createTeam('SelectedTeam');
+    const other = await createTeam('OtherTeam');
+    await startRound(pool, selected, 1);
+    await completeRound(pool, selected, 1);
+
+    await adminProgress(pool, adminToken, selected, 'ROUND', 2, 'unlock');
+
+    expect((await roundStatus(selected, 2)).status).toBe('AVAILABLE');
+    expect((await roundStatus(other, 2)).status).toBe('LOCKED');
+    expect((await pool.query('SELECT enabled FROM round2_auction_config WHERE id=1')).rows[0].enabled).toBe(false);
+    await expect(assertRoundAccessible(pool, selected, 2)).rejects.toMatchObject({ code: 'LOCKED' });
+  });
+
   it('enforces Hunt I, Hunt II, Hunt III sequentially and auto-advances Round 3 and Round 4', async () => {
     const team = await createTeam('HuntSequence');
     await prepareRound3(team);

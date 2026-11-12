@@ -15,6 +15,9 @@ function bearerOrCookie(req: Request, cookieName: string): string | undefined {
 }
 
 export async function requireAdminAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  // Route guards and leaf routers can both require admin auth. Reuse the
+  // principal already attached during this request instead of querying twice.
+  if (req.admin && req.adminSessionToken) { next(); return; }
   const token = bearerOrCookie(req, 'fc_admin_token');
   if (!token) { res.status(401).json({ success: false, message: 'Authentication required. No session token provided.' }); return; }
 
@@ -60,6 +63,9 @@ export async function requireAdminAuth(req: AuthenticatedRequest, res: Response,
 }
 
 export async function requireTeamAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  // A parent round-access guard may already have validated this request's
+  // cookie and attached the team. Never cache this between HTTP requests.
+  if (req.team) { next(); return; }
   const token = bearerOrCookie(req, 'fc_team_token');
   if (!token) { res.status(401).json({ success: false, message: 'Authentication required. No squad token provided.' }); return; }
 

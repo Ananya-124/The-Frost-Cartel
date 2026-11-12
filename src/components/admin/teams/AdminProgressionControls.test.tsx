@@ -13,14 +13,13 @@ vi.mock('../../../services/progressionService', () => ({
   },
 }));
 
-function state(round2EligibleAt: string | null, round2Status: 'LOCKED' | 'AVAILABLE' = 'LOCKED'): { success: true } & TeamProgression {
+function state(round2Status: 'LOCKED' | 'AVAILABLE' = 'LOCKED'): TeamProgression {
   return {
-    success: true,
     teamId: 'team-42',
     rounds: [1, 2, 3, 4].map((round_id) => ({
       round_id,
       status: round_id === 1 ? 'COMPLETED' : round_id === 2 ? round2Status : 'LOCKED',
-      eligible_at: round_id === 2 ? round2EligibleAt : null,
+      eligible_at: round_id === 2 ? '2026-11-12T10:00:00.000Z' : null,
       completed_at: null,
     })) as TeamProgression['rounds'],
     hunts: [1, 2, 3].map((hunt_id) => ({ hunt_id, status: 'LOCKED' as const, completed_at: null })),
@@ -28,33 +27,34 @@ function state(round2EligibleAt: string | null, round2Status: 'LOCKED' | 'AVAILA
   };
 }
 
-describe('Admin Round 2 team progression controls', () => {
+describe('Admin team round progression controls', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('allows advancing to next eligible round and shows reset every team option', async () => {
-    vi.mocked(progressionService.getAdminTeam).mockResolvedValue(state(null));
+  it('shows one next-round action for the selected server team', async () => {
+    vi.mocked(progressionService.getAdminTeam).mockResolvedValue({ success: true, ...state() });
     render(<AdminProgressionControls teamId="team-42" teamName="North Hall" />);
 
-    const moveButton = await screen.findByRole('button', { name: 'Move North Hall to Round 2' });
-    expect(moveButton).toBeEnabled();
-
-    expect(screen.getByRole('button', { name: '⚠️ Reset Every Team' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Move North Hall to Round 2' })).toBeEnabled();
+    expect(screen.getByText(/Round 01/)).toBeInTheDocument();
+    expect(screen.getByText(/Round 02/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /lock|complete|reset|hunt/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Round 2 gameplay also requires the auction to be started/i)).toBeInTheDocument();
     expect(progressionService.getAdminTeam).toHaveBeenCalledWith('team-42');
+    expect(progressionService.getAdminTeams).not.toHaveBeenCalled();
   });
 
-  it('moves an eligible team forward through the authenticated server action', async () => {
-    vi.mocked(progressionService.getAdminTeam).mockResolvedValue(state('2026-11-12T10:00:00.000Z'));
-    vi.mocked(progressionService.adminAction).mockResolvedValue(state('2026-11-12T10:00:00.000Z', 'AVAILABLE'));
+  it('moves only the selected team after server confirmation', async () => {
+    vi.mocked(progressionService.getAdminTeam).mockResolvedValue({ success: true, ...state() });
+    vi.mocked(progressionService.adminAction).mockResolvedValue({ success: true, ...state('AVAILABLE') });
     const onProgressChanged = vi.fn();
     render(<AdminProgressionControls teamId="team-42" teamName="North Hall" onProgressChanged={onProgressChanged} />);
 
-    const moveButton = await screen.findByRole('button', { name: 'Move North Hall to Round 2' });
-    fireEvent.click(moveButton);
-
+    fireEvent.click(await screen.findByRole('button', { name: 'Move North Hall to Round 2' }));
     await waitFor(() => expect(progressionService.adminAction).toHaveBeenCalledWith(
       'team-42', 'ROUND', 2, 'unlock',
     ));
-    expect(await screen.findByText(/North Hall moved to Round 2/i)).toBeInTheDocument();
+    expect(await screen.findByText('North Hall moved to Round 2.')).toBeInTheDocument();
+    expect(screen.getByText('AVAILABLE')).toBeInTheDocument();
     expect(onProgressChanged).toHaveBeenCalledTimes(1);
   });
 });

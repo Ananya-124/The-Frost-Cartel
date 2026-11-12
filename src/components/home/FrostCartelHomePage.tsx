@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { ROUNDS_DATA } from '../../constants/rounds.constants';
@@ -74,6 +74,7 @@ export const FrostCartelHomePage: React.FC = () => {
   });
   const [notice, setNotice] = useState<string | null>(null);
   const [progression, setProgression] = useState<TeamProgression | null>(null);
+  const progressionRequestInFlight = useRef<Promise<TeamProgression> | null>(null);
   const handleRound1CreditUpdate = useCallback((credits: number) => {
     setSession((previous) => previous && previous.credits !== credits ? { ...previous, credits } : previous);
   }, []);
@@ -88,25 +89,32 @@ export const FrostCartelHomePage: React.FC = () => {
 
   const refreshProgression = useCallback(async () => {
     if (!session) { setProgression(null); return; }
+    let request = progressionRequestInFlight.current;
+    if (!request) {
+      request = progressionService.getMine();
+      progressionRequestInFlight.current = request;
+    }
     try {
-      setProgression(await progressionService.getMine());
+      setProgression(await request);
     } catch (error) {
       if (errorStatus(error) === 401) {
         authService.logout();
         setSession(null);
         setProgression(null);
       }
+    } finally {
+      if (progressionRequestInFlight.current === request) progressionRequestInFlight.current = null;
     }
   }, [session]);
 
   useEffect(() => {
+    if (!session || activeChamberRound !== null) return;
     void refreshProgression();
-    if (!session) return;
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         void refreshProgression();
       }
-    }, 3000);
+    }, 15_000);
     const onFocus = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         void refreshProgression();
@@ -117,7 +125,7 @@ export const FrostCartelHomePage: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [session, refreshProgression]);
+  }, [session, activeChamberRound, refreshProgression]);
   const displayRounds = useMemo(() => serverRounds(progression, Boolean(session)), [progression, session]);
 
   useEffect(() => {

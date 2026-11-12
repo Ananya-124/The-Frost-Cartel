@@ -3,6 +3,7 @@ import { act, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TeamDashboardView } from '../TeamDashboardView';
 import { round1Api } from '../../../services/round1ApiService';
+import { progressionService } from '../../../services/progressionService';
 import type { TeamSession } from '../../../types/team.types';
 
 vi.mock('../../../services/progressionService', () => ({
@@ -44,6 +45,24 @@ describe('team dashboard Round 1 status polling', () => {
     expect(document.visibilityState).toBe('visible');
     await act(async () => { await Promise.resolve(); await vi.advanceTimersByTimeAsync(60_000); });
     expect(round1Api.getState).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refetch progression from the Round 1 status poll when the parent supplied it', async () => {
+    vi.useFakeTimers();
+    vi.mocked(round1Api.getState).mockResolvedValue({ round: { isActive: false }, session: { status: 'paused' } } as never);
+    const progression = { rounds: [], hunts: [] };
+    render(
+      <TeamDashboardView
+        session={{ teamId: 'team-poll', teamName: 'Polling Team', credits: 500 } as TeamSession}
+        onLogout={() => undefined}
+        onEnterRound1={() => undefined}
+        onClose={() => undefined}
+        progression={progression as never}
+      />
+    );
+    await act(async () => { await Promise.resolve(); await vi.advanceTimersByTimeAsync(20_000); });
+    expect(round1Api.getState).toHaveBeenCalledTimes(3);
+    expect(progressionService.getMine).not.toHaveBeenCalled();
   });
 
   it('adapts to Round 2: The Haunted Auction when Round 2 is unlocked or in progress', () => {
