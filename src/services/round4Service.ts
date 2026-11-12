@@ -247,6 +247,8 @@ class Round4Service {
     isWinner?: boolean;
     raceClosed?: boolean;
     winner?: WinnerRecord;
+    nextFloorId?: string;
+    nextFloorName?: string;
     progress: ExpeditionProgress;
   } {
     const progress = this.getProgress(teamId);
@@ -290,15 +292,11 @@ class Round4Service {
 
     if (isLastStepOfRoute) {
       const newCompletedRoutes = [...new Set([...progress.completedRouteIds, route.routeId])];
-      const nextRouteIndex = route.routeNumber;
-      const nextRoute = EXPEDITION_ROUTES[nextRouteIndex];
-
       const updated: ExpeditionProgress = {
         ...progress,
         solvedStepIds: newSolved,
         completedRouteIds: newCompletedRoutes,
-        activeRouteId: nextRoute ? nextRoute.routeId : route.routeId,
-        activeStepIndex: nextRoute ? 0 : 4,
+        activeStepIndex: 4,
         targetDiscovered: false,
       };
       this.saveLocalProgress(updated);
@@ -329,10 +327,23 @@ class Round4Service {
       };
     }
 
+    const nextIndex = progress.activeStepIndex + 1;
+    const nextStep = route.steps[nextIndex];
+    const nextFloorId = nextStep ? nextStep.floorId : 'floor-07';
+    const floorNames: Record<string, string> = {
+      'floor-02': 'Second Floor — Humanities & Research Wing',
+      'floor-03': 'Third Floor — Computer Applications Wing',
+      'floor-04': 'Fourth Floor — Computer Science & Engineering Wing',
+      'floor-05': 'Fifth Floor — Academic & Faculty Block',
+      'floor-06': 'Sixth Floor — Electronics & AI Department',
+      'floor-07': 'Seventh Floor — Main Event Venue & Auditorium',
+    };
+    const nextFloorName = floorNames[nextFloorId] || nextFloorId.toUpperCase();
+
     const updated: ExpeditionProgress = {
       ...progress,
       solvedStepIds: newSolved,
-      activeStepIndex: progress.activeStepIndex + 1,
+      activeStepIndex: nextIndex,
       targetDiscovered: false,
     };
     this.saveLocalProgress(updated);
@@ -347,10 +358,80 @@ class Round4Service {
 
     return {
       success: true,
-      message: 'Clue verified! Advancing to the next target location.',
+      message: 'The seal has yielded. Your next destination awaits.',
       isRouteCompleted: false,
+      nextFloorId,
+      nextFloorName,
       progress: updated,
     };
+  }
+
+  /**
+   * Scan or validate a physical QR token at the current checkpoint
+   */
+  async scanQrToken(
+    teamId: string,
+    qrToken: string
+  ): Promise<{
+    success: boolean;
+    valid: boolean;
+    validationWord?: string;
+    clueIndex?: number;
+    locationName?: string;
+    message: string;
+    code?: string;
+  }> {
+    try {
+      const res = await fetch('/api/round4/scan-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrToken }),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      const err = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        valid: false,
+        message: err.message || 'Checkpoint scan failed.',
+        code: err.code,
+      };
+    } catch {
+      // Local offline fallback
+      const progress = this.getProgress(teamId);
+      const route = getExpeditionRoute(progress.activeRouteId);
+      const activeStep = route.steps[progress.activeStepIndex];
+      const cleanToken = qrToken.trim();
+
+      if (activeStep && activeStep.qrToken === cleanToken) {
+        return {
+          success: true,
+          valid: true,
+          validationWord: activeStep.acceptedCodes[0] || 'WRAITH',
+          clueIndex: activeStep.clueIndex,
+          locationName: activeStep.locationName,
+          message: 'Physical checkpoint confirmed! Enter the validation cipher into your field console.',
+        };
+      }
+
+      // Check if out of sequence on this route
+      const otherStep = route.steps.find((s) => s.qrToken === cleanToken);
+      if (otherStep) {
+        return {
+          success: false,
+          valid: false,
+          code: 'OUT_OF_SEQUENCE',
+          message: `Out of sequence checkpoint! This marker is for Clue #${otherStep.clueIndex}, but your squad is currently on Clue #${activeStep?.clueIndex || 1}.`,
+        };
+      }
+
+      return {
+        success: false,
+        valid: false,
+        message: 'Unrecognized checkpoint cipher. Ensure you are scanning an authentic Frost Cartel physical marker.',
+      };
+    }
   }
 
   /**

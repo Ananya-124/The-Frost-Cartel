@@ -355,92 +355,6 @@
   }
 }
 
-/* AAA Horror Jumpscare Keyframe Animations */
-@keyframes jumpscareShake {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  10% { transform: translate(-14px, 12px) rotate(-2deg); }
-  20% { transform: translate(16px, -10px) rotate(2deg); }
-  30% { transform: translate(-18px, -14px) rotate(-1.5deg); }
-  40% { transform: translate(14px, 16px) rotate(2.5deg); }
-  50% { transform: translate(-16px, 10px) rotate(-3deg); }
-  60% { transform: translate(18px, -12px) rotate(1deg); }
-  70% { transform: translate(-12px, 14px) rotate(-2deg); }
-  80% { transform: translate(14px, -16px) rotate(2deg); }
-  90% { transform: translate(-10px, 8px) rotate(-1deg); }
-  100% { transform: translate(0, 0) rotate(0deg); }
-}
-
-@keyframes jumpscareLunge {
-  0% {
-    transform: scale(0.3) translate3d(0, 40px, 0);
-    opacity: 0;
-    filter: blur(8px) brightness(0.4);
-  }
-  8% {
-    transform: scale(0.9) translate3d(0, 0, 0);
-    opacity: 1;
-    filter: blur(2px) brightness(1.8);
-  }
-  20% {
-    transform: scale(1.35) translate3d(-10px, -10px, 0);
-    filter: blur(0px) brightness(1.2);
-  }
-  50% {
-    transform: scale(1.75) translate3d(15px, 10px, 0);
-    filter: brightness(1.4);
-  }
-  80% {
-    transform: scale(2.25) translate3d(-8px, -5px, 0);
-    filter: brightness(1.1);
-  }
-  95% {
-    transform: scale(2.6) translate3d(0, 0, 0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(3.1) translate3d(0, 0, 0);
-    opacity: 0;
-  }
-}
-
-@keyframes jumpscareStrobe {
-  0%, 100% { background-color: rgba(0, 0, 0, 0.98); }
-  5% { background-color: rgba(185, 28, 28, 0.85); }
-  10% { background-color: rgba(255, 255, 255, 0.9); }
-  15% { background-color: rgba(0, 0, 0, 0.95); }
-  22% { background-color: rgba(153, 27, 27, 0.9); }
-  30% { background-color: rgba(20, 5, 5, 0.98); }
-  45% { background-color: rgba(220, 38, 38, 0.8); }
-  60% { background-color: rgba(0, 0, 0, 0.95); }
-  75% { background-color: rgba(255, 255, 255, 0.75); }
-  85% { background-color: rgba(120, 10, 10, 0.9); }
-}
-
-@keyframes jumpscareGlitch {
-  0% { transform: translate(0) scale(1); filter: hue-rotate(0deg); }
-  20% { transform: translate(-8px, 6px) scale(1.02); filter: hue-rotate(90deg) drop-shadow(-8px 0 red); }
-  40% { transform: translate(8px, -6px) scale(0.98); filter: hue-rotate(180deg) drop-shadow(8px 0 cyan); }
-  60% { transform: translate(-6px, -4px) scale(1.04); filter: invert(0.8) hue-rotate(270deg); }
-  80% { transform: translate(6px, 4px) scale(1); filter: hue-rotate(45deg); }
-  100% { transform: translate(0) scale(1); filter: hue-rotate(0deg); }
-}
-
-.animate-jumpscare-shake {
-  animation: jumpscareShake 0.12s infinite;
-}
-
-.animate-jumpscare-lunge {
-  animation: jumpscareLunge 2.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-jumpscare-strobe {
-  animation: jumpscareStrobe 0.22s infinite;
-}
-
-.animate-jumpscare-glitch {
-  animation: jumpscareGlitch 0.18s infinite;
-}
-
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
@@ -448,12 +362,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  .animate-jumpscare-shake,
-  .animate-jumpscare-lunge,
-  .animate-jumpscare-strobe,
-  .animate-jumpscare-glitch {
-    animation: none !important;
   }
 }
 

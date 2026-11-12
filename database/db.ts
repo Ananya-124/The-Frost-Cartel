@@ -140,126 +140,617 @@ export function seedBootstrapData(): void {
 export function seedRound4Data(): void {
   const now = new Date().toISOString();
 
-  // 1. Seed Round 4 Settings
+  // Safe schema migrations for SQLite: ensure columns exist
+  try {
+    const stepCols = db.prepare('PRAGMA table_info(round4_steps)').all() as { name: string }[];
+    const stepColNames = new Set(stepCols.map((c) => c.name));
+    if (!stepColNames.has('qr_token')) {
+      db.exec("ALTER TABLE round4_steps ADD COLUMN qr_token TEXT NOT NULL DEFAULT ''");
+    }
+    if (!stepColNames.has('validation_word')) {
+      db.exec("ALTER TABLE round4_steps ADD COLUMN validation_word TEXT NOT NULL DEFAULT ''");
+    }
+    if (!stepColNames.has('physical_location')) {
+      db.exec("ALTER TABLE round4_steps ADD COLUMN physical_location TEXT NOT NULL DEFAULT ''");
+    }
+    if (!stepColNames.has('safety_notes')) {
+      db.exec("ALTER TABLE round4_steps ADD COLUMN safety_notes TEXT NOT NULL DEFAULT ''");
+    }
+    if (!stepColNames.has('is_verified')) {
+      db.exec('ALTER TABLE round4_steps ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 1');
+    }
+
+    const settingsCols = db.prepare('PRAGMA table_info(round4_settings)').all() as { name: string }[];
+    const settingsColNames = new Set(settingsCols.map((c) => c.name));
+    if (!settingsColNames.has('final_riddle')) {
+      db.exec("ALTER TABLE round4_settings ADD COLUMN final_riddle TEXT NOT NULL DEFAULT ''");
+    }
+    if (!settingsColNames.has('final_accepted_answers_json')) {
+      db.exec("ALTER TABLE round4_settings ADD COLUMN final_accepted_answers_json TEXT NOT NULL DEFAULT '[\"ANCHOR\"]'");
+    }
+    if (!settingsColNames.has('final_qr_token')) {
+      db.exec("ALTER TABLE round4_settings ADD COLUMN final_qr_token TEXT NOT NULL DEFAULT 'fc_qr_final_7th_relic'");
+    }
+
+    const progCols = db.prepare('PRAGMA table_info(round4_team_progress)').all() as { name: string }[];
+    const progColNames = new Set(progCols.map((c) => c.name));
+    if (!progColNames.has('scanned_qr_token')) {
+      db.exec('ALTER TABLE round4_team_progress ADD COLUMN scanned_qr_token TEXT');
+    }
+  } catch (err) {
+    console.error('[DB] Error during round4 schema migration:', err);
+  }
+
+  // 1. Seed or update Round 4 Settings
+  const finalRiddle =
+    "Standing at the pinnacle on floor number seven, Underneath the tiled expanse of the room's white heaven. Find the white spinners anchored high overhead, Whose three wide arms rest while the final steps are tread. Reach above the still blade hovering over the crowd, To pull down the victory and claim your title proud.";
+  const finalAnswers = ['ANCHOR', 'CEILING FAN', 'WHITE SPINNERS', 'PINNACLE'];
+
   const settingsCheck = db.prepare('SELECT id FROM round4_settings LIMIT 1').get();
   if (!settingsCheck) {
     db.prepare(`
       INSERT INTO round4_settings (
         id, is_released, common_final_location_id, common_final_floor_id, common_final_room_name,
-        common_final_x, common_final_y, common_final_radius, physical_entry_instructions, created_at, updated_at
-      ) VALUES ('settings-main', 1, 'room-final-700', 'floor-7', 'The Celestial Archives & Observatory Vault', 280, 125, 36, 'Level 07 • North Archway • Final Chamber Doors', ?, ?)
-    `).run(now, now);
+        common_final_x, common_final_y, common_final_radius, physical_entry_instructions,
+        final_riddle, final_accepted_answers_json, final_qr_token, created_at, updated_at
+      ) VALUES (
+        'settings-main', 1, 'room-final-700', 'floor-07', 'Main Event Venue (Anchor Ceiling Fan)',
+        800, 510, 42, 'Seventh Floor • Main Event Hall • Underneath 3-Blade Anchor Ceiling Fan Bay',
+        ?, ?, 'fc_qr_final_7th_relic', ?, ?
+      )
+    `).run(finalRiddle, JSON.stringify(finalAnswers), now, now);
+  } else {
+    db.prepare(`
+      UPDATE round4_settings
+      SET common_final_floor_id = 'floor-07',
+          common_final_room_name = 'Main Event Venue (Anchor Ceiling Fan)',
+          common_final_x = 800,
+          common_final_y = 510,
+          common_final_radius = 42,
+          physical_entry_instructions = 'Seventh Floor • Main Event Hall • Underneath 3-Blade Anchor Ceiling Fan Bay',
+          final_riddle = ?,
+          final_accepted_answers_json = ?,
+          final_qr_token = 'fc_qr_final_7th_relic',
+          updated_at = ?
+      WHERE id = 'settings-main'
+    `).run(finalRiddle, JSON.stringify(finalAnswers), now);
   }
 
-  // 2. Seed the 7 Routes
-  const routeCount = db.prepare('SELECT COUNT(*) as count FROM round4_routes').get() as { count: number };
-  if (routeCount.count === 0) {
-    const routes = [
-      { id: 'route-1', num: 1, roman: 'I', name: 'Route I', sub: 'The Celestial Meridian & Solar Horizon' },
-      { id: 'route-2', num: 2, roman: 'II', name: 'Route II', sub: "The Cartographer's Traverse" },
-      { id: 'route-3', num: 3, roman: 'III', name: 'Route III', sub: 'The Alchemical Cryptogram' },
-      { id: 'route-4', num: 4, roman: 'IV', name: 'Route IV', sub: 'The Scriptorium Cipher' },
-      { id: 'route-5', num: 5, roman: 'V', name: 'Route V', sub: 'The Platinum Block Chronology' },
-      { id: 'route-6', num: 6, roman: 'VI', name: 'Route VI', sub: "The Astronomer's Needle" },
-      { id: 'route-7', num: 7, roman: 'VII', name: 'Route VII', sub: 'The Keystone Pilgrimage' },
-    ];
+  // 2. Remove deprecated routes (> 5) and seed the 5 authoritative routes
+  db.prepare('DELETE FROM round4_routes WHERE route_number > 5').run();
 
-    const insertRoute = db.prepare(`
-      INSERT INTO round4_routes (id, route_number, roman_numeral, route_name, route_subtitle, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
+  const routes = [
+    { id: 'route-1', num: 1, roman: 'I', name: 'Route I', sub: 'Meridian Path (4 → 2 → 5 → 3 → 7)' },
+    { id: 'route-2', num: 2, roman: 'II', name: 'Route II', sub: "Alchemist's Arc (2 → 4 → 6 → 3 → 7)" },
+    { id: 'route-3', num: 3, roman: 'III', name: 'Route III', sub: "Cartographer's Traverse (2 → 6 → 3 → 5 → 7)" },
+    { id: 'route-4', num: 4, roman: 'IV', name: 'Route IV', sub: 'Shadow Traverse (4 → 6 → 2 → 5 → 7)' },
+    { id: 'route-5', num: 5, roman: 'V', name: 'Route V', sub: 'Phantom Meridian (6 → 2 → 5 → 4 → 7)' },
+  ];
 
-    for (const r of routes) {
-      insertRoute.run(r.id, r.num, r.roman, r.name, r.sub, now, now);
-    }
+  const insertRoute = db.prepare(`
+    INSERT INTO round4_routes (id, route_number, roman_numeral, route_name, route_subtitle, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      route_number = excluded.route_number,
+      roman_numeral = excluded.roman_numeral,
+      route_name = excluded.route_name,
+      route_subtitle = excluded.route_subtitle,
+      updated_at = excluded.updated_at
+  `);
+
+  for (const r of routes) {
+    insertRoute.run(r.id, r.num, r.roman, r.name, r.sub, now, now);
   }
 
-  // 3. Seed the 35 Steps (7 routes × 5 steps: 4 independent + 1 common final room with route-specific riddle)
-  const stepCount = db.prepare('SELECT COUNT(*) as count FROM round4_steps').get() as { count: number };
-  if (stepCount.count < 35) {
-    const rawSteps = [
-      // ROUTE I
-      { id: 'r1_s1', route: 'route-1', idx: 1, floor: 'floor-7', loc: 'Lecture Hall 701 — North Slate', x: 500, y: 130, rad: 36, rid: 'Where the lecturer’s chalk marks the morning equinox, find the brass inscription engraved beneath the northern slate.', hint: 'Level 07 • Room 701 (Lecture Hall) • Northern Chalkboard Frame', answers: ['RIVET7', 'EQUINOX', '701'], isFinal: 0 },
-      { id: 'r1_s2', route: 'route-1', idx: 2, floor: 'floor-7', loc: 'Central Atrium — Mosaic Compass Rose', x: 280, y: 260, rad: 36, rid: 'Stand upon the carved marble needle pointing to true north. Read the four Roman initials etched into the bronze meridian ring.', hint: 'Level 07 • Central Courtyard Balcony • Bronze Floor Meridian', answers: ['MERIDIAN', 'NORTH', 'AZIMUTH'], isFinal: 0 },
-      { id: 'r1_s3', route: 'route-1', idx: 3, floor: 'floor-7', loc: 'Informatics Bay — Terminal 04', x: 155, y: 330, rad: 36, rid: 'Behind the fourth workstation where cathode screens once hummed, discover the serial number stamped into the metal chassis.', hint: 'Level 07 • Room 704 (Computer Lab) • Terminal 04 Chassis Tag', answers: ['BAY4', 'SILICON', 'TERMINAL'], isFinal: 0 },
-      { id: 'r1_s4', route: 'route-1', idx: 4, floor: 'floor-7', loc: 'Western Reading Hall — Antiquities Cabinet', x: 165, y: 135, rad: 36, rid: 'Between folio volumes of 1947 and 1952, a locked wooden vitrine holds the founder’s surveying compass. Enter its calibration year.', hint: 'Level 07 • Room 702 (Western Reading Hall) • Vitrine Plaque', answers: ['1947', 'COMPASS', 'PLATINUM'], isFinal: 0 },
-      { id: 'r1_s5', route: 'route-1', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'Ascend the ceremonial stairs to the observatory doorway. The keystone bears a winged cipher. Decode the three letters.', hint: 'Level 07 • North Archway • Final Keystone Inscription', answers: ['BSN', 'KEYSTONE', 'APEX'], isFinal: 1 },
+  // 3. Seed the 25 Authoritative Steps (5 routes × 5 steps) with PDF riddles, Halloween tokens & QR codes
+  // Clean up any steps for routes > 5
+  db.prepare("DELETE FROM round4_steps WHERE route_id NOT IN ('route-1', 'route-2', 'route-3', 'route-4', 'route-5')").run();
 
-      // ROUTE II
-      { id: 'r2_s1', route: 'route-2', idx: 1, floor: 'floor-6', loc: 'Astrolabe Draft Station', x: 420, y: 140, rad: 36, rid: 'On the curved drafting desk overlooking the canopy, count the radial degrees etched on the brass protractor.', hint: 'Level 06 • East Scriptorium • Drafting Desk 02', answers: ['180', 'RADIAL', 'CHART'], isFinal: 0 },
-      { id: 'r2_s2', route: 'route-2', idx: 2, floor: 'floor-6', loc: 'Architectural Archive Stacks — Aisle D', x: 135, y: 150, rad: 36, rid: 'Follow shelf column D to the blue binding titled "Structural Elevations 1965". What is the folio stamp number?', hint: 'Level 06 • Archive Room • Shelf Column D', answers: ['65D', 'BLUE', 'ELEVATION'], isFinal: 0 },
-      { id: 'r2_s3', route: 'route-2', idx: 3, floor: 'floor-6', loc: 'Faculty Seminar Room — Podium Drawer', x: 490, y: 310, rad: 36, rid: 'Beneath the mahogany lecturer podium, a brass plate conceals a four-letter guild motto.', hint: 'Level 06 • Room 603 (Seminar Hall) • Podium Base', answers: ['LUX', 'ORDO', 'MIND'], isFinal: 0 },
-      { id: 'r2_s4', route: 'route-2', idx: 4, floor: 'floor-6', loc: 'Southern Balcony Balustrade', x: 280, y: 360, rad: 36, rid: 'Look towards the courtyard fountain from the stone railing. The southern plinth holds an iron mason mark.', hint: 'Level 06 • South Colonnade • Balustrade Stone Center', answers: ['MASON', 'PLINTH', 'STONE'], isFinal: 0 },
-      { id: 'r2_s5', route: 'route-2', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'At the high skylight alignment, count the brass celestial rings suspended beneath the dome.', hint: 'Level 07 • North Archway • Final Celestial Dome Rings', answers: ['SEVEN', 'ORBIT', 'CELESTIAL'], isFinal: 1 },
+  const rawSteps = [
+    // === ROUTE 1: 4 -> 2 -> 5 -> 3 -> 7 ===
+    {
+      id: 'r1_s1',
+      route: 'route-1',
+      idx: 1,
+      floor: 'floor-04',
+      loc: 'Near CS UG Lab 2 — Wooden Table',
+      x: 230,
+      y: 520,
+      rad: 36,
+      rid: "Four floors above, your next trail awaits,\nNear CS UG Lab 2 lie the secrets of fate.\nWhere curious minds work and mysteries grow,\nA wooden guardian hides what you need to know.\nDon't search its surface or look around,\nThe secret lies beneath, close to the ground.",
+      hint: '4th Floor • Near CS UG Lab 2 • Underneath the wooden table',
+      physLoc: 'Near CS UG Lab 2, underneath the wooden table',
+      safety: 'Mount on inner wooden apron of table. Accessible without moving furniture.',
+      word: 'WRAITH',
+      token: 'fc_qr_r1_s1_w47a',
+      answers: ['WRAITH'],
+      isFinal: 0,
+    },
+    {
+      id: 'r1_s2',
+      route: 'route-1',
+      idx: 2,
+      floor: 'floor-02',
+      loc: 'Student Sitting Benches — Wall Overhead',
+      x: 512,
+      y: 280,
+      rad: 36,
+      rid: "Make your way to the second floor,\nWhere tired souls pause before exploring more.\nA place where footsteps slow their pace,\nAnd weary travellers find a resting space.\nThe secret isn't where they sit below,\nBut above their heads, where shadows grow.",
+      hint: '2nd Floor • Wall above the sitting benches',
+      physLoc: 'On the wall above the student sitting benches',
+      safety: 'Eye-level wall sticker above middle backrest.',
+      word: 'CANDLE',
+      token: 'fc_qr_r1_s2_c92b',
+      answers: ['CANDLE'],
+      isFinal: 0,
+    },
+    {
+      id: 'r1_s3',
+      route: 'route-1',
+      idx: 3,
+      floor: 'floor-05',
+      loc: 'Ratan Tata Portrait Frame',
+      x: 512,
+      y: 330,
+      rad: 36,
+      rid: 'Five floors above, a wise face meets your sight,\nA man who turned challenges into the light.\nHe taught the world that success is hard to claim,\nFind the one whose wisdom speaks through his name.\nHis words are in front, but his secret stays behind.',
+      hint: '5th Floor • Behind the Ratan Tata frame',
+      physLoc: 'Behind the Ratan Tata portrait frame',
+      safety: 'Place on lower edge of rear frame moulding. Do not remove frame from wall.',
+      word: 'RAVEN',
+      token: 'fc_qr_r1_s3_r18c',
+      answers: ['RAVEN'],
+      isFinal: 0,
+    },
+    {
+      id: 'r1_s4',
+      route: 'route-1',
+      idx: 4,
+      floor: 'floor-03',
+      loc: 'Notice Boards Near Lift',
+      x: 460,
+      y: 430,
+      rad: 36,
+      rid: "On floor number three, your trail takes flight,\nNear the lift stands a keeper of information in sight.\nIt holds announcements, posters and more,\nLike whispers from souls who've passed before.\nSearch where these silent stories stay,\nYour next secret is hidden along the way.",
+      hint: '3rd Floor • Notice boards near the lift',
+      physLoc: 'Notice boards near the lift',
+      safety: 'Affix to outer bottom-right frame trim of notice board.',
+      word: 'HEX',
+      token: 'fc_qr_r1_s4_h34d',
+      answers: ['HEX'],
+      isFinal: 0,
+    },
+    {
+      id: 'r1_s5',
+      route: 'route-1',
+      idx: 5,
+      floor: 'floor-07',
+      loc: 'Main Event Venue — Anchor Ceiling Fan Bay',
+      x: 800,
+      y: 510,
+      rad: 42,
+      rid: finalRiddle,
+      hint: '7th Floor • Main Event Hall • 3-Blade Anchor Ceiling Fan Bay',
+      physLoc: 'Main Event Venue, stationary podium beneath Anchor ceiling fan',
+      safety: 'Affix to stationary podium directly beneath fan. Never touch fan or blades.',
+      word: 'ANCHOR',
+      token: 'fc_qr_final_7th_relic',
+      answers: finalAnswers,
+      isFinal: 1,
+    },
 
-      // ROUTE III
-      { id: 'r3_s1', route: 'route-3', idx: 1, floor: 'floor-5', loc: 'Organic Synthesis Lab — Cabinet 09', x: 140, y: 140, rad: 36, rid: 'Inside the copper reagent cabinet, locate bottle labeled with the atomic weight of silver.', hint: 'Level 05 • Room 501 • Copper Reagent Locker', answers: ['108', 'ARGENTUM', 'SILVER'], isFinal: 0 },
-      { id: 'r3_s2', route: 'route-3', idx: 2, floor: 'floor-5', loc: 'Analytical Balance Chamber', x: 220, y: 320, rad: 36, rid: 'On the vibration-free granite slab, calibrate the balance needle to read the zero point tare value.', hint: 'Level 05 • Balance Niche • Granite Calibration Plate', answers: ['TARE', 'ZERO', 'BALANCE'], isFinal: 0 },
-      { id: 'r3_s3', route: 'route-3', idx: 3, floor: 'floor-5', loc: 'Central Corridor — Herbarium Display', x: 380, y: 220, rad: 36, rid: 'Examine the dried belladonna leaf mounted in the botanical frame. Identify the collector’s field number.', hint: 'Level 05 • Center Hall • Glass Vitrine 03', answers: ['BELL42', 'NIGHTSHADE', 'FLORA'], isFinal: 0 },
-      { id: 'r3_s4', route: 'route-3', idx: 4, floor: 'floor-5', loc: 'East Distillation Tower', x: 505, y: 280, rad: 36, rid: 'Where condensers rise through the mezzanine ceiling, count the cooling coils wrapped in brass wire.', hint: 'Level 05 • East Lab • Condenser Column 01', answers: ['TWELVE', '12', 'SPIRAL'], isFinal: 0 },
-      { id: 'r3_s5', route: 'route-3', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'Before the vault threshold, decipher the Latin motto carved into the archway lintel.', hint: 'Level 07 • North Archway • Final Lintel Inscription', answers: ['VERITAS', 'ARCHWAY', 'LINTEL'], isFinal: 1 },
+    // === ROUTE 2: 2 -> 4 -> 6 -> 3 -> 7 ===
+    {
+      id: 'r2_s1',
+      route: 'route-2',
+      idx: 1,
+      floor: 'floor-02',
+      loc: 'Near Room 217 — Wooden Table',
+      x: 280,
+      y: 240,
+      rad: 36,
+      rid: 'Two floors above, your next mystery awaits,\nNear room 217 lie the secrets of fate.\nA lonely wooden keeper stands nearby,\nHolding its secrets away from the eye.',
+      hint: '2nd Floor • Near Room 217 • Underneath the wooden table',
+      physLoc: 'Near Room 217, underneath the wooden table',
+      safety: 'Affix to underside of tabletop near legs.',
+      word: 'GHOUL',
+      token: 'fc_qr_r2_s1_g51a',
+      answers: ['GHOUL'],
+      isFinal: 0,
+    },
+    {
+      id: 'r2_s2',
+      route: 'route-2',
+      idx: 2,
+      floor: 'floor-04',
+      loc: 'Industry–Academia Banner (Anusha & Bhavana Chambers)',
+      x: 740,
+      y: 220,
+      rad: 36,
+      rid: 'Four floors above, your next trail begins,\nWhere knowledge meets the world of innovations.\nNear the chambers of Anusha and Bhavana,\nA banner speaks of a technological era.\nIt welcomes minds to a future untold,\nLook around its presence for a secret to unfold.',
+      hint: '4th Floor • Industry–Academia Collaboration banner',
+      physLoc: 'Industry–Academia Collaboration banner near Anusha and Bhavana chambers',
+      safety: 'Affix to lower corner of banner frame.',
+      word: 'COVEN',
+      token: 'fc_qr_r2_s2_c73b',
+      answers: ['COVEN'],
+      isFinal: 0,
+    },
+    {
+      id: 'r2_s3',
+      route: 'route-2',
+      idx: 3,
+      floor: 'floor-06',
+      loc: 'Near CSBS 604 Staircase — Fire Extinguisher Bracket',
+      x: 720,
+      y: 160,
+      rad: 36,
+      rid: 'Six floors above, your next mystery lies,\nNear CSBS 604, where the staircase climbs.\nA silent guardian stands against the wall,\nReady to fight what threatens all.\nThough flames may awaken in the dead of night,\nLook near the keeper who puts them out of sight.',
+      hint: '6th Floor • Near CSBS 604 staircase • Fire extinguisher area',
+      physLoc: 'Near CSBS 604 staircase, stationary bracket beside fire extinguisher',
+      safety: 'Affix to wall panel beside extinguisher. Do not move emergency equipment.',
+      word: 'PHANTOM',
+      token: 'fc_qr_r2_s3_p29c',
+      answers: ['PHANTOM'],
+      isFinal: 0,
+    },
+    {
+      id: 'r2_s4',
+      route: 'route-2',
+      idx: 4,
+      floor: 'floor-03',
+      loc: 'In Front of C301 — Compartments / Boxes',
+      x: 720,
+      y: 240,
+      rad: 36,
+      rid: 'On floor number three, your hunt takes flight,\nSeek the door marked C301 in sight.\nBefore it stands a keeper of many spaces,\nWith countless little doors and hidden places.\nThe spirits have left something behind,\nSearch among the compartments to find.',
+      hint: '3rd Floor • In front of C301 • Among the boxes/compartments',
+      physLoc: 'In front of C301, among the compartments/boxes',
+      safety: 'Affix inside open cubby shelf 3. Do not access personal lockers.',
+      word: 'GRIMOIRE',
+      token: 'fc_qr_r2_s4_g84d',
+      answers: ['GRIMOIRE'],
+      isFinal: 0,
+    },
+    {
+      id: 'r2_s5',
+      route: 'route-2',
+      idx: 5,
+      floor: 'floor-07',
+      loc: 'Main Event Venue — Anchor Ceiling Fan Bay',
+      x: 800,
+      y: 510,
+      rad: 42,
+      rid: finalRiddle,
+      hint: '7th Floor • Main Event Hall • 3-Blade Anchor Ceiling Fan Bay',
+      physLoc: 'Main Event Venue, stationary podium beneath Anchor ceiling fan',
+      safety: 'Affix to stationary podium directly beneath fan. Never touch fan or blades.',
+      word: 'ANCHOR',
+      token: 'fc_qr_final_7th_relic',
+      answers: finalAnswers,
+      isFinal: 1,
+    },
 
-      // ROUTE IV
-      { id: 'r4_s1', route: 'route-4', idx: 1, floor: 'floor-4', loc: 'Manuscript Conservation Lab', x: 440, y: 130, rad: 36, rid: 'On the illuminated parchment easel, align the watermark grid with the golden ratio cipher.', hint: 'Level 04 • Conservation Lab • Easel 01', answers: ['PHI', 'WATERMARK', '1618'], isFinal: 0 },
-      { id: 'r4_s2', route: 'route-4', idx: 2, floor: 'floor-4', loc: 'Rare Bindings Stack — Row 14', x: 150, y: 230, rad: 36, rid: 'Locate the heavy leather-bound ledger labeled "Faculty Minutes 1958". What is the monogram on the brass clasp?', hint: 'Level 04 • Stack 14 • Brass Clasp', answers: ['FMC', 'MONOGRAM', 'CLASP'], isFinal: 0 },
-      { id: 'r4_s3', route: 'route-4', idx: 3, floor: 'floor-4', loc: 'Central Scriptorium — Great Oak Table', x: 280, y: 270, rad: 36, rid: 'Carved into the underside of the central oak table is an eight-digit grid coordinate.', hint: 'Level 04 • Center Reading Table • Underside Plaque', answers: ['884126', 'COORD', 'CENTRAL'], isFinal: 0 },
-      { id: 'r4_s4', route: 'route-4', idx: 4, floor: 'floor-4', loc: 'Printing Press Exhibition', x: 495, y: 330, rad: 36, rid: 'The cast-iron Gutenberg reproduction lever points to a letter case. What metal typeset letter is locked inside?', hint: 'Level 04 • East Annex • Press Bed Frame', answers: ['OMEGA', 'LEVER', 'TYPE'], isFinal: 0 },
-      { id: 'r4_s5', route: 'route-4', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'On the bronze astrolabe pedestal in the final chamber, note the meridian angle.', hint: 'Level 07 • North Archway • Final Astrolabe Pedestal', answers: ['ANGLE360', 'MERIDIAN', 'ZENITH'], isFinal: 1 },
+    // === ROUTE 3: 2 -> 6 -> 3 -> 5 -> 7 ===
+    {
+      id: 'r3_s1',
+      route: 'route-3',
+      idx: 1,
+      floor: 'floor-02',
+      loc: 'Near Room 215 — Archive Boxes',
+      x: 190,
+      y: 310,
+      rad: 36,
+      rid: 'Two floors above where journeys begin,\nA quiet corner holds secrets within.\nNear two-one-five, a row of doors,\nStands guarding secrets behind its shores.\nThey hold no keys to kingdoms unknown,\nYet one hides a secret of its own.\nLook where the silent keepers stand,\nYour next discovery is close at hand.',
+      hint: '2nd Floor • Near Room 215 • Among the boxes',
+      physLoc: 'Near Room 215, stationary archive cabinet #2',
+      safety: 'Organizer calibration required: Affix on stationary cabinet #2.',
+      word: 'SPECTER',
+      token: 'fc_qr_r3_s1_s62a',
+      answers: ['SPECTER'],
+      isFinal: 0,
+    },
+    {
+      id: 'r3_s2',
+      route: 'route-3',
+      idx: 2,
+      floor: 'floor-06',
+      loc: 'Electronics Circuits Lab — Guglielmo Board Corner',
+      x: 170,
+      y: 520,
+      rad: 36,
+      rid: "Six floors above the ground,\nWhere electric thoughts are carefully planned.\nA lab of circuits, connections and flow,\nHolds a secret that few would know.\nFind the board that carries a pioneer's name,\nWhere two walls meet, you'll continue the game.\nDon't follow the wires or search the floor,\nThe corner beside it hides something more.",
+      hint: '6th Floor • Electronics Circuit Lab • Guglielmo Board corner',
+      physLoc: 'Electronics Circuits Lab, corner wall seam beside Guglielmo Board',
+      safety: 'Affix on corner drywall seam. Do not touch lab wiring.',
+      word: 'TALISMAN',
+      token: 'fc_qr_r3_s2_t15b',
+      answers: ['TALISMAN'],
+      isFinal: 0,
+    },
+    {
+      id: 'r3_s3',
+      route: 'route-3',
+      idx: 3,
+      floor: 'floor-03',
+      loc: 'Near Room C302 — Result Analysis Display Board',
+      x: 320,
+      y: 200,
+      rad: 36,
+      rid: 'Three floors above,\nA wall of achievements holds secrets within.\nWhere numbers and graphs tell stories of pride,\nA board of results stands waiting nearby.\nNear C302, take a careful view,\nAmong the records, a secret waits for you.\nLook where achievements are proudly displayed,\nYour next hidden clue will soon be revealed!',
+      hint: '3rd Floor • Near Room C302 • Result Analysis Display Board',
+      physLoc: 'Near Room C302, at Result Analysis Display Board',
+      safety: 'Affix to wooden frame boundary of result showcase.',
+      word: 'WITCH',
+      token: 'fc_qr_r3_s3_w93c',
+      answers: ['WITCH'],
+      isFinal: 0,
+    },
+    {
+      id: 'r3_s4',
+      route: 'route-3',
+      idx: 4,
+      floor: 'floor-05',
+      loc: 'Near CR501 — Red Fire Cabinet Wall',
+      x: 260,
+      y: 220,
+      rad: 36,
+      rid: 'Ascend five levels to the top-tier space,\nFind CR501 to locate the place.\nA bright red cabinet stands upon the wall,\nKeeping watch along the silent hall.\nLift up your eyes above the crimson steel,\nHigh on the ceiling tile, your reward reveal.',
+      hint: '5th Floor • Near CR501 • Wall beside fire cabinet',
+      physLoc: 'Near CR501, eye-level wall panel beside fire cabinet',
+      safety: 'STRICT SAFETY: Stationed on eye-level wall panel. Never climb or reach ceiling.',
+      word: 'BANSHEE',
+      token: 'fc_qr_r3_s4_b46d',
+      answers: ['BANSHEE'],
+      isFinal: 0,
+    },
+    {
+      id: 'r3_s5',
+      route: 'route-3',
+      idx: 5,
+      floor: 'floor-07',
+      loc: 'Main Event Venue — Anchor Ceiling Fan Bay',
+      x: 800,
+      y: 510,
+      rad: 42,
+      rid: finalRiddle,
+      hint: '7th Floor • Main Event Hall • 3-Blade Anchor Ceiling Fan Bay',
+      physLoc: 'Main Event Venue, stationary podium beneath Anchor ceiling fan',
+      safety: 'Affix to stationary podium directly beneath fan. Never touch fan or blades.',
+      word: 'ANCHOR',
+      token: 'fc_qr_final_7th_relic',
+      answers: finalAnswers,
+      isFinal: 1,
+    },
 
-      // ROUTE V
-      { id: 'r5_s1', route: 'route-5', idx: 1, floor: 'floor-3', loc: 'Dean of Engineering Suite — Fireplace Mantle', x: 160, y: 130, rad: 36, rid: 'Behind the brass clock on the ceremonial stone mantle, find the founder’s initials stamped into the brickwork.', hint: 'Level 03 • Room 301 • Mantle Clock', answers: ['BSN1962', 'MANTLE', 'CLOCK'], isFinal: 0 },
-      { id: 'r5_s2', route: 'route-5', idx: 2, floor: 'floor-3', loc: 'Civil Engineering Materials Lab', x: 480, y: 140, rad: 36, rid: 'The hydraulic press pressure dial has a red calibration tick. Enter the maximum metric tonnage.', hint: 'Level 03 • Materials Lab • Pressure Gauge', answers: ['500T', 'HYDRAULIC', 'PRESSURE'], isFinal: 0 },
-      { id: 'r5_s3', route: 'route-5', idx: 3, floor: 'floor-3', loc: 'Founders Memorial Gallery', x: 280, y: 260, rad: 36, rid: 'Read the fifth line inscribed on the foundation bronze tablet unveiled in 1962.', hint: 'Level 03 • Central Gallery • Bronze Plaque', answers: ['DEDICATION', 'FOUNDATION', '1962'], isFinal: 0 },
-      { id: 'r5_s4', route: 'route-5', idx: 4, floor: 'floor-3', loc: 'Surveying Instrument Armory', x: 180, y: 340, rad: 36, rid: 'Inside the transit theodolite case #3, find the serial number on the optical prism barrel.', hint: 'Level 03 • Armory Locker 03 • Theodolite Case', answers: ['PRISM03', 'TRANSIT', 'OPTIC'], isFinal: 0 },
-      { id: 'r5_s5', route: 'route-5', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'The observatory ledger rests upon the central lectern. Read the final accession date.', hint: 'Level 07 • North Archway • Final Central Lectern', answers: ['1974', 'ARCHIVE', 'RECORD'], isFinal: 1 },
+    // === ROUTE 4: 4 -> 6 -> 2 -> 5 -> 7 ===
+    {
+      id: 'r4_s1',
+      route: 'route-4',
+      idx: 1,
+      floor: 'floor-04',
+      loc: 'In Front of CSE Vision Board — Elevator Floor Signage',
+      x: 512,
+      y: 420,
+      rad: 36,
+      rid: 'Make your way up to the fourth level space,\nWhere CSE\'s Vision and Mission take their place.\nStand before the steel doors that lift and convey,\nThough this elevator skips four along its way.\nLook just above the metal frame where numbers rest,\nBehind the floor sign lies your hidden quest.',
+      hint: '4th Floor • In front of CSE Vision & Mission board • Elevator floor signage',
+      physLoc: 'In front of CSE Vision & Mission board, elevator floor signage',
+      safety: 'Affix onto metal border of elevator signage above doors.',
+      word: 'CAULDRON',
+      token: 'fc_qr_r4_s1_c38a',
+      answers: ['CAULDRON'],
+      isFinal: 0,
+    },
+    {
+      id: 'r4_s2',
+      route: 'route-4',
+      idx: 2,
+      floor: 'floor-06',
+      loc: 'Beside AV 602 — AI & DS Notice Board',
+      x: 760,
+      y: 220,
+      rad: 36,
+      rid: 'Ascend to floor six to continue your quest,\nWhere data and intelligence are put to the test.\nLocate the dark pinboard beneath the department sign,\nRight beside classroom six-zero-two in line.\nDon\'t read the posters pinned out front in plain view,\nBehind the dark frame, your passage calls to you.',
+      hint: '6th Floor • Beside AV 602 Class Room • Behind Department of AI & DS notice board',
+      physLoc: 'Beside AV 602 Class Room, behind black Department of AI & DS notice board',
+      safety: 'Affix on side trim of dark pinboard.',
+      word: 'NIGHTFALL',
+      token: 'fc_qr_r4_s2_n72b',
+      answers: ['NIGHTFALL'],
+      isFinal: 0,
+    },
+    {
+      id: 'r4_s3',
+      route: 'route-4',
+      idx: 3,
+      floor: 'floor-02',
+      loc: 'Near C208 — Recessed Storage Corner',
+      x: 780,
+      y: 240,
+      rad: 36,
+      rid: 'Head down to floor two where the quiet hallway bends,\nBeside room C208, the open path ends.\nLook into the recessed corner tucked out of sight,\nWhere flat brown boxes rest away from the light.',
+      hint: '2nd Floor • Near C208 • Inner wall corner behind stacked storage boxes',
+      physLoc: 'Near C208, tucked in inner wall corner behind stacked storage boxes',
+      safety: 'Affix on drywall baseboard in recessed nook. Do not obstruct passage.',
+      word: 'COBWEB',
+      token: 'fc_qr_r4_s3_c19c',
+      answers: ['COBWEB'],
+      isFinal: 0,
+    },
+    {
+      id: 'r4_s4',
+      route: 'route-4',
+      idx: 4,
+      floor: 'floor-05',
+      loc: 'Near Lab 503 — Blue Suggestion Container',
+      x: 750,
+      y: 480,
+      rad: 36,
+      rid: 'Head to the fifth floor and follow the hall,\nFind Lab 503 and look at the wall.\nAbove the long wooden shelf standing nearby,\nA bright blue container catches your eye.\nWhere students drop feedback through a slot at the top,\nSearch inside the chamber where reflections stop.',
+      hint: '5th Floor • Near Lab 503 • Blue suggestion container above wooden cabinet',
+      physLoc: 'Near Lab 503, inside blue suggestion container above wooden cabinet',
+      safety: 'Affix on underside of suggestion box lid or side.',
+      word: 'LANTERN',
+      token: 'fc_qr_r4_s4_l85d',
+      answers: ['LANTERN'],
+      isFinal: 0,
+    },
+    {
+      id: 'r4_s5',
+      route: 'route-4',
+      idx: 5,
+      floor: 'floor-07',
+      loc: 'Main Event Venue — Anchor Ceiling Fan Bay',
+      x: 800,
+      y: 510,
+      rad: 42,
+      rid: finalRiddle,
+      hint: '7th Floor • Main Event Hall • 3-Blade Anchor Ceiling Fan Bay',
+      physLoc: 'Main Event Venue, stationary podium beneath Anchor ceiling fan',
+      safety: 'Affix to stationary podium directly beneath fan. Never touch fan or blades.',
+      word: 'ANCHOR',
+      token: 'fc_qr_final_7th_relic',
+      answers: finalAnswers,
+      isFinal: 1,
+    },
 
-      // ROUTE VI
-      { id: 'r6_s1', route: 'route-6', idx: 1, floor: 'floor-2', loc: 'Applied Physics Wave Tank', x: 460, y: 135, rad: 36, rid: 'Where acoustic transducers generate harmonic waves, count the resonant nodal lines marked on the acrylic wall.', hint: 'Level 02 • Room 204 • Acrylic Tank', answers: ['HARMONIC', 'NODAL', 'ACOUSTIC'], isFinal: 0 },
-      { id: 'r6_s2', route: 'route-6', idx: 2, floor: 'floor-2', loc: 'Laser Interferometer Darkroom', x: 150, y: 160, rad: 36, rid: 'Inspect the helium-neon optical beam splitter base. Enter the wavelength engraved in nanometers.', hint: 'Level 02 • Optics Darkroom • Beam Splitter 01', answers: ['633NM', '633', 'HELIOS'], isFinal: 0 },
-      { id: 'r6_s3', route: 'route-6', idx: 3, floor: 'floor-2', loc: 'Cryogenic Storage Bay', x: 340, y: 300, rad: 36, rid: 'On the vacuum flask relief valve, check the pressure safety seal stamp.', hint: 'Level 02 • Cryo Bay • Flask 02 Valve', answers: ['CRYO', 'VACUUM', 'NITROGEN'], isFinal: 0 },
-      { id: 'r6_s4', route: 'route-6', idx: 4, floor: 'floor-2', loc: 'West Faculty Lounge — Grandfather Clock', x: 135, y: 320, rad: 36, rid: 'Open the pendulum cabinet door. Note the engraved weight maker name.', hint: 'Level 02 • Lounge West • Clock Cabinet', answers: ['CHRONOS', 'PENDULUM', 'TIME'], isFinal: 0 },
-      { id: 'r6_s5', route: 'route-6', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'Beneath the glass dome, inspect the primary telescope brass mounting plate.', hint: 'Level 07 • North Archway • Final Telescope Mounting', answers: ['REFRACTOR', 'HORIZON', 'OPTIC'], isFinal: 1 },
+    // === ROUTE 5: 6 -> 2 -> 5 -> 4 -> 7 ===
+    {
+      id: 'r5_s1',
+      route: 'route-5',
+      idx: 1,
+      floor: 'floor-06',
+      loc: 'Near Lift — AI & DS Project Lab Overhead Sign',
+      x: 530,
+      y: 430,
+      rad: 36,
+      rid: "Ascend to floor six where the elevators wait,\nRight beside the lift doors, locate the lab gate.\n'Department of AI & Data Science Project Lab' reads high,\nReach right behind the main sign hanging over the door.",
+      hint: '6th Floor • Near the lift • Overhead AI & DS Project Lab sign board',
+      physLoc: 'Near the lift, behind overhead Department of AI & DS Project Lab sign board',
+      safety: 'Affix to back of sign mounting bracket reachable from door threshold.',
+      word: 'VAMPIRE',
+      token: 'fc_qr_r5_s1_v44a',
+      answers: ['VAMPIRE'],
+      isFinal: 0,
+    },
+    {
+      id: 'r5_s2',
+      route: 'route-5',
+      idx: 2,
+      floor: 'floor-02',
+      loc: 'Near Sitting Area — Wooden PRINTEX Kiosk Cabinet',
+      x: 610,
+      y: 320,
+      rad: 36,
+      rid: "Ascend or descend to floor two's relaxing space,\nWhere student benches line the floor, step up to the place.\nSpot the tall wooden station built by ECE,\nWhere quick digital prints are made easily.\nDon't scan the print code displayed upon the front,\nSearch behind the cabinet structure for your hunt.",
+      hint: '2nd Floor • Near sitting area • Underneath wooden PRINTEX kiosk cabinet',
+      physLoc: 'Near sitting area, tucked behind/underneath wooden PRINTEX kiosk cabinet',
+      safety: 'Affix to rear cabinet wood casing. Keep clear of kiosk power cables.',
+      word: 'MIDNIGHT',
+      token: 'fc_qr_r5_s2_m81b',
+      answers: ['MIDNIGHT'],
+      isFinal: 0,
+    },
+    {
+      id: 'r5_s3',
+      route: 'route-5',
+      idx: 3,
+      floor: 'floor-05',
+      loc: 'Near UG CR 503 & 504 — Side Staircase Exit Door',
+      x: 140,
+      y: 380,
+      rad: 36,
+      rid: "Climb up to the fifth level where classrooms line the way,\nNear CR503 and 504 where students spend their day.\nLocate the side staircase door that swings to open wide,\nMarked with a green 'FIFTH FLOOR' sign mounted just inside.\nHidden by the heavy door, you'll advance the game.",
+      hint: '5th Floor • Near UG CR 503 & 504 side staircase • Back panel of heavy exit door',
+      physLoc: 'Near UG CR 503 & 504 side staircase, back panel of heavy exit door near FIFTH FLOOR sign',
+      safety: 'CRITICAL SAFETY: Affix flat vinyl sticker to door push face. Never prop open, wedge or lock door.',
+      word: 'CRYPT',
+      token: 'fc_qr_r5_s3_c27c',
+      answers: ['CRYPT'],
+      isFinal: 0,
+    },
+    {
+      id: 'r5_s4',
+      route: 'route-5',
+      idx: 4,
+      floor: 'floor-04',
+      loc: 'Near UG Lab 1 & BS Narayan Lab — Distinguished Alumni Poster',
+      x: 360,
+      y: 520,
+      rad: 36,
+      rid: 'Ascend four levels where computing labs reside,\nNear UG Lab 1 and BS Narayan side by side.\nFind where the CSE department honors its own,\nA Distinguished Alumni poster proudly shown. (IN PURPLE)\nDo not look at the text or the portrait\'s frame,\nBehind the banner lies the secret of the game.',
+      hint: '4th Floor • Near UG Lab 1 & BS Narayan Lab • Behind purple Distinguished Alumni poster',
+      physLoc: 'Near UG Lab 1 and BS Narayan Computational Lab, behind purple Distinguished Alumni poster board',
+      safety: 'Affix removable clip-on tab behind poster lower-right corner.',
+      word: 'OMEN',
+      token: 'fc_qr_r5_s4_o63d',
+      answers: ['OMEN'],
+      isFinal: 0,
+    },
+    {
+      id: 'r5_s5',
+      route: 'route-5',
+      idx: 5,
+      floor: 'floor-07',
+      loc: 'Main Event Venue — Anchor Ceiling Fan Bay',
+      x: 800,
+      y: 510,
+      rad: 42,
+      rid: finalRiddle,
+      hint: '7th Floor • Main Event Hall • 3-Blade Anchor Ceiling Fan Bay',
+      physLoc: 'Main Event Venue, stationary podium beneath Anchor ceiling fan',
+      safety: 'Affix to stationary podium directly beneath fan. Never touch fan or blades.',
+      word: 'ANCHOR',
+      token: 'fc_qr_final_7th_relic',
+      answers: finalAnswers,
+      isFinal: 1,
+    },
+  ];
 
-      // ROUTE VII
-      { id: 'r7_s1', route: 'route-7', idx: 1, floor: 'floor-1', loc: 'Main Foyer — Granite Foundation Stone', x: 280, y: 350, rad: 36, rid: 'At the grand glass entrance beneath the canopy, locate the cornerstone laid in memory of the founders.', hint: 'Level 01 • Main Entrance Foyer • Cornerstone', answers: ['CORNERSTONE', 'PLATINUM', 'FOUNDER'], isFinal: 0 },
-      { id: 'r7_s2', route: 'route-7', idx: 2, floor: 'floor-1', loc: 'Auditorium Projection Booth', x: 480, y: 220, rad: 36, rid: 'Behind the twin 35mm carbon-arc projectors, check the lens focal length stencil on the steel casing.', hint: 'Level 01 • Auditorium Balcony • Booth Lens Stencil', answers: ['75MM', 'CARBON', 'CINEMA'], isFinal: 0 },
-      { id: 'r7_s3', route: 'route-7', idx: 3, floor: 'floor-1', loc: 'Historical Trophy Cabinet', x: 150, y: 250, rad: 36, rid: 'Find the 1968 Inter-Collegiate Debating Chalice. Read the inscription on the silver base.', hint: 'Level 01 • Trophy Corridor • Glass Cabinet 02', answers: ['CHALICE', '1968', 'ORATORY'], isFinal: 0 },
-      { id: 'r7_s4', route: 'route-7', idx: 4, floor: 'floor-1', loc: 'Dean’s Executive Boardroom', x: 160, y: 140, rad: 36, rid: 'Behind the presidential portrait, a discreet safe bears a 4-dial letter combination.', hint: 'Level 01 • Boardroom North • Behind Portrait', answers: ['DEAN', 'SAFE', 'COUNCIL'], isFinal: 0 },
-      { id: 'r7_s5', route: 'route-7', idx: 5, floor: 'floor-7', loc: 'The Celestial Archives & Observatory Vault', x: 280, y: 125, rad: 36, rid: 'Upon the vault portal seal, translate the four celestial runes surrounding the sun emblem.', hint: 'Level 07 • North Archway • Final Sun Emblem Seal', answers: ['SOLARIS', 'CROWN', 'RADIANT'], isFinal: 1 },
-    ];
+  const insertStep = db.prepare(`
+    INSERT OR REPLACE INTO round4_steps (
+      id, route_id, clue_index, floor_id, location_name, target_x, target_y, trigger_radius,
+      riddle_text, field_location_hint, accepted_answers_json, validation_word, qr_token,
+      physical_location, safety_notes, is_verified, is_case_sensitive, is_common_final, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)
+  `);
 
-    const insertStep = db.prepare(`
-      INSERT OR REPLACE INTO round4_steps (
-        id, route_id, clue_index, floor_id, location_name, target_x, target_y, trigger_radius,
-        riddle_text, field_location_hint, accepted_answers_json, is_case_sensitive, is_common_final, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
-    `);
-
-    for (const s of rawSteps) {
-      insertStep.run(
-        s.id,
-        s.route,
-        s.idx,
-        s.floor,
-        s.loc,
-        s.x,
-        s.y,
-        s.rad,
-        s.rid,
-        s.hint,
-        JSON.stringify(s.answers),
-        s.isFinal,
-        now,
-        now
-      );
-    }
+  for (const s of rawSteps) {
+    insertStep.run(
+      s.id,
+      s.route,
+      s.idx,
+      s.floor,
+      s.loc,
+      s.x,
+      s.y,
+      s.rad,
+      s.rid,
+      s.hint,
+      JSON.stringify(s.answers),
+      s.word,
+      s.token,
+      s.physLoc,
+      s.safety,
+      s.isFinal,
+      now,
+      now
+    );
   }
 
-  // 4. Default Seed Qualified Teams & Progress for initial 7 teams if none exist
+  // 4. Default Seed Qualified Teams & Progress for initial 5 tournament teams
   const qualifiedCount = db.prepare('SELECT COUNT(*) as count FROM round4_qualified_teams').get() as { count: number };
   if (qualifiedCount.count === 0) {
-    const teamsToQualify = db.prepare('SELECT id FROM teams ORDER BY created_at ASC LIMIT 7').all() as { id: string }[];
-    if (teamsToQualify.length >= 7) {
+    const teamsToQualify = db.prepare('SELECT id FROM teams ORDER BY score DESC, created_at ASC LIMIT 5').all() as { id: string }[];
+    if (teamsToQualify.length >= 5) {
+      // Cryptographically secure Fisher-Yates shuffle of the 5 routes
+      const availableRoutes = ['route-1', 'route-2', 'route-3', 'route-4', 'route-5'];
+      for (let i = availableRoutes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availableRoutes[i], availableRoutes[j]] = [availableRoutes[j], availableRoutes[i]];
+      }
+
       const insertQual = db.prepare(`
         INSERT INTO round4_qualified_teams (id, team_id, route_id, qualified_at, assigned_at)
         VALUES (?, ?, ?, ?, ?)
@@ -270,17 +761,18 @@ export function seedRound4Data(): void {
         ) VALUES (?, ?, ?, 0, 0, '[]', 0, 0, ?, ?)
       `);
 
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 5; i++) {
         const teamId = teamsToQualify[i].id;
-        const routeId = `route-${i + 1}`;
+        const routeId = availableRoutes[i];
         const qualId = `qual-${teamId}`;
         const progId = `prog-${teamId}`;
         insertQual.run(qualId, teamId, routeId, now, now);
         insertProg.run(progId, teamId, routeId, now, now);
       }
-      console.log('[DB] Qualified 7 initial tournament teams and assigned Routes I to VII.');
+      console.log('[DB] Qualified top 5 tournament teams with unique random routes I to V.');
     }
   }
 }
+
 
 

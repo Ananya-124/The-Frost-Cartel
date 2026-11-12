@@ -35,9 +35,25 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
   onToggleMute,
   onProceedToFloors,
 }) => {
-  const [viewState, setViewState] = useState<FloorViewState>('FLOOR_SELECTION_READY');
+  const [viewState, setViewState] = useState<FloorViewState>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('celebration') === '1' || p.get('winner') === '1' || p.get('floorView') === '1') {
+        return 'FLOOR_READY';
+      }
+    }
+    return 'FLOOR_SELECTION_READY';
+  });
   const [hoveredFloorId, setHoveredFloorId] = useState<string | null>(null);
-  const [selectedFloor, setSelectedFloor] = useState<FloorDefinition | null>(null);
+  const [selectedFloor, setSelectedFloor] = useState<FloorDefinition | null>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('celebration') === '1' || p.get('winner') === '1' || p.get('floorView') === '1') {
+        return COLLEGE_FLOORS[0];
+      }
+    }
+    return null;
+  });
   const [cameraPhase, setCameraPhase] = useState<CameraAnimationPhase>('IDLE');
   const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number } | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);

@@ -184,5 +184,9 @@ describe('Stage 3 Master Regression & State Management', () => {
     expect(mockComplete).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/ARCH-LICH GATE SHATTERED • ESCAPED!/i)).toBeInTheDocument();
     expect(screen.getByText(/\+250 CREDITS SECURED/i)).toBeInTheDocument();
+
+    // Verify Jump Scare is completely absent
+    expect(screen.queryByLabelText(/Ancient Grave Jumpscare Event/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/THE ARCH-LICH AWAKENS/i)).not.toBeInTheDocument();
   });
 });

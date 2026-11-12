@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { round1Service } from '../../../services/round1Service';
 import { soundController } from '../../../utils/soundController';
-import { HorrorJumpscareModal } from './HorrorJumpscareModal';
 
 interface FinalGateModalProps {
   isOpen: boolean;
@@ -25,7 +24,6 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
   const [incantation, setIncantation] = useState('');
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isJumpscareActive, setIsJumpscareActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speechSupported] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -145,7 +143,6 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
     if (success) {
       soundController.playSecretFound();
       soundController.playVictory();
-      setIsJumpscareActive(true);
       setSuccessNotice('Arch-Lich Gate Shattered • Escaped!');
       onGateUnlocked();
     } else {
@@ -375,12 +372,6 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
           Frost Cartel • Round 01 Final Trial • Stage 03
         </div>
       </div>
-
-      {/* Horror Jumpscare Cinematic on Unlocking Arch-Lich Gate */}
-      <HorrorJumpscareModal
-        isOpen={isJumpscareActive}
-        onComplete={() => setIsJumpscareActive(false)}
-      />
     </div>
   );
 };
