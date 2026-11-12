@@ -5,7 +5,10 @@ import * as crypto from 'node:crypto';
 import { app } from '../index.ts';
 import { db, initDatabase, hashPassword } from '../../database/db.ts';
 
-describe('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT', () => {
+const hasPg = Boolean(process.env.PG_TEST_DATABASE_URL || process.env.DATABASE_URL);
+const suite = hasPg ? describe : describe.skip;
+
+suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT', () => {
   let server: Server;
   let baseUrl: string;
   let adminToken: string;

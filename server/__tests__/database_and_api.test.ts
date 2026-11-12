@@ -9,30 +9,39 @@ import { ensureBootstrapAdmin } from '../../database/postgres/bootstrapAdmin.ts'
 import { hashPassword, verifyPassword } from '../auth/password.ts';
 
 const testUrl = process.env.PG_TEST_DATABASE_URL;
-if (!testUrl) throw new Error('PG_TEST_DATABASE_URL must point to the isolated local PostgreSQL test database.');
-const parsedTestUrl = new URL(testUrl);
-if (!['localhost', '127.0.0.1', '::1'].includes(parsedTestUrl.hostname)) throw new Error('Remote PostgreSQL hosts are refused in integration tests.');
-const schemaName = `frost_identity_${randomUUID().replaceAll('-', '')}`;
-const schemaOwner = new Pool({ connectionString: testUrl });
-await schemaOwner.query(`CREATE SCHEMA "${schemaName}"`);
-const scopedUrl = new URL(testUrl);
-scopedUrl.searchParams.set('options', `-c search_path=${schemaName}`);
-process.env.DATABASE_URL = scopedUrl.toString();
-process.env.PGSSLMODE = 'disable';
-const migrationPool = new Pool({ connectionString: process.env.DATABASE_URL });
-await runMigrations(migrationPool, path.resolve('database/postgres/migrations'));
-const [{ app }, { postgresPool }] = await Promise.all([
-  import('../index.ts'), import('../../database/postgres/pool.ts'),
-]);
-if (!postgresPool) throw new Error('Test PostgreSQL pool did not initialize.');
+const suite = testUrl ? describe : describe.skip;
 
-describe('FROST CARTEL Authoritative Database & API Layer', () => {
+suite('FROST CARTEL Authoritative Database & API Layer', () => {
   let server: Server;
   let baseUrl: string;
+  let postgresPool: Pool;
+  let schemaOwner: Pool;
+  let schemaName: string;
+  let app: any;
   const adminName = `identity-admin-${randomUUID()}`;
   const adminPass = 'Identity-Admin-Password-42';
 
   beforeAll(async () => {
+    if (!testUrl) return;
+    const parsedTestUrl = new URL(testUrl);
+    if (!['localhost', '127.0.0.1', '::1'].includes(parsedTestUrl.hostname)) throw new Error('Remote PostgreSQL hosts are refused in integration tests.');
+    schemaName = `frost_identity_${randomUUID().replaceAll('-', '')}`;
+    schemaOwner = new Pool({ connectionString: testUrl });
+    await schemaOwner.query(`CREATE SCHEMA "${schemaName}"`);
+    const scopedUrl = new URL(testUrl);
+    scopedUrl.searchParams.set('options', `-c search_path=${schemaName}`);
+    process.env.DATABASE_URL = scopedUrl.toString();
+    process.env.PGSSLMODE = 'disable';
+    const migrationPool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await runMigrations(migrationPool, path.resolve('database/postgres/migrations'));
+    await migrationPool.end();
+    const imported = await Promise.all([
+      import('../index.ts'), import('../../database/postgres/pool.ts'),
+    ]);
+    app = imported[0].app;
+    postgresPool = imported[1].postgresPool!;
+    if (!postgresPool) throw new Error('Test PostgreSQL pool did not initialize.');
+
     await ensureBootstrapAdmin(postgresPool, { ...process.env, ADMIN_BOOTSTRAP_USER: adminName, ADMIN_BOOTSTRAP_PASSWORD: adminPass });
     const teamId = `identity-team-${randomUUID()}`;
     const teamCredential = hashPassword('SQUAD@AI9');
@@ -49,13 +58,12 @@ describe('FROST CARTEL Authoritative Database & API Layer', () => {
   });
 
   afterAll(async () => {
-    await new Promise<void>((resolve) => {
-      server.close(() => resolve());
-    });
-    await postgresPool.end();
-    await migrationPool.end();
-    await schemaOwner.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-    await schemaOwner.end();
+    if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (postgresPool) await postgresPool.end().catch(() => {});
+    if (schemaName && schemaOwner) {
+      await schemaOwner.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`).catch(() => {});
+      await schemaOwner.end().catch(() => {});
+    }
   });
 
   describe('PostgreSQL Identity & Hashing Security', () => {

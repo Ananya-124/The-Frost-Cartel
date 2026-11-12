@@ -3,6 +3,7 @@ import * as crypto from 'node:crypto';
 import { requireAdminAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
 import { eventBus } from '../services/eventBus.ts';
 import { postgresPool } from '../../database/postgres/pool.ts';
+import { db } from '../../database/db.ts';
 import { hashPassword, verifyPassword } from '../auth/password.ts';
 import { sessionCookieSettings } from '../config/security.ts';
 import { setRound1TimerActive } from '../services/round1Gameplay.ts';
@@ -18,7 +19,49 @@ adminRouter.post('/login', async (req, res) => {
     return;
   }
 
-  if (!postgresPool) { res.status(503).json({ success: false, message: 'Authentication service is unavailable.' }); return; }
+  if (!postgresPool) {
+    // Seamless local SQLite fallback
+    try {
+      const admin = db.prepare(`
+        SELECT id, username, password_hash, salt, role, must_change_password AS "mustChangePassword"
+        FROM admins WHERE LOWER(username)=LOWER(?)
+      `).get(username.trim()) as { id: string; username: string; password_hash: string; salt: string; role: string; mustChangePassword: number } | undefined;
+
+      if (!admin || !verifyPassword(password, admin.password_hash, admin.salt)) {
+        res.status(401).json({ success: false, message: 'Invalid administrative credentials.' });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const token = 'adm_' + crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+
+      db.prepare(`
+        INSERT INTO admin_sessions(id, admin_id, token, expires_at, created_at)
+        VALUES(?, ?, ?, ?, ?)
+      `).run('asess-' + crypto.randomUUID(), admin.id, token, expiresAt, now);
+
+      const cookie = sessionCookieSettings().admin;
+      res.cookie(cookie.name, token, { ...cookie.options, maxAge: 12 * 60 * 60 * 1000 });
+
+      res.json({
+        success: true,
+        token,
+        admin: {
+          id: admin.id,
+          username: admin.username,
+          role: admin.role,
+          mustChangePassword: Boolean(admin.mustChangePassword),
+        },
+      });
+      return;
+    } catch (error) {
+      console.error('[Admin login] SQLite operation failed.', error);
+      res.status(503).json({ success: false, message: 'Authentication service is temporarily unavailable.' });
+      return;
+    }
+  }
+
   const found = await postgresPool.query<{ id: string; username: string; password_hash: string; salt: string; role: string; mustChangePassword: boolean }>(`
     SELECT id, username, password_hash, salt, role, must_change_password AS "mustChangePassword"
     FROM admins WHERE LOWER(username)=LOWER($1)

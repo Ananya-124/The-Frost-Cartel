@@ -196,7 +196,10 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
       expect(screen.getByText('THE GATES ARE UNSEALED')).toBeInTheDocument();
     });
 
-    const enterRoundBtn = screen.getByRole('button', { name: /ENTER THE GRAVEYARD/i });
+    const enterRoundBtn = await screen.findByRole('button', { name: /ENTER THE GRAVEYARD/i });
+    await waitFor(() => {
+      expect(enterRoundBtn).not.toBeDisabled();
+    });
     fireEvent.click(enterRoundBtn);
 
     // Modal closes and Round 1 Master Dashboard is rendered

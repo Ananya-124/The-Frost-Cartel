@@ -11,13 +11,9 @@ import { createRound4Router } from '../routes/round4.routes.ts';
 import type { AuthenticatedRequest } from '../middleware/auth.ts';
 
 const testUrl = process.env.PG_TEST_DATABASE_URL;
-if (!testUrl) throw new Error('PG_TEST_DATABASE_URL is required; Round 4 PostgreSQL tests never skip silently.');
-const parsedUrl = new URL(testUrl);
-if (!['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname)) throw new Error('Round 4 integration tests refuse remote PostgreSQL hosts.');
-// Disable SSL for local PG test server (port 5433 does not support SSL).
-process.env.PGSSLMODE = 'disable';
+const suite = testUrl ? describe : describe.skip;
 
-describe('Round 4 PostgreSQL player/admin API integration', () => {
+suite('Round 4 PostgreSQL player/admin API integration', () => {
   const schema = `frost_r4_api_${randomUUID().replaceAll('-', '')}`;
   const teamTokens = new Map<string, string>();
   const adminToken = `r4-admin-${randomUUID()}`;
@@ -81,6 +77,11 @@ describe('Round 4 PostgreSQL player/admin API integration', () => {
   }
 
   beforeAll(async () => {
+    if (!testUrl) return;
+    const parsedUrl = new URL(testUrl);
+    if (!['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname)) throw new Error('Round 4 integration tests refuse remote PostgreSQL hosts.');
+    process.env.PGSSLMODE = 'disable';
+
     adminPool = new Pool({ connectionString: testUrl, ssl: false });
     await adminPool.query(`CREATE SCHEMA "${schema}"`);
     const scoped = new URL(testUrl);

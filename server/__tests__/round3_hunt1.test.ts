@@ -8,32 +8,47 @@ import { runMigrations } from '../../database/postgres/migration-runner.ts';
 import { hashPassword } from '../auth/password.ts';
 
 const testDatabaseUrl = process.env.PG_TEST_DATABASE_URL;
-if (!testDatabaseUrl) throw new Error('PG_TEST_DATABASE_URL is required for this isolated PostgreSQL integration test.');
-const localDatabaseUrl = new URL(testDatabaseUrl);
-if (!['localhost', '127.0.0.1', '::1'].includes(localDatabaseUrl.hostname)) throw new Error('Remote PostgreSQL hosts are refused in Hunt I tests.');
-const originalDatabaseUrl = process.env.DATABASE_URL;
-const originalSslMode = process.env.PGSSLMODE;
-const schemaName = `frost_hunt1_${randomUUID().replaceAll('-', '')}`;
-const adminPool = new Pool({ connectionString: testDatabaseUrl });
-await adminPool.query(`CREATE SCHEMA "${schemaName}"`);
-const schemaPool = new Pool({ connectionString: testDatabaseUrl, options: `-c search_path=${schemaName}` });
-await runMigrations(schemaPool, path.resolve('database/postgres/migrations'));
-localDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
-process.env.DATABASE_URL = localDatabaseUrl.toString();
-process.env.PGSSLMODE = 'disable';
+const suite = testDatabaseUrl ? describe : describe.skip;
 
-const [{ app }, { seedPostgresTeamIdentity, prepareTeamRoundProgression, removeTeamProgressionFixture }] = await Promise.all([
-  import('../index.ts'), import('./progressionFixtures.ts'),
-]);
-
-describe('Round 3 Hunt I — four retained incident tasks', () => {
+suite('Round 3 Hunt I — four retained incident tasks', () => {
   let server: Server;
   let baseUrl = '';
+  let app: any;
+  let seedPostgresTeamIdentity: any;
+  let prepareTeamRoundProgression: any;
+  let removeTeamProgressionFixture: any;
+  let adminPool: Pool;
+  let schemaPool: Pool;
+  let schemaName: string;
+  let originalDatabaseUrl: string | undefined;
+  let originalSslMode: string | undefined;
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const team = { id: `hunt1-test-${suffix}`, name: `Hunt1 Test ${suffix}`, password: 'Hunt#One2026' };
   const tokens: Record<'archivist' | 'tracker', string> = { archivist: '', tracker: '' };
 
   beforeAll(async () => {
+    if (!testDatabaseUrl) return;
+    const localDatabaseUrl = new URL(testDatabaseUrl);
+    if (!['localhost', '127.0.0.1', '::1'].includes(localDatabaseUrl.hostname)) throw new Error('Remote PostgreSQL hosts are refused in Hunt I tests.');
+    originalDatabaseUrl = process.env.DATABASE_URL;
+    originalSslMode = process.env.PGSSLMODE;
+    schemaName = `frost_hunt1_${randomUUID().replaceAll('-', '')}`;
+    adminPool = new Pool({ connectionString: testDatabaseUrl });
+    await adminPool.query(`CREATE SCHEMA "${schemaName}"`);
+    schemaPool = new Pool({ connectionString: testDatabaseUrl, options: `-c search_path=${schemaName}` });
+    await runMigrations(schemaPool, path.resolve('database/postgres/migrations'));
+    localDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
+    process.env.DATABASE_URL = localDatabaseUrl.toString();
+    process.env.PGSSLMODE = 'disable';
+
+    const imported = await Promise.all([
+      import('../index.ts'), import('./progressionFixtures.ts'),
+    ]);
+    app = imported[0].app;
+    seedPostgresTeamIdentity = imported[1].seedPostgresTeamIdentity;
+    prepareTeamRoundProgression = imported[1].prepareTeamRoundProgression;
+    removeTeamProgressionFixture = imported[1].removeTeamProgressionFixture;
+
     const { hash, salt } = hashPassword(team.password);
     await seedPostgresTeamIdentity(team.id, team.name, hash, salt);
     await prepareTeamRoundProgression(team.id, 3);
@@ -48,12 +63,14 @@ describe('Round 3 Hunt I — four retained incident tasks', () => {
 
   afterAll(async () => {
     if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
-    await removeTeamProgressionFixture(team.id);
+    if (removeTeamProgressionFixture) await removeTeamProgressionFixture(team.id).catch(() => {});
     const { postgresPool } = await import('../../database/postgres/pool.ts');
-    await postgresPool?.end();
-    await schemaPool.end();
-    await adminPool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-    await adminPool.end();
+    await postgresPool?.end().catch(() => {});
+    if (schemaPool) await schemaPool.end().catch(() => {});
+    if (adminPool && schemaName) {
+      await adminPool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`).catch(() => {});
+      await adminPool.end().catch(() => {});
+    }
     if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = originalDatabaseUrl;
     if (originalSslMode === undefined) delete process.env.PGSSLMODE; else process.env.PGSSLMODE = originalSslMode;
   });

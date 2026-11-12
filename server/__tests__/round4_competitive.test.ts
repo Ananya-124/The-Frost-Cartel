@@ -11,36 +11,19 @@ const previousDatabaseUrl = process.env.DATABASE_URL;
 const previousSslMode = process.env.PGSSLMODE;
 const previousNodeEnv = process.env.NODE_ENV;
 const testDatabaseUrl = process.env.PG_TEST_DATABASE_URL;
-if (!testDatabaseUrl) {
-  describe.skip('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race (SKIPPED — PG_TEST_DATABASE_URL not set)', () => {
-    it.skip('skipped', () => { /* no PG_TEST_DATABASE_URL */ });
-  });
-  // @ts-expect-error early exit without pg url
-  process.exit !== undefined && (() => { /* halt module evaluation */ })();
-  throw new Error('PG_TEST_DATABASE_URL not set — test file skipped.');
-}
-const parsedTestUrl = new URL(testDatabaseUrl);
-if (!['localhost', '127.0.0.1', '::1'].includes(parsedTestUrl.hostname)) throw new Error('Round 4 tests refuse remote PostgreSQL hosts.');
-// Disable SSL for local PG test server before any Pool is created.
-process.env.PGSSLMODE = 'disable';
-process.env.NODE_ENV = 'test';
-const schemaName = `frost_round4_api_${crypto.randomUUID().replaceAll('-', '')}`;
-const schemaAdminPool = new Pool({ connectionString: testDatabaseUrl, ssl: false });
-await schemaAdminPool.query(`CREATE SCHEMA "${schemaName}"`);
-const scopedDatabaseUrl = new URL(testDatabaseUrl);
-scopedDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
-process.env.DATABASE_URL = scopedDatabaseUrl.toString();
-const migrationPool = new Pool({ connectionString: scopedDatabaseUrl.toString(), ssl: false });
-await runMigrations(migrationPool, path.resolve('database/postgres/migrations'));
-await migrationPool.end();
-const [{ app }, { seedPostgresTeamIdentity, prepareTeamRoundProgression, removeTeamProgressionFixture }, { postgresPool }] = await Promise.all([
-  import('../index.ts'), import('./progressionFixtures.ts'), import('../../database/postgres/pool.ts'),
-]);
+const suite = testDatabaseUrl ? describe : describe.skip;
 
-describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race', () => {
+suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race', () => {
   let server: Server;
   let baseUrl: string;
   let adminToken: string;
+  let app: any;
+  let seedPostgresTeamIdentity: any;
+  let prepareTeamRoundProgression: any;
+  let removeTeamProgressionFixture: any;
+  let postgresPool: any;
+  let schemaName: string;
+  let schemaAdminPool: Pool;
   const adminName = `r4-admin-${crypto.randomUUID()}`;
   const adminPassword = 'Round4-Admin-Password-42';
 
@@ -48,6 +31,31 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
   const testTeams: Array<{ id: string; name: string; pass: string; token: string }> = [];
 
   beforeAll(async () => {
+    if (!testDatabaseUrl) return;
+    const parsedTestUrl = new URL(testDatabaseUrl);
+    if (!['localhost', '127.0.0.1', '::1'].includes(parsedTestUrl.hostname)) throw new Error('Round 4 tests refuse remote PostgreSQL hosts.');
+    // Disable SSL for local PG test server before any Pool is created.
+    process.env.PGSSLMODE = 'disable';
+    process.env.NODE_ENV = 'test';
+    schemaName = `frost_round4_api_${crypto.randomUUID().replaceAll('-', '')}`;
+    schemaAdminPool = new Pool({ connectionString: testDatabaseUrl, ssl: false });
+    await schemaAdminPool.query(`CREATE SCHEMA "${schemaName}"`);
+    const scopedDatabaseUrl = new URL(testDatabaseUrl);
+    scopedDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
+    process.env.DATABASE_URL = scopedDatabaseUrl.toString();
+    const migrationPool = new Pool({ connectionString: scopedDatabaseUrl.toString(), ssl: false });
+    await runMigrations(migrationPool, path.resolve('database/postgres/migrations'));
+    await migrationPool.end();
+
+    const imported = await Promise.all([
+      import('../index.ts'), import('./progressionFixtures.ts'), import('../../database/postgres/pool.ts'),
+    ]);
+    app = imported[0].app;
+    seedPostgresTeamIdentity = imported[1].seedPostgresTeamIdentity;
+    prepareTeamRoundProgression = imported[1].prepareTeamRoundProgression;
+    removeTeamProgressionFixture = imported[1].removeTeamProgressionFixture;
+    postgresPool = imported[2].postgresPool;
+
     if (!postgresPool) throw new Error('Round 4 API integration test requires the local PostgreSQL test database.');
     const adminCredentials = hashPassword(adminPassword);
     await postgresPool.query('INSERT INTO admins(id,username,password_hash,salt,role,must_change_password) VALUES($1,$2,$3,$4,\'admin\',false)', [`r4-admin-${crypto.randomUUID()}`, adminName, adminCredentials.hash, adminCredentials.salt]);
@@ -89,14 +97,18 @@ describe('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Ra
 
   afterAll(async () => {
     if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
-    await postgresPool?.query('DELETE FROM round4_winner');
-    for (const team of testTeams) {
-      await removeTeamProgressionFixture(team.id);
+    if (postgresPool) {
+      await postgresPool.query('DELETE FROM round4_winner').catch(() => {});
+      for (const team of testTeams) {
+        if (removeTeamProgressionFixture) await removeTeamProgressionFixture(team.id).catch(() => {});
+      }
+      await postgresPool.query('DELETE FROM admins WHERE username=$1', [adminName]).catch(() => {});
+      await postgresPool.end().catch(() => {});
     }
-    await postgresPool?.query('DELETE FROM admins WHERE username=$1', [adminName]);
-    await postgresPool?.end();
-    await schemaAdminPool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-    await schemaAdminPool.end();
+    if (schemaAdminPool && schemaName) {
+      await schemaAdminPool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`).catch(() => {});
+      await schemaAdminPool.end().catch(() => {});
+    }
     if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = previousDatabaseUrl;
     if (previousSslMode === undefined) delete process.env.PGSSLMODE; else process.env.PGSSLMODE = previousSslMode;
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;

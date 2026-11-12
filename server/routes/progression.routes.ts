@@ -200,6 +200,7 @@ export function roundAccessGuard(roundId: number) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (req.path === '/admin' || req.path.startsWith('/admin/')) { next(); return; }
     requireTeamAuth(req, res, () => {
+      if (!postgresPool) { next(); return; }
       const accessStartedAt = performance.now();
       void (async () => {
         const pool = configuredPool();

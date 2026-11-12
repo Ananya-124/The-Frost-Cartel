@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as crypto from 'node:crypto';
 import { postgresPool } from '../../database/postgres/pool.ts';
+import { db } from '../../database/db.ts';
 import { verifyPassword } from '../auth/password.ts';
 import { requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
 import { sessionCookieSettings } from '../config/security.ts';
@@ -12,7 +13,43 @@ authRouter.post('/team-login', async (req, res) => {
   if (typeof teamName !== 'string' || !teamName.trim() || typeof password !== 'string' || !password) {
     res.status(400).json({ success: false, message: 'Squad Name and Ritual Password are required.' }); return;
   }
-  if (!postgresPool) { res.status(503).json({ success: false, message: 'Authentication service is unavailable.' }); return; }
+
+  if (!postgresPool) {
+    // Seamless local SQLite fallback
+    try {
+      const team = db.prepare(`
+        SELECT id, team_name AS "teamName", password_hash, salt, is_paused AS "isPaused", score,
+               max_credits AS "maxCredits", total_credits AS "totalCredits", login_count
+        FROM teams WHERE lower(team_name)=lower(?)
+      `).get(teamName.trim()) as { id: string; teamName: string; password_hash: string; salt: string; isPaused: number; score: number; maxCredits: number; totalCredits: number; login_count: number } | undefined;
+
+      if (!team || !verifyPassword(password, team.password_hash, team.salt)) {
+        res.status(401).json({ success: false, message: 'Invalid Squad Name or password.' }); return;
+      }
+      if (team.isPaused) { res.status(403).json({ success: false, message: 'This squad has been temporarily paused by Game Masters.' }); return; }
+
+      const token = 'squad_' + crypto.randomBytes(32).toString('hex');
+      const sessionId = 'tsess-' + crypto.randomUUID();
+      const previousCount = team.login_count ?? 0;
+      const playerNumber = (previousCount % 2) + 1;
+      const now = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      db.prepare('UPDATE teams SET login_count=login_count+1, last_login_at=?, updated_at=? WHERE id=?').run(now, now, team.id);
+      db.prepare('INSERT INTO team_sessions(id,team_id,token,player_number,expires_at,created_at) VALUES(?,?,?,?,?,?)').run(sessionId, team.id, token, playerNumber, expiresAt, now);
+      db.prepare('INSERT INTO activity_history(id,team_id,action,details,created_at) VALUES(?,?,?,?,?)').run('act-' + crypto.randomUUID(), team.id, 'LOGIN', JSON.stringify({ message: `Player ${playerNumber} authenticated to squad portal` }), now);
+
+      const cookie = sessionCookieSettings().team;
+      res.cookie(cookie.name, token, { ...cookie.options, maxAge: 24 * 60 * 60 * 1000 });
+      res.json({ success: true, token, playerNumber, team: { id: team.id, teamName: team.teamName, score: team.score, maxCredits: team.maxCredits, totalCredits: team.totalCredits, isPaused: false } });
+      return;
+    } catch (error) {
+      console.error('[Team login] SQLite operation failed.', error);
+      res.status(503).json({ success: false, message: 'Authentication service is temporarily unavailable.' });
+      return;
+    }
+  }
+
   const client = await postgresPool.connect();
   try {
     const found = await client.query<{ id: string; teamName: string; password_hash: string; salt: string; isPaused: boolean; score: number; maxCredits: number; totalCredits: number; login_count: number }>(
@@ -51,7 +88,13 @@ authRouter.get('/session', requireTeamAuth, (req: AuthenticatedRequest, res) => 
 
 authRouter.post('/logout', async (req, res) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '') || req.cookies?.fc_team_token;
-  if (token && postgresPool) await postgresPool.query('DELETE FROM team_sessions WHERE token=$1', [token]);
+  if (token) {
+    if (postgresPool) {
+      await postgresPool.query('DELETE FROM team_sessions WHERE token=$1', [token]).catch(() => undefined);
+    } else {
+      try { db.prepare('DELETE FROM team_sessions WHERE token=?').run(token); } catch {}
+    }
+  }
   const cookie = sessionCookieSettings().team;
   res.clearCookie(cookie.name, cookie.options);
   res.json({ success: true, message: 'Logged out successfully.' });
