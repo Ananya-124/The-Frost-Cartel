@@ -82,7 +82,6 @@ winter arc/
     │   │       ├── Grave2BuriedDiary.tsx # Grave 2: Buried diary page deciphering
     │   │       ├── Grave3FinalTestament.tsx # Grave 3: Runestone puzzle and final testament
     │   │       ├── GraveyardEnvironmentView.tsx # Atmospheric cemetery scene with 3 coffins
-    │   │       ├── HorrorJumpscareModal.tsx # Terrifying interactive jump scare on completion
     │   │       └── Stage3GameContainer.tsx # Stage 3 orchestrator, fragment unlocks, and victory
     │   ├── layout/
     │   │   ├── CornerQuickNav.tsx # Leaderboard modal trigger (Admin link strictly unlinked)

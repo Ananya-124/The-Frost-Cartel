@@ -51,7 +51,7 @@ The authoritative `main` branch contains 100% of the active features across all 
      - *Visual Clue Editor (35 Steps)*: Interactive floor plan canvas with click-to-place golden target beacon, riddle texts, field hints, and comma-separated answer keys.
 
 3. **All Four Tournament Rounds:**
-   - **Round 1:** The Graveyard Escape (Stage 1 Crypt, Stage 2 Evidence Desk, Stage 3 Skeleton Assembly & Horror Jumpscare Gate).
+   - **Round 1:** The Graveyard Escape (Stage 1 Crypt, Stage 2 Evidence Desk, Stage 3 Skeleton Assembly & Arch-Lich Gate).
    - **Round 2:** The Haunted Auction House (6 bidding cards, credit deductions, anti-sniping timer resets).
    - **Round 3:** Paradox Hunt (Past/Future split-screen dual viewport, Hunt 1 & 2 cooperative progression, card power boosts).
    - **Round 4:** The Campus Expedition (Dove flight & letter landing, 8-floor interactive selection, continuous open-window drone camera flight, 7 independent routes, common final room convergence, and atomic winner celebration).

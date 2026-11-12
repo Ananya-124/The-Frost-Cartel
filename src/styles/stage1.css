@@ -155,7 +155,7 @@
 .s1-altar {
   --u: calc(min(100vw - 40px, 768px) * 0.82 / var(--n, 5) / 100);
   position: relative;
-  height: clamp(170px, 22vw, 210px);
+  height: clamp(320px, 42vw, 380px);
   margin-top: 20px;
   border-radius: 28px;
   background:
@@ -296,22 +296,35 @@
 }
 .s1-candle-right .s1-candle-flame { animation-delay: -0.6s; }
 .s1-fogband { position: absolute; z-index: 6; left: -6%; right: -6%; bottom: -2%; height: 40%; background: radial-gradient(ellipse at 50% 100%, rgba(205, 197, 169, 0.18), transparent 70%); filter: blur(10px); pointer-events: none; animation: s1Fog 8s ease-in-out infinite alternate; }
-.s1-cells { position: absolute; left: 9%; right: 9%; top: 0; bottom: 0; }
+.s1-cells {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(100%, 360px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
 
 /* ---------- Pumpkin cells ---------- */
 .s1-cell {
-  position: absolute; top: 0; bottom: 0; left: 0;
-  width: calc(100% / var(--n, 5));
-  transition: transform var(--swap-ms, 0.4s) cubic-bezier(0.5, 0, 0.3, 1);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(62px, 20%, 82px);
+  height: 58%;
+  transform: translate(-50%, -50%);
+  transition:
+    left var(--swap-ms, 0.4s) cubic-bezier(0.5, 0, 0.3, 1),
+    top var(--swap-ms, 0.4s) cubic-bezier(0.5, 0, 0.3, 1);
 }
 .s1-cell::before {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: 10%;
-  width: min(88%, 170px);
+  top: calc(50% + 30px);
+  width: min(88%, 132px);
   height: 18%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(130, 110, 78, 0.18), rgba(38, 26, 18, 0.08) 55%, transparent 72%);
   pointer-events: none;
@@ -322,20 +335,20 @@
 .s1-btn:focus-visible { outline: 1px dashed #d99f4d; outline-offset: -4px; }
 
 .s1-lift, .s1-stack {
-  position: absolute; left: 50%; bottom: 19%;
+  position: absolute; left: 50%; top: 50%;
   width: min(90%, 190px);
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 .s1-lift { transition: transform 0.6s cubic-bezier(0.3, 1.1, 0.4, 1); will-change: transform; }
-.s1-cell.s1-lifted .s1-lift { transform: translateX(-50%) translateY(-84%) rotate(-7deg); }
+.s1-cell.s1-lifted .s1-lift { transform: translate(-50%, calc(-50% - 60%)) rotate(-7deg); }
 .s1-hop { display: block; }
-.s1-pumpkin-svg { display: block; width: 100%; height: auto; border-radius: 44%; mix-blend-mode: screen; filter: drop-shadow(0 13px 10px rgba(0, 0, 0, 0.62)) saturate(0.9) contrast(1.04); transition: filter 0.2s ease; }
+.s1-pumpkin-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 13px 10px rgba(0, 0, 0, 0.62)) saturate(0.9) contrast(1.04); transition: filter 0.2s ease; }
 .s1-idle .s1-hop { animation: s1Idle 4.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
 .s1-shaking .s1-lift { animation: s1Shake 0.45s linear both; }
 .s1-face { animation: s1Flicker 3.2s linear infinite; animation-delay: var(--d, 0s); }
 
-.s1-pool { position: absolute; left: 50%; bottom: 9%; width: min(135%, 250px); height: 36%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(255, 164, 73, 0.34), rgba(153, 77, 24, 0.11) 48%, transparent 72%); mix-blend-mode: screen; filter: blur(3px); pointer-events: none; animation: s1Flicker 3.2s linear infinite; animation-delay: var(--d, 0s); }
-.s1-shadow { position: absolute; left: 50%; bottom: 14%; width: min(84%, 170px); height: 16px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.82), rgba(0,0,0,0.24) 62%, transparent 72%); }
+.s1-pool { position: absolute; left: 50%; top: 50%; width: min(135%, 170px); height: 72%; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(255, 164, 73, 0.34), rgba(153, 77, 24, 0.11) 48%, transparent 72%); mix-blend-mode: screen; filter: blur(3px); pointer-events: none; animation: s1Flicker 3.2s linear infinite; animation-delay: var(--d, 0s); }
+.s1-shadow { position: absolute; left: 50%; top: calc(50% + 35px); width: min(84%, 132px); height: 16px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.82), rgba(0,0,0,0.24) 62%, transparent 72%); }
 
 /* ---------- Skull ---------- */
 .s1-skull-rest {
@@ -346,7 +359,7 @@
 }
 .s1-stack.s1-broken { z-index: 3; }
 .s1-stack::before { content: ''; display: block; padding-top: 88%; } /* gives the stack the pumpkin's height */
-.s1-smashed-pumpkin { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border-radius: 44%; mix-blend-mode: screen; filter: brightness(0.84) saturate(0.85); animation: s1PhotoCrush 0.65s ease-out both; }
+.s1-smashed-pumpkin { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: brightness(0.84) saturate(0.85); animation: s1PhotoCrush 0.65s ease-out both; }
 .s1-layer { position: absolute; inset: 0; width: 100%; height: auto; }
 .s1-l1 { z-index: 1; filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.6)); }
 .s1-l3 { z-index: 3; }

@@ -78,20 +78,15 @@ async def run():
         await page.click('text=Click to Chant Discovered Fragments')
         await page.wait_for_timeout(300)
         
-        # Submit & Capture Jumpscare in the middle of scare
+        # Submit & Capture Gate Shattered
         await page.click('text=Speak Incantation & Break Gate')
-        await page.wait_for_timeout(700)
-        await page.screenshot(path='public/assets/stage-3/verify_jumpscare_scare.png')
-        print('Captured verify_jumpscare_scare.png')
-        
-        # Wait for shatter
-        await page.wait_for_timeout(2500)
-        await page.screenshot(path='public/assets/stage-3/verify_jumpscare_shatter.png')
-        print('Captured verify_jumpscare_shatter.png')
+        await page.wait_for_timeout(1000)
+        await page.screenshot(path='public/assets/stage-3/verify_gate_shattered.png')
+        print('Captured verify_gate_shattered.png')
         
         # Copy all to brain artifact directory
         art_dir = r'C:\Users\yashm\.gemini\antigravity\brain\8f13d18b-3772-4740-bcdd-d4869ff605fe'
-        for f in ['verify_stage3_overview.png', 'verify_grave1_clean.png', 'verify_grave3_clean.png', 'verify_jumpscare_scare.png', 'verify_jumpscare_shatter.png']:
+        for f in ['verify_stage3_overview.png', 'verify_grave1_clean.png', 'verify_grave3_clean.png', 'verify_gate_shattered.png']:
             shutil.copyfile(f'public/assets/stage-3/{f}', f'{art_dir}\\{f}')
             
         print('All screenshots copied to artifacts successfully!')

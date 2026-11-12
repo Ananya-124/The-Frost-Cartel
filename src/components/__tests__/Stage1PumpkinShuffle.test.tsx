@@ -27,8 +27,8 @@ const config: Stage1Config = {
   isReadyForPublication: true,
   activityType: 'skull_pumpkin_shuffle',
   trials: [
-    { pumpkins: 5, tries: 2, reward: 40, shuffleSeconds: 20 },
-    { pumpkins: 7, tries: 2, reward: 60, shuffleSeconds: 20 },
+    { pumpkins: 7, tries: 2, reward: 40, shuffleSeconds: 18 },
+    { pumpkins: 10, tries: 2, reward: 60, shuffleSeconds: 18 },
   ],
   revealSeconds: 3,
 };
@@ -41,7 +41,7 @@ const seeded = (seed: number) => () => {
 };
 
 const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
-const ATTEMPT_MS = 25000; // lead + reveal + lead + 20s shuffle + settle
+const ATTEMPT_MS = 23000; // lead + reveal + lead + 18s shuffle + settle
 const credits = (id: string) => round1Service.getTeamSession(id, 'Test Squad').credits;
 
 /** `skulls` lists which pumpkin hides the skull on each attempt, in order. */
@@ -108,14 +108,26 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
   beforeEach(() => { vi.useFakeTimers(); localStorage.clear(); sessionStorage.clear(); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it('opens on Trial I with 5 pumpkins, 2 tries and 40 credits', () => {
+  it('opens on Trial I with 7 pumpkins, 2 tries and 40 credits in a circle', () => {
     const { container } = setup('s1-open');
-    expect(screen.getByText('Trial I — 5 pumpkins')).toBeInTheDocument();
-    expect(screen.getByText(/40 credits · 2 tries · 20s shuffle/i)).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-pumpkin]')).toHaveLength(5);
+    expect(screen.getByText('Trial I — 7 pumpkins')).toBeInTheDocument();
+    expect(screen.getByText(/40 credits · 2 tries · 18s shuffle/i)).toBeInTheDocument();
+    expect(container.querySelectorAll('.animate-bat-fly-r2l, .animate-bat-fly-l2r')).toHaveLength(4);
+    expect(container.querySelector('.s1-pumpkin-svg')).toHaveAttribute('src', '/assets/stage1/pumpkin-reference.png');
+    const pumpkins = [...container.querySelectorAll<HTMLElement>('.s1-cell')];
+    expect(pumpkins).toHaveLength(7);
+    expect(pumpkins.some((pumpkin) => Number.parseFloat(pumpkin.style.left) < 50)).toBe(true);
+    expect(pumpkins.some((pumpkin) => Number.parseFloat(pumpkin.style.left) > 50)).toBe(true);
+    expect(pumpkins.some((pumpkin) => Number.parseFloat(pumpkin.style.top) < 50)).toBe(true);
+    expect(pumpkins.some((pumpkin) => Number.parseFloat(pumpkin.style.top) > 50)).toBe(true);
+    const radii = pumpkins.map((pumpkin) => Math.hypot(
+      Number.parseFloat(pumpkin.style.left) - 50,
+      Number.parseFloat(pumpkin.style.top) - 50,
+    ));
+    expect(Math.max(...radii) - Math.min(...radii)).toBeLessThan(0.01);
   });
 
-  it('shows the skull briefly, hides it, shuffles 20 seconds, then lets the player guess', async () => {
+  it('shows the skull briefly, hides it, shuffles 18 seconds, then lets the player guess', async () => {
     const { container, pumpkin } = setup('s1-flow');
     fireEvent.click(screen.getByRole('button', { name: /Begin trial I/i }));
     expect(container.querySelector('.s1-skull-rest')).toBeNull();
@@ -185,8 +197,8 @@ describe('Stage 1 — Pumpkin Shuffle (two trials)', () => {
     expect(getServerCredits()).toBe(0);
 
     fireEvent.click(screen.getByRole('button', { name: /Continue to trial II/i }));
-    expect(screen.getByText('Trial II — 7 pumpkins')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-pumpkin]')).toHaveLength(7);
+    expect(screen.getByText('Trial II — 10 pumpkins')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-pumpkin]')).toHaveLength(10);
     expect(screen.getByText(/60 credits · 2 tries/i)).toBeInTheDocument();
   });
 

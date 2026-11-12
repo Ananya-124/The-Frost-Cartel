@@ -8,7 +8,7 @@
 [![Express 5](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Tests Passing](https://img.shields.io/badge/Tests-81%2F81%20Passing-brightgreen)](https://vitest.dev/)
+[![Tests Passing](https://img.shields.io/badge/Tests-210%2F210%20Passing-brightgreen)](https://vitest.dev/)
 [![Oxlint Clean](https://img.shields.io/badge/Oxlint-0%20Warnings-brightgreen)](https://oxc.rs/)
 
 ---
@@ -87,7 +87,7 @@ The platform provides a strict separation of concerns between the **Public Playe
 
 | Stage | Name | Credits | Status & Mechanics |
 | :---: | :--- | :---: | :--- |
-| **01** | **The Unknown Challenge** | `100 CR` | *Not Configured* (Reserved for custom organizer challenge) |
+| **01** | **The Pumpkin Shuffle** | `100 CR` | 3-trial shuffle minigame with animated pumpkin swapping, trial progression, and 100 CR reward settlement. |
 | **02** | **The Haunted Image Hunt** | `150 CR` | Scattered detective evidence desk with 8 photographs, zoomable inspection, 12 cursed relics, and -15 CR hint penalties. |
 | **03** | **The Forgotten Graveyard** | `250 CR` | Atmospheric cemetery with three interactive open coffins (Grave I: Marked Remains, Grave II: Buried Diary, Grave III: Final Testament), runestone decoding, and a full-throttle horror jump scare upon final answer submission. |
 

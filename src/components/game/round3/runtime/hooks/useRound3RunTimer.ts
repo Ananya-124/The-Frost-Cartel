@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Round3RunState } from '../../../../../types/round3.types';
 import { round3Service } from '../../../../../services/round3Service';
 
+const STATUS_RUNNING = 'running';
+const STATUS_PAUSED = 'paused';
+const OP_START = 'start';
+const OP_PAUSE = 'pause';
+const OP_RESUME = 'resume';
+
 export function formatRound3Time(milliseconds: number): string {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
@@ -31,7 +37,7 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
     setError('');
   }, []);
 
-  const remainingMs = run.status === 'running'
+  const remainingMs = run.status === STATUS_RUNNING
     ? Math.ceil(Math.max(0, baseRemaining.current - (performance.now() - syncedAt.current)))
     : run.remainingMs;
   const remainingSeconds = Math.ceil(remainingMs / 1000);
@@ -58,8 +64,8 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
       setBusy(true);
       setError('');
       try {
-        const result = operation === 'start' ? await round3Service.startRun()
-          : operation === 'pause' ? await round3Service.pauseRun()
+        const result = operation === OP_START ? await round3Service.startRun()
+          : operation === OP_PAUSE ? await round3Service.pauseRun()
             : await round3Service.resumeRun();
         if (result.run) acceptRun(result.run);
         setRefreshVersion((value) => value + 1);
@@ -75,15 +81,15 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
 
   const ensureRunning = useCallback(async () => {
     const current = runRef.current;
-    if (current.status === 'running') return current;
-    if (current.status === 'not_started') return transition('start');
-    if (current.status === 'paused') return transition('resume');
+    if (current.status === STATUS_RUNNING) return current;
+    if (current.status === 'not_started') return transition(OP_START);
+    if (current.status === STATUS_PAUSED) return transition(OP_RESUME);
     return current;
   }, [transition]);
 
-  const start = useCallback(() => transition('start'), [transition]);
-  const pause = useCallback(() => transition('pause'), [transition]);
-  const resume = useCallback(() => transition('resume'), [transition]);
+  const start = useCallback(() => transition(OP_START), [transition]);
+  const pause = useCallback(() => transition(OP_PAUSE), [transition]);
+  const resume = useCallback(() => transition(OP_RESUME), [transition]);
 
   useEffect(() => {
     const timer = run.status === 'running'
@@ -102,12 +108,12 @@ export function useRound3RunTimer(initialRun: Round3RunState) {
   }, [refresh, run.status]);
 
   useEffect(() => {
-    if (run.status === 'running' && remainingMs <= 0) void refresh();
+    if (run.status === STATUS_RUNNING && remainingMs <= 0) void refresh();
   }, [run.status, remainingMs, tick, refresh]);
 
   return {
     run, remainingMs, remainingSeconds, busy, error, refreshVersion,
-    gameplayEnabled: run.status === 'running' && remainingMs > 0 && !busy,
+    gameplayEnabled: run.status === STATUS_RUNNING && remainingMs > 0 && !busy,
     refresh,
     start,
     pause,

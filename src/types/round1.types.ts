@@ -197,9 +197,11 @@ export interface Round1TeamSessionState {
     grave1BookRead?: boolean;
     grave1SkeletonMoved?: boolean;
     dugSoilIds: string[];
+    grave2Completed?: boolean;
     grave2CofferUnlocked: boolean;
     grave3RingIndices: [number, number, number];
     grave3Unlocked: boolean;
+    grave3Completed?: boolean;
     collectedFragments: string[];
     isGateUnlocked: boolean;
   };

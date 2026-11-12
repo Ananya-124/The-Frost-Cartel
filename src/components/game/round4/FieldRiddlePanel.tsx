@@ -8,6 +8,8 @@ interface FieldRiddlePanelProps {
   progress: ExpeditionProgress;
   isTargetDiscovered: boolean;
   onSubmitAnswer: (answer: string) => Promise<{ success: boolean; message: string }>;
+  onOpenScanner?: () => void;
+  scannedValidationWord?: string | null;
   isMuted: boolean;
 }
 
@@ -17,6 +19,8 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
   progress,
   isTargetDiscovered,
   onSubmitAnswer,
+  onOpenScanner,
+  scannedValidationWord,
   isMuted,
 }) => {
   const [answerInput, setAnswerInput] = useState<string>('');
@@ -24,7 +28,18 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Sync scanned validation word if provided
+  React.useEffect(() => {
+    if (scannedValidationWord) {
+      setAnswerInput(scannedValidationWord);
+      setFeedback({
+        type: 'success',
+        message: `Checkpoint confirmed! Validation word: ${scannedValidationWord}`,
+      });
+    }
+  }, [scannedValidationWord]);
+
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!answerInput.trim() || isSubmitting || !isTargetDiscovered) return;
 
@@ -114,6 +129,17 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
 
           {/* Answer Code Input Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
+            {onOpenScanner && isTargetDiscovered && (
+              <button
+                type="button"
+                onClick={onOpenScanner}
+                className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-[#b8860b] to-[#d4af37] hover:from-[#c9971c] hover:to-[#e5c158] text-[#1c1208] font-cinzel text-xs font-bold tracking-[0.16em] border border-[#ffd866] shadow-sm flex items-center justify-center gap-2 cursor-pointer uppercase transition-all"
+              >
+                <span>📷</span>
+                <span>SCAN PHYSICAL QR CHECKPOINT</span>
+              </button>
+            )}
+
             <div className="relative">
               <input
                 type="text"
@@ -190,34 +216,40 @@ export const FieldRiddlePanel: React.FC<FieldRiddlePanelProps> = ({
               const isCompleted = idx < progress.activeStepIndex || progress.completedRouteIds.includes(currentRoute.routeId);
               const isCurrent = idx === progress.activeStepIndex && !progress.completedRouteIds.includes(currentRoute.routeId);
 
+              let dotContent: React.ReactNode;
+              if (isCurrent) {
+                dotContent = (
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-200 to-white border border-[#b8860b] shadow-[0_0_10px_rgba(255,215,0,0.95)] flex items-center justify-center animate-pulse">
+                    <div className="w-2 h-2 rounded-full bg-[#3d270c]" />
+                  </div>
+                );
+              } else if (isCompleted) {
+                dotContent = (
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border border-[#b8860b] shadow-sm flex items-center justify-center">
+                    <span className="text-[#3d270c] text-[9px] font-bold">✓</span>
+                  </div>
+                );
+              } else {
+                dotContent = (
+                  <div className="w-4 h-4 rounded-full bg-[#3d2a17]/40 border border-[#b8974a]/40" />
+                );
+              }
+
               return (
                 <div
                   key={`clue-dot-${stepNumber}`}
                   className="relative flex items-center justify-center"
                   title={`Clue ${stepNumber} of 5`}
                 >
-                  {isCurrent ? (
-                    // Active Pulsing Clue Dot
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-200 to-white border border-[#b8860b] shadow-[0_0_10px_rgba(255,215,0,0.95)] flex items-center justify-center animate-pulse">
-                      <div className="w-2 h-2 rounded-full bg-[#3d270c]" />
-                    </div>
-                  ) : isCompleted ? (
-                    // Solved Step Dot
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border border-[#b8860b] shadow-sm flex items-center justify-center">
-                      <span className="text-[#3d270c] text-[9px] font-bold">✓</span>
-                    </div>
-                  ) : (
-                    // Locked Future Step Dot
-                    <div className="w-4 h-4 rounded-full bg-[#3d2a17]/40 border border-[#b8974a]/40" />
-                  )}
+                  {dotContent}
                 </div>
               );
             })}
           </div>
 
-          {/* Footer Metadata: ROUTE I / VII | X / 5 SOLVED */}
+          {/* Footer Metadata: CURRENT SECTOR | X / 5 SOLVED */}
           <div className="flex items-center justify-between text-[11px] font-cinzel font-semibold tracking-wider text-[#5c401d] pt-1">
-            <span>{currentRoute.routeName.toUpperCase()} / VII</span>
+            <span>SECTOR OBJECTIVE</span>
             <div className="h-3 w-[1px] bg-[#b8974a]/50" />
             <span>{solvedCountInRoute} / 5 SOLVED</span>
           </div>
