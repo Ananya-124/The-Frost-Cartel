@@ -28,13 +28,36 @@ export function configuredAllowedOrigins(env: NodeJS.ProcessEnv = process.env): 
 }
 
 export function createCorsOptions(env: NodeJS.ProcessEnv = process.env): CorsOptions {
-  const allowedOrigins = configuredAllowedOrigins(env);
+  let allowedOrigins: Set<string>;
+  try {
+    allowedOrigins = configuredAllowedOrigins(env);
+  } catch {
+    allowedOrigins = new Set(LOCAL_ORIGINS);
+  }
+
   return {
-    origin: (origin, callback) => callback(null, origin === undefined || allowedOrigins.has(origin)),
+    origin: (origin, callback) => {
+      if (origin === undefined || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      try {
+        const parsed = new URL(origin);
+        // Automatically allow any Vercel deployment for this application
+        if (
+          parsed.protocol === 'https:' &&
+          parsed.hostname.endsWith('.vercel.app') &&
+          (parsed.hostname.includes('the-frost-cartel') || parsed.hostname.includes('frost-cartel'))
+        ) {
+          return callback(null, true);
+        }
+      } catch {}
+      return callback(null, false);
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Round2-Key'],
     maxAge: 600,
+    optionsSuccessStatus: 204,
   };
 }
 
