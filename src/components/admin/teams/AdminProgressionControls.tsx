@@ -44,6 +44,24 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
     } finally { actionInFlight.current = false; setBusy(null); }
   };
 
+  const handleQuickAdvance = async (targetRound: number) => {
+    if (actionInFlight.current || !teamId) return;
+    actionInFlight.current = true;
+    setBusy(`advance-${targetRound}`); setError(''); setNotice('');
+    try {
+      const next = await progressionService.adminAdvanceTeam(teamId, targetRound, reason);
+      setProgression(next);
+      setNotice(`Squad ${teamName} advanced to Round ${targetRound}! Inventory and cards synced.`);
+      try { await onProgressChanged?.(); }
+      catch { setError('Progression changed, but dashboard summary could not refresh.'); }
+    } catch (cause) {
+      setError(errorStatus(cause) === 401 ? 'Administrator session expired. Sign in again to continue.' : cause instanceof Error ? cause.message : 'Advance action failed.');
+    } finally {
+      actionInFlight.current = false;
+      setBusy(null);
+    }
+  };
+
   const stateFor = (entity: ProgressEntity, id: number) => entity === 'ROUND'
     ? progression?.rounds.find((row) => row.round_id === id)
     : progression?.hunts.find((row) => row.hunt_id === id);
@@ -84,6 +102,73 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
     {error && <div role="alert" className="flex flex-wrap justify-between gap-2 rounded border border-red-500/40 bg-red-950/30 p-2 text-xs text-red-200"><span>{error}</span><button type="button" onClick={() => { void load(); }} className="underline">Retry</button></div>}
     {notice && <output aria-live="polite" className="block rounded border border-emerald-500/30 bg-emerald-950/30 p-2 text-xs text-emerald-200">{notice}</output>}
     <label className="block text-[10px] text-cartel-silver/70">Audit reason (optional)<input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} className="mt-1 w-full rounded border border-white/15 bg-black/40 px-2 py-1.5 text-xs text-white" /></label>
+
+    {/* ONE-CLICK SQUAD ROUND CONTROLLER */}
+    <div className="rounded-xl border border-amber-500/40 bg-black/40 p-3.5 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-xs font-cinzel font-bold text-amber-300 uppercase tracking-wider">
+            ⚡ Quick Squad Round Director
+          </span>
+          <p className="text-[10px] text-stone-300">
+            One-click advance: automatically completes prior stages, syncs inventory/cards, and unlocks the selected round.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+        {[
+          { id: 1, name: 'Round 1: Crypt', desc: 'The Graveyard Escape' },
+          { id: 2, name: 'Round 2: Auction', desc: 'The Haunted Auction' },
+          { id: 3, name: 'Round 3: Paradox', desc: 'Paradox Hunt (+ Cards)' },
+          { id: 4, name: 'Round 4: Expedition', desc: 'Campus Expedition' },
+        ].map((r) => {
+          const rState = progression?.rounds.find((row) => row.round_id === r.id);
+          const isCurrent = rState?.status === 'AVAILABLE' || rState?.status === 'IN_PROGRESS';
+          const isCompleted = rState?.status === 'COMPLETED';
+          return (
+            <button
+              key={r.id}
+              type="button"
+              disabled={Boolean(busy) || loading}
+              onClick={() => { void handleQuickAdvance(r.id); }}
+              className={`p-2.5 rounded border text-left transition-all cursor-pointer ${
+                isCurrent
+                  ? 'border-emerald-400 bg-emerald-950/70 text-emerald-200 shadow-[0_0_12px_rgba(52,211,153,0.4)]'
+                  : isCompleted
+                  ? 'border-cyan-500/40 bg-cyan-950/30 text-cyan-200 hover:border-cyan-400'
+                  : 'border-white/15 bg-black/50 text-stone-300 hover:border-amber-400/60 hover:bg-amber-950/30'
+              }`}
+            >
+              <div className="flex items-center justify-between text-[10px] font-mono font-bold">
+                <span>{r.name}</span>
+                <span className={isCurrent ? 'text-emerald-400 font-black' : isCompleted ? 'text-cyan-400' : 'text-stone-400'}>
+                  {isCurrent ? '● ACTIVE' : isCompleted ? '✓ DONE' : '○ JUMP'}
+                </span>
+              </div>
+              <div className="text-[9px] text-stone-400 mt-1 truncate">{r.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* EXPLANATION ACCORDION: WHAT ARE LOCK, UNLOCK, COMPLETE, RESET? */}
+    <details className="rounded border border-white/10 bg-black/20 px-3 py-2 text-left">
+      <summary className="cursor-pointer text-[10px] font-cinzel font-bold uppercase tracking-wider text-cartel-amber">
+        ❓ Guide: What do Lock, Unlock, Complete, & Reset mean?
+      </summary>
+      <div className="mt-2 space-y-1.5 text-[10px] text-stone-300 leading-relaxed font-sans">
+        <p><strong className="text-emerald-300 font-bold uppercase">Unlock:</strong> Makes a round or hunt playable and unsealed for this squad so they can enter immediately.</p>
+        <p><strong className="text-cyan-300 font-bold uppercase">Complete:</strong> Finalizes the round as solved and satisfies prerequisites for subsequent rounds.</p>
+        <p><strong className="text-amber-300 font-bold uppercase">Lock:</strong> Revokes access, preventing the squad from entering until re-unlocked.</p>
+        <p><strong className="text-red-300 font-bold uppercase">Reset:</strong> Clears the squad's completion timestamp and returns the round to locked while preserving audit logs.</p>
+        <p className="text-stone-400 pt-1 border-t border-white/10 italic">
+          💡 Tip: Use the <strong>Quick Squad Round Director</strong> above for standard tournament progression — it manages completions and inventory sync automatically without having to click individual buttons.
+        </p>
+      </div>
+    </details>
+
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{[1, 2, 3, 4].map((id) => renderRow('ROUND', id, `Round ${String(id).padStart(2, '0')}`))}</div>
     <h5 className="pt-1 text-[10px] font-cinzel font-bold uppercase tracking-wider text-cartel-amber">Round 3 hunts · sequential</h5>
     <div className="grid grid-cols-1 gap-2">{[1, 2, 3].map((id) => renderRow('HUNT', id, huntNames[id - 1]))}</div>

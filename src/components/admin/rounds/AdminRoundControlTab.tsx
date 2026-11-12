@@ -52,6 +52,8 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
   const [roundDuration, setRoundDuration] = useState<number>(22);
   const [serverStatus, setServerStatus] = useState<Round1Status>(round1Status);
   const [round2Active, setRound2Active] = useState(false);
+  const [round3Active, setRound3Active] = useState(false);
+  const [round4Active, setRound4Active] = useState(false);
   const [timerBusy, setTimerBusy] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [roundError, setRoundError] = useState<string | null>(null);
@@ -78,6 +80,10 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
         if (!active) return;
         const r2 = data.rounds.find((r) => r.round_id === 2);
         setRound2Active(r2?.status === 'AVAILABLE' || r2?.status === 'IN_PROGRESS');
+        const r3 = data.rounds.find((r) => r.round_id === 3);
+        setRound3Active(r3?.status === 'AVAILABLE' || r3?.status === 'IN_PROGRESS');
+        const r4 = data.rounds.find((r) => r.round_id === 4);
+        setRound4Active(r4?.status === 'AVAILABLE' || r4?.status === 'IN_PROGRESS');
       }).catch(() => undefined);
     }
     return () => { active = false; };
@@ -106,6 +112,62 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
       },
       action === 'lock',
       action === 'unlock' ? 'UNLOCK FOR ALL SQUADS' : 'LOCK ROUND 2'
+    );
+  };
+
+  const handleGlobalRound3Action = (action: 'advance' | 'lock') => {
+    requestConfirmation(
+      action === 'lock' ? 'LOCK ROUND 3 FOR ALL SQUADS' : 'ADVANCE ALL SQUADS TO ROUND 3 (SYNC AUCTION CARDS)',
+      action === 'lock'
+        ? 'This will lock Round 3 for all squads across the tournament.'
+        : 'This will complete Round 2, transfer all won auction cards into each squad\'s Round 3 inventory, and unlock Round 3 (Paradox Hunt) for ALL squads across the tournament.',
+      async () => {
+        setTimerBusy(true); setRoundError(null);
+        try {
+          const res = await progressionService.adminRound3Global(action);
+          setRound3Active(res.isActive);
+          if (res.isActive) {
+            setFeedbackNotice(`Advanced all squads to Round 3! Synced ${res.cardsSynced} auction cards into squad inventories.`);
+          } else {
+            setFeedbackNotice('Round 3 locked for all squads.');
+          }
+          setTimeout(() => setFeedbackNotice(null), 4000);
+          await onRefresh();
+        } catch (error) {
+          setRoundError(error instanceof Error ? error.message : `Round 3 ${action} failed.`);
+          throw error;
+        } finally {
+          setTimerBusy(false);
+        }
+      },
+      action === 'lock',
+      action === 'lock' ? 'LOCK ROUND 3' : 'ADVANCE TO ROUND 3'
+    );
+  };
+
+  const handleGlobalRound4Action = (action: 'advance' | 'lock') => {
+    requestConfirmation(
+      action === 'lock' ? 'LOCK ROUND 4 FOR ALL SQUADS' : 'ADVANCE ALL SQUADS TO ROUND 4',
+      action === 'lock'
+        ? 'This will lock Round 4 for all squads.'
+        : 'This will finalize Round 3 and unlock Round 4 (The Campus Expedition) for ALL squads across the tournament.',
+      async () => {
+        setTimerBusy(true); setRoundError(null);
+        try {
+          const res = await progressionService.adminRound4Global(action);
+          setRound4Active(res.isActive);
+          setFeedbackNotice(`Round 4 ${res.isActive ? 'unlocked' : 'locked'} for all squads across the tournament.`);
+          setTimeout(() => setFeedbackNotice(null), 4000);
+          await onRefresh();
+        } catch (error) {
+          setRoundError(error instanceof Error ? error.message : `Round 4 ${action} failed.`);
+          throw error;
+        } finally {
+          setTimerBusy(false);
+        }
+      },
+      action === 'lock',
+      action === 'lock' ? 'LOCK ROUND 4' : 'ADVANCE TO ROUND 4'
     );
   };
 
@@ -419,6 +481,100 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
               className="px-4 py-2 rounded bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-lg cursor-pointer disabled:opacity-40 transition-all"
             >
               🔒 LOCK ROUND 2 (ALL SQUADS)
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Round 3 Tournament Master Orchestration Bar */}
+      <div className="stone-panel rounded-xl p-5 border border-purple-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2.5 mb-1">
+            <span className="text-xl" aria-hidden="true">⏳</span>
+            <h2 className="text-lg font-cinzel font-bold text-white tracking-wide">
+              ROUND 3 MASTER CONTROLS — THE PARADOX HUNT
+            </h2>
+            <output
+              aria-live="polite"
+              className={`text-[10px] font-cinzel font-black px-2.5 py-0.5 rounded-full border uppercase inline-block ${
+                round3Active
+                  ? 'bg-purple-950/80 border-purple-500/70 text-purple-300'
+                  : 'bg-cartel-charcoal border-white/20 text-cartel-silver'
+              }`}
+            >
+              {round3Active ? 'ACTIVE • UNLOCKED FOR ALL SQUADS' : 'LOCKED • ALL SQUADS'}
+            </output>
+          </div>
+          <p className="text-xs text-cartel-silver/70 font-sans">
+            Advancing to Round 3 finalizes Round 2, transfers all won auction power cards into each squad's Round 3 inventory, and unlocks Paradox Hunt for all squads.
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0">
+          {!round3Active ? (
+            <button
+              type="button"
+              disabled={timerBusy || actionBusy}
+              onClick={() => handleGlobalRound3Action('advance')}
+              className="px-4 py-2 rounded bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer disabled:opacity-40 transition-all"
+            >
+              🔓 ADVANCE ALL SQUADS TO ROUND 3 (SYNC AUCTION CARDS)
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={timerBusy || actionBusy}
+              onClick={() => handleGlobalRound3Action('lock')}
+              className="px-4 py-2 rounded bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-lg cursor-pointer disabled:opacity-40 transition-all"
+            >
+              🔒 LOCK ROUND 3 (ALL SQUADS)
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Round 4 Tournament Master Orchestration Bar */}
+      <div className="stone-panel rounded-xl p-5 border border-amber-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2.5 mb-1">
+            <span className="text-xl" aria-hidden="true">📜</span>
+            <h2 className="text-lg font-cinzel font-bold text-white tracking-wide">
+              ROUND 4 MASTER CONTROLS — THE CAMPUS EXPEDITION
+            </h2>
+            <output
+              aria-live="polite"
+              className={`text-[10px] font-cinzel font-black px-2.5 py-0.5 rounded-full border uppercase inline-block ${
+                round4Active
+                  ? 'bg-amber-950/80 border-amber-500/70 text-amber-300'
+                  : 'bg-cartel-charcoal border-white/20 text-cartel-silver'
+              }`}
+            >
+              {round4Active ? 'ACTIVE • UNLOCKED FOR ALL SQUADS' : 'LOCKED • ALL SQUADS'}
+            </output>
+          </div>
+          <p className="text-xs text-cartel-silver/70 font-sans">
+            Unlocks the final physical campus expedition chamber and releases puzzle routes for all squads.
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0">
+          {!round4Active ? (
+            <button
+              type="button"
+              disabled={timerBusy || actionBusy}
+              onClick={() => handleGlobalRound4Action('advance')}
+              className="px-4 py-2 rounded bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.4)] cursor-pointer disabled:opacity-40 transition-all"
+            >
+              🔓 ADVANCE ALL SQUADS TO ROUND 4
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={timerBusy || actionBusy}
+              onClick={() => handleGlobalRound4Action('lock')}
+              className="px-4 py-2 rounded bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-lg cursor-pointer disabled:opacity-40 transition-all"
+            >
+              🔒 LOCK ROUND 4 (ALL SQUADS)
             </button>
           )}
         </div>

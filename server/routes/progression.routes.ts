@@ -5,7 +5,8 @@ import { postgresPool } from '../../database/postgres/pool.ts';
 import { db } from '../../database/db.ts';
 import { getRound3Run, getRound3Session } from '../../database/postgres/round3-repository.ts';
 import {
-  adminProgress, adminProgressRound2Global, assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
+  adminAdvanceTeamToRound, adminProgress, adminProgressRound2Global, adminProgressRound3Global, adminProgressRound4Global,
+  assertHuntAccessible, assertRoundAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
   getTeamProgressionAudit, ProgressionError, startHunt, startRound,
 } from '../../database/postgres/progression.ts';
 import { requireAdminAuth, requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
@@ -230,6 +231,36 @@ adminRouter.post('/round2/:action', asyncHandler(async (req, res) => {
   const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
   const result = await adminProgressRound2Global(pool, req.adminSessionToken, action as 'unlock' | 'lock' | 'reset', reason);
   return res.json({ success: true, action, ...result });
+}));
+
+adminRouter.post('/round3/:action', asyncHandler(async (req, res) => {
+  const pool = configuredPool();
+  if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+  const action = (Array.isArray(req.params.action) ? req.params.action[0] : req.params.action).toLowerCase();
+  if (!['advance', 'unlock', 'lock'].includes(action)) throw new ProgressionError('Unsupported round 3 action.', 'NOT_FOUND');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  const result = await adminProgressRound3Global(pool, req.adminSessionToken, action as 'advance' | 'unlock' | 'lock', reason);
+  return res.json({ success: true, action, ...result });
+}));
+
+adminRouter.post('/round4/:action', asyncHandler(async (req, res) => {
+  const pool = configuredPool();
+  if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+  const action = (Array.isArray(req.params.action) ? req.params.action[0] : req.params.action).toLowerCase();
+  if (!['advance', 'unlock', 'lock'].includes(action)) throw new ProgressionError('Unsupported round 4 action.', 'NOT_FOUND');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  const result = await adminProgressRound4Global(pool, req.adminSessionToken, action as 'advance' | 'unlock' | 'lock', reason);
+  return res.json({ success: true, action, ...result });
+}));
+
+adminRouter.post('/teams/:teamId/advance/:roundId', asyncHandler(async (req, res) => {
+  const pool = configuredPool();
+  if (!req.admin || !req.adminSessionToken) throw new ProgressionError('Administrator authentication required.', 'FORBIDDEN');
+  const teamId = Array.isArray(req.params.teamId) ? req.params.teamId[0] : req.params.teamId;
+  const roundId = numberParam(req.params.roundId, 'round', 1, 4);
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  const result = await adminAdvanceTeamToRound(pool, req.adminSessionToken, teamId, roundId, reason);
+  return res.json({ success: true, ...result, ...(await getTeamProgression(pool, teamId)), audit: await getTeamProgressionAudit(pool, teamId) });
 }));
 
 adminRouter.get('/:teamId', asyncHandler(async (req, res) => {

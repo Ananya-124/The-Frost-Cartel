@@ -93,13 +93,15 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
     };
 
     void syncStatus();
-    intervalId = setInterval(() => { void syncStatus(); }, 15000);
+    intervalId = setInterval(() => { void syncStatus(); }, 3000);
     const syncWhenVisible = () => { if (document.visibilityState === 'visible') void syncStatus(); };
     document.addEventListener('visibilitychange', syncWhenVisible);
+    window.addEventListener('focus', syncWhenVisible);
     return () => {
       disposed = true;
       if (intervalId) clearInterval(intervalId);
       document.removeEventListener('visibilitychange', syncWhenVisible);
+      window.removeEventListener('focus', syncWhenVisible);
     };
   }, [session.teamId, isRound1GameActive]);
 

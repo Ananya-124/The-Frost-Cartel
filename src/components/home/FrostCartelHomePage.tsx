@@ -106,8 +106,17 @@ export const FrostCartelHomePage: React.FC = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         void refreshProgression();
       }
-    }, 15000);
-    return () => clearInterval(interval);
+    }, 3000);
+    const onFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void refreshProgression();
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [session, refreshProgression]);
   const displayRounds = useMemo(() => serverRounds(progression, Boolean(session)), [progression, session]);
 

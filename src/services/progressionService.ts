@@ -49,6 +49,12 @@ export const progressionService = {
     request<{ success: true } & TeamProgression>(`/api/admin/progression/${encodeURIComponent(teamId)}/${entity}/${entityId}/${action}`, 'POST', { reason }),
   adminRound2Global: (action: 'unlock' | 'lock' | 'reset', reason?: string) =>
     request<{ success: true; action: string; isActive: boolean; updatedCount: number }>(`/api/admin/progression/round2/${action}`, 'POST', { reason }),
+  adminRound3Global: (action: 'advance' | 'unlock' | 'lock', reason?: string) =>
+    request<{ success: true; action: string; isActive: boolean; updatedCount: number; cardsSynced: number }>(`/api/admin/progression/round3/${action}`, 'POST', { reason }),
+  adminRound4Global: (action: 'advance' | 'unlock' | 'lock', reason?: string) =>
+    request<{ success: true; action: string; isActive: boolean; updatedCount: number }>(`/api/admin/progression/round4/${action}`, 'POST', { reason }),
+  adminAdvanceTeam: (teamId: string, roundId: number, reason?: string) =>
+    request<{ success: true; teamId: string; roundId: number } & TeamProgression>(`/api/admin/progression/teams/${encodeURIComponent(teamId)}/advance/${roundId}`, 'POST', { reason }),
 };
 
 export const adminAuthService = {

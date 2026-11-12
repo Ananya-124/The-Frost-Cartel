@@ -271,6 +271,263 @@ export async function adminProgressRound2Global(
   });
 }
 
+export const ROUND2_TO_ROUND3_CARD_MAPPINGS: Array<{ auctionPowerCardId: string; round3CardId: string; rationale: string }> = [
+  { auctionPowerCardId: 'r2-card-1', round3CardId: 'temporal-compass', rationale: 'Chrono Freeze to Temporal Compass' },
+  { auctionPowerCardId: 'r2-card-2', round3CardId: 'temporal-shield', rationale: 'Witching Hour to Temporal Shield' },
+  { auctionPowerCardId: 'r2-card-3', round3CardId: 'spectral-lens', rationale: 'Spectral Sight to Spectral Lens' },
+  { auctionPowerCardId: 'r2-card-4', round3CardId: 'resonance-decoder', rationale: "Witch's Lens to Resonance Decoder" },
+  { auctionPowerCardId: 'r2-card-5', round3CardId: 'phantom-key', rationale: 'Hexbreaker to Phantom Key' },
+  { auctionPowerCardId: 'r2-card-6', round3CardId: 'emergency-power-cell', rationale: "Mechanic's Curse to Emergency Power Cell" },
+  { auctionPowerCardId: 'r2-card-7', round3CardId: 'memory-seal', rationale: "Witch's Elixir to Memory Seal" },
+  { auctionPowerCardId: 'r2-card-8', round3CardId: 'phantom-beacon', rationale: "Raven's Messenger to Phantom Beacon" },
+  { auctionPowerCardId: 'r2-card-9', round3CardId: 'echo-recorder', rationale: 'Phantom Shield to Echo Recorder' },
+  { auctionPowerCardId: 'r2-card-10', round3CardId: 'soul-binding-sigil', rationale: 'Soul Surge to Soul Binding Sigil' },
+];
+
+export async function approveAuctionCardMappings(client: PoolClient): Promise<void> {
+  for (const m of ROUND2_TO_ROUND3_CARD_MAPPINGS) {
+    await client.query(`
+      INSERT INTO round3_auction_card_mappings(auction_power_card_id, round3_card_id, mapping_status, rationale, reviewed_at)
+      VALUES($1, $2, 'APPROVED', $3, now())
+      ON CONFLICT (auction_power_card_id) DO UPDATE SET
+        round3_card_id = EXCLUDED.round3_card_id,
+        mapping_status = 'APPROVED',
+        rationale = EXCLUDED.rationale,
+        reviewed_at = now()
+    `, [m.auctionPowerCardId, m.round3CardId, m.rationale]);
+  }
+}
+
+export async function syncRound2CardsToRound3Inventory(client: PoolClient, teamId?: string): Promise<number> {
+  await approveAuctionCardMappings(client);
+  const result = await client.query(`
+    INSERT INTO round3_card_inventory(team_id, card_id, source, auction_power_card_id, auction_ownership_id, quantity, updated_at)
+    SELECT
+      tpc.team_id,
+      m.round3_card_id,
+      'auction',
+      tpc.power_card_id,
+      tpc.id,
+      1,
+      now()
+    FROM team_power_cards tpc
+    JOIN round3_auction_card_mappings m ON m.auction_power_card_id = tpc.power_card_id AND m.mapping_status = 'APPROVED'
+    WHERE tpc.source = 'auction' AND tpc.purchased_round_id = 2
+      AND ($1::text IS NULL OR tpc.team_id = $1)
+    ON CONFLICT (team_id, card_id, source) DO UPDATE SET
+      quantity = round3_card_inventory.quantity + 1,
+      auction_power_card_id = EXCLUDED.auction_power_card_id,
+      auction_ownership_id = EXCLUDED.auction_ownership_id,
+      updated_at = now()
+  `, [teamId ?? null]);
+  return result.rowCount ?? 0;
+}
+
+export async function adminProgressRound3Global(
+  pool: Pool,
+  adminSessionToken: string,
+  action: 'advance' | 'unlock' | 'lock',
+  reason?: string,
+): Promise<{ isActive: boolean; updatedCount: number; cardsSynced: number }> {
+  return withPostgresTransaction(pool, async (client) => {
+    const adminId = await requireAdminSession(client, adminSessionToken);
+    if (action === 'advance' || action === 'unlock') {
+      await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=3');
+      const cardsSynced = await syncRound2CardsToRound3Inventory(client);
+      await client.query(`
+        UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now()
+        WHERE round_id=2 AND status IN ('AVAILABLE', 'IN_PROGRESS')
+      `);
+      const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
+        'SELECT team_id, status FROM round_progress WHERE round_id=3 FOR UPDATE',
+      );
+      let updatedCount = 0;
+      for (const t of teams.rows) {
+        if (t.status === 'LOCKED') {
+          await client.query(
+            "UPDATE round_progress SET status='AVAILABLE', eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=3",
+            [t.team_id],
+          );
+          await client.query(
+            "UPDATE team_hunt_progress SET status='AVAILABLE', updated_at=now() WHERE team_id=$1 AND hunt_id=1 AND status='LOCKED'",
+            [t.team_id],
+          );
+          await client.query('INSERT INTO round3_sessions(team_id) VALUES($1) ON CONFLICT (team_id) DO NOTHING', [t.team_id]);
+          await client.query('INSERT INTO round3_runs(team_id) VALUES($1) ON CONFLICT (team_id) DO NOTHING', [t.team_id]);
+          await audit(client, {
+            adminId,
+            teamId: t.team_id,
+            entity: 'ROUND',
+            entityId: 3,
+            previous: t.status,
+            next: 'AVAILABLE',
+            action: 'ADVANCE',
+            reason: reason || 'Tournament Round 3 unlocked for all squads with Round 2 cards synced',
+          });
+          updatedCount++;
+        }
+      }
+      return { isActive: true, updatedCount, cardsSynced };
+    } else {
+      await client.query('UPDATE rounds SET is_active=false, updated_at=now() WHERE round_id=3');
+      const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
+        'SELECT team_id, status FROM round_progress WHERE round_id=3 FOR UPDATE',
+      );
+      let updatedCount = 0;
+      for (const t of teams.rows) {
+        if (t.status !== 'LOCKED') {
+          await client.query(
+            "UPDATE round_progress SET status='LOCKED', updated_at=now() WHERE team_id=$1 AND round_id=3",
+            [t.team_id],
+          );
+          await audit(client, {
+            adminId,
+            teamId: t.team_id,
+            entity: 'ROUND',
+            entityId: 3,
+            previous: t.status,
+            next: 'LOCKED',
+            action: 'LOCK',
+            reason: reason || 'Tournament Round 3 locked for all squads',
+          });
+          updatedCount++;
+        }
+      }
+      return { isActive: false, updatedCount, cardsSynced: 0 };
+    }
+  });
+}
+
+export async function adminProgressRound4Global(
+  pool: Pool,
+  adminSessionToken: string,
+  action: 'advance' | 'unlock' | 'lock',
+  reason?: string,
+): Promise<{ isActive: boolean; updatedCount: number }> {
+  return withPostgresTransaction(pool, async (client) => {
+    const adminId = await requireAdminSession(client, adminSessionToken);
+    if (action === 'advance' || action === 'unlock') {
+      await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
+      await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+      await client.query(`
+        UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now()
+        WHERE round_id=3 AND status IN ('AVAILABLE', 'IN_PROGRESS')
+      `);
+      const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
+        'SELECT team_id, status FROM round_progress WHERE round_id=4 FOR UPDATE',
+      );
+      let updatedCount = 0;
+      for (const t of teams.rows) {
+        if (t.status === 'LOCKED') {
+          await client.query(
+            "UPDATE round_progress SET status='AVAILABLE', eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=4",
+            [t.team_id],
+          );
+          await audit(client, {
+            adminId,
+            teamId: t.team_id,
+            entity: 'ROUND',
+            entityId: 4,
+            previous: t.status,
+            next: 'AVAILABLE',
+            action: 'ADVANCE',
+            reason: reason || 'Tournament Round 4 unlocked for all squads',
+          });
+          updatedCount++;
+        }
+      }
+      return { isActive: true, updatedCount };
+    } else {
+      await client.query('UPDATE rounds SET is_active=false, updated_at=now() WHERE round_id=4');
+      await client.query('UPDATE round4_settings SET is_released=false, updated_at=now() WHERE id=1');
+      const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
+        'SELECT team_id, status FROM round_progress WHERE round_id=4 FOR UPDATE',
+      );
+      let updatedCount = 0;
+      for (const t of teams.rows) {
+        if (t.status !== 'LOCKED') {
+          await client.query(
+            "UPDATE round_progress SET status='LOCKED', updated_at=now() WHERE team_id=$1 AND round_id=4",
+            [t.team_id],
+          );
+          await audit(client, {
+            adminId,
+            teamId: t.team_id,
+            entity: 'ROUND',
+            entityId: 4,
+            previous: t.status,
+            next: 'LOCKED',
+            action: 'LOCK',
+            reason: reason || 'Tournament Round 4 locked for all squads',
+          });
+          updatedCount++;
+        }
+      }
+      return { isActive: false, updatedCount };
+    }
+  });
+}
+
+export async function adminAdvanceTeamToRound(
+  pool: Pool,
+  adminSessionToken: string,
+  teamId: string,
+  targetRound: number,
+  reason?: string,
+): Promise<{ success: boolean; teamId: string; roundId: number }> {
+  return withPostgresTransaction(pool, async (client) => {
+    const adminId = await requireAdminSession(client, adminSessionToken);
+    await assertTeam(client, teamId);
+    await lockTeamProgression(client, teamId);
+
+    // Auto-complete previous rounds up to targetRound - 1
+    for (let r = 1; r < targetRound; r++) {
+      const prev = await client.query<{ status: ProgressStatus }>(
+        'SELECT status FROM round_progress WHERE team_id=$1 AND round_id=$2 FOR UPDATE', [teamId, r]
+      );
+      if (prev.rows[0] && prev.rows[0].status !== 'COMPLETED') {
+        await client.query(
+          "UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=$2",
+          [teamId, r]
+        );
+        await audit(client, { adminId, teamId, entity: 'ROUND', entityId: r, previous: prev.rows[0].status, next: 'COMPLETED', action: 'COMPLETE', reason: `Auto-completed to advance to Round ${targetRound}` });
+      }
+    }
+
+    if (targetRound === 2) {
+      await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=2');
+      await client.query('UPDATE round2_auction_config SET enabled=true, updated_at=now() WHERE id=1');
+    }
+
+    if (targetRound === 3) {
+      await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=3');
+      await syncRound2CardsToRound3Inventory(client, teamId);
+      await client.query("UPDATE team_hunt_progress SET status='AVAILABLE', updated_at=now() WHERE team_id=$1 AND hunt_id=1 AND status='LOCKED'", [teamId]);
+      await client.query('INSERT INTO round3_sessions(team_id) VALUES($1) ON CONFLICT (team_id) DO NOTHING', [teamId]);
+      await client.query('INSERT INTO round3_runs(team_id) VALUES($1) ON CONFLICT (team_id) DO NOTHING', [teamId]);
+    }
+
+    if (targetRound === 4) {
+      await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
+      await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+    }
+
+    const target = await client.query<{ status: ProgressStatus }>(
+      'SELECT status FROM round_progress WHERE team_id=$1 AND round_id=$2 FOR UPDATE', [teamId, targetRound]
+    );
+    const oldStatus = target.rows[0]?.status ?? 'LOCKED';
+    if (oldStatus !== 'COMPLETED' && oldStatus !== 'IN_PROGRESS') {
+      await client.query(
+        "UPDATE round_progress SET status='AVAILABLE', eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=$2",
+        [teamId, targetRound]
+      );
+      await audit(client, { adminId, teamId, entity: 'ROUND', entityId: targetRound, previous: oldStatus, next: 'AVAILABLE', action: 'ADVANCE', reason: reason || `Admin advanced squad to Round ${targetRound}` });
+    }
+
+    return { success: true, teamId, roundId: targetRound };
+  });
+}
+
 export async function adminProgress(pool: Pool, adminSessionToken: string, teamId: string, entity: ProgressEntity,
   entityId: number, action: ProgressAction, reason?: string): Promise<void> {
   return withPostgresTransaction(pool, async (client) => {
@@ -322,6 +579,8 @@ export async function adminProgress(pool: Pool, adminSessionToken: string, teamI
         }
       }
       if (entity === 'ROUND' && entityId === 3) {
+        await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=3');
+        await syncRound2CardsToRound3Inventory(client, teamId);
         const huntStatus = await readAndLock(client, teamId, 'HUNT', 1);
         if (huntStatus === 'LOCKED') {
           await setState(client, teamId, 'HUNT', 1, 'AVAILABLE');
