@@ -69,5 +69,7 @@ export function createPostgresPoolConfig(env: PostgresEnvironment = process.env)
     max,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   };
 }
