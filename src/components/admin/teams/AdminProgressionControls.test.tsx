@@ -32,7 +32,7 @@ describe('Admin Round 2 team progression controls', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('allows Round 2 unlock for the shared tournament auction while keeping subsequent rounds gated', async () => {
-    vi.mocked(progressionService.getAdminTeam).mockResolvedValue({ success: true, ...state(null) });
+    vi.mocked(progressionService.getAdminTeam).mockResolvedValue(state(null));
     render(<AdminProgressionControls teamId="team-42" teamName="North Hall" />);
 
     const unlockRound2 = await screen.findByRole('button', { name: 'unlock Round 2' });
@@ -49,8 +49,8 @@ describe('Admin Round 2 team progression controls', () => {
   });
 
   it('unlocks an eligible team through the authenticated server action and displays the confirmed state', async () => {
-    vi.mocked(progressionService.getAdminTeam).mockResolvedValue({ success: true, ...state('2026-11-12T10:00:00.000Z') });
-    vi.mocked(progressionService.adminAction).mockResolvedValue({ success: true, ...state('2026-11-12T10:00:00.000Z', 'AVAILABLE') });
+    vi.mocked(progressionService.getAdminTeam).mockResolvedValue(state('2026-11-12T10:00:00.000Z'));
+    vi.mocked(progressionService.adminAction).mockResolvedValue(state('2026-11-12T10:00:00.000Z', 'AVAILABLE'));
     const onProgressChanged = vi.fn();
     render(<AdminProgressionControls teamId="team-42" teamName="North Hall" onProgressChanged={onProgressChanged} />);
 
