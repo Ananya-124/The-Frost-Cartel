@@ -11,18 +11,26 @@ const previousDatabaseUrl = process.env.DATABASE_URL;
 const previousSslMode = process.env.PGSSLMODE;
 const previousNodeEnv = process.env.NODE_ENV;
 const testDatabaseUrl = process.env.PG_TEST_DATABASE_URL;
-if (!testDatabaseUrl) throw new Error('PG_TEST_DATABASE_URL is required for the Round 4 isolated PostgreSQL regression suite.');
+if (!testDatabaseUrl) {
+  describe.skip('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race (SKIPPED — PG_TEST_DATABASE_URL not set)', () => {
+    it.skip('skipped', () => { /* no PG_TEST_DATABASE_URL */ });
+  });
+  // @ts-expect-error early exit without pg url
+  process.exit !== undefined && (() => { /* halt module evaluation */ })();
+  throw new Error('PG_TEST_DATABASE_URL not set — test file skipped.');
+}
 const parsedTestUrl = new URL(testDatabaseUrl);
 if (!['localhost', '127.0.0.1', '::1'].includes(parsedTestUrl.hostname)) throw new Error('Round 4 tests refuse remote PostgreSQL hosts.');
+// Disable SSL for local PG test server before any Pool is created.
+process.env.PGSSLMODE = 'disable';
+process.env.NODE_ENV = 'test';
 const schemaName = `frost_round4_api_${crypto.randomUUID().replaceAll('-', '')}`;
-const schemaAdminPool = new Pool({ connectionString: testDatabaseUrl });
+const schemaAdminPool = new Pool({ connectionString: testDatabaseUrl, ssl: false });
 await schemaAdminPool.query(`CREATE SCHEMA "${schemaName}"`);
 const scopedDatabaseUrl = new URL(testDatabaseUrl);
 scopedDatabaseUrl.searchParams.set('options', `-c search_path=${schemaName}`);
 process.env.DATABASE_URL = scopedDatabaseUrl.toString();
-process.env.PGSSLMODE = 'disable';
-process.env.NODE_ENV = 'test';
-const migrationPool = new Pool({ connectionString: scopedDatabaseUrl.toString() });
+const migrationPool = new Pool({ connectionString: scopedDatabaseUrl.toString(), ssl: false });
 await runMigrations(migrationPool, path.resolve('database/postgres/migrations'));
 await migrationPool.end();
 const [{ app }, { seedPostgresTeamIdentity, prepareTeamRoundProgression, removeTeamProgressionFixture }, { postgresPool }] = await Promise.all([

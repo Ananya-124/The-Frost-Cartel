@@ -240,6 +240,7 @@ export const FrostCartelHomePage: React.FC = () => {
         {isDashboardOpen && (
           <TeamDashboardView
             session={session}
+            isRound1GameActive
             round1Config={ROUNDS_DATA[0]}
             onLogout={handleLogout}
             onEnterRound1={handleEnterRound1}

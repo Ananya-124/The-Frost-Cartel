@@ -113,20 +113,62 @@ async function getRound1ConfigForClient(client: PoolClient): Promise<Round1Confi
 
 export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: Round1TimingMetrics) {
   const serviceStartedAt=performance.now();
-  try { return await withPostgresTransaction(pool, async (client) => {
-    // This endpoint is polled for display only. Avoid locking team and stage
-    // rows on each refresh; gameplay mutations keep their existing row locks.
-    const data=await loadGame(client,teamId,metrics,false);
-    const round=await measure(metrics,'timerQueryMs',()=>client.query<{duration_seconds:number;is_active:boolean;start_time:Date|null}>('SELECT duration_seconds,is_active,start_time FROM rounds WHERE round_id=1'));
-    const deadline=data.session.roundDeadline ? new Date(data.session.roundDeadline).getTime() : null;
-    const teamRemaining=deadline===null?data.config.durationMinutes*60:Math.max(0,Math.floor((deadline-Date.now())/1000));
-    const globalRemaining=round.rows[0]?.is_active?Math.max(0,round.rows[0].duration_seconds-Math.floor((Date.now()-(round.rows[0].start_time?.getTime()??Date.now()))/1000)):teamRemaining;
-    const remainingSeconds=data.config.lifecycle==='paused'&&typeof data.session.pausedRemainingSeconds==='number'
-      ? data.session.pausedRemainingSeconds
-      : Math.min(teamRemaining,globalRemaining);
-    const roundAcceptsPlay = data.config.lifecycle === 'not_started' || data.config.lifecycle === 'running';
-    return { session:data.session, remainingSeconds,roundActive:roundAcceptsPlay,score:data.session.credits,totalCredits:data.totalCredits,stages:data.rows.map(({stage_id,status,score,max_score,state})=>({stageId:stage_id,status,score,maxScore:max_score,state})),config:data.config };
-  }); } finally { if(metrics)metrics.serviceTotalMs=performance.now()-serviceStartedAt; }
+  try {
+    // This display-only read previously used five serial SELECTs inside a
+    // transaction. A single aggregate statement is both cheaper and gives the
+    // client a consistent snapshot; gameplay mutations retain their row locks.
+    const result=await measure(metrics,'stateQueryMs',()=>pool.query<{
+      team_name:string; score:number; total_credits:number; max_credits:number;
+      progress_status:string|null; configuration:Partial<Round1Config>|null;
+      round_is_active:boolean|null; duration_seconds:number|null; start_time:Date|null;
+      stage_rows:{stage_id:number;status:string;score:number;max_score:number;state:Record<string,unknown>}[];
+    }>(`SELECT t.team_name,t.score,t.total_credits,t.max_credits,p.status AS progress_status,
+        c.configuration,r.is_active AS round_is_active,r.duration_seconds,r.start_time,
+        COALESCE((SELECT jsonb_agg(jsonb_build_object('stage_id',s.stage_id,'status',s.status,
+          'score',s.score,'max_score',s.max_score,'state',s.state) ORDER BY s.stage_id)
+          FROM round1_stage_progress s WHERE s.team_id=t.id),'[]'::jsonb) AS stage_rows
+      FROM teams t
+      LEFT JOIN round_progress p ON p.team_id=t.id AND p.round_id=1
+      LEFT JOIN round1_configuration c ON c.singleton_id=1
+      LEFT JOIN rounds r ON r.round_id=1
+      WHERE t.id=$1`,[teamId]));
+    const row=result.rows[0];
+    if(!row)throw new Round1GameError('Team not found.',404);
+    if(row.stage_rows.length!==3||!row.progress_status)throw new Round1GameError('Round 1 team records are not initialized.',409);
+    if(row.progress_status!=='IN_PROGRESS')throw new Round1GameError('Round 1 is locked or not active for this team.',423);
+    const base=defaults(),stored=row.configuration??{};
+    const config:Round1Config={...base,...stored,
+      stage1:{...base.stage1,...(stored.stage1??{}),trials:stored.stage1?.trials??base.stage1.trials},
+      stage2:{...base.stage2,...(stored.stage2??{}),images:base.stage2.images,targets:base.stage2.targets},
+      stage3:{...base.stage3,...(stored.stage3??{}),grave1:{...base.stage3.grave1,...(stored.stage3?.grave1??{})},grave2:{...base.stage3.grave2,...(stored.stage3?.grave2??{})},grave3:{...base.stage3.grave3,...(stored.stage3?.grave3??{})},finalGate:{...base.stage3.finalGate,...(stored.stage3?.finalGate??{})}},
+    };
+    const initializationStartedAt=performance.now();
+    const game=new Round1Service();
+    game.updateStage1Config(config.stage1);game.updateStage2Config(config.stage2);game.updateStage3Config(config.stage3);game.setDurationMinutes(config.durationMinutes);
+    const persisted=row.stage_rows[0].state?.round1Session as Round1TeamSessionState|undefined;
+    const session=persisted??game.snapshotTeamSession(teamId,row.team_name);
+    session.teamId=teamId;session.teamName=row.team_name;session.credits=row.score;session.totalDurationMinutes=config.durationMinutes;
+    for(const stageRow of row.stage_rows){
+      const id=`stage-${stageRow.stage_id}` as StageId;const item=session.stages[id];
+      item.status=(item.status==='skipped'?'skipped':stageRow.status.toLowerCase()) as typeof item.status;
+      item.earnedCredits=stageRow.score;item.rewardCredits=stageRow.max_score;
+    }
+    session.scoreTransactions=session.scoreTransactions??[];
+    game.restoreTeamSession(session);
+    if(metrics)metrics.initializationMs=performance.now()-initializationStartedAt;
+    const deadline=session.roundDeadline?new Date(session.roundDeadline).getTime():null;
+    const teamRemaining=deadline===null?config.durationMinutes*60:Math.max(0,Math.floor((deadline-Date.now())/1000));
+    const globalDeadline=row.round_is_active&&row.start_time
+      ?row.start_time.getTime()+(row.duration_seconds??0)*1000:null;
+    const effectiveDeadline=deadline===null?globalDeadline:globalDeadline===null?deadline:Math.min(deadline,globalDeadline);
+    const globalRemaining=globalDeadline===null?teamRemaining:Math.max(0,Math.floor((globalDeadline-Date.now())/1000));
+    const remainingSeconds=config.lifecycle==='paused'&&typeof session.pausedRemainingSeconds==='number'
+      ?session.pausedRemainingSeconds:Math.min(teamRemaining,globalRemaining);
+    const endsAt=config.lifecycle==='paused'?null:effectiveDeadline===null?null:new Date(effectiveDeadline).toISOString();
+    const roundAcceptsPlay=config.lifecycle==='not_started'||config.lifecycle==='running';
+    return {session,remainingSeconds,endsAt,roundActive:roundAcceptsPlay,score:session.credits,totalCredits:row.total_credits,
+      stages:row.stage_rows.map(({stage_id,status,score,max_score,state})=>({stageId:stage_id,status,score,maxScore:max_score,state})),config};
+  } finally {if(metrics)metrics.serviceTotalMs=performance.now()-serviceStartedAt;}
 }
 
 export type Round1Action = { actionId:string; type:string; [key:string]:unknown };

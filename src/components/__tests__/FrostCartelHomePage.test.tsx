@@ -143,7 +143,10 @@ describe('FROST CARTEL Homepage & Team Authentication', () => {
     }, { timeout: 3000 });
 
     expect(screen.getAllByText('ShadowSquad').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('THE GATES ARE UNSEALED')).toBeInTheDocument();
+    // Wait for round1Api.getState() async call to resolve and set roundStatus='running'
+    await waitFor(() => {
+      expect(screen.getByText('THE GATES ARE UNSEALED')).toBeInTheDocument();
+    }, { timeout: 3000 });
     expect(screen.getAllByText('THE GRAVEYARD ESCAPE').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('WALLET: 0 CR')).toBeInTheDocument();
 

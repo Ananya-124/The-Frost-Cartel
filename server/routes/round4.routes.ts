@@ -84,6 +84,11 @@ export function createRound4Router(
     const dbPool = requirePool();
     const id = teamId(req);
     const result = await submitRound4Clue(dbPool, id, req.body?.stepId, req.body?.answer, req.body?.requestId);
+    // Replayed successful non-final submissions must preserve the same response
+    // shape as the original request so clients do not need a follow-up state read.
+    if (result.duplicate && result.body.success === true && result.body.isFinal === false) {
+      result.body.state = await getRound4TeamRoute(dbPool, id);
+    }
     if (!result.duplicate && result.body.success === true && result.body.isFinal === false) {
       const state = await getRound4TeamRoute(dbPool, id);
       result.body.state = state;

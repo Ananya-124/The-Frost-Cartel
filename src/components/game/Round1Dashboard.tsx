@@ -49,16 +49,17 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     return null;
   });
   const stateRequestInFlight = useRef<Promise<void> | null>(null);
+  const timerDeadline = useRef<number | null>(null);
   const onUpdateCreditsRef = useRef(onUpdateCredits);
   useEffect(() => { onUpdateCreditsRef.current = onUpdateCredits; }, [onUpdateCredits]);
 
-  // PostgreSQL is authoritative. This local countdown is display-only and is
-  // resynchronized with the server every ten seconds.
+  // PostgreSQL is authoritative; the browser renders against its absolute deadline.
   const applyServerState = useCallback((value: Round1StateResponse) => {
     if (!value?.round || !value.team || !value.session || !value.config?.stage1 || !value.config.stage2 || !value.config.stage3) {
       throw new Error('The Round 1 server returned incomplete game state. Retry or contact the event coordinator.');
     }
     setServerState(value);
+    timerDeadline.current = value.round.endsAt ? Date.parse(value.round.endsAt) : null;
     setSecondsRemaining(value.round.remainingSeconds);
     timerStore.setSeconds(value.round.remainingSeconds);
     onUpdateCreditsRef.current(value.team.totalCredits);
@@ -78,10 +79,12 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     void refreshState();
     const poll = setInterval(() => { void refreshState(); }, 30000);
     const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void refreshState(); };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
     window.addEventListener('focus', refreshWhenVisible);
     window.addEventListener('online', refreshWhenVisible);
     return () => {
       clearInterval(poll);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
       window.removeEventListener('focus', refreshWhenVisible);
       window.removeEventListener('online', refreshWhenVisible);
     };
@@ -89,7 +92,10 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
   useEffect(() => {
     const timer = setInterval(() => {
       if (serverState?.round.isActive && serverState.session.status === 'active') {
-        const next = Math.max(0, timerStore.getSnapshot() - 1);
+        const deadline = timerDeadline.current;
+        const next = deadline === null
+          ? timerStore.getSnapshot()
+          : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
         timerStore.setSeconds(next);
         // Keep the dashboard countdown responsive without rerendering a heavy
         // active puzzle tree once per second.
@@ -113,7 +119,21 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
 
   const performAction = async (type: string, fields: Record<string, unknown> = {}) => {
     const result = await round1Api.action(type, fields);
-    setServerState((current) => current ? { ...current, session: result.session, team: { ...current.team, score: result.score, totalCredits: Number(result.totalCredits ?? current.team.totalCredits) } } : current);
+    const actionDeadline = result.session.roundDeadline ? Date.parse(result.session.roundDeadline) : null;
+    if (Number.isFinite(actionDeadline) && actionDeadline !== null) {
+      timerDeadline.current = timerDeadline.current === null ? actionDeadline : Math.min(timerDeadline.current, actionDeadline);
+    }
+    setServerState((current) => current ? {
+      ...current,
+      round: { ...current.round, endsAt: timerDeadline.current === null ? null : new Date(timerDeadline.current).toISOString() },
+      session: result.session,
+      team: { ...current.team, score: result.score, totalCredits: Number(result.totalCredits ?? current.team.totalCredits) },
+    } : current);
+    if (actionDeadline !== null && Number.isFinite(actionDeadline)) {
+      const next = Math.max(0, Math.ceil((timerDeadline.current! - Date.now()) / 1000));
+      timerStore.setSeconds(next);
+      if (activeStageId === null) setSecondsRemaining(next);
+    }
     if (typeof result.totalCredits === 'number') onUpdateCredits(result.totalCredits);
     setRequestError(null);
     return { ...result, creditsDelta: result.score - (serverState?.team.score ?? result.score) };
@@ -138,7 +158,6 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
 
   const handleStageCompleted = () => {
     soundController.playVictory();
-    void refreshState();
   };
 
   if (loading || !teamSession || !stage1Config || !stage2Config || !stage3Config) return <div className="min-h-screen bg-black text-stone-100 flex flex-col items-center justify-center gap-4"><p>{loading ? 'Loading your Round 1 progress…' : requestError ?? 'Round 1 state is unavailable.'}</p>{!loading && <button className="px-4 py-2 border border-amber-500 rounded" onClick={() => { setLoading(true); void refreshState(); }}>Retry</button>}{requestError?.includes('session has expired') && <button onClick={onReturnHome}>Return to sign in</button>}</div>;

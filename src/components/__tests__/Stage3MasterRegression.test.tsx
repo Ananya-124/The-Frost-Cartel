@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Stage3ForgottenGraveyard } from '../game/stage3/Stage3ForgottenGraveyard';
 import { round1Service } from '../../services/round1Service';
 
@@ -127,7 +127,7 @@ describe('Stage 3 Master Regression & State Management', () => {
     expect(screen.queryByText(/4\/3/)).not.toBeInTheDocument();
   });
 
-  it('redesigned Final Escape Gate modal renders single header, connected tablets, and unseals with phrase', () => {
+  it('redesigned Final Escape Gate modal renders single header, connected tablets, and unseals with phrase', async () => {
     const config = round1Service.getStage3Config();
 
     // Complete all 3 graves
@@ -135,10 +135,18 @@ describe('Stage 3 Master Regression & State Management', () => {
     round1Service.markGrave2Completed(teamId, 'EMBER');
     round1Service.markGrave3Completed(teamId);
 
+    const initialSession = round1Service.getTeamSession(teamId, 'Spectral Operatives');
+    const onAction = vi.fn(async (_type: string, fields?: Record<string, unknown>) => {
+      const success = fields?.answer === 'BENEATH EMBER RETURNS';
+      return { success, message: success ? 'Accepted' : 'The ancient runes reject your phrase', session: initialSession, score: initialSession.credits, creditsDelta: success ? 250 : 0, completed: success };
+    });
+
     render(
       <Stage3ForgottenGraveyard
         teamId={teamId}
         config={config}
+        initialSession={initialSession}
+        onAction={onAction}
         initialCollectedFragments={['BENEATH', 'EMBER', 'RETURNS']}
         isCompleted={false}
         onReturnDashboard={mockReturn}
@@ -174,14 +182,14 @@ describe('Stage 3 Master Regression & State Management', () => {
     fireEvent.change(input, { target: { value: 'WRONG CIPHER' } });
     fireEvent.click(submitBtn);
 
-    expect(screen.getByText(/The ancient runes reject your phrase/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/The ancient runes reject your phrase/i)).toBeInTheDocument());
     expect(mockComplete).not.toHaveBeenCalled();
 
     // Correct submission
     fireEvent.change(input, { target: { value: 'BENEATH EMBER RETURNS' } });
     fireEvent.click(submitBtn);
 
-    expect(mockComplete).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
     expect(screen.getByText(/ARCH-LICH GATE SHATTERED • ESCAPED!/i)).toBeInTheDocument();
     expect(screen.getByText(/\+250 CREDITS SECURED/i)).toBeInTheDocument();
 

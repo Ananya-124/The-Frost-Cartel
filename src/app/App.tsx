@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { FrostCartelHomePage } from '../components/home/FrostCartelHomePage';
-import { AdminPortal } from '../components/admin/AdminPortal';
 import { isAdminRoute } from './routes';
 import type { AppView } from './app.types';
+
+const AdminPortal = lazy(() => import('../components/admin/AdminPortal').then((module) => ({ default: module.AdminPortal })));
 
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(() => {
@@ -35,7 +36,9 @@ export const App: React.FC = () => {
   };
 
   if (currentView === 'admin') {
-    return <AdminPortal onNavigatePublic={navigateToPublic} />;
+    return <Suspense fallback={<div role="status" className="min-h-screen bg-black text-stone-100 flex items-center justify-center">Loading administrator portal…</div>}>
+      <AdminPortal onNavigatePublic={navigateToPublic} />
+    </Suspense>;
   }
 
   // Public portal: STRICTLY NO public admin buttons or shortcuts exposed

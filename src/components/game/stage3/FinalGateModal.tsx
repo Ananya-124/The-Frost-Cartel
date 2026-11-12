@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import type { Round1ActionResponse } from '../../../services/round1ApiService';
+import { round1Service } from '../../../services/round1Service';
 import { soundController } from '../../../utils/soundController';
-import { HorrorJumpscareModal } from './HorrorJumpscareModal';
 
 interface FinalGateModalProps {
   isOpen: boolean;
   teamId: string;
-  onAction: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
+  onAction?: (type: string, fields?: Record<string, unknown>) => Promise<Round1ActionResponse>;
   collectedFragments: string[];
   isCompleted: boolean;
   onGateUnlocked: () => void;
@@ -15,7 +15,7 @@ interface FinalGateModalProps {
 
 export const FinalGateModal: React.FC<FinalGateModalProps> = ({
   isOpen,
-  teamId: _teamId,
+  teamId,
   onAction,
   collectedFragments,
   isCompleted,
@@ -24,7 +24,7 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
 }) => {
   const [incantation, setIncantation] = useState('');
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-  const [isJumpscareActive, setIsJumpscareActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(
     isCompleted ? 'Arch-Lich Gate Shattered • Escaped!' : null
   );
@@ -34,20 +34,42 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorNotice(null);
+    setIsSubmitting(true);
 
-    let result: Round1ActionResponse;
-    try { result = await onAction('stage3.finalAnswer', { answer: incantation }); }
-    catch (error) { soundController.playError(); setErrorNotice(error instanceof Error ? error.message : 'The gate could not be checked.'); return; }
-    const success = Boolean(result.success);
-    const message = typeof result.message === 'string' ? result.message : '';
-    if (success) {
-      setIsJumpscareActive(true);
-      setSuccessNotice('Arch-Lich Gate Shattered • Escaped!');
-      onGateUnlocked();
+    if (onAction) {
+      let result: Round1ActionResponse;
+      try {
+        result = await onAction('stage3.finalAnswer', { answer: incantation });
+      } catch (error) {
+        soundController.playError();
+        setErrorNotice(error instanceof Error ? error.message : 'The gate could not be checked.');
+        setIsSubmitting(false);
+        return;
+      }
+      setIsSubmitting(false);
+      const success = Boolean(result.success);
+      const message = typeof result.message === 'string' ? result.message : '';
+      if (success) {
+        soundController.playVictory();
+        setSuccessNotice('Arch-Lich Gate Shattered • Escaped!');
+        onGateUnlocked();
+      } else {
+        soundController.playError();
+        const penalty = Math.abs(Number(result.creditsDelta ?? 0));
+        setErrorNotice(`${message}${penalty ? ` (-${penalty} CR)` : ''}`);
+      }
     } else {
-      soundController.playError();
-      const penalty = Math.abs(Number(result.creditsDelta ?? 0));
-      setErrorNotice(`${message}${penalty ? ` (-${penalty} CR)` : ''}`);
+      // Local fallback for offline/test environments without explicit onAction prop
+      const { success, message } = round1Service.submitFinalEscapeAnswer(teamId, incantation);
+      setIsSubmitting(false);
+      if (success) {
+        soundController.playVictory();
+        setSuccessNotice('Arch-Lich Gate Shattered • Escaped!');
+        onGateUnlocked();
+      } else {
+        soundController.playError();
+        setErrorNotice(message);
+      }
     }
   };
 
@@ -125,7 +147,7 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
               }`}
             >
               <div className="text-[9px] font-cinzel font-bold tracking-widest uppercase mb-1">
-                Grave I
+                GRAVE I — THE MARKED REMAINS
               </div>
               <div className="font-cinzel text-base sm:text-xl font-black">
                 {collectedFragments.includes('BENEATH') ? 'BENEATH' : (collectedFragments.includes('THE') ? 'THE' : '???')}
@@ -141,7 +163,7 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
               }`}
             >
               <div className="text-[9px] font-cinzel font-bold tracking-widest uppercase mb-1">
-                Grave II
+                GRAVE II — THE BURIED DIARY
               </div>
               <div className="font-cinzel text-base sm:text-xl font-black">
                 {collectedFragments.includes('EMBER') ? 'EMBER' : (collectedFragments.includes('NIGHT') ? 'NIGHT' : '???')}
@@ -157,7 +179,7 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
               }`}
             >
               <div className="text-[9px] font-cinzel font-bold tracking-widest uppercase mb-1">
-                Grave III
+                GRAVE III — THE FINAL TESTAMENT
               </div>
               <div className="font-cinzel text-base sm:text-xl font-black">
                 {collectedFragments.includes('RETURNS') ? 'RETURNS' : '???'}
@@ -219,9 +241,15 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-red-800 via-red-600 to-amber-700 hover:from-red-700 hover:to-amber-600 border border-amber-500/60 font-cinzel text-sm sm:text-base font-black text-white tracking-widest uppercase shadow-[0_0_25px_rgba(220,38,38,0.5)] transition-all transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              disabled={isSubmitting}
+              aria-label="UNSEAL THE FINAL GATE • Speak Incantation & Break Gate"
+              className={`w-full py-3.5 px-4 rounded-xl font-cinzel text-sm sm:text-base font-black tracking-widest uppercase shadow-[0_0_30px_rgba(220,38,38,0.55)] transition-all transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
+                isSubmitting
+                  ? 'bg-stone-800 border border-stone-600 text-stone-400 cursor-wait'
+                  : 'bg-gradient-to-r from-red-800 via-red-600 to-amber-700 hover:from-red-700 hover:to-amber-600 border border-amber-500/80 text-white'
+              }`}
             >
-              Speak Incantation & Break Gate
+              <span>{isSubmitting ? 'UNSEALING ANCIENT SANCTUM...' : 'UNSEAL THE FINAL GATE'}</span>
             </button>
           </form>
         )}
@@ -231,12 +259,6 @@ export const FinalGateModal: React.FC<FinalGateModalProps> = ({
           Frost Cartel • Round 01 Final Trial • Stage 03
         </div>
       </div>
-
-      {/* Horror Jumpscare Cinematic on Unlocking Arch-Lich Gate */}
-      <HorrorJumpscareModal
-        isOpen={isJumpscareActive}
-        onComplete={() => setIsJumpscareActive(false)}
-      />
     </div>
   );
 };

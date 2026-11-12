@@ -3,7 +3,7 @@ import type { Round1TeamSessionState, Stage1Config, Stage2Config, Stage3Config }
 
 export interface Round1StateResponse {
   success: true;
-  round: { id: number; name: string; isActive: boolean; totalDurationSeconds: number; remainingSeconds: number };
+  round: { id: number; name: string; isActive: boolean; totalDurationSeconds: number; remainingSeconds: number; endsAt: string | null };
   team: { score: number; totalCredits: number; maxCredits: number; isPaused: boolean };
   session: Round1TeamSessionState;
   config: { stage1: Stage1Config; stage2: Stage2Config; stage3: Stage3Config };

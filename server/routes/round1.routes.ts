@@ -24,7 +24,7 @@ round1Router.get('/state',requireTeamAuth,asyncRoute(async(req,res)=>{
   const {acceptedAnswer:_acceptedAnswer,...finalGate}=config.stage3.finalGate;
   const publicStage3={...config.stage3,grave1,grave2,grave3:{...config.stage3.grave3,runeRings:config.stage3.grave3.runeRings.map(({correctSymbol:_correctSymbol,...ring})=>ring)},finalGate};
   const session=structuredClone(value.session);session.stage1State.activeTarget=undefined;
-  res.json({success:true,round:{id:1,name:'The Graveyard Escape',isActive:value.roundActive,totalDurationSeconds:config.durationMinutes*60,remainingSeconds:value.remainingSeconds},team:{score:value.score,totalCredits:value.totalCredits,maxCredits:req.team?.maxCredits??500,isPaused:req.team?.isPaused??false},session,stages:value.stages.map(({state:_privateState,...stage})=>stage),config:{stage1:config.stage1,stage2:config.stage2,stage3:publicStage3}});
+  res.json({success:true,round:{id:1,name:'The Graveyard Escape',isActive:value.roundActive,totalDurationSeconds:config.durationMinutes*60,remainingSeconds:value.remainingSeconds,endsAt:value.endsAt},team:{score:value.score,totalCredits:value.totalCredits,maxCredits:req.team?.maxCredits??500,isPaused:req.team?.isPaused??false},session,stages:value.stages.map(({state:_privateState,...stage})=>stage),config:{stage1:config.stage1,stage2:config.stage2,stage3:publicStage3}});
   if(timings)console.info(`[Round 1 timing] GET /state ${JSON.stringify({...timings,responseBuildMs:performance.now()-responseStartedAt,totalServerMs:performance.now()-requestStartedAt})}`);
 }));
 

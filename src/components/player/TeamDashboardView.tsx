@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { RoundConfig } from '../../types/round.types';
 import { useNativeDialog } from '../../hooks/useNativeDialog';
@@ -13,6 +13,7 @@ interface TeamDashboardViewProps {
   onLogout: () => void;
   onEnterRound1: () => void;
   onClose: () => void;
+  isRound1GameActive?: boolean;
 }
 
 export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
@@ -21,6 +22,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   onLogout,
   onEnterRound1,
   onClose,
+  isRound1GameActive = false,
 }) => {
   const { dialogRef } = useNativeDialog(true, onClose);
 
@@ -28,10 +30,15 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   const [progression, setProgression] = useState<TeamProgression | null>(null);
   const [progressionLoading, setProgressionLoading] = useState(false);
   const [progressionError, setProgressionError] = useState<string | null>(null);
+  const progressionRef = useRef<TeamProgression | null>(null);
 
   const refreshProgression = useCallback(async () => {
     setProgressionLoading(true); setProgressionError(null);
-    try { setProgression(await progressionService.getMine()); }
+    try {
+      const value = await progressionService.getMine();
+      progressionRef.current = value;
+      setProgression(value);
+    }
     catch (error) {
       setProgressionError(errorStatus(error) === 401 ? 'Your team session expired. Sign in again to refresh progression.' : error instanceof Error ? error.message : 'Could not load team progression.');
     } finally { setProgressionLoading(false); }
@@ -40,24 +47,30 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
   useEffect(() => { void refreshProgression(); }, [refreshProgression, session.teamId]);
 
   useEffect(() => {
+    if (isRound1GameActive) return;
     let disposed = false;
+    let inFlight = false;
     const syncStatus = async () => {
+      if (disposed || inFlight || document.visibilityState !== 'visible') return;
+      inFlight = true;
       try {
         const state = await round1Api.getState();
         if (!disposed) setRoundStatus(state.round.isActive ? 'running' : state.session.status === 'completed' ? 'completed' : 'paused');
       } catch {
         if (!disposed) {
-          const status = progression?.rounds.find((round) => round.round_id === 1)?.status;
+          const status = progressionRef.current?.rounds.find((round) => round.round_id === 1)?.status;
           setRoundStatus(status === 'COMPLETED' ? 'completed' : 'not_started');
         }
-      }
+      } finally { inFlight = false; }
     };
     void syncStatus();
     const interval = setInterval(() => { void syncStatus(); }, 10000);
-    return () => { disposed = true; clearInterval(interval); };
-  }, [progression, session.teamId]);
+    const syncWhenVisible = () => { if (document.visibilityState === 'visible') void syncStatus(); };
+    document.addEventListener('visibilitychange', syncWhenVisible);
+    return () => { disposed = true; clearInterval(interval); document.removeEventListener('visibilitychange', syncWhenVisible); };
+  }, [session.teamId, isRound1GameActive]);
 
-  const isRoundActive = roundStatus === 'running';
+  const isRoundActive = isRound1GameActive || roundStatus === 'running';
 
   return (
     <dialog

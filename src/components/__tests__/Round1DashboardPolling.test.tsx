@@ -18,7 +18,7 @@ describe('Round 1 state polling', () => {
     const gameSession = game.getTeamSession('poll-team', 'Polling Team');
     const state = {
       success: true,
-      round: { id: 1, name: 'The Graveyard Escape', isActive: true, totalDurationSeconds: 1320, remainingSeconds: 1320 },
+      round: { id: 1, name: 'The Graveyard Escape', isActive: true, totalDurationSeconds: 1320, remainingSeconds: 1320, endsAt: null },
       team: { score: 0, totalCredits: 500, maxCredits: 500, isPaused: false },
       session: gameSession,
       config: { stage1: game.getStage1Config(), stage2: game.getStage2Config(), stage3: game.getStage3Config() },
@@ -38,6 +38,33 @@ describe('Round 1 state polling', () => {
     expect(round1Api.getState).toHaveBeenCalledTimes(1);
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(round1Api.getState).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(round1Api.getState).toHaveBeenCalledTimes(3);
+  });
+
+  it('renders from the server deadline and catches up after browser timer throttling without API calls', async () => {
+    vi.useFakeTimers();
+    const game = new Round1Service();
+    const gameSession = game.beginRound1('timer-team', 'Timer Team');
+    const endsAt = new Date(Date.now() + 60_000).toISOString();
+    gameSession.roundDeadline = endsAt;
+    const state = {
+      success: true,
+      round: { id: 1, name: 'The Graveyard Escape', isActive: true, totalDurationSeconds: 1320, remainingSeconds: 60, endsAt },
+      team: { score: 0, totalCredits: 500, maxCredits: 500, isPaused: false },
+      session: gameSession,
+      config: { stage1: game.getStage1Config(), stage2: game.getStage2Config(), stage3: game.getStage3Config() },
+    } as Round1StateResponse;
+    vi.mocked(round1Api.getState).mockResolvedValue(state);
+    render(<Round1Dashboard session={{ teamId: 'timer-team', teamName: 'Timer Team' } as TeamSession} onReturnHome={() => undefined} onUpdateCredits={() => undefined} />);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(screen.getByText(/01:00/)).toBeInTheDocument();
+
+    // Simulate a suspended tab: wall time advances while interval callbacks do not.
+    act(() => { vi.setSystemTime(Date.now() + 5_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByText(/00:54/)).toBeInTheDocument();
+    expect(round1Api.getState).toHaveBeenCalledTimes(1);
   });
 
   it('shows a retryable error instead of crashing on an incomplete state response', async () => {

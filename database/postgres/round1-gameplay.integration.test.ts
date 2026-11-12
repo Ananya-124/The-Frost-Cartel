@@ -32,8 +32,11 @@ suite('PostgreSQL Round 1 server-authoritative gameplay',()=>{
     const initial=await getTeamRound1State(pool,id);
     expect(initial.roundActive).toBe(true);
     expect(initial.remainingSeconds).toBe(1320);
+    expect(initial.endsAt).toBeNull();
     const entered=await performRound1Action(pool,id,action('enter',{stageId:'stage-1'}));
     expect(entered.success).toBe(true);
+    const running=await getTeamRound1State(pool,id);
+    expect(running.endsAt).toBe(entered.session.roundDeadline);
     const skipped=await performRound1Action(pool,id,action('skip',{stageId:'stage-1'}));
     expect(skipped).toMatchObject({success:true,score:0,totalCredits:500});
     expect(skipped.session.stages['stage-1'].status).toBe('skipped');
@@ -53,7 +56,7 @@ suite('PostgreSQL Round 1 server-authoritative gameplay',()=>{
     const totalMs=performance.now()-started;
     console.info(`[Round 1 local PostgreSQL timing] state-read ${JSON.stringify({...timings,observedTotalMs:totalMs})}`);
     expect(totalMs).toBeGreaterThanOrEqual(0);
-    expect(timings).toMatchObject({teamQueryMs:expect.any(Number),stageStateQueryMs:expect.any(Number),progressionQueryMs:expect.any(Number),configurationLoadMs:expect.any(Number),timerQueryMs:expect.any(Number)});
+    expect(timings).toMatchObject({stateQueryMs:expect.any(Number),initializationMs:expect.any(Number),serviceTotalMs:expect.any(Number)});
   });
 
   it('preserves per-team pause and resume when no global admin timer has started',async()=>{

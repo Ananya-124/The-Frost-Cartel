@@ -13,6 +13,7 @@ import { round4Router } from './routes/round4.routes.ts';
 import { eventsRouter } from './routes/events.routes.ts';
 import { adminProgressionRouter, progressionRouter, roundAccessGuard } from './routes/progression.routes.ts';
 import { createCorsOptions } from './config/security.ts';
+import { requestTimingMiddleware } from './middleware/requestTiming.ts';
 
 export const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,6 +27,7 @@ app.use(cookieParser());
 
 // Exact origin allowlist; no-origin requests remain available for CLI/server health checks.
 app.use(cors(createCorsOptions()));
+app.use(requestTimingMiddleware);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

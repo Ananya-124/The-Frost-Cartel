@@ -167,6 +167,40 @@ class Round4Service {
     }
   }
 
+  async scanQrToken(
+    _teamId: string,
+    qrToken: string
+  ): Promise<{
+    success: boolean;
+    valid: boolean;
+    validationWord?: string;
+    clueIndex?: number;
+    locationName?: string;
+    message: string;
+    code?: string;
+  }> {
+    try {
+      return await request<{
+        success: boolean;
+        valid: boolean;
+        validationWord?: string;
+        clueIndex?: number;
+        locationName?: string;
+        message: string;
+        code?: string;
+      }>('/api/round4/scan-qr', {
+        method: 'POST',
+        body: JSON.stringify({ qrToken: qrToken.trim() }),
+      });
+    } catch (err) {
+      return {
+        success: false,
+        valid: false,
+        message: err instanceof Error ? err.message : 'Checkpoint scan failed.',
+      };
+    }
+  }
+
   getWinner(): WinnerRecord | null { return this.currentWinner; }
   subscribe(listener: (progress: ExpeditionProgress) => void): () => void {
     this.listeners.add(listener); return () => { this.listeners.delete(listener); };
