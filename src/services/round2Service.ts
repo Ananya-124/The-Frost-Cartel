@@ -1,4 +1,4 @@
-import { apiUrl } from './apiBaseUrl';
+﻿import { apiUrl } from './apiBaseUrl';
 
 export interface R2Card { id: number; name: string; description: string; icon: string; defaultBase: number; status: 'pending' | 'live' | 'sold' | 'unsold'; winner: string | null; price: number | null }
 export interface R2Live { cardId: number; base: number; highBid: number; highBidder: string | null; endsAt: number | null; bids: { team: string; amount: number; t: number }[] }

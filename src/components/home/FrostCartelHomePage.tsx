@@ -58,7 +58,17 @@ export const FrostCartelHomePage: React.FC = () => {
     }
     return false;
   });
-  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return (
+        params.get('leaderboard') === '1' ||
+        window.location.hash === '#/leaderboard' ||
+        window.location.hash === '#leaderboard'
+      );
+    }
+    return false;
+  });
   const [activeChamberRound, setActiveChamberRound] = useState<number | null>(() => {
     if (typeof window === 'undefined') return null;
     return resolveChamberFromLocation(window.location.hash, window.location.search, null);
@@ -105,6 +115,9 @@ export const FrostCartelHomePage: React.FC = () => {
       const current = authService.getCurrentSession();
       if (current) {
         setSession(current);
+      }
+      if (window.location.hash === '#/leaderboard' || window.location.hash === '#leaderboard') {
+        setIsLeaderboardOpen(true);
       }
       setActiveChamberRound((prev) =>
         resolveChamberFromLocation(window.location.hash, window.location.search, prev)
@@ -251,7 +264,12 @@ export const FrostCartelHomePage: React.FC = () => {
         {/* Tournament Standings Leaderboard Modal */}
         <GothicLeaderboardModal
           isOpen={isLeaderboardOpen}
-          onClose={() => setIsLeaderboardOpen(false)}
+          onClose={() => {
+            setIsLeaderboardOpen(false);
+            if (window.location.hash === '#/leaderboard' || window.location.hash === '#leaderboard') {
+              window.location.hash = '';
+            }
+          }}
         />
       </div>
     );
@@ -303,7 +321,12 @@ export const FrostCartelHomePage: React.FC = () => {
       {/* 4. Tournament Standings Leaderboard Modal */}
       <GothicLeaderboardModal
         isOpen={isLeaderboardOpen}
-        onClose={() => setIsLeaderboardOpen(false)}
+        onClose={() => {
+          setIsLeaderboardOpen(false);
+          if (window.location.hash === '#/leaderboard' || window.location.hash === '#leaderboard') {
+            window.location.hash = '';
+          }
+        }}
       />
     </div>
   );

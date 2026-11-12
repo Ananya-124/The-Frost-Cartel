@@ -15,7 +15,12 @@ const FALLBACK_POLL_MS = 15000; // SSE delivers changes; this is reconnect recov
 const Divider: React.FC = () => (
   <div className="flex items-center justify-center gap-3 w-full max-w-md mx-auto opacity-80">
     <span className="h-px flex-1 bg-gradient-to-r from-transparent to-cartel-pumpkin" />
-    <span aria-hidden="true" className="r2-pumpkin text-2xl">🎃</span>
+    <img
+      src="/assets/round2/credits-pumpkin.png?v=2"
+      alt=""
+      aria-hidden="true"
+      className="r2-pumpkin r2-divider-pumpkin"
+    />
     <span className="h-px flex-1 bg-gradient-to-l from-transparent to-cartel-pumpkin" />
   </div>
 );
@@ -180,7 +185,7 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   else if (allSold) footer = 'ROUND 2 • AUCTION COMPLETE';
 
   return (
-    <div className="relative min-h-screen bg-cartel-void text-cartel-bone font-sans">
+    <div className="r2-page relative min-h-screen bg-cartel-void text-cartel-bone font-sans">
       <HauntedGraveyardAtmosphere />
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-5">
         {/* Header */}
@@ -199,7 +204,12 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
           <div className="r2-btn rounded-xl px-4 py-2 text-center min-w-[110px]">
             <div className="font-cinzel text-[10px] tracking-widest text-cartel-silver/80 truncate max-w-[140px]">{team}</div>
             <div className="font-cinzel text-xl sm:text-2xl text-amber-200/90 flex items-center justify-center gap-1.5">
-              <span aria-hidden="true" className="r2-pumpkin text-xl">🎃</span>
+              <img
+                src="/assets/round2/credits-pumpkin.png?v=2"
+                alt=""
+                aria-hidden="true"
+                className="r2-pumpkin r2-credit-pumpkin"
+              />
               <span>{credits}</span>
               <span className="text-xs">CR</span>
             </div>
@@ -310,7 +320,12 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
                 </p>
                 <div aria-hidden="true" className="r2-wait-divider">
                   <span />
-                  <span className="r2-pumpkin">🎃</span>
+                  <img
+                    src="/assets/round2/credits-pumpkin.png?v=2"
+                    alt=""
+                    aria-hidden="true"
+                    className="r2-pumpkin r2-divider-pumpkin"
+                  />
                   <span />
                 </div>
               </div>

@@ -318,7 +318,6 @@ export const PhotoInspectionViewer: React.FC<PhotoInspectionViewerProps> = ({
             className="absolute inset-0 w-full h-full pointer-events-none"
             preserveAspectRatio="none"
           >
-            <title>{`Interactive evidence targets for ${image.title}`}</title>
             <defs>
               <filter id="gold-glow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="4" result="blur" />

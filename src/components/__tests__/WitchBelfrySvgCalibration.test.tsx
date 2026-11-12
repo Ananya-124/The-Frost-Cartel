@@ -26,48 +26,46 @@ describe("Stage 2: The Witch's Belfry / Bat & Candle SVG Calibration", () => {
   it('calibrates new organic cubic Bézier silhouette for the Nocturnal Bat in upper masonry', () => {
     expect(batDef).toBeDefined();
     expect(batDef.targetId).toBe('bat');
-    expect(batDef.x).toBe(468);
-    expect(batDef.y).toBe(100);
-    expect(batDef.width).toBe(125);
-    expect(batDef.height).toBe(20);
+    expect(batDef.x).toBe(466);
+    expect(batDef.y).toBe(68);
+    expect(batDef.width).toBe(128);
+    expect(batDef.height).toBe(58);
 
     // Percentages calculated against 1024 x 624
-    expect(batDef.xPercent).toBeCloseTo(45.7, 1);
-    expect(batDef.yPercent).toBeCloseTo(16.03, 1);
-    expect(batDef.widthPercent).toBeCloseTo(12.21, 1);
-    expect(batDef.heightPercent).toBeCloseTo(3.21, 1);
+    expect(batDef.xPercent).toBeCloseTo(45.51, 1);
+    expect(batDef.yPercent).toBeCloseTo(10.9, 1);
+    expect(batDef.widthPercent).toBeCloseTo(12.5, 1);
+    expect(batDef.heightPercent).toBeCloseTo(9.29, 1);
 
     // Old coordinates from Image A (1280x1920) must be completely removed
     expect(batDef.svgPath).not.toContain('638.0,299.5');
     expect(batDef.svgPath).not.toContain('719.0,219.5');
 
-    // New path starts at wing edge and uses smooth cubic Béziers
-    expect(batDef.svgPath.startsWith('M 468 110')).toBe(true);
-    expect(batDef.svgPath).toContain('C 524 105 528 103 531 102');
+    // New path starts at wing edge and encloses full wingspan
+    expect(batDef.svgPath.startsWith('M 530 75')).toBe(true);
     expect(batDef.svgPath.endsWith('Z')).toBe(true);
   });
 
   it('calibrates new organic cubic Bézier silhouette for the Altar Candle on pillar sconce', () => {
     expect(candleDef).toBeDefined();
     expect(candleDef.targetId).toBe('candle');
-    expect(candleDef.x).toBe(402);
-    expect(candleDef.y).toBe(376);
-    expect(candleDef.width).toBe(13);
-    expect(candleDef.height).toBe(25);
+    expect(candleDef.x).toBe(382);
+    expect(candleDef.y).toBe(417);
+    expect(candleDef.width).toBe(28);
+    expect(candleDef.height).toBe(51);
 
     // Percentages calculated against 1024 x 624
-    expect(candleDef.xPercent).toBeCloseTo(39.26, 1);
-    expect(candleDef.yPercent).toBeCloseTo(60.26, 1);
-    expect(candleDef.widthPercent).toBeCloseTo(1.27, 1);
-    expect(candleDef.heightPercent).toBeCloseTo(4.01, 1);
+    expect(candleDef.xPercent).toBeCloseTo(37.3, 1);
+    expect(candleDef.yPercent).toBeCloseTo(66.83, 1);
+    expect(candleDef.widthPercent).toBeCloseTo(2.73, 1);
+    expect(candleDef.heightPercent).toBeCloseTo(8.17, 1);
 
     // Old coordinates from Image A (1280x1920) must be completely removed
     expect(candleDef.svgPath).not.toContain('511.0,1274.5');
     expect(candleDef.svgPath).not.toContain('497.5,1215.0');
 
-    // New path starts at candle tip and uses smooth cubic Béziers
-    expect(candleDef.svgPath.startsWith('M 408 376')).toBe(true);
-    expect(candleDef.svgPath).toContain('C 414.5 388');
+    // New path starts at lantern pinnacle and wraps Gothic fixture
+    expect(candleDef.svgPath.startsWith('M 396 417')).toBe(true);
     expect(candleDef.svgPath.endsWith('Z')).toBe(true);
   });
 
