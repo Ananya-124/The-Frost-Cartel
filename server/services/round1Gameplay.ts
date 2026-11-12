@@ -287,7 +287,7 @@ export async function setRound1Timer(pool:Pool,adminId:string,action:'start'|'pa
     if(!current.rowCount)throw new Round1GameError('Round 1 settings are not initialized.',503);
     const configuration=cfg.rows[0]?.configuration??defaults();
     if(action==='start'){
-      if(current.rows[0].is_active||configuration.lifecycle==='paused'||configuration.lifecycle==='completed')throw new Round1GameError('Round 1 cannot be started from its current timer state.',409);
+      if(current.rows[0].is_active||configuration.lifecycle==='paused')throw new Round1GameError('Round 1 cannot be started from its current timer state.',409);
       const seconds=Number(configuration.durationMinutes??22)*60;
       await client.query('UPDATE rounds SET is_active=true,duration_seconds=$1,start_time=now(),updated_at=now() WHERE round_id=1',[seconds]);
       await client.query("UPDATE round1_configuration SET configuration=jsonb_set(configuration - 'pausedGlobalTimer','{lifecycle}','\"running\"'::jsonb,true),updated_by=$1,updated_at=now() WHERE singleton_id=1",[adminId]);
@@ -339,7 +339,6 @@ export async function setRound1TimerActive(pool:Pool,adminId:string,isActive:boo
     if(isActive&&configuration.lifecycle==='running'&&!running)return {success:true,isActive,changed:false};
     if(!isActive&&(configuration.lifecycle==='paused'||configuration.lifecycle==='completed'))return {success:true,isActive,changed:false};
     if(isActive){
-      if(configuration.lifecycle==='completed')throw new Round1GameError('Round 1 has already ended.',409);
       if(configuration.lifecycle==='paused'){
         const sessions=await client.query<{team_id:string;state:Record<string,unknown>}>('SELECT team_id,state FROM round1_stage_progress WHERE stage_id=1 FOR UPDATE');
         for(const row of sessions.rows){
