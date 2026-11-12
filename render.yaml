@@ -4,18 +4,18 @@ services:
     runtime: node
     plan: starter
     numInstances: 1
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev
     startCommand: npm start
     healthCheckPath: /api/ready
     envVars:
       - key: NODE_VERSION
-        value: 22.18.0
+        value: 22.14.0
       - key: NODE_ENV
         value: production
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: SESSION_COOKIE_SAME_SITE
-        value: lax
+        value: none
       - key: ADMIN_BOOTSTRAP_USER
         sync: false
       - key: ADMIN_BOOTSTRAP_PASSWORD
@@ -25,6 +25,6 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: PGSSLMODE
-        value: verify-full
+        value: require
       - key: PGSSLROOTCERT_CONTENT
         sync: false
