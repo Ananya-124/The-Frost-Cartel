@@ -63,12 +63,25 @@ setInterval(() => { if (S.live?.endsAt && Date.now() >= S.live.endsAt) settle();
 // ---------- Player endpoints ----------
 round2Router.get('/state', (req, res) => { res.json(view(req.query.team as string | undefined)); });
 
-// First credit report per team is locked (credits come from Round 1's localStorage).
+// Sync the Round 1 balance on join until the team has spent credits in the auction.
 round2Router.post('/join', (req, res) => {
   const name = String(req.body?.teamName ?? '').trim();
   if (!name) return fail(res, 400, 'Team name is required.');
   const credits = Math.max(0, Math.min(CONFIG.maxCredits, Math.floor(Number(req.body?.credits) || 0)));
-  if (!S.teams[key(name)]) { S.teams[key(name)] = { name, startCredits: credits, spent: 0, cards: [] }; save(); }
+  const teamKey = key(name);
+  const team = S.teams[teamKey];
+  if (!team) {
+    S.teams[teamKey] = { name, startCredits: credits, spent: 0, cards: [] };
+    save();
+  } else if (
+    team.spent === 0 &&
+    team.cards.length === 0 &&
+    key(S.live?.highBidder ?? '') !== teamKey &&
+    team.startCredits !== credits
+  ) {
+    team.startCredits = credits;
+    save();
+  }
   res.json(view(name));
 });
 

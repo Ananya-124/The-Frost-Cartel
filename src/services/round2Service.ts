@@ -25,13 +25,18 @@ async function call<T>(path: string, method = 'GET', body?: unknown, adminKey?: 
 export const round2Service = {
   /** Round 1 -> Round 2: credits earned in Round 1 live in localStorage under the team's id. */
   getRound1Credits(teamId: string, fallback = 0): number {
-    try {
-      const all = JSON.parse(localStorage.getItem('frost_cartel_round1_sessions') ?? '{}');
-      const c = all?.[teamId]?.credits;
-      return typeof c === 'number' ? c : fallback;
-    } catch {
-      return fallback;
-    }
+    const readCredits = (storage: Storage): number | undefined => {
+      try {
+        const stored = storage.getItem('frost_cartel_round1_sessions');
+        if (!stored) return undefined;
+        const all = JSON.parse(stored) as Record<string, { credits?: unknown }>;
+        const credits = all[teamId]?.credits;
+        return typeof credits === 'number' && Number.isFinite(credits) ? credits : undefined;
+      } catch {
+        return undefined;
+      }
+    };
+    return readCredits(localStorage) ?? readCredits(sessionStorage) ?? fallback;
   },
   join: (teamName: string, credits: number) => call<R2View>('/join', 'POST', { teamName, credits }),
   getState: (team: string) => call<R2View>(`/state?team=${encodeURIComponent(team)}`),

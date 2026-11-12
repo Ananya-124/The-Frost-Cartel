@@ -44,8 +44,11 @@ describe('Round 2 — Haunted Auction API (player flow)', () => {
   it('lets teams join and shows no live card at first', async () => {
     const a = await call('/join', 'POST', { teamName: 'Alpha', credits: 300 });
     const b = await call('/join', 'POST', { teamName: 'Beta', credits: 200 });
+    await call('/join', 'POST', { teamName: 'Early Team', credits: 0 });
+    const refreshed = await call('/join', 'POST', { teamName: 'Early Team', credits: 175 });
     expect(a.json.me.credits).toBe(300);
     expect(b.json.me.credits).toBe(200);
+    expect(refreshed.json.me.credits).toBe(175);
     expect(a.json.live).toBeNull();
     expect(a.json.cards).toHaveLength(11);
     expect(a.json.cards.map((card: { name: string }) => card.name)).toEqual([
@@ -79,6 +82,7 @@ describe('Round 2 — Haunted Auction API (player flow)', () => {
     expect((await call('/bid', 'POST', { teamName: 'Alpha', amount: 90 })).status).toBe(400); // below base
     expect((await call('/bid', 'POST', { teamName: 'Ghost', amount: 100 })).status).toBe(403); // never joined
     expect((await call('/bid', 'POST', { teamName: 'Alpha', amount: 100 })).json.live.highBidder).toBe('Alpha');
+    expect((await call('/join', 'POST', { teamName: 'Alpha', credits: 450 })).json.me.credits).toBe(300);
     expect((await call('/bid', 'POST', { teamName: 'Alpha', amount: 150 })).status).toBe(409); // already leading
     expect((await call('/bid', 'POST', { teamName: 'Beta', amount: 105 })).status).toBe(400); // under the +10 step
     expect((await call('/bid', 'POST', { teamName: 'Beta', amount: 250 })).status).toBe(400); // more than Beta owns
@@ -95,6 +99,7 @@ describe('Round 2 — Haunted Auction API (player flow)', () => {
     expect(card.winner).toBe('Alpha');
     expect(s.json.me.credits).toBe(180);
     expect(s.json.me.cards).toEqual([{ id: 1, name: 'Chrono Freeze', price: 120 }]);
+    expect((await call('/join', 'POST', { teamName: 'Alpha', credits: 500 })).json.me.credits).toBe(180);
     expect((await call('/state?team=Beta')).json.me.credits).toBe(200);
   });
 

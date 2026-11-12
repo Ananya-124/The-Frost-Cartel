@@ -8,6 +8,14 @@
   --r2-violet: #a58acb;      /* stage text (dimmed lavender) */
 }
 
+.r2-page {
+  background-image: url('/assets/halloween/background/graveyard_master_bg.jpg');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
 @font-face {
   font-family: 'R2 Poster';
   src: url('/fonts/s1-oswald-latin-600-normal.woff2') format('woff2');
@@ -136,6 +144,19 @@ button.r2-btn:hover {
 .r2-title-haunted { font-size: 1.12em; }
 .r2-title-auction { font-size: 1.08em; }
 .r2-pumpkin { display: inline-block; animation: r2PumpkinPulse 2.8s ease-in-out infinite; }
+.r2-credit-pumpkin {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(255, 116, 35, 0.72));
+}
+.r2-divider-pumpkin {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 7px rgba(255, 116, 35, 0.78));
+}
 .r2-hourglass { display: inline-block; animation: r2HourFlip 6s ease-in-out infinite; }
 
 /* ================= STAGE + EARNED CARDS ================= */
@@ -162,6 +183,13 @@ button.r2-btn:hover {
 
 .r2-waiting-panel {
   min-height: clamp(370px, 58vh, 620px);
+  background: transparent;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(182, 146, 97, 0.48);
+}
+.r2-waiting-panel::before {
+  box-shadow: none;
 }
 .r2-waiting-content {
   min-height: clamp(356px, calc(58vh - 14px), 606px);
@@ -198,7 +226,8 @@ button.r2-btn:hover {
   transform: scaleX(-1);
 }
 .r2-wait-divider .r2-pumpkin {
-  font-size: 1.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 /* ================= EARNED CARD POSTCARD ================= */
