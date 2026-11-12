@@ -117,14 +117,26 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
           loading="eager"
         />
 
-        {/* 3. Helper progress text if partially completed */}
-        {progressText && !isNotConfigured && status !== 'completed' && (
+        {/* 3. Status and Credits Pill */}
+        {status === 'completed' ? (
+          <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
+            <span className="text-[8px] sm:text-[9.5px] font-cinzel font-black tracking-widest uppercase drop-shadow-[0_0_8px_rgba(245,158,11,0.9)] bg-black/85 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.5)]">
+              +{rewardCredits} CR SECURED ✓
+            </span>
+          </div>
+        ) : progressText && !isNotConfigured ? (
           <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
             <span className="text-[7.5px] sm:text-[8.5px] font-cinzel text-amber-200/90 tracking-widest font-bold uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,1)] bg-black/60 px-2 py-0.5 rounded-full border border-amber-500/30">
               {progressText}
             </span>
           </div>
-        )}
+        ) : !isNotConfigured ? (
+          <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
+            <span className="text-[7.5px] sm:text-[8.5px] font-cinzel text-amber-300/80 tracking-widest font-bold uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,1)] bg-black/60 px-2 py-0.5 rounded-full border border-amber-500/20">
+              {rewardCredits} CR BOUNTY
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Screen-reader accessible portal label & announcement */}

@@ -145,6 +145,19 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     return { ...result, creditsDelta: result.score - (serverState?.team.score ?? result.score) };
   };
 
+  const changeActiveStage = (stageId: StageId | null) => {
+    setActiveStageId(stageId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (stageId) {
+        url.searchParams.set('stage', stageId.replace('stage-', ''));
+      } else {
+        url.searchParams.delete('stage');
+      }
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+  };
+
   const handleToggleMute = () => {
     const muted = soundController.toggleMute();
     setIsMuted(muted);
@@ -152,18 +165,19 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
 
   const handleSelectStage = async (stageId: StageId) => {
     soundController.playClick();
-    try { await performAction('enter', { stageId }); setActiveStageId(stageId); }
+    try { await performAction('enter', { stageId }); changeActiveStage(stageId); }
     catch (error) { setRequestError(error instanceof Error ? error.message : 'Could not enter this stage.'); }
   };
 
   const handleSkipStage = async (stageId: StageId) => {
     soundController.playClick();
-    try { await performAction('skip', { stageId }); setActiveStageId(null); }
+    try { await performAction('skip', { stageId }); changeActiveStage(null); }
     catch (error) { setRequestError(error instanceof Error ? error.message : 'Could not skip this stage.'); }
   };
 
   const handleStageCompleted = () => {
     soundController.playVictory();
+    void refreshState();
   };
 
   if (loading || !teamSession || !stage1Config || !stage2Config || !stage3Config) return <div className="min-h-screen bg-black text-stone-100 flex flex-col items-center justify-center gap-4"><p>{loading ? 'Loading your Round 1 progress…' : requestError ?? 'Round 1 state is unavailable.'}</p>{!loading && <button className="px-4 py-2 border border-amber-500 rounded" onClick={() => { setLoading(true); void refreshState(); }}>Retry</button>}{requestError?.includes('session has expired') && <button onClick={onReturnHome}>Return to sign in</button>}</div>;
@@ -175,11 +189,11 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
         {requestErrorNotice}
         {teamSession.stages['stage-1'].status === 'not_configured' ? (
           <Round1DeferredBoundary stageLabel="Stage 1"><Suspense fallback={<StageChunkLoading label="Stage 1" />}>
-            <Stage1Framework config={stage1Config} onReturnDashboard={() => setActiveStageId(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} />
+            <Stage1Framework config={stage1Config} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} />
           </Suspense></Round1DeferredBoundary>
         ) : (
           <Round1DeferredBoundary stageLabel="Stage 1"><Suspense fallback={<StageChunkLoading label="Stage 1" />}>
-            <Stage1PumpkinShuffle teamId={session.teamId} config={stage1Config} initialState={teamSession.stage1State} timerStore={timerStore} onAction={performAction} onReturnDashboard={() => setActiveStageId(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} onCreditsAwarded={handleStageCompleted} />
+            <Stage1PumpkinShuffle teamId={session.teamId} config={stage1Config} initialState={teamSession.stage1State} timerStore={timerStore} onAction={performAction} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} onCreditsAwarded={handleStageCompleted} />
           </Suspense></Round1DeferredBoundary>
         )}
       </div>
@@ -192,7 +206,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
       <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
         <Round1DeferredBoundary stageLabel="Stage 2"><Suspense fallback={<StageChunkLoading label="Stage 2" />}>
-          <Stage2HauntedImageHunt teamId={session.teamId} config={stage2Config} initialFoundTargetIds={teamSession.stage2State.foundTargetIds} timerStore={timerStore} onAction={performAction} isCompleted={teamSession.stages['stage-2'].status === 'completed'} onReturnDashboard={() => setActiveStageId(null)} onSkipStage={() => { void handleSkipStage('stage-2'); }} onStageCompleted={handleStageCompleted} />
+          <Stage2HauntedImageHunt teamId={session.teamId} config={stage2Config} initialFoundTargetIds={teamSession.stage2State.foundTargetIds} timerStore={timerStore} onAction={performAction} isCompleted={teamSession.stages['stage-2'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-2'); }} onStageCompleted={handleStageCompleted} />
         </Suspense></Round1DeferredBoundary>
       </div>
     );
@@ -204,7 +218,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
       <div className="relative min-h-screen bg-black text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
         <Round1DeferredBoundary stageLabel="Stage 3"><Suspense fallback={<StageChunkLoading label="Stage 3" />}>
-          <Stage3ForgottenGraveyard teamId={session.teamId} config={stage3Config} initialSession={teamSession} timerStore={timerStore} onAction={performAction} initialCollectedFragments={teamSession.stage3State.collectedFragments} isCompleted={teamSession.stages['stage-3'].status === 'completed'} onReturnDashboard={() => setActiveStageId(null)} onSkipStage={() => { void handleSkipStage('stage-3'); }} onStageCompleted={handleStageCompleted} />
+          <Stage3ForgottenGraveyard teamId={session.teamId} config={stage3Config} initialSession={teamSession} timerStore={timerStore} onAction={performAction} initialCollectedFragments={teamSession.stage3State.collectedFragments} isCompleted={teamSession.stages['stage-3'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-3'); }} onStageCompleted={handleStageCompleted} />
         </Suspense></Round1DeferredBoundary>
       </div>
     );
@@ -224,7 +238,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
         session={session}
         secondsRemaining={secondsRemaining}
         isTeamStarted={isTeamStarted}
-        credits={teamSession.credits}
+        credits={serverState.team.totalCredits}
         isMuted={isMuted}
         durationMinutes={durationMinutes}
         onToggleMute={handleToggleMute}

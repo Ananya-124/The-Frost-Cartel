@@ -90,7 +90,7 @@ async function loadGame(client: PoolClient, teamId: string, metrics?: Round1Timi
   const initializationStartedAt=performance.now();
   const game = new Round1Service();
   game.updateStage1Config(cfg.stage1); game.updateStage2Config(cfg.stage2); game.updateStage3Config(cfg.stage3); game.setDurationMinutes(cfg.durationMinutes);
-  const persisted = rows.rows[0].state?.round1Session as Round1TeamSessionState | undefined;
+  const persisted = (rows.rows.find((r) => r.state?.round1Session)?.state?.round1Session as Round1TeamSessionState | undefined);
   const session = persisted ?? game.snapshotTeamSession(teamId,team.rows[0].team_name);
   session.teamId=teamId; session.teamName=team.rows[0].team_name; session.credits=team.rows[0].score;
   session.totalDurationMinutes=cfg.durationMinutes;
@@ -145,9 +145,14 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     const initializationStartedAt=performance.now();
     const game=new Round1Service();
     game.updateStage1Config(config.stage1);game.updateStage2Config(config.stage2);game.updateStage3Config(config.stage3);game.setDurationMinutes(config.durationMinutes);
-    const persisted=row.stage_rows[0].state?.round1Session as Round1TeamSessionState|undefined;
-    const session=persisted??game.snapshotTeamSession(teamId,row.team_name);
-    session.teamId=teamId;session.teamName=row.team_name;session.credits=row.score;session.totalDurationMinutes=config.durationMinutes;
+    const persisted = (row.stage_rows.find((s) => s.state?.round1Session)?.state?.round1Session as Round1TeamSessionState | undefined);
+    const session = persisted ?? game.snapshotTeamSession(teamId, row.team_name);
+    const stageCreditsSum = row.stage_rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
+    const authoritativeScore = Math.max(Number(row.score || 0), stageCreditsSum);
+    session.teamId = teamId;
+    session.teamName = row.team_name;
+    session.credits = authoritativeScore;
+    session.totalDurationMinutes = config.durationMinutes;
     for(const stageRow of row.stage_rows){
       const id=`stage-${stageRow.stage_id}` as StageId;const item=session.stages[id];
       item.status=(item.status==='skipped'?'skipped':stageRow.status.toLowerCase()) as typeof item.status;
@@ -254,7 +259,7 @@ export async function performRound1Action(pool: Pool, teamId: string, action: Ro
         updated.credits=saved.score;
         stageRow.score=Math.max(0,stageRow.score+saved.delta);
         const stageState=updated.stages[`stage-${n}` as StageId]; stageState.earnedCredits=stageRow.score;
-        if(tx.deltaCredits>0&&(saved.delta!==tx.deltaCredits))result.creditsAwarded=saved.delta;
+        if(saved.delta!==0)result.creditsAwarded=(Number(result.creditsAwarded??0)+saved.delta);
       }
     }
     const stageIds=['stage-1','stage-2','stage-3'] as const;

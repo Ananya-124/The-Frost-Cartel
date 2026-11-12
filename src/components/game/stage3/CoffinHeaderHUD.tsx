@@ -71,7 +71,7 @@ export const CoffinHeaderHUD: React.FC<CoffinHeaderHUDProps> = ({
 
         <div className="px-3 py-1 rounded-full bg-black/80 border border-amber-500/70 shadow-[0_0_12px_rgba(245,158,11,0.25)] flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300 hidden sm:flex backdrop-blur-sm whitespace-nowrap">
           <span aria-hidden="true">🪙</span>
-          <span>250 CR</span>
+          <span>{_stageCleared ? '+250 CR SECURED ✓' : '250 CR BOUNTY'}</span>
         </div>
 
         <button

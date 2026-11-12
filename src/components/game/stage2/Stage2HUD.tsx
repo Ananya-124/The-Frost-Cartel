@@ -77,7 +77,7 @@ export const Stage2HUD: React.FC<Stage2HUDProps> = ({
         {/* Credits Reward Pill */}
         <div className="px-3 py-1.5 rounded-full bg-stone-950/90 border border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.3)] flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300">
           <span aria-hidden="true">💰</span>
-          <span>150 CR</span>
+          <span>{stageCleared ? '+150 CR SECURED ✓' : '150 CR BOUNTY'}</span>
         </div>
 
         {/* Audio Toggle */}
