@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 import { withPostgresTransaction } from './transaction.ts';
+import { qualifyTeamForRound4 } from './round4.ts';
 
 export type ProgressStatus = 'LOCKED' | 'AVAILABLE' | 'IN_PROGRESS' | 'COMPLETED';
 export type ProgressAction = 'unlock' | 'lock' | 'advance' | 'complete' | 'reset';
@@ -104,6 +105,9 @@ async function markNextRoundEligible(client: PoolClient, teamId: string, roundId
   }
   const newStatus: ProgressStatus = oldStatus === 'LOCKED' && autoAvailable ? 'AVAILABLE' : oldStatus;
   await client.query('UPDATE round_progress SET status=$3, eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=$2', [teamId, nextRoundId, newStatus]);
+  if (nextRoundId === 4 && (newStatus === 'AVAILABLE' || newStatus === 'IN_PROGRESS')) {
+    await qualifyTeamForRound4(client, teamId);
+  }
   await audit(client, { teamId, entity: 'ROUND', entityId: nextRoundId, previous: oldStatus, next: newStatus,
     action: newStatus === 'AVAILABLE' && oldStatus !== 'AVAILABLE' ? 'ADVANCE' : 'MARK_ELIGIBLE',
     reason: `Round ${roundId} completion satisfied the prerequisite.` });
@@ -435,6 +439,7 @@ export async function adminProgressRound4Global(
           });
           updatedCount++;
         }
+        await qualifyTeamForRound4(client, t.team_id);
       }
       return { isActive: true, updatedCount };
     } else {
@@ -510,6 +515,7 @@ export async function adminAdvanceTeamToRound(
     if (targetRound === 4) {
       await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
       await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+      await qualifyTeamForRound4(client, teamId);
     }
 
     const target = await client.query<{ status: ProgressStatus }>(
@@ -586,6 +592,11 @@ export async function adminProgress(pool: Pool, adminSessionToken: string, teamI
           await setState(client, teamId, 'HUNT', 1, 'AVAILABLE');
           await audit(client, { adminId, teamId, entity: 'HUNT', entityId: 1, previous: huntStatus, next: 'AVAILABLE', action: 'ADVANCE', reason });
         }
+      }
+      if (entity === 'ROUND' && entityId === 4) {
+        await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
+        await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+        await qualifyTeamForRound4(client, teamId);
       }
       await audit(client, { adminId, teamId, entity, entityId, previous: status, next: 'AVAILABLE', action, reason });
       return;

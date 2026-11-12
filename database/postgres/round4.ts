@@ -51,6 +51,46 @@ async function saveAction(client: PoolClient, teamId: string, action: string, so
     JSON.stringify({ fingerprint: actionFingerprint, status: result.status, response: result.body }), sourceEventId]);
 }
 
+export async function qualifyTeamForRound4(client: PoolClient, teamId: string): Promise<string> {
+  const existing = await client.query<{ route_id: string }>(
+    'SELECT route_id FROM round4_qualified_teams WHERE team_id=$1', [teamId]
+  );
+  if (existing.rowCount && existing.rows[0]) {
+    await client.query(`
+      INSERT INTO round4_team_progress(id, team_id, route_id, current_step_index, solved_steps)
+      VALUES($1, $2, $3, 0, '[]'::jsonb)
+      ON CONFLICT (team_id) DO NOTHING
+    `, [`r4-progress-${teamId}`, teamId, existing.rows[0].route_id]);
+    return existing.rows[0].route_id;
+  }
+
+  const allRoutes = await client.query<{ id: string; route_number: number }>(`
+    SELECT id, route_number FROM round4_routes
+    WHERE id NOT IN (SELECT route_id FROM round4_qualified_teams)
+    ORDER BY route_number
+  `);
+  let routeId = allRoutes.rows[0]?.id;
+  if (!routeId) {
+    const fallback = await client.query<{ id: string }>('SELECT id FROM round4_routes ORDER BY route_number LIMIT 1');
+    if (!fallback.rowCount || !fallback.rows[0]) throw new Round4Error('No Round 4 routes configured in system.', 'NOT_FOUND');
+    routeId = fallback.rows[0].id;
+  }
+
+  await client.query(`
+    INSERT INTO round4_qualified_teams(id, team_id, route_id, qualified_at, assigned_at)
+    VALUES($1, $2, $3, now(), now())
+    ON CONFLICT (team_id) DO NOTHING
+  `, [`qual-${teamId}`, teamId, routeId]);
+
+  await client.query(`
+    INSERT INTO round4_team_progress(id, team_id, route_id, current_step_index, solved_steps)
+    VALUES($1, $2, $3, 0, '[]'::jsonb)
+    ON CONFLICT (team_id) DO NOTHING
+  `, [`r4-progress-${teamId}`, teamId, routeId]);
+
+  return routeId;
+}
+
 export async function getRound4ReleaseState(pool: Pool): Promise<boolean> {
   const result = await pool.query<{ is_released: boolean }>('SELECT is_released FROM round4_settings WHERE id=1');
   if (!result.rowCount) throw new Round4Error('Round 4 settings are unavailable.', 'NOT_FOUND');
@@ -58,14 +98,28 @@ export async function getRound4ReleaseState(pool: Pool): Promise<boolean> {
 }
 
 export async function getRound4Status(pool: Pool, teamId: string) {
-  const [released, qualification, winner] = await Promise.all([
-    getRound4ReleaseState(pool),
-    pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string }>(`
-      SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name FROM round4_qualified_teams q
-      JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]),
-    getRound4Winner(pool),
-  ]);
+  const released = await getRound4ReleaseState(pool);
+  let qualification = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string }>(`
+    SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name FROM round4_qualified_teams q
+    JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
+
+  if (!qualification.rowCount) {
+    const eligible = await pool.query<{ status: string }>(
+      "SELECT status FROM round_progress WHERE team_id=$1 AND round_id=4 AND status IN ('AVAILABLE', 'IN_PROGRESS')",
+      [teamId]
+    );
+    if (eligible.rowCount) {
+      await withPostgresTransaction(pool, async (client) => {
+        await qualifyTeamForRound4(client, teamId);
+      });
+      qualification = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string }>(`
+        SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name FROM round4_qualified_teams q
+        JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
+    }
+  }
+
   const qual = qualification.rows[0];
+  const winner = await getRound4Winner(pool);
   if (!qual) return {
     success: true, qualified: false, isReleased: released, assignedRouteId: null, winner: winner ?? null,
     message: 'Your squad has not been qualified for Round 04 (The Campus Expedition). Only seven qualified squads may enter.',
@@ -83,9 +137,25 @@ export async function getRound4Winner(pool: Pool): Promise<Winner | null> {
 }
 
 export async function getRound4TeamRoute(pool: Pool, teamId: string) {
-  const qual = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string; route_subtitle: string }>(`
+  let qual = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string; route_subtitle: string }>(`
     SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name,r.route_subtitle
     FROM round4_qualified_teams q JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
+
+  if (!qual.rowCount) {
+    const eligible = await pool.query<{ status: string }>(
+      "SELECT status FROM round_progress WHERE team_id=$1 AND round_id=4 AND status IN ('AVAILABLE', 'IN_PROGRESS')",
+      [teamId]
+    );
+    if (eligible.rowCount) {
+      await withPostgresTransaction(pool, async (client) => {
+        await qualifyTeamForRound4(client, teamId);
+      });
+      qual = await pool.query<{ route_id: string; route_number: number; roman_numeral: string; route_name: string; route_subtitle: string }>(`
+        SELECT q.route_id,r.route_number,r.roman_numeral,r.route_name,r.route_subtitle
+        FROM round4_qualified_teams q JOIN round4_routes r ON r.id=q.route_id WHERE q.team_id=$1`, [teamId]);
+    }
+  }
+
   const assignment = qual.rows[0];
   if (!assignment) throw new Round4Error('Access Denied: Your squad is not among the seven qualified teams for Round 04.', 'FORBIDDEN');
   const progressResult = await pool.query<{ current_step_index: number; target_discovered: boolean; solved_steps: string[]; common_room_arrived: boolean; is_finished: boolean; finished_at: Date | null }>(
