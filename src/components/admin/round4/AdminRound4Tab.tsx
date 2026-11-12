@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Round4AdminOverview, QualifiedTeamAssignment } from '../../../types/round4Expedition.types';
 import { round4Service } from '../../../services/round4Service';
 import { getFloorMapConfig } from '../../game/round4/FloorMapConfiguration';

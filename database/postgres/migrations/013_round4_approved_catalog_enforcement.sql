@@ -465,3 +465,4 @@ SET
   physical_entry_instructions = 'Seventh Floor • Main Event Hall • Underneath 3-Blade Anchor Ceiling Fan Bay',
   updated_at = clock_timestamp()
 WHERE id = 1;
+
