@@ -9,6 +9,7 @@
     "server": "node --experimental-strip-types server/index.ts",
     "start": "node --experimental-strip-types server/index.ts",
     "db:migrate": "node --experimental-strip-types database/postgres/migrate.ts",
+    "db:reset-teams": "node --experimental-strip-types scripts/master_reset.ts",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run --fileParallelism=false",

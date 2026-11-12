@@ -198,6 +198,8 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
 
   afterAll(async () => {
     if (postgresPool) {
+      await postgresPool.query('DELETE FROM round4_winner WHERE singleton_id = 1').catch(() => {});
+      await postgresPool.query('UPDATE round4_settings SET is_released = false WHERE id = 1').catch(() => {});
       for (const squad of squads) {
         await postgresPool.query('DELETE FROM team_sessions WHERE team_id = $1', [squad.id]).catch(() => {});
         await postgresPool.query('DELETE FROM round4_team_progress WHERE team_id = $1', [squad.id]).catch(() => {});
@@ -206,6 +208,16 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
         await postgresPool.query('DELETE FROM teams WHERE id = $1', [squad.id]).catch(() => {});
       }
     }
+    try {
+      db.prepare('DELETE FROM round4_winner WHERE singleton_id = 1').run();
+      db.prepare('UPDATE round4_settings SET is_released = 0 WHERE id = 1').run();
+      for (const squad of squads) {
+        db.prepare('DELETE FROM team_sessions WHERE team_id = ?').run(squad.id);
+        db.prepare('DELETE FROM round4_team_progress WHERE team_id = ?').run(squad.id);
+        db.prepare('DELETE FROM round4_qualified_teams WHERE team_id = ?').run(squad.id);
+        db.prepare('DELETE FROM teams WHERE id = ?').run(squad.id);
+      }
+    } catch {}
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
     });
