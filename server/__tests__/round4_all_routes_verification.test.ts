@@ -4,6 +4,7 @@ import type { Server } from 'node:http';
 import * as crypto from 'node:crypto';
 import { app } from '../index.ts';
 import { db, initDatabase, hashPassword } from '../../database/db.ts';
+import { postgresPool } from '../../database/postgres/pool.ts';
 
 const hasPg = Boolean(process.env.PG_TEST_DATABASE_URL || process.env.DATABASE_URL);
 const suite = hasPg ? describe : describe.skip;
@@ -91,6 +92,12 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
     db.exec('DELETE FROM round4_team_progress;');
     db.exec('DELETE FROM round4_qualified_teams;');
 
+    if (postgresPool) {
+      await postgresPool.query('DELETE FROM round4_winner');
+      await postgresPool.query('DELETE FROM round4_team_progress');
+      await postgresPool.query('DELETE FROM round4_qualified_teams');
+    }
+
     await new Promise<void>((resolve) => {
       server = app.listen(0, '127.0.0.1', () => {
         const addr = server.address();
@@ -102,11 +109,19 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
     });
 
     // Admin login
-    const adminRes = await fetch(`${baseUrl}/api/admin/login`, {
+    const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'admin@1';
+    let adminRes = await fetch(`${baseUrl}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin123', password: 'admin@1' }),
+      body: JSON.stringify({ username: 'admin123', password: adminPassword }),
     });
+    if (!adminRes.ok) {
+      adminRes = await fetch(`${baseUrl}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin123', password: 'admin@1' }),
+      });
+    }
     const adminData = await adminRes.json();
     adminToken = adminData.token;
 
@@ -129,6 +144,21 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
         INSERT INTO team_sessions (id, team_id, token, player_number, expires_at, created_at)
         VALUES (?, ?, ?, 1, ?, ?)
       `).run(`sess-${teamId}`, teamId, token, new Date(Date.now() + 86400000).toISOString(), now);
+
+      if (postgresPool) {
+        await postgresPool.query(`
+          INSERT INTO teams (id, team_name, password_hash, salt, is_paused, score, max_credits, total_credits, login_count)
+          VALUES ($1, $2, $3, $4, false, 100, 500, 500, 1)
+        `, [teamId, name, hash, salt]);
+        await postgresPool.query(`
+          INSERT INTO team_sessions (id, team_id, token, player_number, expires_at)
+          VALUES ($1, $2, $3, 1, now() + interval '24 hours')
+        `, [`sess-${teamId}`, teamId, token]);
+        await postgresPool.query(`
+          UPDATE round_progress SET status='IN_PROGRESS', eligible_at=now()
+          WHERE team_id=$1 AND round_id=4
+        `, [teamId]);
+      }
 
       squads.push({
         id: teamId,
@@ -154,9 +184,28 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
       body: JSON.stringify({ assignments }),
     });
     expect(qualRes.status).toBe(200);
+
+    const relRes = await fetch(`${baseUrl}/api/round4/admin/release`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ isReleased: true }),
+    });
+    expect(relRes.status).toBe(200);
   });
 
   afterAll(async () => {
+    if (postgresPool) {
+      for (const squad of squads) {
+        await postgresPool.query('DELETE FROM team_sessions WHERE team_id = $1', [squad.id]).catch(() => {});
+        await postgresPool.query('DELETE FROM round4_team_progress WHERE team_id = $1', [squad.id]).catch(() => {});
+        await postgresPool.query('DELETE FROM round4_qualified_teams WHERE team_id = $1', [squad.id]).catch(() => {});
+        await postgresPool.query('DELETE FROM round_progress WHERE team_id = $1', [squad.id]).catch(() => {});
+        await postgresPool.query('DELETE FROM teams WHERE id = $1', [squad.id]).catch(() => {});
+      }
+    }
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
     });
@@ -185,8 +234,7 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
   });
 
   it('executes full automated run across all 5 routes: testing validation, case-insensitivity, whitespace trimming, and wrong-answer rejection', async () => {
-    for (let r = 0; r < 5; r++) {
-      const squad = squads[r];
+    await Promise.all(squads.map(async (squad, r) => {
       const routeInfo = EXPECTED_ROUTES[r];
 
       // Solve Steps 1 through 4
@@ -281,18 +329,18 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
       expect(finalCheckData.activeStep.clueIndex).toBe(5);
       expect(finalCheckData.activeStep.isCommonFinal).toBe(true);
       expect(finalCheckData.activeStep.floorId).toBe('floor-07');
-    }
-  });
+    }));
+  }, 120_000);
 
   it('demonstrates that all 5 squads converge at Floor 7 and tests single-winner championship atomicity', async () => {
     // All 5 squads discover the final target
-    for (const squad of squads) {
+    await Promise.all(squads.map(async (squad) => {
       const discRes = await fetch(`${baseUrl}/api/round4/discover-target`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${squad.token}` },
       });
       expect(discRes.status).toBe(200);
-    }
+    }));
 
     // Squad 3 submits the winning final answer first using alias "CEILING FAN"
     const winnerRes = await fetch(`${baseUrl}/api/round4/submit-clue`, {
@@ -336,8 +384,14 @@ suite('ROUND 04 — COMPLETE 5-ROUTE ANSWER & SEVENTH FLOOR VERIFICATION AUDIT',
     }
 
     // Verify DB strictly records ONE champion
-    const winnersInDb = db.prepare('SELECT * FROM round4_winner').all() as Array<{ team_id: string }>;
-    expect(winnersInDb.length).toBe(1);
-    expect(winnersInDb[0].team_id).toBe(squads[2].id);
-  });
+    if (postgresPool) {
+      const pgWinners = await postgresPool.query<{ team_id: string }>('SELECT team_id FROM round4_winner');
+      expect(pgWinners.rows.length).toBe(1);
+      expect(pgWinners.rows[0].team_id).toBe(squads[2].id);
+    } else {
+      const winnersInDb = db.prepare('SELECT * FROM round4_winner').all() as Array<{ team_id: string }>;
+      expect(winnersInDb.length).toBe(1);
+      expect(winnersInDb[0].team_id).toBe(squads[2].id);
+    }
+  }, 120_000);
 });

@@ -141,8 +141,8 @@ export const AdminRound4Tab: React.FC = () => {
   };
 
   const handleSaveQualifications = async () => {
-    if (assignments.length > 7) {
-      setNotice('Error: Exactly seven teams (or fewer) can be qualified.');
+    if (assignments.length > 5) {
+      setNotice('Error: Exactly five teams (or fewer) can be qualified.');
       return;
     }
     await runAdminAction(async () => {
@@ -197,7 +197,7 @@ export const AdminRound4Tab: React.FC = () => {
             ROUND 04 MASTER SUITE
           </div>
           <h2 className="text-xl font-cinzel font-black text-white">
-            Seven Teams, Seven Routes, One Common Treasure
+            Five Teams, Five Routes, One Common Treasure
           </h2>
           <div className="text-xs text-cartel-silver mt-1">
             Status:{' '}
@@ -354,7 +354,7 @@ export const AdminRound4Tab: React.FC = () => {
       {activeSubTab === 'qualification' && (
         <div className="space-y-4 p-4 rounded-xl bg-cartel-charcoal/60 border border-white/10">
           <div className="text-xs text-cartel-silver leading-relaxed">
-            Configure exactly seven qualified squads after Round 03 and assign one unique route to each squad.
+            Configure exactly five qualified squads after Round 03 and assign one unique route to each squad.
             A squad cannot enter Round 04 unless qualified here.
           </div>
 
@@ -495,13 +495,12 @@ export const AdminRound4Tab: React.FC = () => {
                 onChange={(e) => setEditingStep((prev) => ({ ...prev, floorId: e.target.value }))}
                 className="w-full p-2 rounded bg-black/80 border border-white/20 text-xs text-white"
               >
-                <option value="floor-7">Seventh Floor (Observatory & Celestial Vault)</option>
-                <option value="floor-6">Sixth Floor (Scriptorium & Cartographer Bays)</option>
-                <option value="floor-5">Fifth Floor (Alchemical & Analytical Labs)</option>
-                <option value="floor-4">Fourth Floor (Conservation & Rare Folios)</option>
-                <option value="floor-3">Third Floor (Engineering & Foundations Gallery)</option>
-                <option value="floor-2">Second Floor (Physics & Harmonic Labs)</option>
-                <option value="floor-1">First Floor (Grand Foyer & Foundation Stone)</option>
+                <option value="floor-07">Seventh Floor (Main Event Venue — Anchor Fan)</option>
+                <option value="floor-06">Sixth Floor</option>
+                <option value="floor-05">Fifth Floor</option>
+                <option value="floor-04">Fourth Floor</option>
+                <option value="floor-03">Third Floor</option>
+                <option value="floor-02">Second Floor</option>
               </select>
             </div>
 

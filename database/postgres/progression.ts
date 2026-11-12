@@ -712,8 +712,8 @@ export async function qualifyRound4Teams(
   adminSessionToken: string,
   assignments: Round4QualificationAssignment[],
 ): Promise<void> {
-  if (!Array.isArray(assignments) || assignments.length > 7) {
-    throw new ProgressionError('Round 4 supports at most seven qualified teams.', 'CONFLICT');
+  if (!Array.isArray(assignments) || assignments.length > 5) {
+    throw new ProgressionError('Round 4 supports at most five qualified teams.', 'CONFLICT');
   }
   const teamIds = new Set<string>();
   const routeIds = new Set<string>();

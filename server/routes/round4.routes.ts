@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 import { postgresPool } from '../../database/postgres/pool.ts';
 import {
   discoverRound4Target, getRound4AdminOverview, getRound4ReleaseState, getRound4Status,
-  getRound4TeamRoute, resetRound4Tournament, Round4Error,
+  getRound4TeamRoute, resetRound4Tournament, Round4Error, scanRound4Qr,
   setRound4Release, submitRound4Clue, updateRound4FinalRoom, updateRound4Step,
 } from '../../database/postgres/round4.ts';
 import { ProgressionError, qualifyRound4Teams as replaceRound4Assignments } from '../../database/postgres/progression.ts';
@@ -106,6 +106,14 @@ export function createRound4Router(
     res.status(result.status).json(result.body);
   }));
 
+  router.post('/scan-qr', auth.team, asyncRoute(async (req, res) => {
+    const dbPool = requirePool();
+    const id = teamId(req);
+    const token = req.body?.qrToken || req.query?.token;
+    const result = await scanRound4Qr(dbPool, id, token);
+    res.status(result.success ? 200 : 400).json(result);
+  }));
+
   router.get('/admin/overview', auth.admin, asyncRoute(async (_req, res) =>
     res.json(await getRound4AdminOverview(requirePool()))));
 
@@ -113,8 +121,8 @@ export function createRound4Router(
     const session = adminSession(req);
     const assignments = req.body?.assignments;
     if (!Array.isArray(assignments)) return res.status(400).json({ success: false, message: 'assignments must be an array.' });
-    if (assignments.length > 7) return res.status(400).json({ success: false,
-      message: 'Strict Limit Exceeded: Round 04 allows at most seven qualified teams.' });
+    if (assignments.length > 5) return res.status(400).json({ success: false,
+      message: 'Strict Limit Exceeded: Round 04 allows at most five qualified teams.' });
     const teamIds = new Set<string>();
     const routeIds = new Set<string>();
     for (const assignment of assignments) {
@@ -128,7 +136,7 @@ export function createRound4Router(
       routeIds.add(assignment.routeId);
     }
     await replaceRound4Assignments(requirePool(), session, assignments);
-    res.json({ success: true, message: `Successfully qualified ${assignments.length} squads with unique routes I to VII.` });
+    res.json({ success: true, message: `Successfully qualified ${assignments.length} squads with unique routes I to V.` });
   }));
 
   router.post('/admin/release', auth.admin, asyncRoute(async (req, res) => {

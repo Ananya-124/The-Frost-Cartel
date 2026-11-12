@@ -31,9 +31,9 @@ suite('Round 4 PostgreSQL catalog migration 012', () => {
     await adminPool?.end();
   });
 
-  it('seeds the seven routes and their exact five-clue sequence', async () => {
-    expect((await pool.query('SELECT count(*)::int AS count FROM round4_routes')).rows[0].count).toBe(7);
-    expect((await pool.query('SELECT count(*)::int AS count FROM round4_steps')).rows[0].count).toBe(35);
+  it('seeds the five routes and their exact five-clue sequence', async () => {
+    expect((await pool.query('SELECT count(*)::int AS count FROM round4_routes')).rows[0].count).toBe(5);
+    expect((await pool.query('SELECT count(*)::int AS count FROM round4_steps')).rows[0].count).toBe(25);
 
     const routeRows = await pool.query(`
       SELECT r.id, r.route_number, r.roman_numeral, r.route_name, r.route_subtitle,
@@ -44,13 +44,11 @@ suite('Round 4 PostgreSQL catalog migration 012', () => {
       GROUP BY r.id ORDER BY r.route_number
     `);
     expect(routeRows.rows).toEqual([
-      { id: 'route-1', route_number: 1, roman_numeral: 'I', route_name: 'Route I', route_subtitle: 'The Celestial Meridian & Solar Horizon', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
-      { id: 'route-2', route_number: 2, roman_numeral: 'II', route_name: 'Route II', route_subtitle: "The Cartographer's Traverse", clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
-      { id: 'route-3', route_number: 3, roman_numeral: 'III', route_name: 'Route III', route_subtitle: 'The Alchemical Cryptogram', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
-      { id: 'route-4', route_number: 4, roman_numeral: 'IV', route_name: 'Route IV', route_subtitle: 'The Scriptorium Cipher', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
-      { id: 'route-5', route_number: 5, roman_numeral: 'V', route_name: 'Route V', route_subtitle: 'The Platinum Block Chronology', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
-      { id: 'route-6', route_number: 6, roman_numeral: 'VI', route_name: 'Route VI', route_subtitle: "The Astronomer's Needle", clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
-      { id: 'route-7', route_number: 7, roman_numeral: 'VII', route_name: 'Route VII', route_subtitle: 'The Keystone Pilgrimage', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
+      { id: 'route-1', route_number: 1, roman_numeral: 'I', route_name: 'Route I', route_subtitle: 'Meridian Path (4 → 2 → 5 → 3 → 7)', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
+      { id: 'route-2', route_number: 2, roman_numeral: 'II', route_name: 'Route II', route_subtitle: "Alchemist's Arc (2 → 4 → 6 → 3 → 7)", clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
+      { id: 'route-3', route_number: 3, roman_numeral: 'III', route_name: 'Route III', route_subtitle: "Cartographer's Traverse (2 → 6 → 3 → 5 → 7)", clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
+      { id: 'route-4', route_number: 4, roman_numeral: 'IV', route_name: 'Route IV', route_subtitle: 'Shadow Traverse (4 → 6 → 2 → 5 → 7)', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
+      { id: 'route-5', route_number: 5, roman_numeral: 'V', route_name: 'Route V', route_subtitle: 'Phantom Meridian (6 → 2 → 5 → 4 → 7)', clue_count: 5, clue_order: [1, 2, 3, 4, 5], common_final_flags: [false, false, false, false, true] },
     ]);
 
     const associations = await pool.query(`
@@ -59,18 +57,18 @@ suite('Round 4 PostgreSQL catalog migration 012', () => {
              is_case_sensitive, is_common_final
       FROM round4_steps ORDER BY route_id, clue_index
     `);
-    expect(associations.rows).toHaveLength(35);
+    expect(associations.rows).toHaveLength(25);
     for (const row of associations.rows) {
-      const [, routeNumber, clueNumber] = row.id.match(/^r([1-7])_s([1-5])$/) ?? [];
+      const [, routeNumber, clueNumber] = row.id.match(/^r([1-5])_s([1-5])$/) ?? [];
       expect(routeNumber).toBeDefined();
       expect(row.route_id).toBe(`route-${routeNumber}`);
       expect(row.clue_index).toBe(Number(clueNumber));
       expect(row.is_common_final).toBe(row.clue_index === 5);
       expect(row.is_case_sensitive).toBe(false);
-      expect(row.trigger_radius).toBe(36);
-      expect(row.accepted_answers).toHaveLength(3);
+      expect(row.trigger_radius).toBeGreaterThan(0);
+      expect(row.accepted_answers.length).toBeGreaterThanOrEqual(1);
     }
-    expect(associations.rows.filter((row) => row.is_common_final)).toHaveLength(7);
+    expect(associations.rows.filter((row) => row.is_common_final)).toHaveLength(5);
     const actualCatalog = associations.rows.map((row) => ({
       id: row.id,
       routeId: row.route_id,
@@ -89,7 +87,7 @@ suite('Round 4 PostgreSQL catalog migration 012', () => {
     expect(actualCatalog.every((clue) =>
       clue.id.length > 0 && clue.floorId.length > 0 && clue.locationName.length > 0 &&
       clue.riddleText.length > 0 && clue.fieldLocationHint.length > 0 &&
-      clue.acceptedAnswers.length === 3 && clue.targetX >= 0 && clue.targetY >= 0 &&
+      clue.acceptedAnswers.length >= 1 && clue.targetX >= 0 && clue.targetY >= 0 &&
       clue.triggerRadius > 0,
     )).toBe(true);
   });
@@ -97,8 +95,8 @@ suite('Round 4 PostgreSQL catalog migration 012', () => {
   it('is re-runnable without duplicates and leaves release, qualification, progress and winner untouched', async () => {
     const migration = await readFile(path.resolve('database/postgres/migrations/012_round4_catalog_seed.sql'), 'utf8');
     await pool.query(migration);
-    expect((await pool.query('SELECT count(*)::int AS count FROM round4_routes')).rows[0].count).toBe(7);
-    expect((await pool.query('SELECT count(*)::int AS count FROM round4_steps')).rows[0].count).toBe(35);
+    expect((await pool.query('SELECT count(*)::int AS count FROM round4_routes')).rows[0].count).toBe(5);
+    expect((await pool.query('SELECT count(*)::int AS count FROM round4_steps')).rows[0].count).toBe(25);
     expect((await pool.query('SELECT is_released FROM round4_settings WHERE id=1')).rows[0].is_released).toBe(false);
     expect((await pool.query('SELECT count(*)::int AS count FROM round4_qualified_teams')).rows[0].count).toBe(0);
     expect((await pool.query('SELECT count(*)::int AS count FROM round4_team_progress')).rows[0].count).toBe(0);

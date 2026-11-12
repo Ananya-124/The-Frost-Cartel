@@ -122,7 +122,7 @@ export async function getRound4Status(pool: Pool, teamId: string) {
   const winner = await getRound4Winner(pool);
   if (!qual) return {
     success: true, qualified: false, isReleased: released, assignedRouteId: null, winner: winner ?? null,
-    message: 'Your squad has not been qualified for Round 04 (The Campus Expedition). Only seven qualified squads may enter.',
+    message: 'Your squad has not been qualified for Round 04 (The Campus Expedition). Only five qualified squads may enter.',
   };
   return {
     success: true, qualified: true, isReleased: released, assignedRouteId: qual.route_id,
@@ -157,7 +157,7 @@ export async function getRound4TeamRoute(pool: Pool, teamId: string) {
   }
 
   const assignment = qual.rows[0];
-  if (!assignment) throw new Round4Error('Access Denied: Your squad is not among the seven qualified teams for Round 04.', 'FORBIDDEN');
+  if (!assignment) throw new Round4Error('Access Denied: Your squad is not among the five qualified teams for Round 04.', 'FORBIDDEN');
   const progressResult = await pool.query<{ current_step_index: number; target_discovered: boolean; solved_steps: string[]; common_room_arrived: boolean; is_finished: boolean; finished_at: Date | null }>(
     'SELECT current_step_index,target_discovered,solved_steps,common_room_arrived,is_finished,finished_at FROM round4_team_progress WHERE team_id=$1 AND route_id=$2',
     [teamId, assignment.route_id],
@@ -259,8 +259,8 @@ export async function submitRound4Clue(pool: Pool, teamId: string, stepId: unkno
     };
     if (progress.is_finished) return fail(400, { success: false, message: 'Your squad has already completed all five expedition clues.' });
     const activeResult = await client.query<{
-      id: string; clue_index: number; accepted_answers: string[]; is_case_sensitive: boolean; is_common_final: boolean;
-    }>('SELECT id,clue_index,accepted_answers,is_case_sensitive,is_common_final FROM round4_steps WHERE route_id=$1 AND clue_index=$2',
+      id: string; clue_index: number; accepted_answers: string[]; qr_token: string; is_case_sensitive: boolean; is_common_final: boolean;
+    }>('SELECT id,clue_index,accepted_answers,qr_token,is_case_sensitive,is_common_final FROM round4_steps WHERE route_id=$1 AND clue_index=$2',
     [progress.route_id, progress.current_step_index + 1]);
     const active = activeResult.rows[0];
     if (!active || active.id !== stepId) {
@@ -269,7 +269,8 @@ export async function submitRound4Clue(pool: Pool, teamId: string, stepId: unkno
     if (!progress.target_discovered) return fail(409, { success: false, message: 'Discover the active clue target before submitting its answer.' });
     const isMatch = active.accepted_answers.some((accepted) => active.is_case_sensitive
       ? accepted.trim() === cleanAnswer
-      : accepted.trim().toUpperCase() === cleanAnswer.toUpperCase());
+      : accepted.trim().toUpperCase() === cleanAnswer.toUpperCase())
+      || (active.qr_token && active.qr_token.trim().toUpperCase() === cleanAnswer.toUpperCase());
     if (!isMatch) return fail(400, { success: false, correct: false,
       message: 'Incorrect cipher. The code does not align with the architectural record.' });
 
@@ -409,4 +410,89 @@ export async function recordRound4Completion(pool: Pool, teamId: string): Promis
     if (!progress.rowCount) throw new Round4Error('The team has not completed the Round 4 expedition.', 'CONFLICT');
     await completeRoundInTransaction(client, teamId, 4);
   });
+}
+
+export async function scanRound4Qr(
+  pool: Pool,
+  teamId: string,
+  qrToken: unknown
+): Promise<{ success: boolean; valid: boolean; validationWord?: string; clueIndex?: number; locationName?: string; message: string }> {
+  if (typeof qrToken !== 'string' || !qrToken.trim()) {
+    return { success: false, valid: false, message: 'QR token is required.' };
+  }
+  const cleanToken = qrToken.trim();
+  const released = await getRound4ReleaseState(pool);
+  if (!released) {
+    throw new Round4Error('Round 04 has not been released by the event administrators.', 'UNRELEASED');
+  }
+
+  const qualResult = await pool.query<{ route_id: string }>(
+    'SELECT route_id FROM round4_qualified_teams WHERE team_id=$1',
+    [teamId]
+  );
+  if (!qualResult.rowCount) {
+    throw new Round4Error('Access Denied: Your squad is not among the five qualified teams for Round 04.', 'FORBIDDEN');
+  }
+  const routeId = qualResult.rows[0].route_id;
+
+  const progressResult = await pool.query<{
+    current_step_index: number;
+    target_discovered: boolean;
+    is_finished: boolean;
+  }>(
+    'SELECT current_step_index, target_discovered, is_finished FROM round4_team_progress WHERE team_id=$1',
+    [teamId]
+  );
+  const progress = progressResult.rows[0];
+  if (!progress) {
+    throw new Round4Error('Round 04 progress is not initialized for this team.', 'FORBIDDEN');
+  }
+  if (progress.is_finished) {
+    return { success: true, valid: false, message: 'Your squad has already completed all five expedition clues.' };
+  }
+  if (!progress.target_discovered) {
+    return {
+      success: true,
+      valid: false,
+      message: 'Discover the active campus location on your map before scanning the checkpoint QR.',
+    };
+  }
+
+  const stepResult = await pool.query<{
+    id: string;
+    clue_index: number;
+    location_name: string;
+    validation_word: string;
+    qr_token: string;
+    accepted_answers: string[];
+    is_common_final: boolean;
+  }>(
+    'SELECT id, clue_index, location_name, validation_word, qr_token, accepted_answers, is_common_final FROM round4_steps WHERE route_id=$1 AND clue_index=$2',
+    [routeId, progress.current_step_index + 1]
+  );
+  const active = stepResult.rows[0];
+  if (!active) {
+    return { success: false, valid: false, message: 'Active clue configuration is unavailable.' };
+  }
+
+  const tokenMatches =
+    (active.qr_token && active.qr_token.trim().toUpperCase() === cleanToken.toUpperCase()) ||
+    active.accepted_answers.some((ans) => ans.trim().toUpperCase() === cleanToken.toUpperCase());
+
+  if (tokenMatches) {
+    return {
+      success: true,
+      valid: true,
+      validationWord: active.validation_word || active.accepted_answers[0],
+      clueIndex: active.clue_index,
+      locationName: active.location_name,
+      message: 'Physical checkpoint verified!',
+    };
+  }
+
+  return {
+    success: true,
+    valid: false,
+    message: 'Invalid physical checkpoint QR code for this location.',
+  };
 }

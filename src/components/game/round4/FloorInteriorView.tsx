@@ -6,6 +6,7 @@ import { getFloorMapConfig } from './FloorMapConfiguration';
 import { RouteNavigation } from './RouteNavigation';
 import { CampusFloorMap } from './CampusFloorMap';
 import { FieldRiddlePanel } from './FieldRiddlePanel';
+import { QRScannerModal } from './QRScannerModal';
 import { WinnerCelebrationModal } from './WinnerCelebrationModal';
 import { NonWinnerModal } from './NonWinnerModal';
 import { soundController } from '../../../utils/soundController';
@@ -34,6 +35,8 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [discoveryBusy, setDiscoveryBusy] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannedWord, setScannedWord] = useState<string | null>(null);
 
   // Authoritative server route & qualification check on mount
   // Subscribe to service progress updates and winner events
@@ -78,6 +81,10 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   const currentStep = currentRoute?.steps[0] ?? null;
   const activeFloorId = currentStep?.floorId || floor.id;
   const mapConfig = getFloorMapConfig(activeFloorId);
+
+  useEffect(() => {
+    setScannedWord(null);
+  }, [currentStep?.stepId]);
 
   // Map Explorer avatar touches the glowing target point
   const handleTargetReached = useCallback(() => {
@@ -318,11 +325,25 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             progress={progress}
             isTargetDiscovered={routeState.progress.targetDiscovered}
             onSubmitAnswer={handleSubmitAnswer}
+            onOpenScanner={() => setIsScannerOpen(true)}
+            scannedValidationWord={scannedWord}
             isMuted={isMuted}
           />
         </section>
 
       </main>
+
+      {/* QR Code Physical Checkpoint Scanner Modal */}
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        teamId={currentRoute?.routeId || ''}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={(valWord) => {
+          setScannedWord(valWord);
+          setIsScannerOpen(false);
+        }}
+        isMuted={isMuted}
+      />
 
       {/* 3. Championship Winner & Non-Winner Result Overlays */}
       {winner && (

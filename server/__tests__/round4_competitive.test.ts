@@ -114,11 +114,11 @@ suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race'
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
   });
 
-  describe('Phase 1: Qualification of Seven Teams & Strict Limit Enforcement', () => {
-    it('rejects an 8th team from being qualified (maximum 7 enforced)', async () => {
-      const eightAssignments = testTeams.map((t, idx) => ({
+  describe('Phase 1: Qualification of Five Teams & Strict Limit Enforcement', () => {
+    it('rejects a 6th team from being qualified (maximum 5 enforced)', async () => {
+      const sixAssignments = testTeams.slice(0, 6).map((t, idx) => ({
         teamId: t.id,
-        routeId: `route-${(idx % 7) + 1}`,
+        routeId: `route-${(idx % 5) + 1}`,
       }));
 
       const res = await fetch(`${baseUrl}/api/round4/admin/qualify-teams`, {
@@ -127,13 +127,13 @@ suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race'
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ assignments: eightAssignments }),
+        body: JSON.stringify({ assignments: sixAssignments }),
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data.success).toBe(false);
-      expect(data.message).toMatch(/Limit Exceeded.*seven qualified teams/i);
+      expect(data.message).toMatch(/Limit Exceeded.*five qualified teams/i);
     });
 
     it('rejects duplicate route assignment (1 team = 1 unique route, 1 route = 1 team)', async () => {
@@ -157,8 +157,8 @@ suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race'
       expect(data.message).toMatch(/Duplicate route assignment/i);
     });
 
-    it('successfully qualifies exactly 7 teams with unique routes I to VII', async () => {
-      const validSeven = testTeams.slice(0, 7).map((t, idx) => ({
+    it('successfully qualifies exactly 5 teams with unique routes I to V', async () => {
+      const validFive = testTeams.slice(0, 5).map((t, idx) => ({
         teamId: t.id,
         routeId: `route-${idx + 1}`,
       }));
@@ -169,13 +169,13 @@ suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race'
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ assignments: validSeven }),
+        body: JSON.stringify({ assignments: validFive }),
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      expect(data.message).toMatch(/Successfully qualified 7 squads/i);
+      expect(data.message).toMatch(/Successfully qualified 5 squads/i);
 
       // Round 04 stays sealed until the administrators release it.
       const sealedRoute = await fetch(`${baseUrl}/api/round4/my-route`, {
@@ -191,8 +191,8 @@ suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race'
       expect(releaseResponse.status).toBe(200);
     });
 
-    it('blocks an unqualified 8th team from accessing Round 04 (403 Forbidden)', async () => {
-      const unqualifiedTeam = testTeams[7]; // Team 8 was not in the qualified list
+    it('blocks an unqualified 6th team from accessing Round 04 (403 Forbidden)', async () => {
+      const unqualifiedTeam = testTeams[5]; // Team 6 was not in the qualified list
 
       const res = await fetch(`${baseUrl}/api/round4/my-route`, {
         headers: {
@@ -447,7 +447,7 @@ suite('FROST CARTEL — Round 04: Seven Teams, Seven Routes, Atomic Winner Race'
       expect(data.success).toBe(true);
       expect(data.winner).toBeDefined();
       expect(data.winner.team_name || data.winner.teamName).toBeDefined();
-      expect(data.qualifiedTeams.length).toBe(7);
+      expect(data.qualifiedTeams.length).toBe(5);
     });
   });
 });
