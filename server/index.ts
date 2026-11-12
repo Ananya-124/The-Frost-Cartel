@@ -26,9 +26,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Exact origin allowlist; no-origin requests remain available for CLI/server health checks.
-const corsMiddleware = cors(createCorsOptions());
-app.use(corsMiddleware);
-app.options('*', corsMiddleware);
+app.use(cors(createCorsOptions()));
 app.use(requestTimingMiddleware);
 
 // Health check endpoint
