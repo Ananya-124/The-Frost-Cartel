@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { AdminTeam, Round1Status } from '../../../types/admin';
 import { adminReadService } from '../../../services/adminReadService';
 import { round1Api } from '../../../services/round1ApiService';
+import { progressionService } from '../../../services/progressionService';
 import { AdminProgressionControls } from '../teams/AdminProgressionControls';
 import { ConfirmationModal } from '../shared/ConfirmationModal';
 import { AdminStageConfigPanel } from './AdminStageConfigPanel';
@@ -341,10 +342,30 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
       <div className="stone-panel rounded-xl p-5 border border-white/10 shadow-xl space-y-4">
         <div className="pb-3 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-cinzel font-bold text-white uppercase">Move a team forward</h3>
-            <p className="mt-1 text-xs text-cartel-silver/70">Progress one team to its next eligible round. Round 2 gameplay remains gated by the auction start control.</p>
+            <h3 className="text-sm font-cinzel font-bold text-white uppercase">Move a team forward / Direct Round Jump</h3>
+            <p className="mt-1 text-xs text-cartel-silver/70">Progress any team to Round 4 or another round directly. Prior rounds are auto-completed.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => {
+                requestConfirmation(
+                  '⚡ ADVANCE ALL SQUADS TO ROUND 4',
+                  'Are you sure you want to advance EVERY squad across the tournament directly to Round 4: The Campus Expedition? This will auto-qualify all squads, assign campus routes, and unseal Round 4.',
+                  async () => {
+                    const res = await progressionService.adminRound4Global('advance', 'Admin advanced all squads directly to Round 4');
+                    setFeedbackNotice(`⚡ Successfully advanced all squads to Round 4! (${res.updatedCount} squads updated)`);
+                    setTimeout(() => setFeedbackNotice(null), 4000);
+                  },
+                  false,
+                  'Advance All to Round 4'
+                );
+              }}
+              className="px-3.5 py-1.5 rounded bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:to-yellow-400 text-black font-cinzel font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all cursor-pointer disabled:opacity-50"
+            >
+              ⚡ Advance All to Round 4
+            </button>
             {teams.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <label htmlFor="squad-select-control" className="text-xs font-cinzel font-bold text-cartel-amber uppercase">

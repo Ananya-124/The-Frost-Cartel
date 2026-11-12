@@ -28,66 +28,159 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
   }, [teamId]);
   useEffect(() => { void load(); }, [load]);
 
-  const moveTeamForward = async (roundId: number) => {
+  const jumpDirectlyToRound = async (targetRound: number) => {
     if (actionInFlight.current || !teamId) return;
     actionInFlight.current = true;
-    setBusyRound(roundId); setError(''); setNotice('');
+    setBusyRound(targetRound); setError(''); setNotice('');
     try {
-      const next = await progressionService.adminAction(teamId, 'ROUND', roundId, 'unlock');
+      const next = await progressionService.adminAdvanceTeam(teamId, targetRound, `Admin jumped ${teamName} directly to Round ${targetRound}`);
       setProgression(next);
-      setNotice(`${teamName} moved to Round ${roundId}.`);
+      setNotice(`⚡ ${teamName} moved directly to Round ${targetRound}! Prior rounds auto-completed and route assigned.`);
       try { await onProgressChanged?.(); }
-      catch { setError('The team update was saved, but the dashboard summary could not refresh.'); }
+      catch { setError('Team updated, but dashboard summary could not refresh.'); }
     } catch (cause) {
-      setError(errorStatus(cause) === 401 ? 'Administrator session expired. Sign in again to continue.' : cause instanceof Error ? cause.message : `Could not move ${teamName} to Round ${roundId}.`);
-    } finally { actionInFlight.current = false; setBusyRound(null); }
+      setError(errorStatus(cause) === 401 ? 'Administrator session expired. Sign in again to continue.' : cause instanceof Error ? cause.message : `Could not move ${teamName} to Round ${targetRound}.`);
+    } finally {
+      actionInFlight.current = false;
+      setBusyRound(null);
+    }
   };
 
   const rounds = progression?.rounds ?? [];
-  const nextRound = [2, 3, 4].find((roundId) => {
-    const current = rounds.find((row) => row.round_id === roundId);
-    const previous = rounds.find((row) => row.round_id === roundId - 1);
-    return current?.status === 'LOCKED' && (previous?.status === 'COMPLETED' || Boolean(current.eligible_at));
-  });
 
   return <section aria-label={`Team progression for ${teamName}`} className="space-y-4 border-t border-white/10 pt-4">
+    {/* Header with Team Name & Reset/Refresh */}
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h4 className="text-xs font-cinzel font-bold uppercase tracking-wider text-cartel-cyan">Team rounds · {teamName}</h4>
-        <p className="mt-1 text-[10px] text-cartel-silver/60">Advance this team to its next eligible round. Round 2 gameplay also requires the auction to be started from the Auction tab.</p>
+        <p className="mt-1 text-[10px] text-cartel-silver/60">Move this squad to any round below with one click. Prior rounds are auto-completed.</p>
       </div>
-      <button type="button" onClick={() => { void load(); }} disabled={loading || busyRound !== null} className="rounded border border-cartel-amber/40 px-2 py-1 text-[10px] text-cartel-amber disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (!window.confirm(`⚠️ Reset progress for EVERY squad across the tournament? All squads will be returned to Round 1 staged.`)) return;
+            setLoading(true);
+            void progressionService.adminResetAllTeamsProgress('Reset all squads triggered from team progression')
+              .then((res) => {
+                setNotice(`Master Reset Complete! All ${res.resetCount} squads reset to Round 1 staged.`);
+                void load();
+                void onProgressChanged?.();
+              })
+              .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Reset failed.'))
+              .finally(() => setLoading(false));
+          }}
+          disabled={loading || busyRound !== null}
+          className="rounded border border-red-500/50 bg-red-950/40 hover:bg-red-900/60 px-2.5 py-1 text-[10px] font-cinzel font-bold uppercase text-red-300 transition-colors cursor-pointer disabled:opacity-50"
+        >
+          ⚠️ Reset Every Team
+        </button>
+        <button type="button" onClick={() => { void load(); }} disabled={loading || busyRound !== null} className="rounded border border-cartel-amber/40 px-2 py-1 text-[10px] text-cartel-amber disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button>
+      </div>
+    </div>
+
+    {/* PROMINENT DIRECT JUMP BAR */}
+    <div className="rounded-xl border-2 border-amber-500/50 bg-amber-950/30 p-3.5 shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">⚡</span>
+          <span className="text-xs font-cinzel font-black text-amber-300 uppercase tracking-widest">
+            MOVE {teamName.toUpperCase()} DIRECTLY TO ROUND:
+          </span>
+        </div>
+        <span className="text-[10px] text-amber-200/70 font-mono">1-click jump & auto-qualify</span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        {[1, 2, 3, 4].map((rId) => {
+          const isRound4 = rId === 4;
+          const currentRoundState = rounds.find((r) => r.round_id === rId);
+          const isActive = currentRoundState?.status === 'AVAILABLE' || currentRoundState?.status === 'IN_PROGRESS';
+          return (
+            <button
+              key={rId}
+              type="button"
+              disabled={busyRound !== null || loading}
+              onClick={() => { void jumpDirectlyToRound(rId); }}
+              className={`p-2.5 rounded-lg text-xs font-cinzel font-bold uppercase tracking-wider transition-all cursor-pointer flex flex-col items-center justify-center gap-1 border-2 ${
+                isRound4
+                  ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black font-black border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)] hover:scale-103'
+                  : isActive
+                  ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
+                  : 'bg-cartel-charcoal hover:bg-white/10 border-white/20 text-white'
+              } disabled:opacity-50 disabled:cursor-wait`}
+            >
+              <span className="text-xs font-black">
+                {isRound4 ? '⚡ Jump to Round 4' : `Jump to Round ${rId}`}
+              </span>
+              <span className={`text-[9px] font-mono ${isRound4 ? 'text-black/90 font-bold' : 'text-cartel-silver/70'}`}>
+                {busyRound === rId ? 'Moving…' : isActive ? '● Currently Active' : ROUND_NAMES[rId]?.short ?? `Round ${rId}`}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
 
     {error && <div role="alert" className="flex flex-wrap justify-between gap-2 rounded border border-red-500/40 bg-red-950/30 p-2 text-xs text-red-200"><span>{error}</span><button type="button" onClick={() => { void load(); }} className="underline">Retry</button></div>}
     {notice && <output aria-live="polite" className="block rounded border border-emerald-500/30 bg-emerald-950/30 p-2 text-xs text-emerald-200">{notice}</output>}
 
     {loading && !progression ? <p role="status" className="text-xs text-cartel-silver/60">Loading team rounds…</p> : !progression ? null : <>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {rounds.map((round) => {
           const isActive = round.status === 'AVAILABLE' || round.status === 'IN_PROGRESS';
           const isCompleted = round.status === 'COMPLETED';
           return (
-            <div key={round.round_id} className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
-              isActive ? 'border-amber-500/60 bg-amber-950/20' : isCompleted ? 'border-emerald-500/30 bg-emerald-950/15' : 'border-white/10 bg-black/25'
+            <div key={round.round_id} className={`flex items-center justify-between gap-3 rounded-lg border p-3.5 ${
+              isActive ? 'border-amber-500/60 bg-amber-950/20 shadow-sm' : isCompleted ? 'border-emerald-500/30 bg-emerald-950/15' : 'border-white/10 bg-black/25'
             }`}>
               <div>
                 <span className="text-xs font-cinzel font-bold text-white block">
                   {ROUND_NAMES[round.round_id]?.title ?? `Round ${String(round.round_id).padStart(2, '0')}`}
                 </span>
-                <span className={`text-[9px] font-mono uppercase ${
+                <span className={`text-[10px] font-mono uppercase tracking-wider ${
                   isActive ? 'text-amber-400 font-bold' : isCompleted ? 'text-emerald-400' : 'text-cartel-silver/60'
                 }`}>
                   {round.status.replace('_', ' ')}
                 </span>
               </div>
+              <div>
+                {round.round_id === 4 ? (
+                  <button
+                    type="button"
+                    disabled={busyRound !== null || loading}
+                    onClick={() => { void jumpDirectlyToRound(4); }}
+                    className="px-3 py-1.5 rounded bg-amber-500/20 hover:bg-amber-500/40 border border-amber-400/60 text-amber-300 font-cinzel text-xs font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyRound === 4 ? 'Moving…' : '⚡ Jump R4'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busyRound !== null || loading}
+                    onClick={() => { void jumpDirectlyToRound(round.round_id); }}
+                    className="px-2.5 py-1 rounded bg-cartel-charcoal hover:bg-white/10 border border-white/20 text-white font-cinzel text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyRound === round.round_id ? 'Moving…' : `Jump R${round.round_id}`}
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
-      {nextRound !== undefined ? <button type="button" aria-label={`Move ${teamName} to Round ${nextRound}`} disabled={busyRound !== null} onClick={() => { void moveTeamForward(nextRound); }} className="rounded border border-cartel-amber/50 bg-cartel-amber/10 px-3 py-2 text-xs font-cinzel font-bold uppercase text-cartel-amber enabled:hover:bg-cartel-amber/20 disabled:cursor-wait disabled:opacity-50">
-        {busyRound === nextRound ? 'Updating team…' : `Move team to Round ${nextRound}`}
-      </button> : <p className="text-[10px] text-cartel-silver/60">Squad is at maximum round progression or already unlocked.</p>}
+
+      {/* Standalone Big Action Button */}
+      <div className="pt-2">
+        <button
+          type="button"
+          disabled={busyRound !== null || loading}
+          onClick={() => { void jumpDirectlyToRound(4); }}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:to-yellow-400 text-black font-cinzel font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(245,158,11,0.5)] transition-all cursor-pointer disabled:opacity-50"
+        >
+          {busyRound === 4 ? 'Moving squad to Round 4…' : `⚡ JUMP ${teamName.toUpperCase()} DIRECTLY TO ROUND 4 (CAMPUS EXPEDITION)`}
+        </button>
+      </div>
     </>}
   </section>;
 };
