@@ -599,13 +599,14 @@ export async function adminAdvanceTeamToRound(
       await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
       await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
       await qualifyTeamForRound4(client, teamId);
+      await client.query('UPDATE round4_team_progress SET is_finished=false, finished_at=NULL WHERE team_id=$1', [teamId]);
     }
 
     const target = await client.query<{ status: ProgressStatus }>(
       'SELECT status FROM round_progress WHERE team_id=$1 AND round_id=$2 FOR UPDATE', [teamId, targetRound]
     );
     const oldStatus = target.rows[0]?.status ?? 'LOCKED';
-    if (oldStatus !== 'COMPLETED' && oldStatus !== 'IN_PROGRESS') {
+    if (oldStatus !== 'AVAILABLE') {
       await client.query(
         "UPDATE round_progress SET status='AVAILABLE', eligible_at=COALESCE(eligible_at, now()), updated_at=now() WHERE team_id=$1 AND round_id=$2",
         [teamId, targetRound]

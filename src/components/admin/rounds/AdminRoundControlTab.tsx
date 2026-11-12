@@ -113,30 +113,6 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
     });
   };
 
-  const handleResetAllTeams = () => {
-    requestConfirmation(
-      'RESET EVERY TEAM PROGRESS',
-      '⚠️ CRITICAL WARNING: This will reset tournament progress for EVERY squad across all rounds. All squads return to Round 1 staged, Rounds 2, 3, and 4 are locked, auction cards and route assignments are cleared. This action cannot be undone.',
-      async () => {
-        setTimerBusy(true); setRoundError(null);
-        try {
-          const res = await progressionService.adminResetAllTeamsProgress('Tournament Master Reset by Administrator');
-          setFeedbackNotice(`Master Reset Complete! All ${res.resetCount} squad records have been reset to Round 1 staged.`);
-          setServerStatus('not_started');
-          await onRefresh();
-          setTimeout(() => setFeedbackNotice(null), 5000);
-        } catch (error) {
-          setRoundError(error instanceof Error ? error.message : 'Tournament reset failed.');
-          throw error;
-        } finally {
-          setTimerBusy(false);
-        }
-      },
-      true,
-      'YES, RESET EVERY TEAM PROGRESS'
-    );
-  };
-
   const handleGlobalStatusChange = (status: Round1Status) => {
     const actionDescriptions: Record<Round1Status, { title: string; message: string; danger: boolean }> = {
       running: {
@@ -195,36 +171,6 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
       )}
       {roundError && <output role="alert" className="text-xs text-red-300">{roundError}</output>}
       {teamLoadError && <div role="alert" className="rounded border border-red-500/40 bg-red-950/30 p-3 text-xs text-red-200">{teamLoadError}</div>}
-
-      {/* ⚠️ DANGER ZONE: MASTER TOURNAMENT PROGRESSION RESET BAR */}
-      <div className="stone-panel rounded-xl p-5 border-2 border-red-600/70 bg-gradient-to-r from-red-950/40 via-stone-950/80 to-red-950/40 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2.5 mb-1">
-            <span className="text-xl" aria-hidden="true">⚠️</span>
-            <h2 className="text-lg font-cinzel font-black text-red-400 tracking-wide">
-              MASTER TOURNAMENT PROGRESSION RESET
-            </h2>
-            <span className="text-[10px] font-mono text-red-300 bg-red-900/60 border border-red-500/50 px-2.5 py-0.5 rounded-full uppercase">
-              DANGER ZONE • TOURNAMENT RESET
-            </span>
-          </div>
-          <p className="text-xs text-cartel-silver/80 font-sans max-w-2xl">
-            Reset every team's progress back to the beginning. Sets all squads back to Round 1 staged, locks Rounds 2, 3, and 4, wipes auction won cards, and clears Round 4 route assignments.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-2 shrink-0">
-          <button
-            type="button"
-            disabled={timerBusy || actionBusy}
-            onClick={handleResetAllTeams}
-            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-red-700 via-rose-700 to-red-900 hover:from-red-600 hover:to-rose-600 text-white font-cinzel font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:shadow-[0_0_30px_rgba(220,38,38,0.8)] border border-red-400/60 cursor-pointer disabled:opacity-40 transition-all flex items-center gap-2"
-          >
-            <span aria-hidden="true">🔄</span>
-            <span>RESET EVERY TEAM PROGRESS</span>
-          </button>
-        </div>
-      </div>
 
       {/* 1. Global Round State Bar */}
       <div className="stone-panel rounded-xl p-5 border border-cartel-frostBorder/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -393,9 +339,30 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
 
       {/* 4. Server-authoritative team progression */}
       <div className="stone-panel rounded-xl p-5 border border-white/10 shadow-xl space-y-4">
-        <div className="pb-3 border-b border-white/10">
-          <h3 className="text-sm font-cinzel font-bold text-white uppercase">Move a team to its next round</h3>
-          <p className="mt-1 text-xs text-cartel-silver/70">Choose one team below. Round 2 auction access remains closed until the auction starts from the Auction tab.</p>
+        <div className="pb-3 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-cinzel font-bold text-white uppercase">Move a team forward</h3>
+            <p className="mt-1 text-xs text-cartel-silver/70">Progress one team to its next eligible round. Round 2 gameplay remains gated by the auction start control.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {teams.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <label htmlFor="squad-select-control" className="text-xs font-cinzel font-bold text-cartel-amber uppercase">
+                  Squad:
+                </label>
+                <select
+                  id="squad-select-control"
+                  value={selectedTeamId}
+                  onChange={(e) => setSelectedTeamId(e.target.value)}
+                  className="bg-cartel-charcoal border border-white/20 rounded px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-cartel-pumpkin"
+                >
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.currentRound})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
         {teams.length === 0 && !teamLoadError && <p role="status" className="text-xs text-cartel-silver/60">Loading teams…</p>}
         {selectedTeam && <AdminProgressionControls key={selectedTeam.id} teamId={selectedTeam.id} teamName={selectedTeam.name} onProgressChanged={onRefresh} />}

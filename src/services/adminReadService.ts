@@ -46,7 +46,10 @@ function mapTeam(team: ApiTeam): AdminTeam & { officialScore: number } {
   });
 
   const round1 = team.rounds.find((round) => round.roundId === 1);
-  const currentRound = team.rounds.find((round) => round.status === 'IN_PROGRESS' || round.status === 'AVAILABLE');
+  const activeRounds = [...team.rounds]
+    .filter((round) => round.status === 'IN_PROGRESS' || round.status === 'AVAILABLE')
+    .sort((a, b) => b.roundId - a.roundId);
+  const currentRound = activeRounds[0];
   const activeStage = (Object.values(stages).find((stage) => stage.status === 'in_progress')?.stageId ?? 'staged') as StageId | 'staged';
   const status: TeamStatus = team.isPaused ? 'paused' : round1?.status === 'COMPLETED' ? 'completed' : round1?.status === 'IN_PROGRESS' ? 'active' : 'waiting';
 

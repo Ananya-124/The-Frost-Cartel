@@ -53,6 +53,7 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
   const [actionBusy, setActionBusy] = useState(false);
   const inFlight = useRef(false);
   const [pauseBusyId, setPauseBusyId] = useState<string | null>(null);
+  const [quickR4BusyId, setQuickR4BusyId] = useState<string | null>(null);
   const [allTeams, setAllTeams] = useState<AdminTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -114,6 +115,22 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
     } finally { setPauseBusyId(null); }
   };
 
+  const handleQuickJumpToRound4 = async (team: AdminTeam) => {
+    if (quickR4BusyId || inFlight.current) return;
+    setQuickR4BusyId(team.id);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      await progressionService.adminAdvanceTeam(team.id, 4, `Quick jump ${team.name} directly to Round 4`);
+      setActionNotice(`⚡ ${team.name} jumped directly to Round 4 (Campus Expedition)! Prior rounds auto-completed and route assigned.`);
+      await handleRefresh();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : `Could not move ${team.name} to Round 4.`);
+    } finally {
+      setQuickR4BusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {actionNotice && (
@@ -171,26 +188,6 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
 
         {/* Team Actions CTA */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={async () => {
-              if (!window.confirm('⚠️ Reset progress for EVERY squad across all rounds? This will return all squads back to Round 1 staged.')) return;
-              try {
-                setActionBusy(true); setActionError(null);
-                const res = await progressionService.adminResetAllTeamsProgress('Tournament Master Reset from Teams Tab');
-                setActionNotice(`Master Reset Complete! All ${res.resetCount} squads reset to Round 1 staged.`);
-                await handleRefresh();
-              } catch (err) {
-                setActionError(err instanceof Error ? err.message : 'Tournament reset failed.');
-              } finally {
-                setActionBusy(false);
-              }
-            }}
-            disabled={actionBusy}
-            className="px-3 py-2 rounded bg-red-950/70 hover:bg-red-900 border border-red-500/50 text-red-300 font-cinzel font-bold text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
-          >
-            ⚠️ Reset All Progress
-          </button>
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
@@ -291,11 +288,12 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setPendingAction({ team, action: 'reset' })}
-                          className="px-2 py-1 rounded bg-red-950/60 hover:bg-red-900/70 text-red-200 font-cinzel text-[10px] font-bold border border-red-500/30 cursor-pointer"
-                          title="Reset all progress and credits to the beginning of Round 1"
+                          disabled={quickR4BusyId === team.id || actionBusy}
+                          onClick={() => { void handleQuickJumpToRound4(team); }}
+                          className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 font-cinzel text-[10px] font-bold border border-amber-400/50 cursor-pointer disabled:opacity-50"
+                          title={`Jump ${team.name} directly to Round 4 (Campus Expedition)`}
                         >
-                          Reset
+                          {quickR4BusyId === team.id ? 'Moving…' : '⚡ Jump R4'}
                         </button>
                         <button
                           type="button"
@@ -361,17 +359,11 @@ export const AdminTeamsTab: React.FC<AdminTeamsTabProps> = ({
 
       <ConfirmationModal
         isOpen={pendingAction !== null}
-        title={
-          pendingAction?.action === 'reset' ? 'RESET ROUND 1 PROGRESSION' : 'DELETE TEAM'
-        }
+        title="DELETE TEAM"
         message={
-          pendingAction?.action === 'reset'
-            ? `Reset ${pendingAction.team.name}'s Round 1 progression? Historical scores and credit transactions remain preserved.`
-            : `Permanently delete ${pendingAction?.team.name}? The server may reject deletion if historical records still reference this team.`
+          `Permanently delete ${pendingAction?.team.name}? The server may reject deletion if historical records still reference this team.`
         }
-        confirmLabel={
-          actionBusy ? 'Saving…' : pendingAction?.action === 'reset' ? 'Reset Progress' : 'Delete Team'
-        }
+        confirmLabel={actionBusy ? 'Saving…' : 'Delete Team'}
         isDanger={pendingAction !== null}
         onConfirm={confirmTeamAction}
         onCancel={() => setPendingAction(null)}
