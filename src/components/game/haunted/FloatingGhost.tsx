@@ -33,8 +33,8 @@ export const FloatingGhost: React.FC<FloatingGhostProps> = ({
           loading="eager"
           className="w-full h-full object-contain filter brightness-110 contrast-110 opacity-75 hover:opacity-90 transition-opacity duration-1000 animate-ghost-float mix-blend-screen"
         />
-        {/* Supernatural Ethereal Cyan Vapor Glow */}
-        <div className="absolute inset-0 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,0.18)_0%,rgba(56,189,248,0.08)_50%,transparent_75%)] blur-2xl pointer-events-none -z-10 animate-pulse [animation-duration:6s]" />
+        {/* Supernatural Ethereal Cyan Vapor Glow — static, no animated blur repaint */}
+        <div className="absolute inset-0 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,0.18)_0%,rgba(56,189,248,0.08)_50%,transparent_75%)] pointer-events-none -z-10" />
       </div>
     </div>
   );

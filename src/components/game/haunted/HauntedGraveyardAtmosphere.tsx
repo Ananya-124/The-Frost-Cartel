@@ -35,10 +35,9 @@ export const HauntedGraveyardAtmosphere: React.FC = () => {
       <div className="absolute bottom-[16%] right-[6.8%] w-12 h-12 rounded-full bg-gradient-radial from-amber-400/45 via-orange-600/20 to-transparent blur-sm animate-candle-flicker [animation-delay:1.4s] pointer-events-none" />
 
       {/* 6. Distant Flying Bats High in the Night Sky (Kept clear of central heading) */}
+      {/* Two bats instead of four — reduces concurrent wing-flap animation cost */}
       <FlyingBat startYPercent={5} durationSeconds={18} delaySeconds={0} scale={0.65} flightDirection="right-to-left" />
       <FlyingBat startYPercent={10} durationSeconds={24} delaySeconds={8} scale={0.5} flightDirection="left-to-right" />
-      <FlyingBat startYPercent={29} durationSeconds={27} delaySeconds={13} scale={0.42} opacity={0.6} flightDirection="right-to-left" />
-      <FlyingBat startYPercent={58} durationSeconds={31} delaySeconds={5} scale={0.36} opacity={0.55} flightDirection="left-to-right" />
 
       {/* 7. Translucent Floating Ghost Drifting near Castle Spires (Upper Right) */}
       <FloatingGhost side="right" className="hidden lg:block top-[18%] right-[12%] opacity-35 mix-blend-screen filter drop-shadow-[0_0_20px_rgba(127,229,217,0.5)]" />

@@ -93,9 +93,10 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     const timer = setInterval(() => {
       if (serverState?.round.isActive && serverState.session.status === 'active') {
         const deadline = timerDeadline.current;
-        const next = deadline === null
-          ? timerStore.getSnapshot()
-          : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        // No deadline means the round hasn't been explicitly started yet —
+        // do not decrement; the server-synced value is already in the store.
+        if (deadline === null) return;
+        const next = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
         timerStore.setSeconds(next);
         // Keep the dashboard countdown responsive without rerendering a heavy
         // active puzzle tree once per second.

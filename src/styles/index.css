@@ -84,19 +84,23 @@
   }
 
   .animate-bat-wing-left {
-    animation: batWingLeft 0.28s ease-in-out infinite alternate;
+    animation: batWingLeft 0.42s ease-in-out infinite alternate;
+    will-change: transform;
   }
 
   .animate-bat-wing-right {
-    animation: batWingRight 0.28s ease-in-out infinite alternate;
+    animation: batWingRight 0.42s ease-in-out infinite alternate;
+    will-change: transform;
   }
 
   .animate-bat-fly-r2l {
-    animation: batFlyR2L 16s ease-in-out infinite;
+    animation: batFlyR2L 16s linear infinite;
+    will-change: transform;
   }
 
   .animate-bat-fly-l2r {
-    animation: batFlyL2R 18s ease-in-out infinite;
+    animation: batFlyL2R 18s linear infinite;
+    will-change: transform;
   }
 
   .animate-ghost-float {
