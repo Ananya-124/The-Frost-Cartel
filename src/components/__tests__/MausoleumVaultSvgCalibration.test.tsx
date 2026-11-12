@@ -26,38 +26,45 @@ describe('Stage 2: The Mausoleum Vault / Hidden Skull SVG Calibration', () => {
   it('calibrates new organic cubic Bézier silhouette for the hidden skull behind burgundy cloth', () => {
     expect(skullDef).toBeDefined();
     expect(skullDef.targetId).toBe('skull');
-    expect(skullDef.x).toBe(268);
-    expect(skullDef.y).toBe(528);
+    expect(skullDef.x).toBe(282);
+    expect(skullDef.y).toBe(444);
     expect(skullDef.width).toBe(32);
-    expect(skullDef.height).toBe(34);
+    expect(skullDef.height).toBe(40);
 
     // Percentages calculated against 1024 x 620
-    expect(skullDef.xPercent).toBeCloseTo(26.17, 1);
-    expect(skullDef.yPercent).toBeCloseTo(85.16, 1);
-    expect(skullDef.widthPercent).toBeCloseTo(3.13, 1);
-    expect(skullDef.heightPercent).toBeCloseTo(5.48, 1);
+    expect(skullDef.xPercent).toBeCloseTo(27.54, 1);
+    expect(skullDef.yPercent).toBeCloseTo(71.61, 1);
+    expect(skullDef.widthPercent).toBeCloseTo(3.12, 1);
+    expect(skullDef.heightPercent).toBeCloseTo(6.45, 1);
 
     // Old coordinates from Image A (1280x987) must be completely removed
     expect(skullDef.svgPath).not.toContain('535.0,809.5');
     expect(skullDef.svgPath).not.toContain('484.5,798.0');
 
-    // New path starts at skull dome top and uses smooth cubic Béziers
-    expect(skullDef.svgPath.startsWith('M 280 528.5')).toBe(true);
-    expect(skullDef.svgPath).toContain('C 292 561 286 562.5 281 562.5');
+    // New path starts at skull cranium and tightly outlines skull anatomy
+    expect(skullDef.svgPath.startsWith('M 298 444')).toBe(true);
     expect(skullDef.svgPath.endsWith('Z')).toBe(true);
   });
 
   it('calibrates the stone sarcophagus coffin within the 1024 x 620 coordinate space', () => {
     expect(coffinDef).toBeDefined();
     expect(coffinDef.targetId).toBe('coffin');
-    expect(coffinDef.x).toBe(220);
-    expect(coffinDef.y).toBe(350);
-    expect(coffinDef.width).toBe(560);
-    expect(coffinDef.height).toBe(245);
+    expect(coffinDef.x).toBe(233);
+    expect(coffinDef.y).toBe(384);
+    expect(coffinDef.width).toBe(525);
+    expect(coffinDef.height).toBe(161);
 
-    // Discards old 1280x987 coordinates (840.0,820.5)
+    // Percentages calculated against 1024 x 620
+    expect(coffinDef.xPercent).toBeCloseTo(22.75, 1);
+    expect(coffinDef.yPercent).toBeCloseTo(61.94, 1);
+    expect(coffinDef.widthPercent).toBeCloseTo(51.27, 1);
+    expect(coffinDef.heightPercent).toBeCloseTo(25.97, 1);
+
+    // Discards old 1280x987 coordinates and floor polygon
     expect(coffinDef.svgPath).not.toContain('840.0,820.5');
-    expect(coffinDef.svgPath.startsWith('M 258 520')).toBe(true);
+    expect(coffinDef.svgPath).not.toContain('595');
+    expect(coffinDef.svgPath.startsWith('M 368 414')).toBe(true);
+    expect(coffinDef.svgPath.endsWith('Z')).toBe(true);
   });
 
   it('renders completely invisible skull hit path with 0 pre-discovery outline or hover highlight', () => {

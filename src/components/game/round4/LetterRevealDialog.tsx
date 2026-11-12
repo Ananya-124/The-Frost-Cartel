@@ -168,9 +168,8 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
     >
       {/* 1. Deep Warm Charcoal Backdrop Vignette with Subtle Candlelight Radiance */}
       <div
-        className={`fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-700 pointer-events-none ${
-          isOpening ? 'opacity-0' : 'opacity-100'
-        }`}
+        className={`fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-700 pointer-events-none ${isOpening ? 'opacity-0' : 'opacity-100'
+          }`}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(245,190,80,0.14)_0%,transparent_60%)]" />
         {/* Subtle floating ambient golden dust embers */}
@@ -225,13 +224,13 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
 
           {/* Printable Scroll Content - Natural coherent document layout with balanced vertical rhythm */}
           <div
-            className="absolute inset-x-[11%] sm:inset-x-[12%] top-[23.5%] bottom-[15%] flex flex-col items-center justify-between text-center select-none"
+            className="absolute inset-x-[11%] sm:inset-x-[12%] top-[24.5%] bottom-[12%] flex flex-col items-center justify-between text-center select-none"
             style={{ containerType: 'inline-size' }}
           >
-            
+
             {/* Header Section: Title, Ornate Sunburst Emblem, and Subtitle */}
             <div ref={headingRef} className="w-full flex flex-col items-center flex-shrink-0">
-              
+
               {/* Main Heading: THE DAWN AWAKENS */}
               <h2
                 id="letter-heading"
@@ -274,7 +273,7 @@ export const LetterRevealDialog: React.FC<LetterRevealDialogProps> = ({
               ref={storyRef}
               className="w-full flex flex-col items-center text-center space-y-2 sm:space-y-3 md:space-y-3.5 my-auto max-w-[440px] px-1"
             >
-              
+
               {/* Paragraph 1 */}
               <p className="font-cormorant text-[clamp(13px,3.1cqw,17.5px)] leading-[1.48] sm:leading-[1.58] text-[#49301D] font-bold">
                 Beyond the graveyard, a new dawn awaits. Hidden within the walls of your own college lies a forgotten treasure — a relic of knowledge, mystery and unimaginable value.
