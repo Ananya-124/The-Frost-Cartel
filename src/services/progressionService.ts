@@ -8,7 +8,7 @@ export interface HuntProgress { hunt_id: number; status: ProgressStatus; complet
 export interface ProgressAudit { id: number; entity_type: ProgressEntity; entity_id: number; action_performed: string; previous_state: string | null; new_state: string; reason: string | null; created_at: string; admin_id: string | null }
 export interface TeamProgression { teamId: string; rounds: RoundProgress[]; hunts: HuntProgress[]; audit?: ProgressAudit[] }
 export interface ServerTeamOption { id: string; teamName: string }
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 async function request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const controller = new AbortController();

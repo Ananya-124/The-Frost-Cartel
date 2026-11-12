@@ -20,7 +20,7 @@ export interface Round1ActionResponse {
 }
 
 const pendingActions = new Map<string, { id: string; promise?: Promise<Round1ActionResponse> }>();
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 let pendingStateRequest: Promise<Round1StateResponse> | null = null;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

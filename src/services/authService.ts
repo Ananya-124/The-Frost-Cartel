@@ -1,7 +1,7 @@
 import type { AuthResponse, TeamSession } from '../types';
 import { apiUrl, setStoredToken, clearStoredToken } from './apiBaseUrl';
 
-const AUTH_REQUEST_TIMEOUT_MS = 15_000;
+const AUTH_REQUEST_TIMEOUT_MS = 60_000;
 
 async function fetchWithTimeout(path: string, init: RequestInit): Promise<Response> {
   const controller = new AbortController();
