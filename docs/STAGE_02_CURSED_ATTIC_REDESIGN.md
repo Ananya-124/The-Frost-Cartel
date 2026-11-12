@@ -55,3 +55,4 @@ M 458 150 L 472 140 L 480 142 L 466 154 L 484 153 L 500 160 L 484 170 L 496 180 
 - **TypeScript Typecheck:** `npx tsc --noEmit` — 0 errors.
 - **Manifest Synchronization:** `public/assets/stage-02/manifest/target-manifest.json` updated with identical parameters.
 - **Gameplay Integrity:** Canonical answer tokens (`witch_hat`, `spider`), credit mechanics, and hint systems remain fully preserved.
+

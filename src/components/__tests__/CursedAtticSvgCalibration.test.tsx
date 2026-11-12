@@ -183,3 +183,4 @@ describe("Stage 2: The Cursed Attic / Witch's Hat & Spider SVG Calibration", () 
     );
   });
 });
+
