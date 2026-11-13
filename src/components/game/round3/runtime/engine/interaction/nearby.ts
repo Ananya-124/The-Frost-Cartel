@@ -26,22 +26,32 @@ export function findNearTarget(state: GameState, index: PlayerIndex): NearTarget
   let best: InteractableObject | null = null;
   let bestDist = INTERACT_RADIUS;
   for (const object of INTERACTABLES) {
-    if (state.huntIndex === 0 && state.hunt1AvailableInteractables !== undefined && !HUNT1_INTERACTABLE_IDS.has(object.id)) continue;
-    if (state.huntIndex !== 0 && HUNT1_INTERACTABLE_IDS.has(object.id)) continue;
-    if (state.huntIndex === 0 && HUNT1_INTERACTABLE_IDS.has(object.id)
-      && !state.hunt1AvailableInteractables?.includes(object.id)) continue;
-    if (state.huntIndex !== 1 && HUNT2_INTERACTABLE_IDS.has(object.id)) continue;
-    if (state.huntIndex === 1 && !HUNT2_INTERACTABLE_IDS.has(object.id)) continue;
-    if (state.huntIndex !== 2 && HUNT3_INTERACTABLE_IDS.has(object.id)) continue;
-    if (state.huntIndex === 2 && !HUNT3_INTERACTABLE_IDS.has(object.id)) continue;
-    if (state.huntIndex === 2 && !isHunt3InteractableAvailable(object.id, state.hunt3Stage)) continue;
-    if ((state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0) > state.time) continue;
-    if (state.hunt2ObjectStates?.[object.id] === 'hidden') continue;
-    if (object.id === 'trueMemoryAnchor' && !state.hunt2Subtasks?.trueAnchorActivated) continue;
+    // 1. Hunt 1 specific objects
+    if (HUNT1_INTERACTABLE_IDS.has(object.id)) {
+      if (state.huntIndex !== 0) continue;
+      if (state.hunt1AvailableInteractables && !state.hunt1AvailableInteractables.includes(object.id)) continue;
+    }
+    // 2. Hunt 2 specific objects
+    else if (HUNT2_INTERACTABLE_IDS.has(object.id)) {
+      if (state.huntIndex !== 1) continue;
+      if ((state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0) > state.time) continue;
+      if (state.hunt2ObjectStates?.[object.id] === 'hidden') continue;
+      if (object.id === 'trueMemoryAnchor' && !state.hunt2Subtasks?.trueAnchorActivated) continue;
+    }
+    // 3. Hunt 3 specific objects
+    else if (HUNT3_INTERACTABLE_IDS.has(object.id)) {
+      if (state.huntIndex !== 2) continue;
+      if (!isHunt3InteractableAvailable(object.id, state.hunt3Stage)) continue;
+    }
+    // Base props (desk, shelf, cab, etc.) remain search-able across all hunts in their timeline
+
     if (object.timeline !== player.timeline) continue;
     const d = distanceToHitbox(object, player);
-    if (d < bestDist) {
-      bestDist = d;
+    // Give active hunt-evidence strong priority over generic ambient props if both are in range
+    const isHuntClue = HUNT1_INTERACTABLE_IDS.has(object.id) || HUNT2_INTERACTABLE_IDS.has(object.id) || HUNT3_INTERACTABLE_IDS.has(object.id);
+    const effectiveDist = isHuntClue ? d - 20 : d;
+    if (effectiveDist < bestDist && d < INTERACT_RADIUS) {
+      bestDist = effectiveDist;
       best = object;
     }
   }

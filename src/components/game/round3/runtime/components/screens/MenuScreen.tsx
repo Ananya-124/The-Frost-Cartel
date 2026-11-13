@@ -2,7 +2,7 @@ import type { RefObject } from 'react';
 import type { PowerCard } from '../../types';
 import type { Round3InventoryItem } from '../../../../../../types/round3.types';
 import styles from './Menu.module.css';
-import { TEST_POWER_CARDS, type TestPowerCardId } from '../../testingCards';
+import type { TestPowerCardId } from '../../testingCards';
 
 interface MenuScreenProps {
   visible: boolean;
@@ -16,7 +16,7 @@ interface MenuScreenProps {
   onToggleTestingCard: (id: TestPowerCardId) => void;
 }
 
-export default function MenuScreen({ visible, canvasRef, teamName, cards, inventory, onStart, onExit, testingCardIds, onToggleTestingCard }: MenuScreenProps) {
+export default function MenuScreen({ visible, canvasRef, teamName, onStart, onExit }: MenuScreenProps) {
 
   return (
     <div className={visible ? styles.menu : styles.hidden}>
@@ -63,25 +63,6 @@ export default function MenuScreen({ visible, canvasRef, teamName, cards, invent
         </p>
 
         <p className={styles.team}>TEAM · <b>{teamName}</b></p>
-        <div className={styles.inventory}>
-          <b>OWNED ROUND 3 CARDS</b>
-          {inventory.length === 0 ? <span>No cards assigned. Your team receives no automatic sample cards.</span> : inventory.map((item) => {
-            const card = cards.find((entry) => entry.cardId === item.cardId && entry.source === item.source);
-            const sourceLabel = item.source === 'development' ? 'DEVELOPMENT SAMPLE' : item.source === 'admin' ? 'ADMIN ASSIGNED' : 'ROUND 2 AUCTION';
-            return <span key={`${item.source}-${item.cardId}`}>{card?.name ?? item.cardId} · {sourceLabel} ×{item.quantity}</span>;
-          })}
-        </div>
-        {import.meta.env.DEV && <div className={styles.inventory}>
-          <b>TEMPORARY ROUND 3 TEST INVENTORY · SHARED BY BOTH PLAYERS</b>
-          {TEST_POWER_CARDS.map((card) => (
-            <label key={card.id}>
-              <input type="checkbox" checked={testingCardIds.includes(card.id)} onChange={() => onToggleTestingCard(card.id)} />
-              {card.name}
-            </label>
-          ))}
-          <small>Development-only test cards are separate from the server inventory and are saved per team in this browser.</small>
-        </div>}
-        {/* {import.meta.env.DEV && <button className={styles.devSample} onClick={onLoadDevelopmentSample}>Load development-only sample inventory</button>} */}
         <button className={styles.start} onClick={onStart}>
           BEGIN THE HUNT
         </button>

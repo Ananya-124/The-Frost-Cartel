@@ -6,7 +6,11 @@
 .trackerToggle{right:10px;left:auto}
 .hidePanel{margin-left:auto;white-space:nowrap!important;color:#d9c99f!important;background:#191a19!important;border:1px solid #5b5443!important;font-size:9px!important}
 .restorePanel{position:fixed;z-index:36;top:5.25rem;padding:.55rem .8rem;color:#e6cf97;background:rgba(7,9,11,.94);border:1px solid #625743;border-radius:6px;cursor:pointer;font:700 10px ui-sans-serif,system-ui}
-.root header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;border-bottom:1px solid #b7955b55;padding-bottom:.6rem}.root header small{color:#d4b06c;letter-spacing:.14em;font-size:9px}.root h2{font:600 17px Georgia,serif;margin:.2rem 0}.root header strong{color:#f2ca7d;white-space:nowrap}.status{margin:.7rem 0;padding:.6rem;background:#15202a;border-left:2px solid #82b4c2}.progress{font-size:10px;color:#a9a294;margin-bottom:.6rem}.task{border-top:1px solid #ffffff20;padding:.7rem 0}.task h3{font:600 15px Georgia,serif;color:#e6c789;margin:0}.task p{color:#c2bcae;margin:.4rem 0 .7rem}.task small{display:block;color:#b3ad9f;margin:.4rem 0}.actions,.seals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem;margin:.6rem 0}.seals{grid-template-columns:1fr}.seals>div{display:grid;grid-template-columns:1fr auto;gap:.35rem;padding:.55rem;border:1px solid #ffffff20;border-radius:7px}.seals>div>span{font-size:10px;color:#bdcfca}.seals button{grid-column:span 2}.root button,.root select{border:1px solid #a98b5a88;border-radius:5px;background:#17191c;color:#e9e1d1;padding:.4rem .5rem;font:inherit}.root button{cursor:pointer;text-align:left}.root button:hover:not(:disabled){background:#30281c}.root button:disabled{opacity:.45;cursor:not-allowed}.root label{display:grid;gap:.25rem;color:#bdb5a6;margin:.35rem 0}.sequence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem;margin:.5rem 0}.trial{display:grid;gap:.4rem;margin:.7rem 0;padding:.6rem;border:1px solid #8fb6c644}.secret{border-top:1px solid #ffffff20;padding:.7rem 0;color:#b8c4bd}.secret summary{cursor:pointer;color:#c5a568}.complete{margin-top:.8rem;padding:.8rem;border:1px solid #a9d3a2;color:#bce8b0;background:#162518;text-align:center;font-weight:700;letter-spacing:.06em}.loading{position:fixed;right:1rem;top:5.25rem;background:#101419;color:#ddd;padding:1rem;border:1px solid #a98b5a}
+.root header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;border-bottom:1px solid #b7955b55;padding-bottom:.6rem}.root header small{color:#d4b06c;letter-spacing:.14em;font-size:9px}.root h2{font:600 17px Georgia,serif;margin:.2rem 0}.root header strong{color:#f2ca7d;white-space:nowrap}.status{margin:.7rem 0;padding:.6rem;background:#15202a;border-left:2px solid #82b4c2}.progress{font-size:10px;color:#a9a294;margin-bottom:.6rem}.task{border-top:1px solid #ffffff20;padding:.7rem 0}.task h3{font:600 15px Georgia,serif;color:#e6c789;margin:0}.task p{color:#c2bcae;margin:.4rem 0 .7rem}.task small{display:block;color:#b3ad9f;margin:.4rem 0}
+.stageInstructions{margin:6px 0 10px;padding:8px 10px;background:#161b18;border-left:3px solid #b7955b;border-radius:4px}
+.stageInstructions b{font-size:10px;letter-spacing:.08em;color:#ebd4a8}
+.stageInstructions ol{margin:4px 0 2px 16px;padding:0}
+.stageInstructions li{margin:4px 0;font-size:11px;line-height:1.45;color:#ede3cc}.actions,.seals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem;margin:.6rem 0}.seals{grid-template-columns:1fr}.seals>div{display:grid;grid-template-columns:1fr auto;gap:.35rem;padding:.55rem;border:1px solid #ffffff20;border-radius:7px}.seals>div>span{font-size:10px;color:#bdcfca}.seals button{grid-column:span 2}.root button,.root select{border:1px solid #a98b5a88;border-radius:5px;background:#17191c;color:#e9e1d1;padding:.4rem .5rem;font:inherit}.root button{cursor:pointer;text-align:left}.root button:hover:not(:disabled){background:#30281c}.root button:disabled{opacity:.45;cursor:not-allowed}.root label{display:grid;gap:.25rem;color:#bdb5a6;margin:.35rem 0}.sequence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem;margin:.5rem 0}.trial{display:grid;gap:.4rem;margin:.7rem 0;padding:.6rem;border:1px solid #8fb6c644}.secret{border-top:1px solid #ffffff20;padding:.7rem 0;color:#b8c4bd}.secret summary{cursor:pointer;color:#c5a568}.complete{margin-top:.8rem;padding:.8rem;border:1px solid #a9d3a2;color:#bce8b0;background:#162518;text-align:center;font-weight:700;letter-spacing:.06em}.loading{position:fixed;right:1rem;top:5.25rem;background:#101419;color:#ddd;padding:1rem;border:1px solid #a98b5a}
 .journal{border-top:1px solid #ffffff20;padding:.7rem 0;color:#c4c0b5}.journal summary{cursor:pointer;color:#d7c08d;font-weight:700}.journal>p{font-size:11px}.journal article{padding:.5rem 0;border-top:1px solid #ffffff18}.journal article small{display:block;color:#a8b6ae;font-size:9px}.journal article b{color:#ecd39d}.journal article p{margin:.25rem 0}.complete{margin-top:.8rem;padding:.8rem;border:1px solid #a9d3a2;color:#bce8b0;background:#162518;text-align:center;font-weight:700;letter-spacing:.06em}.loading{position:fixed;right:1rem;top:5.25rem;background:#101419;color:#ddd;padding:1rem;border:1px solid #a98b5a}
 @media(max-width:760px){.root{top:148px;bottom:auto;width:min(380px,calc(50vw - 12px));max-height:calc(100vh - 250px);padding:.55rem;font-size:10px}.archivistPanel{left:8px;right:auto}.trackerPanel{right:8px;left:auto}.taskToggle{top:112px}.pastToggle{left:8px;right:auto}.trackerToggle{right:8px;left:auto}.sequence{grid-template-columns:1fr}}
 
@@ -131,3 +135,17 @@
 }
 .trackerToggle, .trackerPanel .taskToggle { background: linear-gradient(#10221f, #08100f) !important; color: #d8fbf4 !important; border-color: #3fb7ae !important; box-shadow: 0 0 12px #3fb7ae33, 0 4px 14px #000b; }
 .loading { background: #0d0907; border-color: #7a5f3a; }
+
+.taskToggle:focus,
+.taskToggle:focus-visible,
+.hidePanel:focus,
+.hidePanel:focus-visible,
+.restorePanel:focus,
+.restorePanel:focus-visible,
+.root:focus,
+.root:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

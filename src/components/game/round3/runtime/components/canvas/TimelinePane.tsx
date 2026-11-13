@@ -12,6 +12,7 @@ interface TimelinePaneProps {
   halfRef: RefObject<HTMLDivElement | null>;
   onPuzzleKey: (key: number) => void;
   onToggleJournal: () => void;
+  onAction?: () => void;
   hideObjective?: boolean;
 }
 
@@ -23,6 +24,7 @@ export default function TimelinePane({
   halfRef,
   onPuzzleKey,
   onToggleJournal,
+  onAction,
   hideObjective = false,
 }: TimelinePaneProps) {
   const isFuture = view.timeline === 'future';
@@ -47,7 +49,16 @@ export default function TimelinePane({
           {view.partnerArmed && <span className={styles.armed}> PARTNER IS ARMED!</span>}
         </div>}
       </div>
-      {/* <div className={styles.prompt}>{view.prompt}</div> */}
+      {view.prompt && (
+        <button
+          type="button"
+          className={styles.prompt}
+          onClick={onAction}
+          title="Click to interact"
+        >
+          {view.prompt}
+        </button>
+      )}
       {view.message && <div className={styles.message}>{view.message}</div>}
       {view.journalOpen && <SharedJournal entries={journal} className={view.index === 0 ? styles.pastJournal : styles.futureJournal} />}
       {view.puzzle && <PuzzlePanel index={view.index} puzzle={view.puzzle} onPress={onPuzzleKey} />}

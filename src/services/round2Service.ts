@@ -1,4 +1,4 @@
-﻿import { apiUrl } from './apiBaseUrl';
+import { apiUrl, getAuthHeaders } from './apiBaseUrl';
 
 export interface R2Card { id: number; name: string; description: string; icon: string; defaultBase: number; status: 'pending' | 'live' | 'sold' | 'unsold'; winner: string | null; price: number | null }
 export interface R2Live { cardId: number; base: number; highBid: number; highBidder: string | null; endsAt: number | null; bids: { team: string; amount: number; t: number }[] }
@@ -29,7 +29,10 @@ async function call<T extends { success: boolean; message?: string; code?: strin
     const res = await fetch(apiUrl(API + path), {
       method,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const result = await res.json() as T;

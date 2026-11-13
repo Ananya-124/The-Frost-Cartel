@@ -81,7 +81,15 @@ async function lockLiveRun(client: PoolClient, teamId: string): Promise<boolean>
   const result = await client.query<{ status: string; remaining_ms: string; started_at: Date | null }>(
     `SELECT status,remaining_ms,started_at FROM round3_runs WHERE team_id=$1 FOR UPDATE`, [teamId],
   );
-  const run = result.rows[0];
+  let run = result.rows[0];
+  if (!run) return false;
+  if ((run.status === 'not_started' || run.status === 'paused') && Number(run.remaining_ms) > 0) {
+    const resumed = await client.query<{ status: string; remaining_ms: string; started_at: Date | null }>(
+      `UPDATE round3_runs SET status='running', started_at=clock_timestamp(), updated_at=clock_timestamp(), version=version+1
+       WHERE team_id=$1 RETURNING status, remaining_ms, started_at`, [teamId],
+    );
+    run = resumed.rows[0];
+  }
   if (!run || run.status !== 'running' || !run.started_at) return false;
   const remaining = await client.query<{ remaining_ms: string }>(
     `SELECT GREATEST(0,$1::bigint-floor(extract(epoch FROM (clock_timestamp()-$2::timestamptz))*1000)::bigint) AS remaining_ms`,

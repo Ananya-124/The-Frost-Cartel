@@ -269,6 +269,12 @@ adminRouter.post('/round4/:action', asyncHandler(async (req, res) => {
   const action = (Array.isArray(req.params.action) ? req.params.action[0] : req.params.action).toLowerCase();
   if (!['advance', 'unlock', 'lock'].includes(action)) throw new ProgressionError('Unsupported round 4 action.', 'NOT_FOUND');
   const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || undefined : undefined;
+  if (action === 'advance') {
+    try {
+      db.prepare('DELETE FROM round4_winner WHERE singleton_id=1').run();
+      db.prepare("UPDATE round4_team_progress SET current_step_index=0, target_discovered=0, is_finished=0, finished_at=NULL").run();
+    } catch {}
+  }
   const result = await adminProgressRound4Global(pool, req.adminSessionToken, action as 'advance' | 'unlock' | 'lock', reason);
   return res.json({ success: true, action, ...result });
 }));

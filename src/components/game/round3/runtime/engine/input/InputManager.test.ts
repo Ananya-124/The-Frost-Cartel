@@ -25,4 +25,17 @@ describe('Round 3 split-screen keyboard input', () => {
     expect(input.isDown('ArrowRight')).toBe(false);
     select.remove();
   });
+
+  it('allows world movement keys when a button is clicked or focused and blurs the button', () => {
+    input = new InputManager(vi.fn());
+    const button = document.createElement('button');
+    document.body.append(button);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    button.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true }));
+    expect(input.isDown('KeyW')).toBe(true);
+    expect(document.activeElement).not.toBe(button);
+    button.remove();
+  });
 });

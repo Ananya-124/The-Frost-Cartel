@@ -35,5 +35,5 @@ export const CONTROLS: Record<PlayerIndex, PlayerControls> = {
 };
 
 /** Card hotkeys shared by both players, in card order. */
-export const CARD_KEYS: readonly string[] = ['KeyZ', 'KeyX', 'KeyC', 'KeyV'];
+export const CARD_KEYS: readonly string[] = ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM'];
 export const CLOSE_PANEL_KEY = 'Escape';

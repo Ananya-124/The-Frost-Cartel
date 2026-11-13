@@ -780,3 +780,15 @@
 }
 .completed { border-top-color: #4f9a5d; }
 .completed b { color: #cfeec4; text-shadow: 0 0 12px #4f9a5d66; }
+
+.taskToggle:focus,
+.taskToggle:focus-visible,
+.hideBrief:focus,
+.hideBrief:focus-visible,
+.panel:focus,
+.panel:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

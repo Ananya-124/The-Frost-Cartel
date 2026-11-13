@@ -145,6 +145,11 @@
 }
 .ph-game-root input, .ph-game-root textarea { background: #070504; border-color: #5e432a; color: #eadfc6; }
 .ph-game-root input:focus, .ph-game-root textarea:focus { outline: none; border-color: var(--blood-bright); box-shadow: 0 0 10px #d6402e44; }
+.ph-game-root button:focus,
+.ph-game-root button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
 .ph-game-root .ph-exit {
   background: rgba(10, 5, 4, .94);
   color: #ffd9a0;
@@ -152,6 +157,12 @@
   box-shadow: 0 0 14px #9c2b1f33;
   position: fixed;
   z-index: 100;
+}
+.ph-game-root .ph-exit.ph-exit-locked {
+  cursor: not-allowed !important;
+  opacity: 0.45 !important;
+  filter: grayscale(0.7);
+  pointer-events: auto;
 }
 .ph-game-root .ph-card-error { background: #2c0907; border-color: #d6402e; box-shadow: 0 0 20px #d6402e44; }
 .ph-game-root ::selection { background: #9c2b1f; color: #fff; }

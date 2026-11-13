@@ -123,7 +123,7 @@ export const AdminAuctionTab: React.FC = () => {
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-xs text-cartel-silver/50">Wallet balances and card ownership come from PostgreSQL. Card ownership here does not grant Round 3 abilities.</p>
+        <p className="mt-2 text-xs text-cartel-silver/50">Wallet balances and card ownership come from PostgreSQL. Won cards are usable by teams in Round 3.</p>
       </section>
 
       <section className="stone-panel rounded-xl p-5">

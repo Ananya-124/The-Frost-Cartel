@@ -18,7 +18,7 @@ const TASKS: Record<Hunt1Challenge, { key: Hunt1TaskKey; title: string; points: 
   1: { key: 'powerFailure', title: 'The Power Failure', points: 200, objective: { archivist: 'Interpret the original wiring diagram and decode the connection path.', tracker: 'Reconnect the damaged generator circuit using the decoded wiring path.' }, required: ['generatorLog', 'burntRelay', 'openGround'], submitter: 'team', pieces: ['generator-relay', 'relay-load', 'load-ground', 'ground-frame'], initial: ['ground-frame', 'load-ground', 'generator-relay', 'relay-load'], labels: { 'generator-relay': 'Amber lead · Output / R-4', 'relay-load': 'Copper lead · R-4 / Load', 'load-ground': 'Braided lead · Load / Ground', 'ground-frame': 'Return lead · Ground / Frame' } },
   2: { key: 'observationLog', title: 'The Observation Log', points: 200, objective: { archivist: 'Reconcile the logbook’s clock conflicts and submit the Past timeline.', tracker: 'Read the room’s physical traces and submit the Future timeline.' }, required: ['observationLog', 'cameraBuffer'], submitter: 'team', pieces: ['alarm', 'lights-fail', 'subject-appears', 'observer-vanishes'], initial: ['subject-appears', 'alarm', 'observer-vanishes', 'lights-fail'], labels: { alarm: 'Alarm acknowledged', 'lights-fail': 'Lights fail', 'subject-appears': 'Figure appears in glass', 'observer-vanishes': 'Observer disappears' } },
   3: { key: 'signalReconstruction', title: 'The Signal Reconstruction', points: 200, objective: { archivist: 'Decode the original signal path from the Past routing blueprint.', tracker: 'Reconnect the damaged Future console using the decoded route.' }, required: ['signalChart', 'cableJunction'], submitter: 'team', pieces: ['intake', 'ground', 'observer', 'transmit'], initial: ['transmit', 'intake', 'observer', 'ground'], labels: { intake: 'INTAKE terminal', ground: 'GROUND reference', observer: 'OBSERVER tap', transmit: 'TRANSMIT output' } },
-  4: { key: 'incidentConclusion', title: 'The Incident Conclusion', points: 150, objective: { archivist: 'Recover the experiment’s original purpose and intended procedure from the historical record.', tracker: 'Reconstruct the failure and transmission aftermath from the physical traces.' }, required: ['incidentBoardPast', 'incidentBoardFuture'], submitter: 'team', pieces: [], initial: [], labels: {} },
+  4: { key: 'incidentConclusion', title: 'The Incident Conclusion', points: 150, objective: { archivist: 'Recover the experiment’s original purpose and intended procedure from the Research Laboratory in the Past.', tracker: 'Reconstruct the failure and transmission aftermath from the Research Laboratory in the Future.' }, required: ['incidentBoardPast', 'incidentBoardFuture'], submitter: 'team', pieces: [], initial: [], labels: {} },
 };
 
 const CONCLUSION_ARCHIVE = ['temporal-resonance-reconstructs-human-memories', 'resonance-limited-to-recorded-imprints'];
@@ -35,7 +35,7 @@ const OBJECT_LABELS: Record<string, string> = {
   generatorLog: 'Generator log · Generator Room — Past', burntRelay: 'Burned relay · Generator Room — Future', openGround: 'Open ground · Generator Room — Future',
   observationLog: 'Observation log · Observation Room — Past', cameraBuffer: 'Camera buffer · Observation Room — Future',
   signalChart: 'Signal chart · Communications Room — Past', cableJunction: 'Cable junction · Communications Room — Future',
-  incidentBoardPast: 'Investigation board · Past', incidentBoardFuture: 'Evidence board · Future',
+  incidentBoardPast: 'Incident board · Research Laboratory — Past', incidentBoardFuture: 'Evidence board · Research Laboratory — Future',
 };
 const TASK_KEYS = Object.keys(TASKS).map((key) => Number(key) as Hunt1Challenge);
 
@@ -137,7 +137,7 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
   };
 
   return <>
-    {showOverview && <button className={styles.taskToggle} type="button" aria-expanded={tasksOpen} aria-controls="hunt1-objectives" onClick={() => setTasksOpen((open) => !open)}>
+    {showOverview && <button className={styles.taskToggle} type="button" aria-expanded={tasksOpen} aria-controls="hunt1-objectives" onClick={(e) => { e.currentTarget.blur(); setTasksOpen((open) => !open); }}>
       HUNT I · {challenge}/4 · {tasksOpen ? 'Hide progress' : 'Investigation progress'}
     </button>}
     {showOverview && tasksOpen && <div className={styles.grid} id="hunt1-objectives" aria-label="Hunt I task progress">
@@ -156,7 +156,7 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
       <header>
         <span>{state.taskCompleted[task.key] ? 'VERIFIED INVESTIGATION' : 'ACTIVE INVESTIGATION'} · {task.title.toUpperCase()}</span>
         <b>{task.points} POINTS</b>
-        <button className={styles.hideBrief} type="button" onClick={() => setBriefOpen(false)} aria-label="Hide task brief">Hide</button>
+        <button className={styles.hideBrief} type="button" onClick={(e) => { e.currentTarget.blur(); setBriefOpen(false); }} aria-label="Hide task brief">Hide</button>
       </header>
       <p className={actor === 'archivist' ? styles.pastText : styles.futureText}>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'} — {task.objective[actor]}</p>
       <p className={styles.fieldInstructions}>FIELDWORK: Move to each listed object in your timeline and press {actor === 'archivist' ? 'E' : 'Enter'} to examine it. Review findings in the shared journal ({actor === 'archivist' ? 'Q' : 'P'}) and compare them with your partner’s timeline. Evidence alone does not complete the task; arrange or interpret it here and submit for verification.</p>
@@ -232,8 +232,8 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
           {workingSubmit ? 'Testing transmission…' : actor === 'archivist' ? signalOrder ? 'Update decoded route' : 'Submit decoded route' : signalOrder ? 'Update console connections' : 'Reconnect and restore signal'}
         </button>
         {actor === 'tracker' && signalPuzzle?.trackerRoute && !signalPuzzle.trackerValid && <p className={styles.waiting}>The console still has a broken or bypassed connection. Rearrange the stations and retry.</p>}
-      </section> : challenge === 4 && evidenceReady && priorTasksReady ? <section className={styles.reportCoop} aria-label="Final incident investigation board">
-        <header><span>FINAL INCIDENT REPORT · PAST ↔ FUTURE</span><b>150 POINTS</b></header>
+      </section> : challenge === 4 && evidenceReady && priorTasksReady ? <section className={styles.reportCoop} aria-label="Final incident research laboratory board">
+        <header><span>FINAL INCIDENT REPORT · RESEARCH LABORATORY (PAST ↔ FUTURE)</span><b>150 POINTS</b></header>
         {actor === 'archivist' ? <>
           <p className={styles.pastText}>ARCHIVIST · HISTORICAL RECORD — The original proposal describes a temporal resonance apparatus intended to recover memory imprints. The signed procedure limits each pass to recorded impressions; it does not authorize an open-ended connection.</p>
           <p>Arrange the two historical findings from the experiment’s purpose to its intended limit. Submit your interpretation for the shared report.</p>

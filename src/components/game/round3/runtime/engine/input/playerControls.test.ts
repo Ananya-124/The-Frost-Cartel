@@ -91,6 +91,30 @@ describe('player journal hotkeys', () => {
       expect(event.defaultPrevented).toBe(true);
     }
   });
+
+  it('allows E and Enter interactions even when a button has focus', () => {
+    const store = new GameStore();
+    const state = store.state;
+    state.phase = 'playing';
+    state.huntIndex = 0;
+    const context: GameContext = { state, store, scheduler: new Scheduler(), cardEffects: {} };
+    const focusedButton = document.createElement('button');
+    document.body.append(focusedButton);
+    focusedButton.focus();
+
+    const onHunt1Interaction = vi.fn();
+    const generatorLog = INTERACTABLES.find((object) => object.id === 'generatorLog')!;
+    state.hunt1AvailableInteractables = [generatorLog.id];
+    state.players[0].x = generatorLog.x + generatorLog.hitbox.w / 2;
+    state.players[0].y = generatorLog.y + generatorLog.hitbox.h / 2;
+
+    const event = new KeyboardEvent('keydown', { code: 'KeyE', bubbles: true });
+    Object.defineProperty(event, 'target', { value: focusedButton });
+    handleActionKey(context, event, undefined, onHunt1Interaction);
+
+    expect(onHunt1Interaction).toHaveBeenCalledWith(0, expect.objectContaining({ id: 'generatorLog' }));
+    focusedButton.remove();
+  });
 });
 
 describe('task interaction feedback', () => {

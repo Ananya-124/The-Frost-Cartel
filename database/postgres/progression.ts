@@ -419,6 +419,11 @@ export async function adminProgressRound4Global(
     if (action === 'advance' || action === 'unlock') {
       await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
       await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+      if (action === 'advance') {
+        await client.query("SELECT pg_advisory_xact_lock(hashtextextended('round4-winner',0))");
+        await client.query('DELETE FROM round4_winner WHERE singleton_id=1');
+        await client.query("UPDATE round4_team_progress SET current_step_index=0, target_discovered=false, solved_steps='[]'::jsonb, is_finished=false, finished_at=NULL");
+      }
       await client.query(`
         UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now()
         WHERE round_id=3 AND status IN ('AVAILABLE', 'IN_PROGRESS')
@@ -604,6 +609,8 @@ export async function adminAdvanceTeamToRound(
     if (targetRound === 4) {
       await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
       await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended('round4-winner',0))");
+      await client.query('DELETE FROM round4_winner WHERE singleton_id=1');
       await qualifyTeamForRound4(client, teamId);
       await client.query('UPDATE round4_team_progress SET is_finished=false, finished_at=NULL WHERE team_id=$1', [teamId]);
     }

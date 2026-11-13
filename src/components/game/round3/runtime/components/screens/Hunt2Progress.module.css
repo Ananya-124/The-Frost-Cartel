@@ -13,7 +13,9 @@
 .panel h2 { margin: 3px 0; color: #ead09b; font: 500 15px Georgia,serif; }
 .future h2 { color: #a6dfdf; }
 .panel p { margin: 3px 0 5px; color: #dbd8cf; font-size: 10px; }
-.panel .fieldGuide { padding: 6px; color: #e0d1a9; background: #171817; border-left: 2px solid #d1a65c; }
+.panel .fieldGuide { padding: 8px 10px; color: #e0d1a9; background: #171817; border-left: 3px solid #d1a65c; margin: 4px 0; }
+.panel .fieldGuide ol { margin: 4px 0 2px 16px; padding: 0; }
+.panel .fieldGuide li { margin: 4px 0; font-size: 10px; line-height: 1.4; color: #ede3cc; }
 .nextAction { display:grid; gap:3px; margin:4px 0; padding:7px 8px; color:#e8e0cd; background:#1a211d; border:1px solid #8eb39a88; border-left:3px solid #9bd0a5; }
 .nextAction b { color:#bce8c5; font-size:9px; letter-spacing:.08em; }
 .nextAction span { font-size:10px; }
@@ -169,3 +171,15 @@
 }
 .completed { border-top-color: #4f9a5d; }
 .completed b { color: #cfeec4; text-shadow: 0 0 12px #4f9a5d66; }
+
+.taskToggle:focus,
+.taskToggle:focus-visible,
+.panelHide:focus,
+.panelHide:focus-visible,
+.panel:focus,
+.panel:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

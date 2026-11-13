@@ -12,12 +12,13 @@ interface SplitScreenProps {
   onPuzzleKey: (playerIndex: 0 | 1, key: number) => void;
   onToggleJournal: (playerIndex: 0 | 1) => void;
   onUseCard: (slot: number) => void;
+  onAction?: (playerIndex: 0 | 1) => void;
   remainingSeconds: number;
   huntProgression: readonly HuntProgress[];
 }
 
 /** Split-screen layout: Archivist (Past) on the left, Tracker (Future) on the right. */
-export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJournal, onUseCard, remainingSeconds, huntProgression }: SplitScreenProps) {
+export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJournal, onUseCard, onAction, remainingSeconds, huntProgression }: SplitScreenProps) {
   const playing = snapshot.phase === 'playing';
   return (
     <>
@@ -29,6 +30,7 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJourn
           halfRef={refs.pastHalf}
           onPuzzleKey={(k) => onPuzzleKey(0, k)}
           onToggleJournal={() => onToggleJournal(0)}
+          onAction={() => onAction?.(0)}
           hideObjective={false}
         />
         <TimelinePane
@@ -38,11 +40,12 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJourn
           halfRef={refs.futureHalf}
           onPuzzleKey={(k) => onPuzzleKey(1, k)}
           onToggleJournal={() => onToggleJournal(1)}
+          onAction={() => onAction?.(1)}
           hideObjective={false}
         />
       </div>
       {playing && <TeamHud snapshot={snapshot} remainingSeconds={remainingSeconds} huntProgression={huntProgression} />}
-      {playing && <CardTray cards={snapshot.cards} onUse={onUseCard} />}
+      {playing && !snapshot.huntIntro && <CardTray cards={snapshot.cards} onUse={onUseCard} />}
     </>
   );
 }

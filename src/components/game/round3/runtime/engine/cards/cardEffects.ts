@@ -11,6 +11,7 @@ import { getHunt } from '../../config/hunts';
 import { HUNT1_INTERACTABLE_IDS, HUNT2_INTERACTABLE_IDS, HUNT3_INTERACTABLE_IDS, INTERACTABLES, isHunt3InteractableAvailable } from '../../config/interactables';
 import { ROOMS } from '../../config/rooms';
 import { pointInRect } from '../world/geometry';
+import { targetSequence } from '../puzzles/puzzleManager';
 
 /** Return 1 to leave the card unspent (as in the original). */
 export type CardEffect = (state: GameState) => number | void;
@@ -130,9 +131,62 @@ function visibleObjects(state: GameState) {
     return inHunt && !hidden && (state.hunt2HiddenInteractablesUntil?.[object.id] ?? 0) <= state.time;
   });
 }
-const master: CardEffect = (state) => announce(state, 'The Warden’s Decree: contact an event coordinator and request a two-minute pause for a competing team. Coordinators approve and apply any pause manually.');
-const unavailableMechanism: CardEffect = (state) => {
-  announce(state, 'This mechanism card applies to Hunt task-panel stages. It is unavailable in the canvas puzzle; open the relevant Hunt task panel first. The card was not spent.');
+const master: CardEffect = (state) => {
+  state.shields += 2;
+  announce(state, 'The Warden’s Decree activated! Granted 2 Ward Sigils. Present this card to coordinators to enforce a 2-minute pause on a rival team.');
+};
+
+const mechanicsCurse: CardEffect = (state) => {
+  const activeSequence = state.puzzles.find((item) => item?.kind === 'sequence');
+  if (activeSequence && activeSequence.kind === 'sequence') {
+    for (const index of [0, 1] as const) {
+      if (state.puzzles[index]?.kind === 'sequence') {
+        const target = targetSequence(state, index);
+        activeSequence.input = [...target];
+        state.flags[index === 0 ? 'pastNodeReady' : 'futureNodeReady'] = true;
+        state.puzzles[index] = null;
+        announce(state, 'Mechanic’s Curse: Automatically validated sequence mechanism stage!');
+        playTone(520, 0.4);
+        return;
+      }
+    }
+  }
+  if (state.flags.tape && state.flags.pastVerified && state.flags.futureVerified) {
+    if (!state.flags.pastNodeReady) {
+      state.flags.pastNodeReady = true;
+      announce(state, 'Mechanic’s Curse: Automatically validated the Past timeline mechanism node.');
+      return;
+    }
+    if (!state.flags.futureNodeReady) {
+      state.flags.futureNodeReady = true;
+      announce(state, 'Mechanic’s Curse: Automatically validated the Future timeline mechanism node.');
+      return;
+    }
+  }
+  announce(state, 'Mechanic’s Curse requires an active mechanism stage (e.g. sequence node). The card was not spent.');
+  return 1;
+};
+
+const soulSurge: CardEffect = (state) => {
+  if (state.flags.tape && state.flags.pastVerified && state.flags.futureVerified) {
+    if (!state.flags.pastNodeReady) {
+      state.flags.pastNodeReady = true;
+      announce(state, 'Soul Surge: Instantly completed Past mechanism stage without final activation interaction!');
+      return;
+    }
+    if (!state.flags.futureNodeReady) {
+      state.flags.futureNodeReady = true;
+      announce(state, 'Soul Surge: Instantly completed Future mechanism stage without final activation interaction!');
+      return;
+    }
+    if (state.players.some((p) => p.syncArmedAt === null)) {
+      state.players[0].syncArmedAt = state.time;
+      state.players[1].syncArmedAt = state.time;
+      announce(state, 'Soul Surge: Unleashed! Both synchronized capture stages instantly completed and armed!');
+      return;
+    }
+  }
+  announce(state, 'Soul Surge requires an eligible multi-stage mechanism in progress. The card was not spent.');
   return 1;
 };
 
@@ -152,9 +206,9 @@ export function createCardEffects(): Record<string, CardEffect> {
   return { ...BUILT_IN_EFFECTS, echo, decode, power, bind,
     'chrono-freeze': chronoFreeze, 'witching-hour': witchingHour,
     'spectral-sight': spectralSight, 'witchs-lens': highlightNearby,
-    hexbreaker, 'mechanics-curse': unavailableMechanism,
+    hexbreaker, 'mechanics-curse': mechanicsCurse,
     'witchs-elixir': elixir, 'ravens-messenger': raven,
-    'phantom-shield': shield, 'soul-surge': unavailableMechanism,
+    'phantom-shield': shield, 'soul-surge': soulSurge,
     'wardens-decree': master };
 }
 

@@ -28,6 +28,52 @@ const BOSS_CONTROLS = [
   { actor: 'tracker' as const, id: 'close-containment', label: 'Close containment · Future' },
 ];
 const STAGE_TITLES = ['The Entity’s Trail', 'Break the Three Seals', 'The Bait Protocol', 'Final Containment'];
+
+function stageInstructions(stage: number, actor: Hunt3Actor): string[] {
+  if (stage === 1) {
+    return actor === 'archivist'
+      ? [
+          'Compare the three historical records in the Past: Sighting Ledger (Archive), Containment Observation (Observation Room), and Movement Report (Director’s Office).',
+          'Read the timecodes and movements in your journal (Q), then deduce and submit which facility wing the entity was tracked to.',
+        ]
+      : [
+          'Compare the three Future traces: Cold Ash (Main Hall), Drag Marks (Observation Room), and Shattered Compass (Observation Room).',
+          'Review the needle anomalies and ash patterns in your journal (P), then deduce and submit your physical trace signature.',
+        ];
+  }
+  if (stage === 2) {
+    return actor === 'archivist'
+      ? [
+          'Inspect each Past diagram: Power Diagram (Generator), Resonance Notes (Communications), and Memory Protocol (Observation).',
+          'Interpret the 3-part sequence for each diagram from the clues and submit it below to unlock the matching Future mechanism.',
+          'Inspect the Component Catalogue in Archive to verify the 4 genuine parts needed for the containment rig.',
+        ]
+      : [
+          'Inspect each Future mechanism in the Generator, Communications, and Observation rooms.',
+          'Once the Archivist verifies a diagram, enter the 3-part sequence on the matching mechanism to disable that seal.',
+          'Recover the 4 genuine containment components across the facility (Coil, Lens, Braid, Core) while ignoring broken decoys.',
+        ];
+  }
+  if (stage === 3) {
+    return actor === 'archivist'
+      ? [
+          'Review the Containment Blueprint in Underground Containment and submit the 4-part socket layout for the rig.',
+          'Read the historical reaction notes in Experiment Room to prepare for the entity’s environmental response patterns.',
+          'After Tracker records all 3 controlled trials, arrange and verify the entity’s 3-part vulnerability profile.',
+          'Activate the chamber lure in Underground Containment to pull the entity into the chamber.',
+        ]
+      : [
+          'In Underground Containment, inspect the physical apparatus and install the 4 recovered parts according to the blueprint.',
+          'In Experiment Room, inspect the test station, test each condition (Frequency, Light, Temperature), and record the entity’s reaction.',
+          'Once the Archivist activates the lure, go to Underground Containment and fire the disruptor 3 times to weaken the entity.',
+        ];
+  }
+  return [
+    'Watch the chamber warnings: each warning describes an entity attack and names who must respond.',
+    'The targeted investigator has 12 seconds to reach their highlighted control terminal in their timeline and interact.',
+    'Alternate through all 6 phases successfully (Stability 6/6) to permanently seal the containment chamber.',
+  ];
+}
 function completedTasksFor(state: Hunt3State, actor: Hunt3Actor): boolean[] {
   const trailSubmitted = state.trail[actor] !== null;
   const stageTwoComplete = actor === 'archivist'
@@ -147,11 +193,11 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
   }, [nextAction]);
 
   if (!state) return <>
-    <button className={`${styles.taskToggle} ${actor === 'archivist' ? styles.pastToggle : styles.trackerToggle}`} type="button" aria-expanded={panelOpen} onClick={() => setPanelOpen((open) => !open)}>
+    <button className={`${styles.taskToggle} ${actor === 'archivist' ? styles.pastToggle : styles.trackerToggle}`} type="button" aria-expanded={panelOpen} onClick={(e) => { e.currentTarget.blur(); setPanelOpen((open) => !open); }}>
       Hunt III · {actor === 'archivist' ? 'Archivist' : 'Tracker'} · {panelOpen ? 'Hide tasks' : 'Show tasks'}
     </button>
     {panelOpen && <section className={`${styles.root} ${actor === 'archivist' ? styles.archivistPanel : styles.trackerPanel}`} aria-label={`Hunt III ${actor} progress`}>
-      <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>Hunt III investigation</h2></div><strong>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'}</strong><button className={styles.hidePanel} type="button" onClick={() => setPanelOpen(false)}>Hide</button></header>
+      <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>Hunt III investigation</h2></div><strong>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'}</strong><button className={styles.hidePanel} type="button" onClick={(e) => { e.currentTarget.blur(); setPanelOpen(false); }}>Hide</button></header>
       <div className={styles.status} role="status">{message || 'Restoring the shared containment investigation…'}</div>
       <section className={styles.task}>
         <h3>The Entity’s Trail</h3>
@@ -178,12 +224,12 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
       className={`${styles.taskToggle} ${actor === 'archivist' ? styles.pastToggle : styles.trackerToggle}`}
       type="button"
       aria-expanded={panelOpen}
-      onClick={() => setPanelOpen((open) => !open)}
+      onClick={(e) => { e.currentTarget.blur(); setPanelOpen((open) => !open); }}
     >
       Hunt III · {state.stage}/4 · {panelOpen ? `Hide ${actor === 'archivist' ? 'Archivist' : 'Tracker'} tasks` : `Show ${actor === 'archivist' ? 'Archivist' : 'Tracker'} tasks`}
     </button>
     {panelOpen && <section className={`${styles.root} ${actor === 'archivist' ? styles.archivistPanel : styles.trackerPanel}`} aria-label={`Hunt III ${actor} progress`}>
-    <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>{STAGE_TITLES[state.stage - 1]}</h2></div><strong>STAGE {state.stage}/4</strong><button className={styles.hidePanel} type="button" onClick={() => setPanelOpen(false)}>Hide</button></header>
+    <header><div><small>ROUND III · FINAL CONTAINMENT</small><h2>{STAGE_TITLES[state.stage - 1]}</h2></div><strong>STAGE {state.stage}/4</strong><button className={styles.hidePanel} type="button" onClick={(e) => { e.currentTarget.blur(); setPanelOpen(false); }}>Hide</button></header>
     <div className={styles.status} aria-live="polite">{message || `Server score: ${state.score} · ${actor === 'archivist' ? 'Archivist · Past' : 'Tracker · Future'}`}</div>
     <div className={styles.playerProgress} aria-live="polite">
       <b>{actor === 'archivist' ? 'ARCHIVIST' : 'TRACKER'} TASKS COMPLETED · {completedTaskCount}/4</b>
@@ -194,11 +240,14 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
 
     {state.stage < 4 && <section className={styles.task}>
       <h3>{state.stage === 1 ? 'Track the roaming entity' : state.stage === 2 ? 'Disable the three seals' : 'Rebuild, test, lure and weaken'}</h3>
-      <p>{state.stage === 1
-        ? actor === 'archivist' ? 'Compare the three historical records in the Past, then submit your last-known-wing deduction. The Tracker submits the matching physical trace.' : 'Compare the three Future traces, then submit your physical-signature deduction. The Archivist submits the matching historical wing.'
-        : state.stage === 2
-          ? actor === 'archivist' ? 'Inspect each Past diagram and interpret its three-part order. Use the equipment catalogue to identify which recovered parts belong in the rig.' : 'Inspect each Future mechanism, configure it using the Archivist’s verified interpretation, and recover the four components confirmed by the catalogue. Examine the decoys to identify why they cannot be used.'
-          : actor === 'archivist' ? 'Submit the blueprint interpretation, review the Tracker’s three environmental readings against the historical notes, verify the combined profile, then activate the lure.' : 'Place the four recovered parts using the Past blueprint, inspect the test station, run and record each environmental trial, then apply three weakness pulses after the Archivist activates the lure.'}</p>
+      <div className={styles.stageInstructions}>
+        <b>TASK INSTRUCTIONS:</b>
+        <ol>
+          {stageInstructions(state.stage, actor).map((step, idx) => (
+            <li key={idx}>{step}</li>
+          ))}
+        </ol>
+      </div>
       <b>{actor === 'archivist' ? 'ARCHIVIST · PAST INSPECTIONS' : 'TRACKER · FUTURE INSPECTIONS'}</b>
       <ul className={styles.inspectList}>{currentObjects.map((item) => {
         const complete = item.id === 'disruptor' ? state.weakness.weakened >= 3 : state.actions.includes(item.id);
@@ -261,7 +310,15 @@ export default function Hunt3Progress({ state, actor, message, working, onAction
     </section>}
 
     {state.stage === 4 && <section className={styles.task}>
-      <h3>Capture the weakened entity</h3>
+      <h3>Capture the weakened entity (Final Sequence)</h3>
+      <div className={styles.stageInstructions}>
+        <b>TASK INSTRUCTIONS:</b>
+        <ol>
+          {stageInstructions(4, actor).map((step, idx) => (
+            <li key={idx}>{step}</li>
+          ))}
+        </ol>
+      </div>
       <p>{state.boss.warning ?? 'Containment sequence complete.'}</p>
       <strong>Containment room · Stability {state.boss.stability}/6{state.boss.deadlineAt ? ` · ${secondsLeft}s to respond` : ''}</strong>
       <small>{nextBossActor === actor ? `Your turn. Reach the highlighted control in your timeline and press ${actor === 'archivist' ? 'E' : 'Enter'}.` : `Waiting for ${nextBossActor === 'archivist' ? 'Archivist · Past' : 'Tracker · Future'} to act. Your matching control is ready for the next warning.`}</small>

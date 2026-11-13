@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { TeamSession } from '../../types/team.types';
 import type { StageId } from '../../types/round.types';
 import { round1Api, type Round1StateResponse } from '../../services/round1ApiService';
@@ -8,21 +8,11 @@ import { HauntedGraveyardAtmosphere } from './haunted/HauntedGraveyardAtmosphere
 import { GothicRound1HUD } from './haunted/GothicRound1HUD';
 import { HauntedPortalCard } from './haunted/HauntedPortalCard';
 import { createRound1TimerStore } from './round1TimerStore';
-import { Round1DeferredBoundary } from './Round1DeferredBoundary';
-import { lazyWithRetry } from '../../utils/lazyRetry';
+import { Stage1Framework } from './stage1/Stage1Framework';
+import { Stage1PumpkinShuffle } from './stage1/Stage1PumpkinShuffle';
+import { Stage2HauntedImageHunt } from './stage2/Stage2HauntedImageHunt';
+import { Stage3ForgottenGraveyard } from './stage3/Stage3ForgottenGraveyard';
 
-const loadStage1Framework = () => import('./stage1/Stage1Framework').then((module) => ({ default: module.Stage1Framework }));
-const loadStage1Game = () => import('./stage1/Stage1PumpkinShuffle').then((module) => ({ default: module.Stage1PumpkinShuffle }));
-const loadStage2 = () => import('./stage2/Stage2HauntedImageHunt').then((module) => ({ default: module.Stage2HauntedImageHunt }));
-const loadStage3 = () => import('./stage3/Stage3ForgottenGraveyard').then((module) => ({ default: module.Stage3ForgottenGraveyard }));
-const Stage1Framework = lazyWithRetry(loadStage1Framework);
-const Stage1PumpkinShuffle = lazyWithRetry(loadStage1Game);
-const Stage2HauntedImageHunt = lazyWithRetry(loadStage2);
-const Stage3ForgottenGraveyard = lazyWithRetry(loadStage3);
-
-const StageChunkLoading: React.FC<{ label: string }> = ({ label }) => (
-  <div role="status" className="min-h-screen bg-black text-stone-100 flex items-center justify-center">Loading {label}…</div>
-);
 
 interface Round1DashboardProps {
   session: TeamSession;
@@ -177,26 +167,11 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
     }
     soundController.playClick();
     setEnteringStageId(stageId);
-    const loadStage = stageId === 'stage-1'
-      ? teamSession?.stages['stage-1'].status === 'not_configured' ? loadStage1Framework() : loadStage1Game()
-      : stageId === 'stage-2' ? loadStage2() : loadStage3();
     try {
-      // Start loading the stage bundle alongside the server's authoritative
-      // entry validation instead of waiting for one before starting the other.
-      await Promise.all([performAction('enter', { stageId }), loadStage]);
+      await performAction('enter', { stageId });
       changeActiveStage(stageId);
     }
     catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (
-        msg.includes('dynamically imported module') ||
-        msg.includes('Failed to fetch') ||
-        msg.includes('error loading dynamically imported module') ||
-        msg.includes('Importing a module script failed')
-      ) {
-        window.location.reload();
-        return;
-      }
       setRequestError(error instanceof Error ? error.message : 'Could not enter this stage.');
     }
     finally { setEnteringStageId(null); }
@@ -244,13 +219,9 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
         {requestErrorNotice}
         {isExpired && teamSession.stages['stage-1'].status !== 'completed' && renderExpiredOverlay()}
         {teamSession.stages['stage-1'].status === 'not_configured' ? (
-          <Round1DeferredBoundary stageLabel="Stage 1"><Suspense fallback={<StageChunkLoading label="Stage 1" />}>
-            <Stage1Framework config={stage1Config} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} />
-          </Suspense></Round1DeferredBoundary>
+          <Stage1Framework config={stage1Config} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} />
         ) : (
-          <Round1DeferredBoundary stageLabel="Stage 1"><Suspense fallback={<StageChunkLoading label="Stage 1" />}>
-            <Stage1PumpkinShuffle teamId={session.teamId} config={stage1Config} initialState={teamSession.stage1State} timerStore={timerStore} onAction={performAction} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} onCreditsAwarded={handleStageCompleted} />
-          </Suspense></Round1DeferredBoundary>
+          <Stage1PumpkinShuffle teamId={session.teamId} config={stage1Config} initialState={teamSession.stage1State} timerStore={timerStore} onAction={performAction} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-1'); }} onCreditsAwarded={handleStageCompleted} />
         )}
       </div>
     );
@@ -262,9 +233,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
       <div className="relative min-h-screen bg-cartel-void text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
         {isExpired && teamSession.stages['stage-2'].status !== 'completed' && renderExpiredOverlay()}
-        <Round1DeferredBoundary stageLabel="Stage 2"><Suspense fallback={<StageChunkLoading label="Stage 2" />}>
-          <Stage2HauntedImageHunt teamId={session.teamId} config={stage2Config} initialFoundTargetIds={teamSession.stage2State.foundTargetIds} timerStore={timerStore} onAction={performAction} isCompleted={teamSession.stages['stage-2'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-2'); }} onStageCompleted={handleStageCompleted} />
-        </Suspense></Round1DeferredBoundary>
+        <Stage2HauntedImageHunt teamId={session.teamId} config={stage2Config} initialFoundTargetIds={teamSession.stage2State.foundTargetIds} timerStore={timerStore} onAction={performAction} isCompleted={teamSession.stages['stage-2'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-2'); }} onStageCompleted={handleStageCompleted} />
       </div>
     );
   }
@@ -275,9 +244,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
       <div className="relative min-h-screen bg-black text-cartel-bone flex flex-col font-sans overflow-x-hidden">
         {requestErrorNotice}
         {isExpired && teamSession.stages['stage-3'].status !== 'completed' && renderExpiredOverlay()}
-        <Round1DeferredBoundary stageLabel="Stage 3"><Suspense fallback={<StageChunkLoading label="Stage 3" />}>
-          <Stage3ForgottenGraveyard teamId={session.teamId} config={stage3Config} initialSession={teamSession} timerStore={timerStore} onAction={performAction} initialCollectedFragments={teamSession.stage3State.collectedFragments} isCompleted={teamSession.stages['stage-3'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-3'); }} onStageCompleted={handleStageCompleted} />
-        </Suspense></Round1DeferredBoundary>
+        <Stage3ForgottenGraveyard teamId={session.teamId} config={stage3Config} initialSession={teamSession} timerStore={timerStore} onAction={performAction} initialCollectedFragments={teamSession.stage3State.collectedFragments} isCompleted={teamSession.stages['stage-3'].status === 'completed'} onReturnDashboard={() => changeActiveStage(null)} onSkipStage={() => { void handleSkipStage('stage-3'); }} onStageCompleted={handleStageCompleted} />
       </div>
     );
   }

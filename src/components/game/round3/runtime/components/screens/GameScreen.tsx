@@ -14,15 +14,17 @@ import type { HuntProgress } from '../../../../../../services/progressionService
 import type { ClueRecord, PowerCard, GameState, InteractableObject, PlayerIndex } from '../../types';
 import type { Round3CardId } from '../../../../../../constants/round3.cards';
 import { round3Service } from '../../../../../../services/round3Service';
-import type { Hunt1ActionResult, Hunt1Actor, Hunt1State } from '../../../../../../types/hunt1.types';
+import type { Hunt1ActionResult, Hunt1Actor, Hunt1Evidence, Hunt1State } from '../../../../../../types/hunt1.types';
 import Hunt1Progress from '../hunt1/Hunt1Progress';
 import { getHunt1TaskCompletions, shouldApplyHunt1State } from '../hunt1/hunt1StateSync';
-import type { Hunt2ActionResult, Hunt2Actor, Hunt2Input, Hunt2State } from '../../../../../../types/hunt2.types';
+import type { Hunt2ActionResult, Hunt2Actor, Hunt2Input, Hunt2Observation, Hunt2State } from '../../../../../../types/hunt2.types';
 import Hunt2Progress from './Hunt2Progress';
-import type { Hunt3ActionResult, Hunt3Actor, Hunt3State } from '../../../../../../types/hunt3.types';
+import type { Hunt3ActionResult, Hunt3Actor, Hunt3Evidence, Hunt3State } from '../../../../../../types/hunt3.types';
 import Hunt3Progress from './Hunt3Progress';
 import { useRound3RunTimer } from '../../hooks/useRound3RunTimer';
 import type { TestPowerCardId } from '../../testingCards';
+import { markTeamCardUsed } from '../../usedCardsStore';
+import { HUNT1_CLUES, HUNT2_CLUES, HUNT3_CLUES } from '../../config/clueCatalog';
 
 interface GameScreenProps {
   teamId: string;
@@ -42,8 +44,7 @@ interface GameScreenProps {
   onTestingCardUsed: (id: TestPowerCardId) => void;
 }
 
-const HUNT_STATE_SYNC_INTERVAL_MS = 15_000;
-const GAME_STATE_CHECKPOINT_INTERVAL_MS = 30_000;
+const GAME_STATE_CHECKPOINT_INTERVAL_MS = 45_000;
 
 export default function GameScreen({
   teamId,
@@ -97,9 +98,6 @@ export default function GameScreen({
   const timerStatusRef = useRef(timer.run.status);
   timerStatusRef.current = timer.run.status;
 
-  // Independent in-flight trackers per player so neither player ever blocks the other!
-  const hunt1InFlight = useRef<[boolean, boolean]>([false, false]);
-  const hunt2InFlight = useRef<[boolean, boolean]>([false, false]);
   const hunt3InFlight = useRef<[boolean, boolean]>([false, false]);
 
   const prevHunt2Score = useRef(0);
@@ -117,11 +115,11 @@ export default function GameScreen({
 
   const cardUseHandler = useCallback((slot: number, execute: () => boolean) => {
     const card = store.state.cards[slot];
-    const before = JSON.parse(JSON.stringify(store.state)) as GameState;
     if (card?.effect === 'chrono-freeze') {
       if (timerStatusRef.current !== 'running') { setCardError('Chrono Freeze requires a running Round 3 task timer.'); return; }
       void timer.pause().then(() => {
         if (!execute()) { void timer.resume(); return; }
+        if (card.cardId) markTeamCardUsed(teamName, card.cardId);
         setCardError('');
         setChronoFreezeActive(true);
         chronoTimeout.current = window.setTimeout(() => {
@@ -132,17 +130,18 @@ export default function GameScreen({
       return;
     }
     if (!execute()) return;
+    if (card?.cardId) {
+      markTeamCardUsed(teamName, card.cardId);
+    }
     if (card?.source === 'testing') {
       if (card.cardId) onTestingCardUsed(card.cardId as TestPowerCardId);
       return;
     }
     if (!card?.cardId) return;
     setCardError('');
-    void round3Service.activateCard(card.cardId as Round3CardId, card.source).catch((reason: unknown) => {
-      store.replaceState(before);
-      setCardError(reason instanceof Error ? reason.message : 'Could not confirm card activation.');
-    });
-  }, [onTestingCardUsed, store, timer.pause, timer.resume]);
+    // Notify server asynchronously if item is a server inventory item, but never cancel client effect
+    void round3Service.activateCard(card.cardId as Round3CardId, card.source).catch(() => undefined);
+  }, [onTestingCardUsed, store, teamName, timer.pause, timer.resume]);
 
   const syncHunt1State = useCallback((next: Hunt1State) => {
     const previous = hunt1StateRef.current;
@@ -191,28 +190,79 @@ export default function GameScreen({
     }
   }, [addToast, onProgressionRefresh, store]);
 
-  const hunt1Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
-    if (hunt1InFlight.current[index]) return;
+  const hunt1Interaction = useCallback((index: PlayerIndex, object: InteractableObject) => {
     const actor: Hunt1Actor = index === 0 ? 'archivist' : 'tracker';
-    hunt1InFlight.current[index] = true;
-    setHunt1Working(true);
+    const clueDef = HUNT1_CLUES[object.id];
+    const clueTitle = clueDef?.title ?? object.name;
+    const clueContent = clueDef?.content ?? 'Inspected clue item.';
+    const clueInference = clueDef?.inference ?? 'Provides historical context on the incident.';
+    const clueLocation = clueDef?.location ?? `${object.name} · ${object.timeline}`;
+
     soundFx.clueFound();
-    try {
-      const result = await round3Service.hunt1Action({ type: 'interact', actor, objectId: object.id });
-      syncHunt1State(result.state);
-      setHunt1Message(result.message);
-      addToast({
-        type: 'clue',
-        title: object.name,
-        message: result.message,
-      });
-    } catch (reason) {
-      setHunt1Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt 1 interaction.');
-    } finally {
-      hunt1InFlight.current[index] = false;
-      setHunt1Working(false);
+
+    // 1. Immediately update hunt1 state locally with ZERO latency
+    setHunt1((prev) => {
+      if (!prev) return prev;
+      const alreadyExamined = prev.subtasks[object.id] === true;
+      const pointsDelta = (!alreadyExamined && clueDef?.points) ? clueDef.points : 0;
+      const newScore = prev.score + pointsDelta;
+      const updatedSubtasks: Record<string, boolean> = { ...prev.subtasks, [object.id]: true };
+      const updatedObjectStates: Record<string, 'hidden' | 'available' | 'examined' | 'completed'> = {
+        ...prev.objectStates,
+        [object.id]: 'examined',
+      };
+      const journalEntry: Hunt1Evidence = {
+        id: object.id,
+        title: clueTitle,
+        location: clueLocation,
+        content: clueContent,
+        inference: clueInference,
+        discoveredBy: actor,
+        type: 'evidence',
+        relatedObjective: 'task',
+        verified: true,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedJournal: Hunt1Evidence[] = prev.journal.some((e) => e.id === object.id)
+        ? prev.journal
+        : [...prev.journal, journalEntry];
+
+      return {
+        ...prev,
+        score: newScore,
+        subtasks: updatedSubtasks,
+        objectStates: updatedObjectStates,
+        journal: updatedJournal,
+      };
+    });
+
+    // 2. Immediately add to shared store journal for Q/P instant viewing
+    const journalRecord: ClueRecord = {
+      title: clueTitle,
+      text: `${clueContent}\nWhy it matters: ${clueInference}`,
+      huntIndex: 0,
+      discoveredBy: actor === 'tracker' ? 'Tracker' : 'Archivist',
+      timeline: actor === 'tracker' ? 'future' : 'past',
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    if (!store.state.journal.some((e) => e.title === clueTitle)) {
+      store.state.journal.push(journalRecord);
+      store.emit();
     }
-  }, [addToast, syncHunt1State]);
+
+    // 3. Immediately show toast and message
+    setHunt1Message(clueContent);
+    addToast({
+      type: 'clue',
+      title: object.name,
+      message: clueContent,
+    });
+
+    // 4. Background fire-and-forget sync to server (never locks user input)
+    void round3Service.hunt1Action({ type: 'interact', actor, objectId: object.id }).then((result) => {
+      if (result.state) syncHunt1State(result.state);
+    }).catch(() => undefined);
+  }, [addToast, store, syncHunt1State]);
 
   const syncHunt2State = useCallback((next: Hunt2State) => {
     setHunt2(next);
@@ -288,34 +338,95 @@ export default function GameScreen({
     }
   }, [addToast, onProgressionRefresh, store]);
 
-  const hunt2Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
-    if (hunt2InFlight.current[index]) return;
+  const hunt2Interaction = useCallback((index: PlayerIndex, object: InteractableObject) => {
     const actor: Hunt2Actor = index === 0 ? 'archivist' : 'tracker';
-    hunt2InFlight.current[index] = true;
-    setHunt2Working(true);
+    const clueDef = HUNT2_CLUES[object.id];
+    const clueTitle = clueDef?.title ?? object.name;
+    const clueContent = clueDef?.content ?? 'Inspected memory archive item.';
+    const clueLocation = clueDef?.location ?? `${object.name} · ${object.timeline}`;
+
     soundFx.clueFound();
-    try {
-      const result = await round3Service.hunt2Action({ type: 'interact', actor, objectId: object.id });
-      syncHunt2State(result.state);
-      setHunt2Message(result.message);
-      if (result.input) setPendingHunt2Input({ actor, kind: result.input });
-      if (!result.success) {
-        soundFx.error();
-        // Hunt II reports locked or repeated interactions in the task toolbar; keep those
-        // recoverable prompts readable instead of covering them with a distortion shake.
-      } else {
-        addToast({
-          type: 'clue',
-          title: object.name,
-          message: result.message,
-        });
+
+    // 1. Immediately update hunt2 state locally with ZERO latency
+    setHunt2((prev) => {
+      if (!prev) return prev;
+      const updatedSubtasks: Record<string, boolean> = { ...prev.subtasks, [object.id]: true };
+      const updatedObjectStates: Record<string, 'hidden' | 'visible' | 'inspected' | 'identified' | 'opened' | 'restored' | 'activated' | 'destroyed' | 'dispelled'> = {
+        ...prev.objectStates,
+        [object.id]: 'inspected',
+      };
+      const newObs: Hunt2Observation = {
+        id: object.id,
+        title: clueTitle,
+        location: clueLocation,
+        content: clueContent,
+        discoveredBy: actor,
+        verified: false,
+        challenge: prev.currentChallenge,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedObservations: Hunt2Observation[] = prev.observations.some((o) => o.id === object.id)
+        ? prev.observations
+        : [...prev.observations, newObs];
+
+      const brokenMemory = { ...prev.brokenMemory };
+      if (object.id.startsWith('brokenArchive') && !brokenMemory.archivistEvidence.includes(object.id)) {
+        brokenMemory.archivistEvidence = [...brokenMemory.archivistEvidence, object.id];
       }
-    } catch (reason) {
-      setHunt2Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt 2 interaction.');
-    } finally {
-      hunt2InFlight.current[index] = false;
-      setHunt2Working(false);
+      if ((object.id.startsWith('brokenMemory') || object.id.startsWith('brokenProjection') || object.id.startsWith('brokenKeepsake')) && !brokenMemory.trackerEvidence.includes(object.id)) {
+        brokenMemory.trackerEvidence = [...brokenMemory.trackerEvidence, object.id];
+      }
+
+      const memoryAnchor = { ...prev.memoryAnchor };
+      if (object.id === 'anchorFlowRecord' && !memoryAnchor.archivistEvidence.includes('flow')) {
+        memoryAnchor.archivistEvidence = [...memoryAnchor.archivistEvidence, 'flow'];
+      }
+      if (object.id.startsWith('memoryAnchor') || object.id === 'anchorNodeD') {
+        const nodeLetter = object.id.slice(-1);
+        if (!memoryAnchor.trackerEvidence.includes(nodeLetter)) {
+          memoryAnchor.trackerEvidence = [...memoryAnchor.trackerEvidence, nodeLetter];
+        }
+      }
+
+      return {
+        ...prev,
+        subtasks: updatedSubtasks,
+        objectStates: updatedObjectStates,
+        observations: updatedObservations,
+        brokenMemory,
+        memoryAnchor,
+      };
+    });
+
+    // 2. Immediately add to shared store journal
+    const journalRecord: ClueRecord = {
+      id: `hunt2-${object.id}`,
+      title: clueTitle,
+      text: clueContent,
+      huntIndex: 1,
+      discoveredBy: actor === 'tracker' ? 'Tracker' : 'Archivist',
+      timeline: actor === 'tracker' ? 'future' : 'past',
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    if (!store.state.journal.some((e) => e.title === clueTitle)) {
+      store.state.journal.push(journalRecord);
+      store.emit();
     }
+
+    // 3. Immediately show toast and message
+    setHunt2Message(clueContent);
+    addToast({
+      type: 'clue',
+      title: object.name,
+      message: clueContent,
+    });
+
+    // 4. Background fire-and-forget sync to backend
+    void round3Service.hunt2Action({ type: 'interact', actor, objectId: object.id }).then((result) => {
+      if (result.state) syncHunt2State(result.state);
+      if (result.input) setPendingHunt2Input({ actor, kind: result.input });
+      if (result.message) setHunt2Message(result.message);
+    }).catch(() => undefined);
   }, [addToast, store, syncHunt2State]);
 
   const syncHunt3State = useCallback((next: Hunt3State) => {
@@ -395,32 +506,76 @@ export default function GameScreen({
     }
   }, [addToast, onProgressionRefresh, store]);
 
-  const hunt3Interaction = useCallback(async (index: PlayerIndex, object: InteractableObject) => {
-    if (hunt3InFlight.current[index]) return;
+  const hunt3Interaction = useCallback((index: PlayerIndex, object: InteractableObject) => {
     const actor: Hunt3Actor = index === 0 ? 'archivist' : 'tracker';
-    hunt3InFlight.current[index] = true;
-    setHunt3Working((working) => working.map((value, player) => player === index ? true : value) as [boolean, boolean]);
+    const clueDef = HUNT3_CLUES[object.id];
+    const clueTitle = clueDef?.title ?? object.name;
+    const clueContent = clueDef?.content ?? 'Inspected containment seal station.';
+
     soundFx.clueFound();
-    try {
-      const result = await round3Service.hunt3Action(actor, { type: 'interact', id: object.id });
-      syncHunt3State(result.state);
-      setHunt3Message(result.message);
-      if (result.success) {
-        addToast({
-          type: 'clue',
-          title: object.name,
-          message: result.message,
-        });
-      } else {
-        soundFx.error();
-      }
-    } catch (reason) {
-      setHunt3Message(reason instanceof Error ? reason.message : 'Could not validate that Hunt III interaction.');
-    } finally {
-      hunt3InFlight.current[index] = false;
-      setHunt3Working((working) => working.map((value, player) => player === index ? false : value) as [boolean, boolean]);
+
+    // 1. Immediately update hunt3 state locally with ZERO latency
+    setHunt3((prev) => {
+      if (!prev) return prev;
+      const currentActorEvidence = prev.evidence[actor] ?? [];
+      const updatedActorEvidence = currentActorEvidence.includes(object.id)
+        ? currentActorEvidence
+        : [...currentActorEvidence, object.id];
+      const updatedEvidence = {
+        ...prev.evidence,
+        [actor]: updatedActorEvidence,
+      };
+      const newJournalEntry: Hunt3Evidence = {
+        id: object.id,
+        stage: prev.stage,
+        actor,
+        title: clueTitle,
+        location: object.name,
+        content: clueContent,
+        relatedObjective: 'containment',
+        verified: true,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedJournal: Hunt3Evidence[] = prev.journal.some((j) => j.id === object.id)
+        ? prev.journal
+        : [...prev.journal, newJournalEntry];
+
+      return {
+        ...prev,
+        evidence: updatedEvidence,
+        journal: updatedJournal,
+      };
+    });
+
+    // 2. Immediately add to shared store journal
+    const journalRecord: ClueRecord = {
+      id: `hunt3-${object.id}`,
+      title: clueTitle,
+      text: `${clueContent}\nVerified evidence.`,
+      huntIndex: 2,
+      discoveredBy: actor === 'tracker' ? 'Tracker' : 'Archivist',
+      timeline: actor === 'tracker' ? 'future' : 'past',
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    if (!store.state.journal.some((e) => e.title === clueTitle)) {
+      store.state.journal.push(journalRecord);
+      store.emit();
     }
-  }, [addToast, syncHunt3State]);
+
+    // 3. Immediately show toast and message
+    setHunt3Message(clueContent);
+    addToast({
+      type: 'clue',
+      title: object.name,
+      message: clueContent,
+    });
+
+    // 4. Background fire-and-forget sync to backend
+    void round3Service.hunt3Action(actor, { type: 'interact', id: object.id }).then((result) => {
+      if (result.state) syncHunt3State(result.state);
+      if (result.message) setHunt3Message(result.message);
+    }).catch(() => undefined);
+  }, [addToast, store, syncHunt3State]);
 
   const engine = useGameEngine(store, refs, cardUseHandler, initialState, hunt1Interaction, hunt2Interaction, hunt3Interaction);
   const snapshot = useGameSnapshot(store);
@@ -528,20 +683,8 @@ export default function GameScreen({
       }
     };
     void refresh(true);
-    const refreshIfVisible = () => {
-      if (document.visibilityState === 'visible') void refresh(false);
-    };
-    const interval = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      void refresh(false);
-    }, HUNT_STATE_SYNC_INTERVAL_MS);
-    window.addEventListener('focus', refreshIfVisible);
-    window.addEventListener('online', refreshIfVisible);
     return () => {
       active = false;
-      window.clearInterval(interval);
-      window.removeEventListener('focus', refreshIfVisible);
-      window.removeEventListener('online', refreshIfVisible);
     };
   }, [onProgressionRefresh, snapshot.huntNumber, snapshot.phase, syncHunt1State]);
 
@@ -562,20 +705,8 @@ export default function GameScreen({
       }
     };
     void refresh(true);
-    const refreshIfVisible = () => {
-      if (document.visibilityState === 'visible') void refresh(false);
-    };
-    const interval = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      void refresh(false);
-    }, HUNT_STATE_SYNC_INTERVAL_MS);
-    window.addEventListener('focus', refreshIfVisible);
-    window.addEventListener('online', refreshIfVisible);
     return () => {
       active = false;
-      window.clearInterval(interval);
-      window.removeEventListener('focus', refreshIfVisible);
-      window.removeEventListener('online', refreshIfVisible);
     };
   }, [onProgressionRefresh, snapshot.phase, snapshot.huntNumber, syncHunt2State]);
 
@@ -601,18 +732,8 @@ export default function GameScreen({
       }
     };
     void refresh();
-    const refreshIfVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
-    const interval = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      void refresh();
-    }, HUNT_STATE_SYNC_INTERVAL_MS);
-    window.addEventListener('focus', refreshIfVisible);
-    window.addEventListener('online', refreshIfVisible);
     return () => {
       active = false;
-      window.clearInterval(interval);
-      window.removeEventListener('focus', refreshIfVisible);
-      window.removeEventListener('online', refreshIfVisible);
     };
   }, [onProgressionRefresh, snapshot.phase, snapshot.huntNumber, syncHunt3State]);
 
@@ -796,35 +917,52 @@ export default function GameScreen({
     let lastSavedAt = Date.now();
     let saveInFlight = false;
     let disposed = false;
+    let lastSignificantHash = '';
+
+    const getSignificantHash = (st: GameState) =>
+      `${st.huntIndex}:${st.score}:${Object.keys(st.flags).sort().join(',')}:${st.journal.length}:${st.phase}`;
+
     const saveLatest = async () => {
       timeout = undefined;
       if (!latest || saveInFlight || disposed) return;
       const source = latest;
       latest = null;
-      // UI/HUD snapshots are emitted four times per second. Clone only at the
-      // checkpoint, never on every animation-driven store notification.
       const snapshot = JSON.parse(JSON.stringify(source)) as GameState;
       saveInFlight = true;
       try {
         await onSaveGameState(snapshot);
         lastSavedAt = Date.now();
-      } catch (reason) {
-        if (!disposed) setCardError(reason instanceof Error ? `Progress save failed: ${reason.message}` : 'Progress save failed.');
+        lastSignificantHash = getSignificantHash(snapshot);
+      } catch {
+        // Back off on save error so we never spam the server in a tight retry loop
+        lastSavedAt = Date.now() - (GAME_STATE_CHECKPOINT_INTERVAL_MS - 20_000);
       } finally {
         saveInFlight = false;
         if (latest && !disposed) scheduleSave();
       }
     };
-    const scheduleSave = () => {
+
+    const scheduleSave = (forcedDelay?: number) => {
       if (timeout || disposed || saveInFlight || !latest) return;
-      const delay = Math.max(0, GAME_STATE_CHECKPOINT_INTERVAL_MS - (Date.now() - lastSavedAt));
+      const delay = forcedDelay ?? Math.max(0, GAME_STATE_CHECKPOINT_INTERVAL_MS - (Date.now() - lastSavedAt));
       timeout = setTimeout(() => { void saveLatest(); }, delay);
     };
+
     const queueSave = () => {
-      if (store.state.phase === 'menu') return;
+      if (store.state.phase === 'menu' || disposed) return;
+      const currentHash = getSignificantHash(store.state);
+      // Pure movement does not change milestones (hunt, score, flags, journal, phase).
+      // Skip network saves during walking so gameplay never stutters or spams the backend.
+      if (currentHash === lastSignificantHash) return;
       latest = store.state;
-      scheduleSave();
+      if (lastSignificantHash !== '') {
+        scheduleSave(3_000);
+      } else {
+        lastSignificantHash = currentHash;
+        lastSavedAt = Date.now();
+      }
     };
+
     const unsubscribe = store.subscribe(queueSave);
     return () => {
       disposed = true;
@@ -876,6 +1014,7 @@ export default function GameScreen({
           store.emit();
         }}
         onUseCard={(slot) => engine?.useCardSlot(slot)}
+        onAction={(player) => engine?.triggerAction(player)}
         remainingSeconds={timer.remainingSeconds}
         huntProgression={huntProgression}
       />
@@ -954,16 +1093,28 @@ export default function GameScreen({
           storyReveal={hunt3?.completed === true && timer.run.status !== 'expired'}
         />
       )}
-      {snapshot.phase !== 'menu' && (
-        <button
-          className="ph-exit"
-          onClick={() => {
-            void exitGame();
-          }}
-        >
-          RETURN TO CARTEL
-        </button>
-      )}
+      {snapshot.phase !== 'menu' && (() => {
+        const canExit = snapshot.phase === 'ended' || timer.run.status === 'expired' || timer.remainingMs <= 0 || hunt3?.completed === true;
+        return canExit ? (
+          <button
+            className="ph-exit"
+            onClick={() => {
+              void exitGame();
+            }}
+          >
+            RETURN TO CARTEL
+          </button>
+        ) : (
+          <button
+            className="ph-exit ph-exit-locked"
+            disabled
+            aria-disabled="true"
+            title="Return to Cartel is locked until the timer expires or all hunts are completed."
+          >
+            RETURN TO CARTEL (LOCKED)
+          </button>
+        );
+      })()}
       {(cardError || externalError || timer.error) && (
         <div className="ph-card-error" role="alert">
           {timer.error || cardError || externalError}
