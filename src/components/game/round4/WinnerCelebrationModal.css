@@ -1,0 +1,213 @@
+.winner-scene {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  background: #070d11;
+}
+
+.winner-artwork {
+  position: relative;
+  width: min(100vw, 172.1482svh);
+  aspect-ratio: 1162 / 675;
+}
+
+.winner-artwork-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: winner-artwork-float 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+.winner-artwork-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #070d11;
+}
+
+.winner-star-cleanup {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.winner-star-cleanup--plaque {
+  top: 83.1%;
+  left: 78.7%;
+  width: 2.1%;
+  height: 4.2%;
+}
+
+.winner-star-cleanup--corner {
+  top: 88.9%;
+  left: 94%;
+  width: 4.7%;
+  height: 8%;
+}
+
+@keyframes winner-skeleton-dance {
+  0%, 100% { transform: rotate(-13deg) translateY(1px) scale(1); }
+  25% { transform: rotate(11deg) translateY(-5px) scale(1.08, 0.96); }
+  50% { transform: rotate(-8deg) translateY(-1px) scale(0.96, 1.05); }
+  75% { transform: rotate(15deg) translateY(-6px) scale(1.06, 0.97); }
+}
+
+@keyframes winner-artwork-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.winner-accessible-copy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.winner-team-name {
+  position: absolute;
+  z-index: 2;
+  top: 58.9%;
+  left: 9.95%;
+  display: grid;
+  width: 31%;
+  height: 12.4%;
+  place-items: center;
+  overflow: hidden;
+  margin: 0;
+  padding: 0.2em 0.8em;
+  background: url('/assets/round-04/winner-team-name-plaque.png') center / 100% 100% no-repeat;
+  color: #ead6a9;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(12px, 2.6vw, 32px);
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 3px #000;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.winner-team-name > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.non-winner-artwork {
+  overflow: hidden;
+}
+
+.non-winner-artwork-image {
+  filter: brightness(0.62) saturate(0.82);
+}
+
+.non-winner-plaque-cover,
+.non-winner-figures-cover {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #071416 32%, rgb(7 20 22 / 96%) 68%, rgb(7 20 22 / 0%) 100%);
+}
+
+.non-winner-plaque-cover {
+  top: 39%;
+  left: 2%;
+  width: 46%;
+  height: 39%;
+}
+
+.non-winner-figures-cover {
+  top: 25%;
+  left: 51%;
+  width: 42%;
+  height: 49%;
+}
+
+.non-winner-skeletons {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.non-winner-skeleton {
+  position: absolute;
+  top: 28%;
+  display: block;
+  width: 7.5%;
+  height: 47%;
+  overflow: visible;
+  color: #d8c39a;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 90%));
+  animation: winner-skeleton-dance 1.15s ease-in-out infinite;
+}
+
+.non-winner-skeleton--1 { left: 28%; animation-delay: -0.16s; }
+.non-winner-skeleton--2 { left: 36%; animation-delay: -0.72s; }
+.non-winner-skeleton--3 { left: 44%; top: 23%; height: 52%; animation-delay: -0.38s; }
+.non-winner-skeleton--4 { left: 52%; animation-delay: -0.92s; }
+.non-winner-skeleton--5 { left: 60%; animation-delay: -0.54s; }
+
+.non-winner-return {
+  z-index: 3;
+}
+
+.non-winner-return:focus-visible {
+  outline: 2px solid #e8c98c;
+  outline-offset: 3px;
+}
+
+.winner-return {
+  position: absolute;
+  top: 4.5%;
+  left: 3%;
+  width: 13.8%;
+  height: 7%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.winner-return:focus-visible {
+  outline: 2px solid #e8c98c;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winner-artwork-image {
+    animation: none;
+  }
+}
+
+@media (max-aspect-ratio: 1162 / 675) {
+  .winner-artwork {
+    width: 100vw;
+  }
+}
+
+@media (max-width: 620px) {
+  .winner-team-name {
+    font-size: clamp(9px, 2.6vw, 17px);
+  }
+
+  .non-winner-skeleton {
+    width: 9%;
+  }
+
+  .non-winner-skeleton--1 { left: 23%; }
+  .non-winner-skeleton--2 { left: 33%; }
+  .non-winner-skeleton--3 { left: 43%; }
+  .non-winner-skeleton--4 { left: 53%; }
+  .non-winner-skeleton--5 { left: 63%; }
+}

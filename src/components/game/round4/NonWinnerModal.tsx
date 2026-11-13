@@ -1,78 +1,51 @@
 import React from 'react';
-import type { WinnerRecord } from '../../../types/round4Expedition.types';
+import './WinnerCelebrationModal.css';
 
 interface NonWinnerModalProps {
-  winner: WinnerRecord;
   mySolvedCount: number;
   myRouteRomanNumeral: string;
   onExit: () => void;
 }
 
 export const NonWinnerModal: React.FC<NonWinnerModalProps> = ({
-  winner,
   mySolvedCount,
   myRouteRomanNumeral,
   onExit,
 }) => {
-  const formattedTime = winner.solvedAt
-    ? new Date(winner.solvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    : 'Recently';
-
-  const rawName = winner.teamName.trim().toUpperCase();
-  const cleanWinnerName = rawName.startsWith('TEAM ') ? rawName : `TEAM ${rawName}`;
-
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Tournament Finished Notice"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+      className="winner-scene non-winner-scene fixed inset-0 z-50 overflow-hidden select-none"
     >
-      <div className="relative w-full max-w-xl bg-gradient-to-b from-[#1c1813] to-[#0c0a08] border border-amber-600/40 rounded-2xl p-6 sm:p-8 shadow-2xl text-center text-[#e8dcb9] font-serif">
-        {/* Subtle Antique Icon */}
-        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-950/60 border border-amber-500/40 flex items-center justify-center text-2xl text-amber-400">
-          📜
+      <main className="winner-artwork non-winner-artwork">
+        <img
+          className="winner-artwork-image non-winner-artwork-image"
+          src="/assets/round-04/winner-celebration.png"
+          alt="Skeletons celebrating on a victory pedestal"
+        />
+        <div className="non-winner-plaque-cover" aria-hidden="true" />
+        <div className="non-winner-figures-cover" aria-hidden="true" />
+        <div className="non-winner-skeletons" aria-hidden="true">
+          {[0, 1, 2, 3, 4].map((dancer) => (
+            <svg key={dancer} className={`non-winner-skeleton non-winner-skeleton--${dancer + 1}`} viewBox="0 0 70 210" fill="none">
+              <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M35 8c-13 0-20 9-20 21 0 8 4 14 11 17l-1 10h20l-1-10c7-3 11-9 11-17C55 17 48 8 35 8Z" fill="#d4c4a4" strokeWidth="4" />
+                <path d="M25 33h6m8 0h6m-19 7 9 2 9-2M35 56v60m-18-49 18 10 18-10M17 67l-8 30m8-30 8 31m28-31 8 30m-8-30-8 31M24 91l11-6 11 6m-22 0 11 7 11-7m-11-2v14m-11 12-4 35m4-35 11 8m11-20 4 35m-4-35-11 8m-15 9 15-3 15 3m-25 0-6 43m6-43 10 2 10-2m-10 0v41m10-41 6 43" strokeWidth="5" />
+                <path d="m18 155-5 36m5-36 15 2m9-2 15 36m-15-36-8 2m-21 34-5 5h17l3-5m24 1 3 4h17l-5-5" strokeWidth="6" />
+              </g>
+            </svg>
+          ))}
         </div>
-
-        <div className="text-xs uppercase tracking-[0.25em] text-amber-500/90 font-bold mb-1">
-          FROST CARTEL • EXPEDITION CONCLUDED
-        </div>
-
-        <h2 className="text-xl sm:text-3xl font-cinzel font-black text-amber-200 tracking-wide mb-4">
-          THE TREASURE HAS BEEN CLAIMED
-        </h2>
-
-        <div className="p-4 rounded-xl bg-black/50 border border-white/10 text-xs sm:text-sm text-[#d4c6a0] italic leading-relaxed mb-6">
-          <p>
-            “Your path was completed. The clues were uncovered and the final chamber was reached, but another team claimed the Golden Relic first.
-            The journey was not without meaning. Every mystery you solved became part of the legend of Frost Cartel.”
-          </p>
-        </div>
-
-        {/* Winner Summary Card */}
-        <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 mb-6 text-left">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-amber-400/80 uppercase font-sans font-semibold">Champions:</span>
-            <span className="font-cinzel text-amber-200 font-bold text-sm">{cleanWinnerName}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-amber-400/80 uppercase font-sans font-semibold">Victory Recorded:</span>
-            <span className="font-mono text-amber-300 text-xs">{formattedTime}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs pt-2 border-t border-white/10">
-            <span className="text-amber-400/80 uppercase font-sans font-semibold">Your Squad Route:</span>
-            <span className="text-white font-cinzel font-bold">ROUTE {myRouteRomanNumeral} • {mySolvedCount} / 5 Clues Completed</span>
-          </div>
-        </div>
-
         <button
           type="button"
           onClick={onExit}
-          className="px-6 py-2.5 rounded-lg bg-amber-900/40 hover:bg-amber-800/60 border border-amber-500/50 text-amber-200 hover:text-white font-cinzel text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          className="winner-return non-winner-return"
+          aria-label={`Return to Exterior from route ${myRouteRomanNumeral}, ${mySolvedCount} clues completed`}
         >
-          Return to Exterior
         </button>
-      </div>
+      </main>
     </div>
   );
 };

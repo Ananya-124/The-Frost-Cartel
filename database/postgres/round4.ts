@@ -286,8 +286,9 @@ export async function submitRound4Clue(pool: Pool, teamId: string, stepId: unkno
     await client.query(`INSERT INTO round4_winner(singleton_id,team_id,team_name,route_id,final_answer,solved_at)
       VALUES(1,$1,$2,$3,$4,$5)`, [teamId, team.rows[0].team_name, progress.route_id, cleanAnswer, now]);
     await completeRoundInTransaction(client, teamId, 4);
-    const body = { success: true, correct: true, isFinal: true, isWinner: true, teamName: team.rows[0].team_name,
-      routeId: progress.route_id, solvedAt: now, message: 'CONGRATULATIONS! Your squad deciphered the final riddle first and claimed the Golden Relic!' };
+    const winner = { teamId, teamName: team.rows[0].team_name, routeId: progress.route_id, solvedAt: now };
+    const body = { success: true, correct: true, isFinal: true, isWinner: true, ...winner,
+      winner, message: 'CONGRATULATIONS! Your squad deciphered the final riddle first and claimed the Golden Relic!' };
     const result: ActionResult = { status: 200, body };
     await saveAction(client, teamId, 'ROUND4_CLUE_SUBMISSION', eventId, fp, result);
     return result;

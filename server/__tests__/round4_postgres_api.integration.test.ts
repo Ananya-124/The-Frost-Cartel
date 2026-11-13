@@ -205,7 +205,14 @@ suite('Round 4 PostgreSQL player/admin API integration', () => {
       submit(secondToken, 'r2_s5', 'SEVEN', 'final-winner-b'),
     ]);
     const [winnerBody, contenderBody] = await Promise.all([winnerResponse.json(), contenderResponse.json()]);
-    expect([winnerBody, contenderBody].filter((body) => body.isWinner === true)).toHaveLength(1);
+    const declaredWinners = [winnerBody, contenderBody].filter((body) => body.isWinner === true);
+    expect(declaredWinners).toHaveLength(1);
+    expect(declaredWinners[0].winner).toMatchObject({
+      teamId: declaredWinners[0].teamId,
+      teamName: declaredWinners[0].teamName,
+      routeId: declaredWinners[0].routeId,
+      solvedAt: declaredWinners[0].solvedAt,
+    });
     expect([winnerBody, contenderBody].filter((body) => body.raceClosed === true)).toHaveLength(1);
     expect((await pool.query('SELECT count(*)::int AS count FROM round4_winner')).rows[0].count).toBe(1);
     const completed = await pool.query(`SELECT rp.team_id FROM round_progress rp JOIN round4_team_progress r4 USING(team_id)

@@ -39,6 +39,13 @@ describe('Round 04 Competitive Modals: Winner Celebration & Non-Winner Summary',
     // 4. EXACT ONE DYNAMIC WINNING TEAM NAME
     expect(screen.getByRole('heading', { level: 1, name: /SHADOW SYNDICATE/i })).toBeInTheDocument();
     expect(screen.queryByText(/TEAM TEAM/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('winner-celebration-video')).toHaveAttribute(
+      'src',
+      '/assets/round-04/winner-celebration.mp4',
+    );
+    expect(screen.getByTestId('winner-celebration-video')).toHaveAttribute('autoplay');
+    expect(screen.getByTestId('winner-celebration-video')).toHaveProperty('muted', true);
+    expect(screen.getByTestId('winner-celebration-video')).toHaveAttribute('loop');
 
     // 5. BOTTOM ACTION
     const exitBtn = screen.getByRole('button', { name: /Enter The Hall of Fame/i });
@@ -93,19 +100,14 @@ describe('Round 04 Competitive Modals: Winner Celebration & Non-Winner Summary',
     );
 
     expect(screen.getByRole('dialog', { name: /Tournament Finished Notice/i })).toBeInTheDocument();
-    expect(screen.getByText('THE TREASURE HAS BEEN CLAIMED')).toBeInTheDocument();
-
-    // Narrative text
-    expect(screen.getByText(/Your path was completed. The clues were uncovered/i)).toBeInTheDocument();
-
-    // Winning team details
-    expect(screen.getByText(/TEAM CELESTIAL SEEKERS/i)).toBeInTheDocument();
-
-    // Own squad stats
-    expect(screen.getByText(/ROUTE IV • 4 \/ 5 Clues Completed/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /skeletons celebrating/i })).toHaveAttribute(
+      'src',
+      '/assets/round-04/winner-celebration.png',
+    );
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
 
     // Return button
-    const returnBtn = screen.getByRole('button', { name: /Return to Exterior/i });
+    const returnBtn = screen.getByRole('button', { name: /Return to Exterior from route IV, 4 clues completed/i });
     expect(returnBtn).toBeInTheDocument();
     fireEvent.click(returnBtn);
     expect(mockExit).toHaveBeenCalledTimes(1);

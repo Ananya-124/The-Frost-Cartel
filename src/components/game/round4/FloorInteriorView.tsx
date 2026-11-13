@@ -10,6 +10,11 @@ import { QRScannerModal } from './QRScannerModal';
 import { WinnerCelebrationModal } from './WinnerCelebrationModal';
 import { NonWinnerModal } from './NonWinnerModal';
 import { soundController } from '../../../utils/soundController';
+import { authService } from '../../../services/authService';
+
+function getErrorStatus(error: unknown): number | undefined {
+  return error && typeof error === 'object' && 'status' in error ? Number(error.status) : undefined;
+}
 
 interface FloorInteriorViewProps {
   floor: FloorDefinition;
@@ -33,6 +38,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [discoveryBusy, setDiscoveryBusy] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -54,7 +60,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   }, []);
 
   const loadAuthoritativeState = useCallback(async () => {
-    setIsLoading(true); setLoadError(null); setIsAccessDenied(false);
+    setIsLoading(true); setLoadError(null); setIsSessionExpired(false); setIsAccessDenied(false);
     try {
       const status = await round4Service.getStatus();
       if (!status.qualified || !status.isReleased) {
@@ -71,7 +77,12 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
         lastUpdated: state.progress.finishedAt ?? new Date().toISOString() });
       setWinner(state.winner);
     } catch (cause) {
-      setLoadError(cause instanceof Error ? cause.message : 'Round 04 state could not be loaded.');
+      if (getErrorStatus(cause) === 401) {
+        setIsSessionExpired(true);
+        setLoadError('Your squad session is invalid or expired. Sign in again to continue.');
+      } else {
+        setLoadError(cause instanceof Error ? cause.message : 'Round 04 state could not be loaded.');
+      }
     } finally { setIsLoading(false); }
   }, []);
 
@@ -95,7 +106,14 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
       setProgress({ teamId: '', activeRouteId: updated.route.routeId, activeStepIndex: updated.progress.currentStepIndex,
         targetDiscovered: updated.progress.targetDiscovered, solvedStepIds: updated.progress.solvedStepIds,
         completedRouteIds: updated.progress.isFinished ? [updated.route.routeId] : [], lastUpdated: new Date().toISOString() });
-    }).catch((cause: unknown) => setActionError(cause instanceof Error ? cause.message : 'Target discovery was not confirmed.'))
+    }).catch((cause: unknown) => {
+      if (getErrorStatus(cause) === 401) {
+        setIsSessionExpired(true);
+        setLoadError('Your squad session is invalid or expired. Sign in again to continue.');
+      } else {
+        setActionError(cause instanceof Error ? cause.message : 'Target discovery was not confirmed.');
+      }
+    })
       .finally(() => setDiscoveryBusy(false));
   }, [routeState, discoveryBusy]);
 
@@ -105,13 +123,44 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
       if (!routeState?.activeStep || !progress) return { success: false, message: 'Round 04 state is unavailable. Retry loading before submitting.' };
       setActionError(null);
       const result = await round4Service.submitAnswer(routeState.activeStep.stepId, answer);
-      if (result.success && result.state) {
+      if (result.status === 401) {
+        setIsSessionExpired(true);
+        setLoadError('Your squad session is invalid or expired. Sign in again to continue.');
+      } else if (result.success && result.state) {
         const updated = result.state;
         setRouteState(updated);
         setProgress({ teamId: '', activeRouteId: updated.route.routeId, activeStepIndex: updated.progress.currentStepIndex,
           targetDiscovered: updated.progress.targetDiscovered, solvedStepIds: updated.progress.solvedStepIds,
           completedRouteIds: updated.progress.isFinished ? [updated.route.routeId] : [], lastUpdated: updated.progress.finishedAt ?? new Date().toISOString() });
         setWinner(updated.winner);
+      } else if (result.success && result.isWinner && result.winner) {
+        const solvedStepIds = routeState.progress.solvedStepIds.includes(routeState.activeStep.stepId)
+          ? routeState.progress.solvedStepIds
+          : [...routeState.progress.solvedStepIds, routeState.activeStep.stepId];
+        setRouteState({
+          ...routeState,
+          progress: {
+            ...routeState.progress,
+            currentStepIndex: 5,
+            targetDiscovered: true,
+            solvedStepIds,
+            isFinished: true,
+            finishedAt: result.winner.solvedAt,
+          },
+          activeStep: null,
+          winner: result.winner,
+          isWinner: true,
+        });
+        setProgress({
+          teamId: '',
+          activeRouteId: routeState.route.routeId,
+          activeStepIndex: 5,
+          targetDiscovered: true,
+          solvedStepIds,
+          completedRouteIds: [routeState.route.routeId],
+          lastUpdated: result.winner.solvedAt,
+        });
+        setWinner(result.winner);
       } else if (result.success) {
         setActionError('The answer was accepted by the server, but current progress could not be refreshed. Reloading server state…');
         void loadAuthoritativeState();
@@ -129,7 +178,7 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   };
 
   if (isLoading) return <main className="min-h-screen flex items-center justify-center bg-[#faf5ea] text-[#3d2a14] font-cinzel" role="status">Loading your server-verified Round 04 route…</main>;
-  if (loadError) return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]"><p role="alert" className="max-w-lg text-sm">{loadError}</p><div className="flex gap-3"><button type="button" onClick={() => { void loadAuthoritativeState(); }} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Retry</button><button type="button" onClick={handleReturn} className="rounded border border-stone-500 px-4 py-2 text-xs">Return to Exterior</button></div></main>;
+  if (loadError) return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]"><p role="alert" className="max-w-lg text-sm">{loadError}</p><div className="flex gap-3">{isSessionExpired ? <button type="button" onClick={() => { authService.logout(); onExit(); }} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Return to Sign In</button> : <><button type="button" onClick={() => { void loadAuthoritativeState(); }} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Retry</button><button type="button" onClick={handleReturn} className="rounded border border-stone-500 px-4 py-2 text-xs">Return to Exterior</button></>}</div></main>;
 
   if (isAccessDenied) {
     return (
@@ -155,12 +204,30 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
   }
 
   if (!routeState || !progress || !currentRoute) return null;
-  if (!currentStep) return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]">
-    <h2 className="font-cinzel text-xl font-bold">Assigned expedition complete</h2>
-    <p className="max-w-md text-sm">The server confirms that all five clues on your assigned route are complete. Await the official result.</p>
-    {winner && <p className="text-sm font-bold">Official winner: {winner.teamName}</p>}
-    <button type="button" onClick={handleReturn} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Return to Exterior</button>
-  </main>;
+  if (!currentStep) {
+    if (winner) {
+      return routeState.isWinner ? (
+        <WinnerCelebrationModal
+          winner={winner}
+          routeRomanNumeral={currentRoute.romanNumeral}
+          isMuted={isMuted}
+          onExit={onExit}
+        />
+      ) : (
+        <NonWinnerModal
+          mySolvedCount={progress.solvedStepIds.length}
+          myRouteRomanNumeral={currentRoute.romanNumeral}
+          onExit={handleReturn}
+        />
+      );
+    }
+
+    return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]">
+      <h2 className="font-cinzel text-xl font-bold">Assigned expedition complete</h2>
+      <p className="max-w-md text-sm">The server confirms that all five clues on your assigned route are complete. Await the official result.</p>
+      <button type="button" onClick={handleReturn} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Return to Exterior</button>
+    </main>;
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-[#faf5ea] text-[#3d2a14] font-sans flex flex-col justify-between overflow-x-hidden selection:bg-amber-500 selection:text-black select-none">
@@ -355,7 +422,6 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
           />
         ) : (
           <NonWinnerModal
-            winner={winner}
             mySolvedCount={progress.solvedStepIds.length}
             myRouteRomanNumeral={currentRoute.romanNumeral}
             onExit={handleReturn}

@@ -68,14 +68,23 @@ if (typeof window !== 'undefined' && !window.__fc_fetch_patched) {
     if (urlStr.includes('/api/')) {
       const headers = new Headers(init?.headers);
       const isAdminRoute = urlStr.includes('/admin');
-      const token = getStoredToken(isAdminRoute ? 'admin' : 'team');
+      const tokenType = isAdminRoute ? 'admin' : 'team';
+      const token = getStoredToken(tokenType);
+      const retryWithCookie = Boolean(token && !headers.has('Authorization') && !urlStr.includes('/api/auth/team-login'));
       if (token && !headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${token}`);
       }
-      return originalFetch.call(this, input, {
+      const requestInit = {
         ...init,
         credentials: init?.credentials ?? 'include',
         headers,
+      };
+      return originalFetch.call(this, input, requestInit).then((response) => {
+        if (response.status !== 401 || !retryWithCookie) return response;
+        clearStoredToken(tokenType);
+        const cookieHeaders = new Headers(headers);
+        cookieHeaders.delete('Authorization');
+        return originalFetch.call(this, input, { ...requestInit, headers: cookieHeaders });
       });
     }
     return originalFetch.call(this, input, init);

@@ -50,6 +50,33 @@ describe('Round 04 PostgreSQL service', () => {
     }
   });
 
+  it('returns the authoritative winner immediately without requiring a follow-up route request', async () => {
+    const winner = {
+      teamId: 'team-first',
+      teamName: 'First Team',
+      routeId: 'route-4',
+      solvedAt: '2026-11-13T06:50:00.000Z',
+    };
+    const fetchMock = vi.fn(async () => response({
+      success: true,
+      correct: true,
+      isFinal: true,
+      isWinner: true,
+      ...winner,
+      winner,
+      message: 'Congratulations!',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(round4Service.submitAnswer('r4_s5', 'final answer')).resolves.toMatchObject({
+      success: true,
+      isWinner: true,
+      winner,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(apiUrl('/api/round4/submit-clue'));
+  });
+
   it('rejects qualification status API failures instead of granting access', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => response({ message: 'Administrator session required.' }, 401)));
     await expect(round4Service.getStatus()).rejects.toThrow('Administrator session required.');

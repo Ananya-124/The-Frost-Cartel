@@ -33,6 +33,7 @@ export interface AuthoritativeRouteState {
 export interface Round4ActionResult {
   success: boolean;
   message: string;
+  status?: number;
   state?: AuthoritativeRouteState;
   isWinner?: boolean;
   raceClosed?: boolean;
@@ -151,6 +152,7 @@ class Round4Service {
       this.pendingIds.delete(key);
       if (!result.success) return result;
       if (result.winner) this.publishWinner(result.winner);
+      if (result.isWinner && result.winner) return result;
       if (result.state) return { ...result, state: result.state };
       try {
         const state = await this.fetchMyRouteState();
@@ -163,7 +165,8 @@ class Round4Service {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         return { success: false, message: 'Network unavailable. Retry when connected; the same request will be safely replayed.' };
       }
-      return { success: false, message: error instanceof Error ? error.message : 'Answer submission failed. Please retry.' };
+      const status = error && typeof error === 'object' && 'status' in error ? Number(error.status) : undefined;
+      return { success: false, message: error instanceof Error ? error.message : 'Answer submission failed. Please retry.', status };
     }
   }
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authService } from '../authService';
+import { setStoredToken } from '../apiBaseUrl';
 
 describe('AuthService backend session', () => {
   afterEach(() => {
@@ -45,9 +46,12 @@ describe('AuthService backend session', () => {
 
   it('clears the cached profile when the server rejects the session', async () => {
     sessionStorage.setItem('frost_cartel_session', JSON.stringify({ teamId: 'forged-team', teamName: 'Forged', credits: 999 }));
+    setStoredToken('team', 'expired-team-token');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ success: false }) }));
     await expect(authService.restoreSession()).resolves.toBeNull();
     expect(authService.getCurrentSession()).toBeNull();
     expect(sessionStorage.getItem('frost_cartel_session')).toBeNull();
+    expect(sessionStorage.getItem('fc_team_token')).toBeNull();
+    expect(localStorage.getItem('fc_team_token')).toBeNull();
   });
 });

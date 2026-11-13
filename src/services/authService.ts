@@ -155,7 +155,10 @@ class AuthService {
   async restoreSession(): Promise<TeamSession | null> {
     try {
       const response = await fetchWithTimeout('/api/auth/session', { credentials: 'include' });
-      if (!response.ok) throw new Error('Team session is no longer valid.');
+      if (!response.ok) {
+        if (response.status === 401) clearStoredToken('team');
+        throw new Error('Team session is no longer valid.');
+      }
       const data = await response.json() as {
         success?: boolean;
         playerNumber?: number;
