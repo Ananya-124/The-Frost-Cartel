@@ -27,4 +27,4 @@ export const UNLOCK_CARD_RANGE = 320;
 /** Leaderboard settings. */
 export const LEADERBOARD_STORAGE_KEY = 'ph_lb';
 export const LEADERBOARD_SIZE = 10;
-export const LEADERBOARD_QUALIFYING_RANKS = 3;
+export const LEADERBOARD_QUALIFYING_RANKS = 5;
