@@ -133,7 +133,10 @@ export const AdminAuctionTab: React.FC = () => {
             return (
               <li key={c.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-2">
                 <CardArt card={c} className="h-20 w-16 rounded border border-amber-400/50 object-cover" />
-                <span className="w-48 font-cinzel">{c.name}</span>
+                <div className="w-64">
+                  <span className="font-cinzel text-sm font-bold text-amber-100 block">{c.name}</span>
+                  {c.description && <span className="text-[11px] text-amber-200/80 block leading-tight mt-0.5">{c.description}</span>}
+                </div>
                 <span className="w-44 text-xs font-mono">
                   {isLive ? (
                     <span className="text-amber-300 font-bold tracking-wider">● LIVE ON BLOCK</span>

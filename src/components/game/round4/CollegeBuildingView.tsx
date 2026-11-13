@@ -314,18 +314,7 @@ export const CollegeBuildingView: React.FC<CollegeBuildingViewProps> = ({
           </button>
         )}
 
-        {/* Minimal Gold Divider */}
-        <div className="h-5 sm:h-6 w-[1px] bg-gradient-to-b from-transparent via-[#b8974a]/60 to-transparent" />
 
-        {/* Minimal Gold Exit Button */}
-        <button
-          type="button"
-          onClick={onExit}
-          className="font-cinzel text-xs sm:text-sm font-bold tracking-[0.2em] text-[#7a2214] hover:text-red-700 hover:bg-red-900/15 px-3 py-1 rounded-sm border border-red-700/40 bg-[#f4ebd5]/80 backdrop-blur-sm transition-all duration-200 cursor-pointer shadow-[0_2px_8px_rgba(70,45,15,0.15)] uppercase"
-          title="Exit Round 04"
-        >
-          EXIT
-        </button>
       </div>
 
       {/* 2. Left Section (~25% of viewport width): Grand Ancient Relic Floor Selector */}

@@ -281,12 +281,24 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="font-gothic text-3xl text-amber-200/90">{liveCard.name}</h2>
-                        <p className="font-garamond text-cartel-silver/80">{liveCard.description}</p>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="font-gothic text-3xl sm:text-4xl text-amber-200 tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                          {liveCard.name}
+                        </h2>
+
+                        {/* High-Visibility Card Ability & Description Container */}
+                        <div className="mt-3 p-3.5 sm:p-4 rounded-xl border-2 border-amber-500/50 bg-gradient-to-br from-amber-950/70 via-black/85 to-[#160c05] shadow-[0_0_25px_rgba(245,158,11,0.22)]">
+                          <div className="flex items-center gap-1.5 font-cinzel text-[11px] sm:text-xs font-black text-amber-300 tracking-widest uppercase mb-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                            <span aria-hidden="true" className="text-base">📜</span>
+                            <span>POWER CARD ABILITY & STRATEGIC EFFECT</span>
+                          </div>
+                          <p className="font-sans text-sm sm:text-base leading-relaxed text-amber-50 font-semibold tracking-wide drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] select-text">
+                            {liveCard.description}
+                          </p>
+                        </div>
                       </div>
                       {secs !== null && (
-                        <div className="text-right" aria-label="Seconds left">
+                        <div className="text-right shrink-0" aria-label="Seconds left">
                           <div className={`font-cinzel text-5xl sm:text-6xl font-bold tabular-nums ${timerClass}`}>{secs}</div>
                           {closing && <div className="font-cinzel text-[10px] tracking-widest text-cartel-silver/70">CLOSING…</div>}
                         </div>

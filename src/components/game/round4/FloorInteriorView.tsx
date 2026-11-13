@@ -307,16 +307,8 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
           </div>
         </div>
 
-        {/* Right: Timer, Sound Toggle, Return to Campus Exterior, and Exit */}
+        {/* Right: Sound Toggle Button */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Hourglass Timer Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#f0e3cc]/80 border border-[#b8974a]/40 shadow-inner">
-            <span className="text-xs">⏳</span>
-            <span className="font-mono text-xs font-bold tracking-wider text-[#4a341b]">
-              02:58
-            </span>
-          </div>
-
           {/* Sound Toggle Button */}
           <button
             onClick={onToggleMute}
@@ -325,27 +317,6 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
             aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
           >
             {isMuted ? '🔇' : '🔊'}
-          </button>
-
-          {/* Return to Exterior Button */}
-          <button
-            onClick={handleReturn}
-            aria-label="Return to Exterior"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded font-cinzel text-xs font-bold tracking-wider text-[#4a341b] hover:text-[#7d561a] hover:bg-[#d4af37]/20 border border-[#b8974a]/40 bg-[#f4ebd5]/80 transition-all uppercase cursor-pointer"
-            title="Return to College Exterior"
-          >
-            <span>←</span>
-            <span>Return</span>
-          </button>
-
-          {/* Exit Button */}
-          <button
-            onClick={onExit}
-            aria-label="Exit Round 04"
-            className="px-3 py-1 rounded font-cinzel text-xs font-bold tracking-wider text-[#7a2214] hover:text-red-700 hover:bg-red-900/15 border border-red-700/40 bg-[#f4ebd5]/80 transition-all uppercase cursor-pointer"
-            title="Exit Round 04"
-          >
-            EXIT
           </button>
         </div>
       </header>

@@ -39,7 +39,7 @@ describe('Round 04 College Building View & Drone Window Entry', () => {
     expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /mute/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /letter/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /exit/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /exit/i })).not.toBeInTheDocument();
 
     // Mandatory Relic Instruction Banner (Requirement 2)
     expect(screen.getByAltText(/Ancient Relic Floor Selector/i)).toBeInTheDocument();
@@ -89,18 +89,9 @@ describe('Round 04 College Building View & Drone Window Entry', () => {
     expect(screen.getByText(/CAMPUS FLOOR MAP/i)).toBeInTheDocument();
     expect(screen.getByText(/FIELD RIDDLE/i)).toBeInTheDocument();
     expect(screen.getByText(/PARTNER HANDOFF/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Return/i })).toBeInTheDocument();
 
     // Verify proceed callback was fired with floor id
     expect(mockProceedToFloors).toHaveBeenCalledWith('floor-7');
-
-    // Test Returning to Exterior
-    const returnBtn = screen.getByRole('button', { name: /Return to Exterior/i });
-    fireEvent.click(returnBtn);
-
-    // Exterior building and instruction banner should be back
-    expect(screen.getByText('PLEASE SELECT YOUR FLOOR')).toBeInTheDocument();
-    expect(screen.getByAltText(/B\. S\. Narayan Platinum Jubilee Academic Block/i)).toBeInTheDocument();
 
     vi.useRealTimers();
     vi.unstubAllGlobals();
