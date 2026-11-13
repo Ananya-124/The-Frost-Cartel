@@ -357,12 +357,14 @@ export async function adminProgressRound3Global(
         SELECT 'rp-' || t.id || '-3', t.id, 3, 'LOCKED', 1000
         FROM teams t
         WHERE NOT EXISTS (SELECT 1 FROM round_progress rp WHERE rp.team_id = t.id AND rp.round_id = 3)
+        ON CONFLICT (team_id, round_id) DO NOTHING
       `);
       await client.query(`
-        INSERT INTO team_hunt_progress (id, team_id, hunt_id, status, max_score)
-        SELECT 'hp-' || t.id || '-1', t.id, 1, 'LOCKED', 300
+        INSERT INTO team_hunt_progress (team_id, hunt_id, status)
+        SELECT t.id, 1, 'LOCKED'
         FROM teams t
         WHERE NOT EXISTS (SELECT 1 FROM team_hunt_progress hp WHERE hp.team_id = t.id AND hp.hunt_id = 1)
+        ON CONFLICT (team_id, hunt_id) DO NOTHING
       `);
 
       const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
