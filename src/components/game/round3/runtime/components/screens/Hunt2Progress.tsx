@@ -118,6 +118,19 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
   const [boardOpen, setBoardOpen] = useState(false); const [boardActor, setBoardActor] = useState<Hunt2Actor>('archivist');
   const [clockNow, setClockNow] = useState(0); const [single, setSingle] = useState(''); const [order, setOrder] = useState(['', '', '', '', '', '']);
   const [profile, setProfile] = useState({ frequency: '', light: '', temperature: '' });
+  const [bannerVisible, setBannerVisible] = useState(false);
+
+  useEffect(() => {
+    if (!message) {
+      setBannerVisible(false);
+      return;
+    }
+    setBannerVisible(true);
+    const timer = setTimeout(() => {
+      setBannerVisible(false);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [message]);
   const panelReadiness = useRef<{ challenge: Hunt2Challenge | null; archivist: boolean; tracker: boolean }>({ challenge: null, archivist: false, tracker: false });
   const hasState = state !== null; const stateCompleted = state?.completed ?? false;
   useEffect(() => { if (!hasState || stateCompleted) return; const initialize = window.setTimeout(() => setClockNow(Date.now()), 0); const timer = window.setInterval(() => setClockNow(Date.now()), 1000); return () => { window.clearTimeout(initialize); window.clearInterval(timer); }; }, [hasState, stateCompleted]);
@@ -233,10 +246,11 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
       </section>
     </div>}
     </Fragment>)}
-    <div className={styles.toolbar}><button onClick={() => setBoardOpen((open) => !open)}>Shared memory board · {state.observations.length}</button>{message && <span role="status">{message}</span>}<span>TEAM SCORE {state.score} · PENALTIES {state.penalties}</span>
-      {challenge === 4 && !state.subtasks.memoryAnchorComplete && <span role="status">ANCHOR INSTABILITY {state.memoryAnchor.instability} · ATTEMPTS {state.memoryAnchor.attemptsRemaining}</span>}
-      <details><summary>Score breakdown</summary><span>Hidden Weakness {state.scoreBreakdown.hiddenWeakness} · Broken Memory {state.scoreBreakdown.brokenMemory} · Anchor {state.scoreBreakdown.anchor} · Final {state.scoreBreakdown.final} · Optional {state.scoreBreakdown.optional} · Penalties −{state.scoreBreakdown.penalties}</span></details>
-    </div>
+    {message && bannerVisible && (
+      <div className={styles.instructionBanner} role="status">
+        <span>📜 {message}</span>
+      </div>
+    )}
     {boardOpen && <aside className={styles.board}><button className={styles.close} onClick={() => setBoardOpen(false)}>Close</button><h2>Shared Memory Board</h2>
       <div className={styles.filters}><button aria-pressed={boardActor === 'archivist'} onClick={() => setBoardActor('archivist')}>Archivist view</button><button aria-pressed={boardActor === 'tracker'} onClick={() => setBoardActor('tracker')}>Tracker view</button></div>
       <h3>TASK {progressNumber}: {title}</h3><p>{CONTEXT[challenge]}</p>{visible.length ? [...visible].reverse().map((entry) => <article key={entry.id}><small>{entry.location} · {entry.discoveredBy.toUpperCase()} · {entry.verified ? 'VERIFIED' : 'UNVERIFIED'}</small><h3>{entry.title}</h3><p>{entry.content}</p></article>) : <p>No memory observations recorded yet.</p>}

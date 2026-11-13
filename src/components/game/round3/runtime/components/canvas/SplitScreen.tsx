@@ -31,7 +31,7 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJourn
           onPuzzleKey={(k) => onPuzzleKey(0, k)}
           onToggleJournal={() => onToggleJournal(0)}
           onAction={() => onAction?.(0)}
-          hideObjective={false}
+          hideObjective={true}
         />
         <TimelinePane
           view={snapshot.players[1]}
@@ -41,7 +41,7 @@ export default function SplitScreen({ snapshot, refs, onPuzzleKey, onToggleJourn
           onPuzzleKey={(k) => onPuzzleKey(1, k)}
           onToggleJournal={() => onToggleJournal(1)}
           onAction={() => onAction?.(1)}
-          hideObjective={false}
+          hideObjective={true}
         />
       </div>
       {playing && <TeamHud snapshot={snapshot} remainingSeconds={remainingSeconds} huntProgression={huntProgression} />}

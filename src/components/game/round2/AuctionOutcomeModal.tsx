@@ -14,7 +14,6 @@ export const WINNER_PHRASES = [
 ];
 
 export const LOSER_PHRASES = [
-  "FUCK YOU. YOU LOST. THE AUCTION NEVER LOVED YOU.",
   "Congratulations! You successfully wasted your credits.",
   "Bro came to bid, forgot to win.",
   "Jokes on you. Your wallet is empty and your inventory is too.",

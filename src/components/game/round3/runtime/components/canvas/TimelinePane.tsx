@@ -46,19 +46,29 @@ export default function TimelinePane({
         {/* <div className={styles.room}>{view.roomName}</div> */}
         {!hideObjective && <div className={styles.objective}>
           {view.objective}
-          {view.partnerArmed && <span className={styles.armed}> PARTNER IS ARMED!</span>}
         </div>}
+        {view.partnerArmed && <div className={styles.armedBanner}>⚡ PARTNER IS ARMED! READY TO SYNCHRONIZE</div>}
       </div>
-      {view.prompt && (
-        <button
-          type="button"
-          className={styles.prompt}
-          onClick={onAction}
-          title="Click to interact"
-        >
-          {view.prompt}
-        </button>
-      )}
+      {view.prompt && (() => {
+        const match = view.prompt.match(/^\[(.*?)\]\s*(.*)$/);
+        return (
+          <button
+            type="button"
+            className={styles.prompt}
+            onClick={onAction}
+            title="Click or press key to interact"
+          >
+            {match ? (
+              <>
+                <kbd className={styles.promptKey}>{match[1]}</kbd>
+                <span className={styles.promptText}>{match[2]}</span>
+              </>
+            ) : (
+              view.prompt
+            )}
+          </button>
+        );
+      })()}
       {view.message && <div className={styles.message}>{view.message}</div>}
       {view.journalOpen && <SharedJournal entries={journal} className={view.index === 0 ? styles.pastJournal : styles.futureJournal} />}
       {view.puzzle && <PuzzlePanel index={view.index} puzzle={view.puzzle} onPress={onPuzzleKey} />}

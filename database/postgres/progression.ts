@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 import { withPostgresTransaction } from './transaction.ts';
-import { qualifyTeamForRound4 } from './round4.ts';
+import { qualifyTeamForRound4, Round4Error } from './round4.ts';
 
 export type ProgressStatus = 'LOCKED' | 'AVAILABLE' | 'IN_PROGRESS' | 'COMPLETED';
 export type ProgressAction = 'unlock' | 'lock' | 'advance' | 'complete' | 'reset';
@@ -453,6 +453,16 @@ export async function adminProgressRound4Global(
         UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now()
         WHERE round_id=3 AND status IN ('AVAILABLE', 'IN_PROGRESS')
       `);
+
+      // Ensure every team has a row initialized for Round 4
+      await client.query(`
+        INSERT INTO round_progress (id, team_id, round_id, status, max_score)
+        SELECT 'rp-' || t.id || '-4', t.id, 4, 'LOCKED', 1000
+        FROM teams t
+        WHERE NOT EXISTS (SELECT 1 FROM round_progress rp WHERE rp.team_id = t.id AND rp.round_id = 4)
+        ON CONFLICT (team_id, round_id) DO NOTHING
+      `);
+
       const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
         'SELECT team_id, status FROM round_progress WHERE round_id=4 FOR UPDATE',
       );
@@ -475,7 +485,13 @@ export async function adminProgressRound4Global(
           });
           updatedCount++;
         }
-        await qualifyTeamForRound4(client, t.team_id);
+        try {
+          await qualifyTeamForRound4(client, t.team_id);
+        } catch (qualErr) {
+          // Exactly five teams can have unique routes I to V in Round 4.
+          // Remaining teams have Round 4 unlocked without throwing a fatal constraint abort.
+          console.warn(`[Round 4] Route auto-qualification limit reached for team ${t.team_id}:`, qualErr);
+        }
       }
       return { isActive: true, updatedCount };
     } else {
@@ -636,7 +652,14 @@ export async function adminAdvanceTeamToRound(
       await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended('round4-winner',0))");
       await client.query('DELETE FROM round4_winner WHERE singleton_id=1');
-      await qualifyTeamForRound4(client, teamId);
+      try {
+        await qualifyTeamForRound4(client, teamId);
+      } catch (qualErr) {
+        if (qualErr instanceof Round4Error) {
+          throw new ProgressionError(qualErr.message, 'CONFLICT');
+        }
+        throw qualErr;
+      }
       await client.query('UPDATE round4_team_progress SET is_finished=false, finished_at=NULL WHERE team_id=$1', [teamId]);
     }
 
@@ -693,7 +716,14 @@ export async function adminProgress(pool: Pool, adminSessionToken: string, teamI
       if (entity === 'ROUND' && entityId === 4) {
         await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=4');
         await client.query('UPDATE round4_settings SET is_released=true, updated_at=now() WHERE id=1');
+        try {
         await qualifyTeamForRound4(client, teamId);
+      } catch (qualErr) {
+        if (qualErr instanceof Round4Error) {
+          throw new ProgressionError(qualErr.message, 'CONFLICT');
+        }
+        throw qualErr;
+      }
       }
       await audit(client, { adminId, teamId, entity, entityId, previous: status, next: 'AVAILABLE', action, reason });
       return;

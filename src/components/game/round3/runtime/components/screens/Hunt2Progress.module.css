@@ -27,13 +27,23 @@
 .unlock { color: #d0bd92!important; letter-spacing: .02em!important; }
 .hint { margin-top: 5px; padding: 3px 7px; color: #d7c69f; background: #191a19; border: 1px solid #5b5443; font-size: 9px; cursor: pointer; pointer-events: auto; }
 .hint:disabled { opacity: .45; cursor: default; }
-.toolbar { position: absolute; z-index: 7; left: 50%; bottom: 64px; display: flex; align-items: center; gap: 10px; max-width: 90%; transform: translateX(-50%); padding: 6px 10px; color: #e6dfcf; background: rgba(7,9,11,.92); border: 1px solid #625743; box-shadow: 0 4px 15px #0008; font: 9px system-ui,sans-serif; }
-.toolbar button,.filters button { padding: 4px 7px; color: #e6cf97; background: #181816; border: 1px solid #5b5344; cursor: pointer; font: inherit; }
-.toolbar span { white-space: nowrap; }
-.toolbar span[role="status"] { overflow: hidden; max-width: min(34vw,360px); text-overflow: ellipsis; }
-.toolbar details { position: relative; white-space: nowrap; }
-.toolbar summary { color: #d6c79f; cursor: pointer; }
-.toolbar details span { position: absolute; right: 0; bottom: 22px; width: min(420px,80vw); padding: 8px; white-space: normal; background: #0a0c0d; border: 1px solid #625743; line-height: 1.5; }
+.instructionBanner {
+  position: fixed;
+  z-index: 25;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(580px, 86vw);
+  padding: 5px 14px;
+  color: #f7eedb;
+  background: rgba(18, 14, 10, 0.94);
+  border: 1px solid rgba(197, 159, 80, 0.6);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
+  font: 500 11px/1.35 Georgia, serif;
+  text-align: center;
+  pointer-events: none;
+}
 .board { position: absolute; z-index: 12; right: 14px; bottom: 132px; width: min(440px,calc(100% - 28px)); max-height: 55vh; overflow: auto; padding: 16px; color: #e5e0d5; background: rgba(8,10,12,.97); border: 1px solid #776747; box-shadow: 0 15px 40px #000c; font: 11px/1.45 system-ui,sans-serif; }
 .board h2 { margin: 0 0 10px; color: #e6c98e; font: 500 18px Georgia,serif; }
 .board h3 { margin: 5px 0; color: #ecd39d; font: 600 13px Georgia,serif; }
@@ -59,7 +69,7 @@
 .completed b { color: #c7e3bb; font: 600 18px Georgia,serif; }
 .completed button { justify-self: center; padding: 8px 12px; color: #12120f; background: #ddc58f; border: 0; cursor: pointer; font-weight: 700; }
 .loading { position: absolute; z-index: 10; left: 50%; bottom: 66px; transform: translateX(-50%); padding: 8px 12px; color: #d7ccb1; background: #111; border: 1px solid #625743; font: 11px system-ui,sans-serif; }
-@media(max-width:720px) { .taskToggle { top: 112px; } .pastToggle { left: 8px; right:auto; } .trackerToggle { right:8px; left:auto; } .panels { top: 148px; left: 8px; right: auto; bottom: auto; width: min(380px,calc(50vw - 12px)); max-height: calc(100vh - 250px); } .futurePanel { left:auto; right:8px; } .panel { padding: 7px; } .panel h2 { font-size: 12px; } .panel p { font-size: 9px; } .panel ul { display: block; } .panel li { margin: 2px 0; } .panel footer { display: none; } .toolbar { bottom: 96px; flex-wrap: wrap; justify-content: center; } .toolbar span[role="status"] { max-width: 80vw; } .board { bottom: 160px; } }
+@media(max-width:720px) { .taskToggle { top: 112px; } .pastToggle { left: 8px; right:auto; } .trackerToggle { right:8px; left:auto; } .panels { top: 148px; left: 8px; right: auto; bottom: auto; width: min(380px,calc(50vw - 12px)); max-height: calc(100vh - 250px); } .futurePanel { left:auto; right:8px; } .panel { padding: 7px; } .panel h2 { font-size: 12px; } .panel p { font-size: 9px; } .panel ul { display: block; } .panel li { margin: 2px 0; } .panel footer { display: none; } .toolbar { top: 50px; bottom: auto; flex-wrap: wrap; justify-content: center; } .toolbar span[role="status"] { max-width: 80vw; } .board { bottom: 160px; } }
 
 /* Age the task console into a physical case-file terminal rather than a HUD. */
 .panel {

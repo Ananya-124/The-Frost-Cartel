@@ -69,11 +69,9 @@ export async function qualifyTeamForRound4(client: PoolClient, teamId: string): 
     WHERE id NOT IN (SELECT route_id FROM round4_qualified_teams)
     ORDER BY route_number
   `);
-  let routeId = allRoutes.rows[0]?.id;
+  const routeId = allRoutes.rows[0]?.id;
   if (!routeId) {
-    const fallback = await client.query<{ id: string }>('SELECT id FROM round4_routes ORDER BY route_number LIMIT 1');
-    if (!fallback.rowCount || !fallback.rows[0]) throw new Round4Error('No Round 4 routes configured in system.', 'NOT_FOUND');
-    routeId = fallback.rows[0].id;
+    throw new Round4Error('All five Round 4 routes are already assigned. At most five teams can be qualified for Round 04.', 'CONFLICT');
   }
 
   await client.query(`

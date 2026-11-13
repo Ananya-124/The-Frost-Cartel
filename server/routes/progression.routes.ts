@@ -10,6 +10,7 @@ import {
   assertHuntAccessible, completeHunt, completeRound, completeRoundInTransaction, getTeamProgression,
   getTeamProgressionAudit, ProgressionError, startHunt, startRound,
 } from '../../database/postgres/progression.ts';
+import { Round4Error } from '../../database/postgres/round4.ts';
 import { requireAdminAuth, requireTeamAuth, type AuthenticatedRequest } from '../middleware/auth.ts';
 import { withPostgresTransaction } from '../../database/postgres/transaction.ts';
 
@@ -48,7 +49,7 @@ function getSqliteTeamProgression(teamId: string) {
 }
 
 function failure(res: Response, error: unknown): void {
-  if (error instanceof ProgressionError) {
+  if (error instanceof ProgressionError || error instanceof Round4Error) {
     const status = error.code === 'FORBIDDEN' ? 403 : error.code === 'NOT_FOUND' ? 404 : error.code === 'LOCKED' ? 423 : error.code === 'UNAVAILABLE' ? 503 : 409;
     res.status(status).json({ success: false, message: error.message, code: error.code });
     return;

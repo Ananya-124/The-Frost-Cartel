@@ -161,6 +161,8 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
           lastUpdated: result.winner.solvedAt,
         });
         setWinner(result.winner);
+      } else if (result.raceClosed && result.winner) {
+        setWinner(result.winner);
       } else if (result.success) {
         setActionError('The answer was accepted by the server, but current progress could not be refreshed. Reloading server state…');
         void loadAuthoritativeState();
@@ -205,28 +207,25 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
 
   if (!routeState || !progress || !currentRoute) return null;
   if (!currentStep) {
-    if (winner) {
-      return routeState.isWinner ? (
+    if (winner && routeState.isWinner) {
+      return (
         <WinnerCelebrationModal
           winner={winner}
           routeRomanNumeral={currentRoute.romanNumeral}
           isMuted={isMuted}
           onExit={onExit}
         />
-      ) : (
-        <NonWinnerModal
-          mySolvedCount={progress.solvedStepIds.length}
-          myRouteRomanNumeral={currentRoute.romanNumeral}
-          onExit={handleReturn}
-        />
       );
     }
 
-    return <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#faf5ea] p-6 text-center text-[#3d2a14]">
-      <h2 className="font-cinzel text-xl font-bold">Assigned expedition complete</h2>
-      <p className="max-w-md text-sm">The server confirms that all five clues on your assigned route are complete. Await the official result.</p>
-      <button type="button" onClick={handleReturn} className="rounded border border-amber-700 px-4 py-2 text-xs font-bold">Return to Exterior</button>
-    </main>;
+    return (
+      <NonWinnerModal
+        mySolvedCount={progress.solvedStepIds.length}
+        myRouteRomanNumeral={currentRoute.romanNumeral}
+        winner={winner}
+        onExit={onExit}
+      />
+    );
   }
 
   return (
@@ -389,13 +388,15 @@ export const FloorInteriorView: React.FC<FloorInteriorViewProps> = ({
           <WinnerCelebrationModal
             winner={winner}
             routeRomanNumeral={currentRoute.romanNumeral}
+            isMuted={isMuted}
             onExit={onExit}
           />
         ) : (
           <NonWinnerModal
             mySolvedCount={progress.solvedStepIds.length}
             myRouteRomanNumeral={currentRoute.romanNumeral}
-            onExit={handleReturn}
+            winner={winner}
+            onExit={onExit}
           />
         )
       )}

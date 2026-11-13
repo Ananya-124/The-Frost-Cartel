@@ -150,9 +150,36 @@ export function inventoryToPowerCards(inventory: readonly Round3InventoryItem[] 
   });
 }
 
+export const R3_MAPPED_TO_R2_ID: Record<string, number> = {
+  'temporal-compass': 1,
+  'temporal-shield': 2,
+  'spectral-lens': 3,
+  'resonance-decoder': 4,
+  'phantom-key': 5,
+  'emergency-power-cell': 6,
+  'memory-seal': 7,
+  'phantom-beacon': 8,
+  'echo-recorder': 9,
+  'soul-binding-sigil': 10,
+};
+
+export const R2_ID_TO_R3_MAPPED: Record<number, string> = {
+  1: 'temporal-compass',
+  2: 'temporal-shield',
+  3: 'spectral-lens',
+  4: 'resonance-decoder',
+  5: 'phantom-key',
+  6: 'emergency-power-cell',
+  7: 'memory-seal',
+  8: 'phantom-beacon',
+  9: 'echo-recorder',
+  10: 'soul-binding-sigil',
+};
+
 /**
  * Combines Round 3 server inventory with Round 2 auction won cards,
- * enforcing single-use per card per team.
+ * strictly showing ONLY the cards the team actually collected.
+ * Enforces single-use per card per team and prevents duplicate mapped entries.
  */
 export function buildTeamPowerCards(
   inventory: readonly Round3InventoryItem[] = [],
@@ -160,56 +187,51 @@ export function buildTeamPowerCards(
   usedCards: Set<string> = new Set()
 ): PowerCard[] {
   const cards: PowerCard[] = [];
-  const seenIds = new Set<string>();
+  const seenDefs = new Set<string>();
 
-  // 1. Process Round 2 Auction cards won by this team
-  for (const won of wonRound2Cards) {
-    const def = resolveRound2Card(won);
-    if (!def || seenIds.has(def.id)) continue;
-    seenIds.add(def.id);
-    const alreadyUsed = usedCards.has(def.id);
+  // 1. Authoritative: Cards won by this team in Round 2 Auction
+  if (wonRound2Cards && wonRound2Cards.length > 0) {
+    for (const won of wonRound2Cards) {
+      const def = resolveRound2Card(won);
+      if (!def || seenDefs.has(def.id)) continue;
+      seenDefs.add(def.id);
+
+      const r3MappedId = typeof won.id === 'number' ? R2_ID_TO_R3_MAPPED[won.id] : undefined;
+      const alreadyUsed = usedCards.has(def.id) || (r3MappedId ? usedCards.has(r3MappedId) : false);
+
+      cards.push({
+        cardId: def.id,
+        source: 'auction',
+        name: def.name,
+        desc: def.desc,
+        effect: def.effect,
+        uses: alreadyUsed ? 0 : 1, // Strictly single-use per team
+        consumption: 'consume-one',
+      });
+    }
+
+    // Return strictly only the cards collected by the team
+    return cards;
+  }
+
+  // 2. Fallback: if wonRound2Cards array is empty, load exclusively verified auction cards from inventory
+  for (const item of inventory) {
+    if (item.quantity <= 0 || item.source !== 'auction') continue;
+    const r2Num = R3_MAPPED_TO_R2_ID[item.cardId];
+    const def = r2Num ? ROUND2_CARD_DEFINITIONS[r2Num] : Object.values(ROUND2_CARD_DEFINITIONS).find((d) => d.id === item.cardId);
+    if (!def || seenDefs.has(def.id)) continue;
+    seenDefs.add(def.id);
+
+    const alreadyUsed = usedCards.has(def.id) || usedCards.has(item.cardId);
     cards.push({
       cardId: def.id,
       source: 'auction',
       name: def.name,
       desc: def.desc,
       effect: def.effect,
-      uses: alreadyUsed ? 0 : 1, // Strictly single-use per team!
+      uses: alreadyUsed ? 0 : 1,
       consumption: 'consume-one',
     });
-  }
-
-  // 2. Process any other items from server inventory (avoiding duplicates)
-  for (const item of inventory) {
-    if (item.quantity <= 0) continue;
-    const def = Object.values(ROUND2_CARD_DEFINITIONS).find((d) => d.id === item.cardId);
-    const cardId = def ? def.id : item.cardId;
-    if (seenIds.has(cardId)) continue;
-    seenIds.add(cardId);
-    const alreadyUsed = usedCards.has(cardId);
-    if (def) {
-      cards.push({
-        cardId: def.id,
-        source: item.source,
-        name: def.name,
-        desc: def.desc,
-        effect: def.effect,
-        uses: alreadyUsed ? 0 : 1,
-        consumption: 'consume-one',
-      });
-    } else {
-      const nameInfo = LEGACY_NAMES[item.cardId] ?? { name: item.cardId, desc: 'Special power card' };
-      const effect = LEGACY_ENGINE_EFFECTS[item.cardId] ?? 'shield';
-      cards.push({
-        cardId: item.cardId,
-        source: item.source,
-        name: nameInfo.name,
-        desc: nameInfo.desc,
-        effect,
-        uses: alreadyUsed ? 0 : item.quantity,
-        consumption: item.cardId === 'temporal-compass' ? 'retained' : 'consume-one',
-      });
-    }
   }
 
   return cards;

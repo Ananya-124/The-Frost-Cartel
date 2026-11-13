@@ -100,10 +100,11 @@ describe('Round 04 Competitive Modals: Winner Celebration & Non-Winner Summary',
     );
 
     expect(screen.getByRole('dialog', { name: /Tournament Finished Notice/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /skeletons celebrating/i })).toHaveAttribute(
-      'src',
-      '/assets/round-04/winner-celebration.png',
-    );
+    expect(screen.getByText(/THE HUNT HAS BEEN CONCLUDED/i)).toBeInTheDocument();
+    expect(screen.getByText(/CELESTIAL SEEKERS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Route IV/i)).toBeInTheDocument();
+    expect(screen.getByText(/4 \/ 5/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('winner-celebration-video')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
 
     // Return button

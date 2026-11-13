@@ -52,7 +52,20 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
   const [sequence, setSequence] = useState<string[]>([]);
   const [workingSubmit, setWorkingSubmit] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [bannerVisible, setBannerVisible] = useState(false);
   const briefWasReady = useRef(false);
+
+  useEffect(() => {
+    if (!message) {
+      setBannerVisible(false);
+      return;
+    }
+    setBannerVisible(true);
+    const timer = setTimeout(() => {
+      setBannerVisible(false);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [message]);
   const actor: Hunt1Actor = playerNumber === 1 ? 'archivist' : 'tracker';
   const activeTask = state ? TASKS[state.currentChallenge] : null;
   const cluesReady = !!state && !!activeTask && activeTask.required.every((id) => state.subtasks[id]);
@@ -96,7 +109,6 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
   const canSubmit = !state.completed && !state.taskCompleted[task.key] && evidenceReady && priorTasksReady && !submittedAlready
     && (task.submitter === 'team' || task.submitter === actor);
   const unlockedObjects = state.availableInteractables.filter((id) => !id.startsWith('optional'));
-  const optionalFound = Object.values(state.optionalScores).reduce((sum, value) => sum + value, 0);
 
   const reconstruct = async () => {
     if (!canSubmit || workingSubmit) return;
@@ -272,13 +284,11 @@ export default function Hunt1Progress({ state, playerNumber, showOverview = true
       TASK BRIEF · {task.title}
     </button>}
 
-    {showOverview && <div className={styles.toolbar}>
-      {message && <span role="status">{message}</span>}
-      <span>HUNT I SCORE {state.score} · PENALTIES −{state.penalties}</span>
-      <details className={styles.teamScoreDetails}><summary>Score breakdown</summary>
-        <span>{TASK_KEYS.map((number) => `${TASKS[number].title} ${state.taskScores[TASKS[number].key]}`).join(' · ')} · Optional ${optionalFound} · Penalties −${state.penalties}</span>
-      </details>
-    </div>}
+    {showOverview && message && bannerVisible && (
+      <div className={styles.instructionBanner} role="status">
+        <span>📜 {message}</span>
+      </div>
+    )}
     {showOverview && state.completed && <div className={styles.completed} role="status">
       <b>THE FORGOTTEN INCIDENT RECONSTRUCTED</b><span>Hunt I complete · {state.score} points preserved</span>
       <article aria-label="Final incident report">
