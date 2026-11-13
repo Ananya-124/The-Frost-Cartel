@@ -128,21 +128,39 @@ export const AdminAuctionTab: React.FC = () => {
       <section className="stone-panel rounded-xl p-5">
         <h3 className="font-cinzel tracking-widest text-cartel-silver/70 text-xs mb-2">CARDS</h3>
         <ul className="space-y-2">
-          {data?.cards.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-2">
-              <CardArt card={c} className="h-20 w-16 rounded border border-amber-400/50 object-cover" />
-              <span className="w-48 font-cinzel">{c.name}</span>
-              <span className="w-40 text-xs uppercase text-cartel-silver/70">{c.status}{c.winner ? ` → ${c.winner} @ ${c.price}` : ''}</span>
-              {(c.status === 'pending' || c.status === 'unsold') && (
-                <>
-                  <label className="text-xs text-cartel-silver/70">Base price
-                    <input type="number" min={1} value={bases[c.id] ?? String(c.defaultBase)} onChange={(e) => setBases({ ...bases, [c.id]: e.target.value })} className={`${inputCls} ml-2 w-24`} />
-                  </label>
-                  <button disabled={!!live} className={`${btnCls} bg-cartel-pumpkin text-black`} onClick={() => void act(round2Service.admin.start(c.id, Number(bases[c.id] ?? c.defaultBase), Number(duration)))}>START BIDDING</button>
-                </>
-              )}
-            </li>
-          ))}
+          {data?.cards.map((c) => {
+            const isLive = live && live.cardId === c.id;
+            return (
+              <li key={c.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-2">
+                <CardArt card={c} className="h-20 w-16 rounded border border-amber-400/50 object-cover" />
+                <span className="w-48 font-cinzel">{c.name}</span>
+                <span className="w-44 text-xs font-mono">
+                  {isLive ? (
+                    <span className="text-amber-300 font-bold tracking-wider">● LIVE ON BLOCK</span>
+                  ) : (
+                    <span className="text-emerald-400 font-semibold">
+                      AVAILABLE FOR SALE
+                      {c.winner ? <span className="block text-[10px] text-stone-400">(Sold: {c.winner} @ {c.price} CR)</span> : null}
+                    </span>
+                  )}
+                </span>
+                {!isLive && (
+                  <>
+                    <label className="text-xs text-cartel-silver/70">Base price
+                      <input type="number" min={1} value={bases[c.id] ?? String(c.defaultBase)} onChange={(e) => setBases({ ...bases, [c.id]: e.target.value })} className={`${inputCls} ml-2 w-24`} />
+                    </label>
+                    <button
+                      disabled={!!live}
+                      className={`${btnCls} bg-cartel-pumpkin text-black font-bold hover:brightness-110 disabled:opacity-40`}
+                      onClick={() => void act(round2Service.admin.start(c.id, Number(bases[c.id] ?? c.defaultBase), Number(duration)))}
+                    >
+                      {c.status === 'sold' ? 'RE-AUCTION CARD' : 'START BIDDING'}
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </section>
 

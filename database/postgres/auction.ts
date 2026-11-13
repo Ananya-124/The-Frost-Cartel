@@ -145,9 +145,6 @@ export async function startAuctionLot(pool: Pool, input: StartAuctionLotInput, a
        WHERE round_id=2 AND is_active=true AND metadata->>'auctionCardId'=$1`, [String(input.cardId)]);
     const card = cardResult.rows[0];
     if (!card) throw new AuctionError('Auction card is not configured.', 'NOT_FOUND');
-    if ((await client.query('SELECT 1 FROM round2_settlements WHERE power_card_id=$1 LIMIT 1', [card.id])).rowCount) {
-      throw new AuctionError('This card has already been sold.', 'CONFLICT');
-    }
     if ((await client.query("SELECT 1 FROM round2_auction_lots WHERE status='ACTIVE' LIMIT 1")).rowCount) {
       throw new AuctionError('A card is already live. End it first.', 'CONFLICT');
     }

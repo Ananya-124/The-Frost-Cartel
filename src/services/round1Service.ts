@@ -641,22 +641,8 @@ export class Round1Service {
       stage.status = 'completed';
       stage.completionTime = new Date().toISOString();
     }
-    // Fixed stage reward: Stage 1 always awards full 100 credits upon completion
-    const deficit = Math.max(0, STAGE_CREDITS['stage-1'] - stage.earnedCredits);
-    if (deficit > 0) {
-      stage.earnedCredits = STAGE_CREDITS['stage-1'];
-      session.credits = Math.min(500, session.credits + deficit);
-      session.scoreTransactions.push({
-        id: `tx_${Date.now()}_stage-1_completion`,
-        teamId: session.teamId,
-        stageId: 'stage-1',
-        type: 'stage_completion',
-        deltaCredits: deficit,
-        balanceAfter: session.credits,
-        reason: `Stage 1 Chamber completed (${STAGE_CREDITS['stage-1']} Credits awarded)`,
-        timestamp: new Date().toISOString(),
-      });
-    }
+    // Assign credits strictly for trials actually completed / won
+    stage.earnedCredits = state.trials.reduce((sum, t) => sum + (t.status === 'won' ? t.earnedCredits : 0), 0);
     const allDone = Object.values(session.stages).every((s) => s.status === 'completed' || s.status === 'not_configured');
     if (allDone) {
       session.status = 'completed';

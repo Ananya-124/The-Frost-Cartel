@@ -6,6 +6,7 @@ interface HauntedPortalCardProps {
   stageNumber: number;
   title: string;
   rewardCredits: number;
+  earnedCredits?: number;
   status: StageProgressStatus | 'locked';
   colorTheme: 'orange' | 'purple' | 'emerald';
   artworkUrl: string;
@@ -19,6 +20,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
   stageNumber,
   title,
   rewardCredits,
+  earnedCredits,
   status,
   colorTheme,
   artworkUrl: _artworkUrl,
@@ -131,7 +133,7 @@ export const HauntedPortalCard: React.FC<HauntedPortalCardProps> = ({
         {status === 'completed' ? (
           <div className="absolute top-[74.5%] left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
             <span className="text-[8px] sm:text-[9.5px] font-cinzel font-black tracking-widest uppercase drop-shadow-[0_0_8px_rgba(245,158,11,0.9)] bg-black/85 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.5)]">
-              +{rewardCredits} CR SECURED ✓
+              +{earnedCredits !== undefined ? earnedCredits : rewardCredits} CR SECURED ✓
             </span>
           </div>
         ) : isSealed ? (

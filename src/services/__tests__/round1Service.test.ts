@@ -91,7 +91,7 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
       expect(service.beginStage1Attempt(id, 1).ok).toBe(true);
     });
 
-    it('completes the stage with full 100 credits when trial I is lost and trial II is won', () => {
+    it('completes the stage awarding only the 60 credits when trial I is lost and trial II is won', () => {
       const id = start();
       service.beginStage1Attempt(id, 0);
       service.beginStage1Attempt(id, 0);
@@ -99,7 +99,8 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
       service.beginStage1Attempt(id, 1);
       service.resolveStage1Trial(id, 1, true);
       const session = service.getTeamSession(id, 'S1 Squad');
-      expect(session.credits).toBe(100);
+      expect(session.credits).toBe(60);
+      expect(session.stages['stage-1'].earnedCredits).toBe(60);
       expect(session.stages['stage-1'].status).toBe('completed');
     });
 

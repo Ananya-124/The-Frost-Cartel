@@ -157,24 +157,23 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     const persisted = (row.stage_rows.find((s) => s.state?.round1Session)?.state?.round1Session as Round1TeamSessionState | undefined);
     const session = persisted ?? game.snapshotTeamSession(teamId, row.team_name);
 
-    // Reconcile completed stages to ensure full fixed credits (Stage 1: 100, Stage 2: 150, Stage 3: 250)
-    let stageNeedsUpdate = false;
-    for (const r of row.stage_rows) {
-      if (r.status === 'COMPLETED' && r.score < r.max_score) {
-        await pool.query('UPDATE round1_stage_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND stage_id=$3', [r.max_score, teamId, r.stage_id]);
-        r.score = r.max_score;
-        stageNeedsUpdate = true;
+    // Reconcile stage scores strictly from trials and stages actually completed
+    if (session.stage1State?.trials) {
+      const realS1 = session.stage1State.trials.reduce((sum, t) => sum + (t.status === 'won' ? (t.earnedCredits || 0) : 0), 0);
+      session.stages['stage-1'].earnedCredits = realS1;
+      const s1Row = row.stage_rows.find((r) => r.stage_id === 1);
+      if (s1Row && s1Row.score !== realS1) {
+        s1Row.score = realS1;
+        await pool.query('UPDATE round1_stage_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND stage_id=1', [realS1, teamId]);
       }
     }
-    const stageCreditsSum = row.stage_rows.reduce((sum, r) => sum + (r.status === 'COMPLETED' ? r.max_score : Number(r.score || 0)), 0);
-    const authoritativeScore = Math.max(Number(row.score || 0), stageCreditsSum);
-    if (row.score < authoritativeScore || row.total_credits < stageCreditsSum || stageNeedsUpdate) {
-      const newScore = authoritativeScore;
-      const newTotalCredits = Math.max(row.total_credits, stageCreditsSum);
-      await pool.query('UPDATE teams SET score=$1, total_credits=$2, updated_at=now() WHERE id=$3', [newScore, newTotalCredits, teamId]);
-      await pool.query('UPDATE round_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND round_id=1', [newScore, teamId]);
-      row.score = newScore;
-      row.total_credits = newTotalCredits;
+    const stageCreditsSum = row.stage_rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
+    const authoritativeScore = stageCreditsSum;
+    if (row.score !== authoritativeScore || row.total_credits !== stageCreditsSum) {
+      await pool.query('UPDATE teams SET score=$1, total_credits=$2, updated_at=now() WHERE id=$3', [authoritativeScore, stageCreditsSum, teamId]);
+      await pool.query('UPDATE round_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND round_id=1', [authoritativeScore, teamId]);
+      row.score = authoritativeScore;
+      row.total_credits = stageCreditsSum;
     }
 
     session.teamId = teamId;
@@ -312,21 +311,15 @@ export async function performRound1Action(pool: Pool, teamId: string, action: Ro
     for(let i=0;i<stageIds.length;i++){
       const id=stageIds[i],row=rows[i],p=updated.stages[id];
       const dbStatus=p.status==='in_progress'?'IN_PROGRESS':p.status==='completed'?'COMPLETED':p.status==='skipped'?'AVAILABLE':p.status==='available'?'AVAILABLE':'LOCKED';
-      if (p.status === 'completed') {
-        row.score = row.max_score;
-        p.earnedCredits = row.max_score;
-      }
-      await client.query(`UPDATE round1_stage_progress SET status=$3,score=$4,time_spent_seconds=$5,completed_at=CASE WHEN $3='COMPLETED' THEN COALESCE(completed_at,now()) ELSE completed_at END,state=$6::jsonb,updated_at=now() WHERE team_id=$1 AND stage_id=$2`,[teamId,row.stage_id,dbStatus,row.score,p.activeTimeSeconds,JSON.stringify(i===0?{round1Session:updated}:i===1?{round1Session:updated}: {round1Session:updated})]);
+      // Assign credits strictly based on trials or stages actually completed
+      row.score = Math.min(row.max_score, Math.max(0, p.earnedCredits));
+      await client.query(`UPDATE round1_stage_progress SET status=$3,score=$4,time_spent_seconds=$5,completed_at=CASE WHEN $3='COMPLETED' THEN COALESCE(completed_at,now()) ELSE completed_at END,state=$6::jsonb,updated_at=now() WHERE team_id=$1 AND stage_id=$2`,[teamId,row.stage_id,dbStatus,row.score,p.activeTimeSeconds,JSON.stringify({round1Session:updated})]);
     }
     const finalStageCreditsSum = rows.reduce((s, r) => s + (r.score || 0), 0);
-    if (finalStageCreditsSum > updated.credits) {
-      updated.credits = finalStageCreditsSum;
-    }
-    if (finalStageCreditsSum > totalCredits) {
-      totalCredits = finalStageCreditsSum;
-    }
-    await client.query('UPDATE teams SET score=GREATEST(score, $1), total_credits=GREATEST(total_credits, $2), updated_at=now() WHERE id=$3', [updated.credits, totalCredits, teamId]);
-    await client.query('UPDATE round_progress SET score=GREATEST(score, $1), updated_at=now() WHERE team_id=$2 AND round_id=1', [updated.credits, teamId]);
+    updated.credits = finalStageCreditsSum;
+    totalCredits = finalStageCreditsSum;
+    await client.query('UPDATE teams SET score=$1, total_credits=$2, updated_at=now() WHERE id=$3', [updated.credits, totalCredits, teamId]);
+    await client.query('UPDATE round_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND round_id=1', [updated.credits, teamId]);
     await client.query(`UPDATE round_progress SET time_spent_seconds=$2,updated_at=now() WHERE team_id=$1 AND round_id=1`,[teamId,updated.roundStartTime?Math.max(0,Math.floor((Date.now()-new Date(updated.roundStartTime).getTime())/1000)):0]);
     const completed=stageIds.every((id)=>updated.stages[id].status==='completed');
     if(completed){
@@ -451,40 +444,33 @@ export async function setRound1TimerActive(pool:Pool,adminId:string,isActive:boo
 export async function reconcileAllRound1Credits(pool: Pool | null): Promise<void> {
   if (pool) {
     try {
-      // 1. Any COMPLETED stage in PostgreSQL must have score = max_score
-      await pool.query(`
-        UPDATE round1_stage_progress
-        SET score = max_score, updated_at = now()
-        WHERE status = 'COMPLETED' AND score < max_score
-      `);
-
-      // 2. Any team with completed stages must have their score and wallet (total_credits) topped up
+      // 1. Any team with completed stages must have their score and wallet (total_credits) match their actual earned stage scores
       await pool.query(`
         WITH stage_sums AS (
-          SELECT team_id, SUM(score) AS calculated_score
+          SELECT team_id, SUM(score)::integer AS calculated_score
           FROM round1_stage_progress
           GROUP BY team_id
         )
         UPDATE teams t
-        SET score = GREATEST(t.score, s.calculated_score),
-            total_credits = GREATEST(t.total_credits, s.calculated_score),
+        SET score = s.calculated_score,
+            total_credits = s.calculated_score,
             updated_at = now()
         FROM stage_sums s
-        WHERE t.id = s.team_id AND (t.score < s.calculated_score OR t.total_credits < s.calculated_score)
+        WHERE t.id = s.team_id AND (t.score != s.calculated_score OR t.total_credits != s.calculated_score)
       `);
 
-      // 3. Update round_progress score for Round 1
+      // 2. Update round_progress score for Round 1
       await pool.query(`
         WITH stage_sums AS (
-          SELECT team_id, SUM(score) AS calculated_score
+          SELECT team_id, SUM(score)::integer AS calculated_score
           FROM round1_stage_progress
           GROUP BY team_id
         )
         UPDATE round_progress rp
-        SET score = GREATEST(rp.score, s.calculated_score),
+        SET score = s.calculated_score,
             updated_at = now()
         FROM stage_sums s
-        WHERE rp.team_id = s.team_id AND rp.round_id = 1 AND rp.score < s.calculated_score
+        WHERE rp.team_id = s.team_id AND rp.round_id = 1 AND rp.score != s.calculated_score
       `);
 
       // 4. If all 3 stages are COMPLETED, ensure round_progress is marked COMPLETED with 500 score
