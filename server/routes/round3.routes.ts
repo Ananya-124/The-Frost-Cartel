@@ -33,7 +33,8 @@ async function postgresTimerAllowsGameplay(teamId: string): Promise<boolean> {
   // Preserve the existing first-action start behavior while making PostgreSQL
   // the timer authority for score-bearing Hunt actions.
   if (run?.status === 'not_started') run = await startPostgresRound3Run(pool, teamId);
-  return run?.status === 'running' && run.remaining_ms > 0;
+  if (run?.status === 'paused' && Number(run.remaining_ms) > 0) run = await resumePostgresRound3Run(pool, teamId);
+  return (run?.status === 'running' || run?.status === 'paused') && Number(run?.remaining_ms ?? 0) > 0;
 }
 
 async function getPostgresApiState(team: { id: string; teamName: string }) {

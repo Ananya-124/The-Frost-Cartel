@@ -67,9 +67,46 @@ export const AdminAuctionTab: React.FC = () => {
           >
             {advancingAll ? 'UPDATING TEAMS…' : '⚡ UNLOCK ROUND 2 FOR ALL TEAMS'}
           </button>
+          <button
+            className={`${btnCls} bg-gradient-to-r from-cyan-700 via-teal-600 to-cyan-800 hover:from-cyan-600 hover:to-teal-500 text-white font-bold shadow-[0_0_12px_rgba(6,182,212,0.4)] disabled:opacity-50`}
+            disabled={advancingAll}
+            onClick={async () => {
+              if (!window.confirm('⚡ Advance ALL teams to Round 3: Paradox Hunt? This will finalize Rounds 1 & 2, sync won auction cards to inventory, and unlock Round 3 for all squads.')) return;
+              setAdvancingAll(true);
+              try {
+                const res = await progressionService.adminRound3Global('advance', 'Admin advanced all teams to Round 3 from Auction portal');
+                setMsg(`⚡ Successfully advanced all teams to Round 3! (${res.updatedCount} squads updated, ${res.cardsSynced} cards synced)`);
+                setSessionExpired(false);
+                setBump((n) => n + 1);
+              } catch (err) {
+                setSessionExpired(false);
+                setMsg(err instanceof Error ? err.message : 'Failed to update teams to Round 3.');
+              } finally {
+                setAdvancingAll(false);
+              }
+            }}
+          >
+            {advancingAll ? 'UPDATING TEAMS…' : '⚡ ADVANCE ALL TEAMS TO ROUND 3'}
+          </button>
           <button className={`${btnCls} border border-red-500/60 text-red-400`} onClick={() => { if (window.confirm('Auction history cannot be erased. Submit a reset request for an audited rejection?')) void act(round2Service.admin.reset()); }}>REQUEST RESET</button>
         </div>
-        {msg && <p role="status" className="mt-2 text-sm text-red-400">{sessionExpired ? 'Your administrator session has expired or is not authorized. Sign in again through the admin portal.' : msg}</p>}
+        {msg && (
+          <div role="status" className={`mt-3 p-3 rounded-lg border text-sm flex flex-wrap items-center justify-between gap-2 ${sessionExpired ? 'border-red-500/60 bg-red-950/40 text-red-300' : 'border-amber-500/40 bg-black/60 text-amber-200'}`}>
+            <span>{sessionExpired ? 'Your administrator session has expired or is not authorized. Sign in again through the admin portal.' : msg}</span>
+            {sessionExpired && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.hash = '#/admin/dashboard';
+                  window.location.reload();
+                }}
+                className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white font-cinzel text-xs font-bold uppercase tracking-wider"
+              >
+                Sign in again
+              </button>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="stone-panel rounded-xl p-5">
@@ -91,21 +128,39 @@ export const AdminAuctionTab: React.FC = () => {
       <section className="stone-panel rounded-xl p-5">
         <h3 className="font-cinzel tracking-widest text-cartel-silver/70 text-xs mb-2">CARDS</h3>
         <ul className="space-y-2">
-          {data?.cards.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-2">
-              <CardArt card={c} className="h-20 w-16 rounded border border-amber-400/50 object-cover" />
-              <span className="w-48 font-cinzel">{c.name}</span>
-              <span className="w-40 text-xs uppercase text-cartel-silver/70">{c.status}{c.winner ? ` → ${c.winner} @ ${c.price}` : ''}</span>
-              {(c.status === 'pending' || c.status === 'unsold') && (
-                <>
-                  <label className="text-xs text-cartel-silver/70">Base price
-                    <input type="number" min={1} value={bases[c.id] ?? String(c.defaultBase)} onChange={(e) => setBases({ ...bases, [c.id]: e.target.value })} className={`${inputCls} ml-2 w-24`} />
-                  </label>
-                  <button disabled={!!live} className={`${btnCls} bg-cartel-pumpkin text-black`} onClick={() => void act(round2Service.admin.start(c.id, Number(bases[c.id] ?? c.defaultBase), Number(duration)))}>START BIDDING</button>
-                </>
-              )}
-            </li>
-          ))}
+          {data?.cards.map((c) => {
+            const isLive = live && live.cardId === c.id;
+            return (
+              <li key={c.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-2">
+                <CardArt card={c} className="h-20 w-16 rounded border border-amber-400/50 object-cover" />
+                <span className="w-48 font-cinzel">{c.name}</span>
+                <span className="w-44 text-xs font-mono">
+                  {isLive ? (
+                    <span className="text-amber-300 font-bold tracking-wider">● LIVE ON BLOCK</span>
+                  ) : (
+                    <span className="text-emerald-400 font-semibold">
+                      AVAILABLE FOR SALE
+                      {c.winner ? <span className="block text-[10px] text-stone-400">(Sold: {c.winner} @ {c.price} CR)</span> : null}
+                    </span>
+                  )}
+                </span>
+                {!isLive && (
+                  <>
+                    <label className="text-xs text-cartel-silver/70">Base price
+                      <input type="number" min={1} value={bases[c.id] ?? String(c.defaultBase)} onChange={(e) => setBases({ ...bases, [c.id]: e.target.value })} className={`${inputCls} ml-2 w-24`} />
+                    </label>
+                    <button
+                      disabled={!!live}
+                      className={`${btnCls} bg-cartel-pumpkin text-black font-bold hover:brightness-110 disabled:opacity-40`}
+                      onClick={() => void act(round2Service.admin.start(c.id, Number(bases[c.id] ?? c.defaultBase), Number(duration)))}
+                    >
+                      {c.status === 'sold' ? 'RE-AUCTION CARD' : 'START BIDDING'}
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
@@ -123,7 +178,7 @@ export const AdminAuctionTab: React.FC = () => {
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-xs text-cartel-silver/50">Wallet balances and card ownership come from PostgreSQL. Card ownership here does not grant Round 3 abilities.</p>
+        <p className="mt-2 text-xs text-cartel-silver/50">Wallet balances and card ownership come from PostgreSQL. Won cards are usable by teams in Round 3.</p>
       </section>
 
       <section className="stone-panel rounded-xl p-5">

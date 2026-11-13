@@ -78,6 +78,25 @@ export const AdminProgressionControls: React.FC<Props> = ({ teamId, teamName, on
         <button
           type="button"
           onClick={() => {
+            if (!window.confirm('⚡ Advance and update ALL squads simultaneously to Round 3: Paradox Hunt? This will complete prior rounds, sync auction power cards, and unseal Round 3 for all squads.')) return;
+            setLoading(true);
+            void progressionService.adminRound3Global('advance', 'Admin batch advanced all squads to Round 3')
+              .then((res) => {
+                setNotice(`⚡ Updated all squads to Round 3 simultaneously! (${res.updatedCount} squads updated, ${res.cardsSynced} cards synced).`);
+                void load();
+                void onProgressChanged?.();
+              })
+              .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Batch advance to Round 3 failed.'))
+              .finally(() => setLoading(false));
+          }}
+          disabled={loading || busyRound !== null}
+          className="rounded border border-cyan-500/50 bg-cyan-950/40 hover:bg-cyan-900/60 px-2.5 py-1 text-[10px] font-cinzel font-bold uppercase text-cyan-300 transition-colors cursor-pointer disabled:opacity-50"
+        >
+          ⚡ Advance All to R3
+        </button>
+        <button
+          type="button"
+          onClick={() => {
             if (!window.confirm(`⚠️ Reset progress for EVERY squad across the tournament? All squads will be returned to Round 1 staged.`)) return;
             setLoading(true);
             void progressionService.adminResetAllTeamsProgress('Reset all squads triggered from team progression')

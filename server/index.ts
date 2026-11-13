@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth.routes.ts';
 import { adminRouter } from './routes/admin.routes.ts';
 import { leaderboardRouter } from './routes/leaderboard.routes.ts';
 import { round1Router } from './routes/round1.routes.ts';
+import { reconcileAllRound1Credits } from './services/round1Gameplay.ts';
 import { round2Router, startRound2AuctionTimer } from './routes/round2.routes.ts';
 import { round3Router } from './routes/round3.routes.ts';
 import { round4Router } from './routes/round4.routes.ts';
@@ -101,6 +102,7 @@ if (process.env.NODE_ENV !== 'test') {
       await ensureBootstrapAdmin(postgresPool);
     }
     if (postgresPool) startRound2AuctionTimer(postgresPool);
+    await reconcileAllRound1Credits(postgresPool);
     app.listen(Number(PORT), () => console.log(`[FROST CARTEL] Authoritative Backend listening on http://127.0.0.1:${PORT}`));
   };
   void start().catch((error: unknown) => {

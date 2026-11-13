@@ -9,7 +9,7 @@ import { activateCardEffect, createCardEffects } from './cards/cardEffects';
 import { type GameContext, Scheduler } from './context';
 import { advanceHunt, endGame, startHunt } from './hunts/huntManager';
 import { InputManager } from './input/InputManager';
-import { handleActionKey, type Hunt1InteractionHandler, type Hunt2InteractionHandler, type Hunt3InteractionHandler } from './input/playerControls';
+import { handleActionKey, triggerPlayerAction, type Hunt1InteractionHandler, type Hunt2InteractionHandler, type Hunt3InteractionHandler } from './input/playerControls';
 import { pressPuzzleKey } from './puzzles/puzzleManager';
 import { createInitialState } from './state/createInitialState';
 import type { GameStore } from './state/store';
@@ -43,6 +43,9 @@ export class GameEngine {
   private lastTime = 0;
   private running = false;
   private gameplayEnabled = true;
+  private readonly hunt1Handler?: Hunt1InteractionHandler;
+  private readonly hunt2Handler?: Hunt2InteractionHandler;
+  private readonly hunt3Handler?: Hunt3InteractionHandler;
 
   constructor(
     store: GameStore,
@@ -56,6 +59,9 @@ export class GameEngine {
     this.store = store;
     this.els = els;
     this.cardUseHandler = cardUseHandler;
+    this.hunt1Handler = hunt1InteractionHandler;
+    this.hunt2Handler = hunt2InteractionHandler;
+    this.hunt3Handler = hunt3InteractionHandler;
     this.store.replaceState(initialState);
     this.ctx = {
       state: store.state,
@@ -140,6 +146,12 @@ export class GameEngine {
     this.flush();
   }
 
+  triggerAction(index: PlayerIndex): void {
+    if (!this.gameplayEnabled || this.ctx.state.phase !== 'playing') return;
+    triggerPlayerAction(this.ctx, index, this.hunt1Handler, this.hunt2Handler, this.hunt3Handler);
+    this.flush();
+  }
+
   setCards(cards: readonly PowerCard[]): void {
     this.ctx.state.cards = cards.map((card) => ({ ...card }));
     this.store.emit();
@@ -187,10 +199,12 @@ export class GameEngine {
     const state = this.ctx.state;
     const dt = Math.min(MAX_FRAME_DT, (timestamp - this.lastTime) / 1000 || 0);
     this.lastTime = timestamp;
-    if (this.gameplayEnabled) state.time += dt;
+    if (this.gameplayEnabled || state.phase === 'playing') state.time += dt;
 
-    if (state.phase === 'playing' && this.gameplayEnabled) {
-      updateGame(this.ctx, this.input, dt);
+    if (state.phase === 'playing') {
+      if (this.gameplayEnabled) {
+        updateGame(this.ctx, this.input, dt);
+      }
       for (const i of [0, 1] as const) {
         this.renderer.drawTimeline(state, i);
         const distorted = state.distortion > 0;

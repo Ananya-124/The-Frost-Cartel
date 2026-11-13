@@ -82,15 +82,33 @@
 
 .prompt {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 64px;
   text-align: center;
-  z-index: 3;
-  pointer-events: none;
-  font-size: 15px;
-  color: var(--gold-bright);
+  z-index: 5;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--gold-bright, #ffd27a);
+  background: rgba(14, 16, 20, 0.92);
+  border: 1.5px solid rgba(245, 158, 11, 0.7);
+  border-radius: 8px;
+  padding: 6px 18px;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0, 0, 0, 0.9);
   text-shadow: 0 0 8px #000, 0 1px 3px #000;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.15s ease-out;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.prompt:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  transform: translateX(-50%) scale(1.05);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), 0 4px 14px rgba(0, 0, 0, 0.95);
 }
 
 .message {

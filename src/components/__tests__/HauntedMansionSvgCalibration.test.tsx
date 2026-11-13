@@ -7,8 +7,7 @@ import {
   STAGE2_CANONICAL_IMAGES,
 } from '../game/stage2/stage2TargetsConfig';
 
-describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", () => {
-  const ghostDef = STAGE2_TARGET_DEFINITIONS.find((t) => t.targetId === 'ghost')!;
+describe("Stage 2: The Haunted Mansion / Spider Web SVG Calibration (Ghost Removed)", () => {
   const webDef = STAGE2_TARGET_DEFINITIONS.find((t) => t.targetId === 'spider_web')!;
   const mansionImage = STAGE2_CANONICAL_IMAGES.find((img) => img.id === 'img_05')!;
 
@@ -16,35 +15,15 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
     vi.clearAllMocks();
   });
 
-  it("declares exact intrinsic dimensions (1024 x 629) for the redesigned Haunted Mansion", () => {
+  it("declares exact intrinsic dimensions (1024 x 629) for the redesigned Haunted Mansion with ghost removed", () => {
     expect(mansionImage).toBeDefined();
     expect(mansionImage.width).toBe(1024);
     expect(mansionImage.height).toBe(629);
     expect(mansionImage.imageUrl).toBe('/assets/stage-02/photographs/haunted-mansion-master.webp');
-  });
-
-  it('calibrates new organic cubic Bézier silhouette for the Ghost inside the oval portrait above the clock', () => {
-    expect(ghostDef).toBeDefined();
-    expect(ghostDef.targetId).toBe('ghost');
-    expect(ghostDef.x).toBe(399);
-    expect(ghostDef.y).toBe(388);
-    expect(ghostDef.width).toBe(27);
-    expect(ghostDef.height).toBe(58);
-
-    // Percentages calculated against 1024 x 629
-    expect(ghostDef.xPercent).toBeCloseTo(38.96, 1);
-    expect(ghostDef.yPercent).toBeCloseTo(61.69, 1);
-    expect(ghostDef.widthPercent).toBeCloseTo(2.64, 1);
-    expect(ghostDef.heightPercent).toBeCloseTo(9.22, 1);
-
-    // Old coordinates from Image A (1200x896) must be completely discarded
-    expect(ghostDef.svgPath).not.toContain('518.0,464.5');
-    expect(ghostDef.svgPath).not.toContain('479.5,456.0');
-
-    // New path starts at head crown and uses smooth cubic Béziers
-    expect(ghostDef.svgPath.startsWith('M 413 388')).toBe(true);
-    expect(ghostDef.svgPath).toContain('C 426 426 425 434 423 440');
-    expect(ghostDef.svgPath.endsWith('Z')).toBe(true);
+    // Ghost is removed from Stage 2 and UI
+    expect(mansionImage.hotspots).toHaveLength(1);
+    expect(mansionImage.hotspots[0].targetId).toBe('spider_web');
+    expect(STAGE2_TARGET_DEFINITIONS.find((t) => t.targetId === 'ghost')).toBeUndefined();
   });
 
   it('calibrates new organic cubic Bézier silhouette for the Spider Web in the upper-right ceiling arch', () => {
@@ -71,20 +50,6 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
     expect(webDef.svgPath.endsWith('Z')).toBe(true);
   });
 
-  it('verifies ghost and spider web targets maintain complete spatial isolation and non-overlapping domains', () => {
-    // Spider web is in upper-right arch
-    const webMaxY = webDef.y + webDef.height;
-
-    // Ghost is in oval portrait above grandfather clock
-    const ghostMinY = ghostDef.y;
-
-    // Vertical separation > 200px
-    expect(ghostMinY - webMaxY).toBeGreaterThan(200);
-
-    // Horizontal separation > 400px
-    expect(webDef.x - (ghostDef.x + ghostDef.width)).toBeGreaterThan(400);
-  });
-
   it('renders completely invisible hit paths with 0 pre-discovery outline or hover highlight', () => {
     const mockClick = vi.fn();
     const mockClose = vi.fn();
@@ -101,11 +66,8 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
       />
     );
 
-    // Hit paths exist with opacity-0
-    const hitGhost = container.querySelector('#hit_hs_ghost');
-    expect(hitGhost).toBeInTheDocument();
-    expect(hitGhost).toHaveClass('opacity-0');
-    expect(hitGhost).toHaveClass('hover:opacity-0');
+    // Ghost hit path does NOT exist
+    expect(container.querySelector('#hit_hs_ghost')).not.toBeInTheDocument();
 
     const hitWeb = container.querySelector('#hit_hs_web');
     expect(hitWeb).toBeInTheDocument();
@@ -113,7 +75,6 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
     expect(hitWeb).toHaveClass('hover:opacity-0');
 
     // Discovered visual paths do NOT exist before discovery
-    expect(container.querySelector('#visual_hs_ghost')).not.toBeInTheDocument();
     expect(container.querySelector('#visual_hs_web')).not.toBeInTheDocument();
 
     // No golden stroke before discovery
@@ -121,16 +82,15 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
     expect(goldPaths).toHaveLength(0);
   });
 
-  it('reveals golden outline and checkmark badge independently for Ghost and Spider Web', () => {
+  it('reveals golden outline and checkmark badge for Spider Web upon discovery', () => {
     const mockClick = vi.fn();
     const mockClose = vi.fn();
     const mockMiss = vi.fn();
 
-    // Case 1: Only Ghost discovered
-    const { container: containerMansion, rerender } = render(
+    const { container } = render(
       <PhotoInspectionViewer
         image={mansionImage}
-        foundTargetIds={['ghost']}
+        foundTargetIds={['spider_web']}
         stageCleared={false}
         onClose={mockClose}
         onHotspotClick={mockClick}
@@ -138,34 +98,16 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
       />
     );
 
-    const visualGhost = containerMansion.querySelector('#visual_hs_ghost');
-    expect(visualGhost).toBeInTheDocument();
-    expect(visualGhost?.getAttribute('stroke')).toBe('#fbbf24');
-    expect(containerMansion.querySelector('#visual_hs_web')).not.toBeInTheDocument();
-
-    // Case 2: Both Ghost and Spider Web discovered
-    rerender(
-      <PhotoInspectionViewer
-        image={mansionImage}
-        foundTargetIds={['ghost', 'spider_web']}
-        stageCleared={false}
-        onClose={mockClose}
-        onHotspotClick={mockClick}
-        onMissedClick={mockMiss}
-      />
-    );
-
-    expect(containerMansion.querySelector('#visual_hs_ghost')).toBeInTheDocument();
-    const visualWeb = containerMansion.querySelector('#visual_hs_web');
+    const visualWeb = container.querySelector('#visual_hs_web');
     expect(visualWeb).toBeInTheDocument();
     expect(visualWeb?.getAttribute('stroke')).toBe('#fbbf24');
 
-    // Checkmarks present for both
-    const checkmarks = containerMansion.querySelectorAll('svg text');
-    expect(checkmarks.length).toBeGreaterThanOrEqual(2);
+    // Checkmark present
+    const checkmarks = container.querySelectorAll('svg text');
+    expect(checkmarks.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('fires onHotspotClick specifically when clicking Ghost and Spider Web hit areas', () => {
+  it('fires onHotspotClick specifically when clicking Spider Web hit area', () => {
     const mockClick = vi.fn();
     const mockClose = vi.fn();
     const mockMiss = vi.fn();
@@ -181,20 +123,9 @@ describe("Stage 2: The Haunted Mansion / Ghost & Spider Web SVG Calibration", ()
       />
     );
 
-    const hitGhost = container.querySelector('#hit_hs_ghost')!;
-    fireEvent.click(hitGhost);
-    expect(mockClick).toHaveBeenCalledTimes(1);
-    expect(mockClick).toHaveBeenCalledWith(
-      expect.objectContaining({
-        targetId: 'ghost',
-        id: 'hs_ghost',
-      }),
-      expect.anything()
-    );
-
     const hitWeb = container.querySelector('#hit_hs_web')!;
     fireEvent.click(hitWeb);
-    expect(mockClick).toHaveBeenCalledTimes(2);
+    expect(mockClick).toHaveBeenCalledTimes(1);
     expect(mockClick).toHaveBeenCalledWith(
       expect.objectContaining({
         targetId: 'spider_web',

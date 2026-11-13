@@ -51,6 +51,7 @@ export class Renderer {
 
   private readonly grain: HTMLCanvasElement = createGrainTile(160);
   private readonly scanlines: HTMLCanvasElement = createScanlineTile();
+  private readonly patternCache = new WeakMap<CanvasRenderingContext2D, { grain: CanvasPattern | null; scanlines: CanvasPattern | null }>();
 
   private readonly menuView: View;
   private readonly timelineViews: [View, View];
@@ -154,7 +155,15 @@ export class Renderer {
     ctx.globalCompositeOperation = 'overlay';
     ctx.globalAlpha = (timeline === 1 ? 0.06 : 0.09) * intensity;
     ctx.translate(-gx, -gy);
-    const grainPattern = ctx.createPattern(this.grain, 'repeat');
+    let patterns = this.patternCache.get(ctx);
+    if (!patterns) {
+      patterns = {
+        grain: ctx.createPattern(this.grain, 'repeat'),
+        scanlines: ctx.createPattern(this.scanlines, 'repeat'),
+      };
+      this.patternCache.set(ctx, patterns);
+    }
+    const grainPattern = patterns.grain;
     if (grainPattern) {
       ctx.fillStyle = grainPattern;
       ctx.fillRect(0, 0, width + 160, height + 160);
@@ -165,7 +174,7 @@ export class Renderer {
     if (timeline === 1) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 0.12 * intensity;
-      const lines = ctx.createPattern(this.scanlines, 'repeat');
+      const lines = patterns.scanlines;
       if (lines) {
         ctx.fillStyle = lines;
         ctx.fillRect(0, 0, width, height);

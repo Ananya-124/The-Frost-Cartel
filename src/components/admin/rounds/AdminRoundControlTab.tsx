@@ -371,6 +371,26 @@ export const AdminRoundControlTab: React.FC<AdminRoundControlTabProps> = ({
               disabled={actionBusy}
               onClick={() => {
                 requestConfirmation(
+                  '⚡ ADVANCE ALL SQUADS TO ROUND 3',
+                  'Are you sure you want to advance EVERY squad across the tournament to Round 3: Paradox Hunt simultaneously? This will finalize Rounds 1 & 2 for all squads, sync all won auction power cards into inventory, and immediately unseal Round 3.',
+                  async () => {
+                    const res = await progressionService.adminRound3Global('advance', 'Admin advanced all squads simultaneously to Round 3');
+                    setFeedbackNotice(`⚡ Successfully advanced all squads to Round 3! (${res.updatedCount} squads updated, ${res.cardsSynced} card inventory records synced)`);
+                    setTimeout(() => setFeedbackNotice(null), 4000);
+                  },
+                  false,
+                  'Advance All to Round 3'
+                );
+              }}
+              className="px-3.5 py-1.5 rounded bg-gradient-to-r from-cyan-700 via-teal-600 to-cyan-800 hover:from-cyan-600 hover:to-teal-500 text-white font-cinzel font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer disabled:opacity-50"
+            >
+              ⚡ Advance All to Round 3
+            </button>
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => {
+                requestConfirmation(
                   '⚡ ADVANCE ALL SQUADS TO ROUND 4',
                   'Are you sure you want to advance EVERY squad across the tournament directly to Round 4: The Campus Expedition? This will auto-qualify all squads, assign campus routes, and unseal Round 4.',
                   async () => {

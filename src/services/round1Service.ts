@@ -62,12 +62,12 @@ export class Round1Service {
   // Stage 2 Configuration: Haunted Image Hunt
   private stage2Config: Stage2Config = {
     title: 'The Haunted Image Hunt',
-    description: 'Inspect scattered antique photographs to identify 12 occult Halloween relics.',
+    description: 'Inspect scattered antique photographs to identify 11 occult Halloween relics.',
     rewardCredits: STAGE_CREDITS['stage-2'], // 150
     images: [...STAGE2_CANONICAL_IMAGES],
     targets: [...STAGE2_CANONICAL_TARGETS],
-    hintDeduction: 15, // Configurable deduction for hint usage
-    incorrectClickPenalty: 0, // Configurable deduction for wrong clicks (default 0)
+    hintDeduction: 0, // No deduction for hint usage
+    incorrectClickPenalty: 0, // No deduction for wrong clicks
   };
 
   // Stage 3 Configuration: The Forgotten Graveyard
@@ -118,7 +118,7 @@ export class Round1Service {
       acceptedAnswer: 'THE NIGHT RETURNS',
       isEscaped: false,
     },
-    incorrectAnswerPenalty: 10, // Deduct 10 credits for incorrect final gate submissions
+    incorrectAnswerPenalty: 0, // No credit deduction for incorrect final gate submissions
   };
 
   // In-Memory Team Game States (keyed by teamId)
@@ -439,29 +439,32 @@ export class Round1Service {
     }
 
     const stage = session.stages[stageId];
-    // Idempotent guard: Stage already completed
-    if (stage.status === 'completed' && stage.earnedCredits > 0) {
+    // Idempotent guard: Stage already completed with full reward
+    const reward = STAGE_CREDITS[stageId];
+    if (stage.status === 'completed' && stage.earnedCredits >= reward) {
       return { success: false, creditsAwarded: 0 };
     }
 
-    const reward = STAGE_CREDITS[stageId];
+    const deficit = Math.max(0, reward - (stage.earnedCredits || 0));
     stage.status = 'completed';
     stage.earnedCredits = reward;
-    stage.completionTime = new Date().toISOString();
+    stage.completionTime = stage.completionTime || new Date().toISOString();
 
-    session.credits = Math.min(500, session.credits + reward);
+    if (deficit > 0) {
+      session.credits = Math.min(500, session.credits + deficit);
 
-    const tx: ScoreTransaction = {
-      id: `tx_${Date.now()}_${stageId}`,
-      teamId,
-      stageId,
-      type: 'stage_completion',
-      deltaCredits: reward,
-      balanceAfter: session.credits,
-      reason: `Completed ${stageId.toUpperCase()} (${reward} Credits)`,
-      timestamp: new Date().toISOString(),
-    };
-    session.scoreTransactions.push(tx);
+      const tx: ScoreTransaction = {
+        id: `tx_${Date.now()}_${stageId}`,
+        teamId,
+        stageId,
+        type: 'stage_completion',
+        deltaCredits: deficit,
+        balanceAfter: session.credits,
+        reason: `Completed ${stageId.toUpperCase()} (${reward} Credits)`,
+        timestamp: new Date().toISOString(),
+      };
+      session.scoreTransactions.push(tx);
+    }
 
     // Check if all configured stages are completed
     const allDone = Object.values(session.stages).every(
@@ -473,16 +476,16 @@ export class Round1Service {
     }
 
     this.persistToStorage();
-    if (this.onScoreSync) {
+    if (this.onScoreSync && deficit > 0) {
       this.onScoreSync(
         teamId,
         session.credits,
         stageId,
         'completed',
-        `Completed ${stageId.toUpperCase()} (+${reward} CR)`
+        `Completed ${stageId.toUpperCase()} (+${deficit} CR)`
       );
     }
-    return { success: true, creditsAwarded: reward };
+    return { success: true, creditsAwarded: deficit };
   }
 
   // ---------------------------------------------------------------------------
@@ -638,6 +641,8 @@ export class Round1Service {
       stage.status = 'completed';
       stage.completionTime = new Date().toISOString();
     }
+    // Assign credits strictly for trials actually completed / won
+    stage.earnedCredits = state.trials.reduce((sum, t) => sum + (t.status === 'won' ? t.earnedCredits : 0), 0);
     const allDone = Object.values(session.stages).every((s) => s.status === 'completed' || s.status === 'not_configured');
     if (allDone) {
       session.status = 'completed';
@@ -647,82 +652,22 @@ export class Round1Service {
   }
 
   /**
-   * Use a hint (deducts credits if configured by admin).
+   * Use a hint (no credit deduction in Round 1).
    */
-  useHint(teamId: string, stageId: StageId, hintLabel: string): { deduction: number } {
+  useHint(teamId: string, stageId: StageId, _hintLabel: string): { deduction: number } {
     const session = this.teamStates.get(teamId);
-    if (!session) return { deduction: 0 };
-
-    const deduction = stageId === 'stage-2' ? this.stage2Config.hintDeduction : 0;
-    if (deduction > 0) {
-      session.credits = Math.max(0, session.credits - deduction);
-      const tx: ScoreTransaction = {
-        id: `tx_hint_${Date.now()}`,
-        teamId,
-        stageId,
-        type: 'hint_deduction',
-        deltaCredits: -deduction,
-        balanceAfter: session.credits,
-        reason: `Hint requested: ${hintLabel} (-${deduction} CR)`,
-        timestamp: new Date().toISOString(),
-      };
-      session.scoreTransactions.push(tx);
-    }
-
-    if (stageId === 'stage-2') {
+    if (session && stageId === 'stage-2') {
       session.stage2State.usedHintsCount++;
+      this.persistToStorage();
     }
-    this.persistToStorage();
-    if (this.onScoreSync && deduction > 0) {
-      this.onScoreSync(
-        teamId,
-        session.credits,
-        stageId,
-        'in_progress',
-        `Hint requested: ${hintLabel} (-${deduction} CR)`
-      );
-    }
-    return { deduction };
+    return { deduction: 0 };
   }
 
   /**
-   * Record penalty for incorrect answer attempt (if configured by admin).
+   * Record penalty for incorrect answer attempt (no credit deduction in Round 1).
    */
-  recordPenalty(teamId: string, stageId: StageId, reason: string): { penalty: number } {
-    const session = this.teamStates.get(teamId);
-    if (!session) return { penalty: 0 };
-
-    const penalty =
-      stageId === 'stage-2'
-        ? this.stage2Config.incorrectClickPenalty
-        : this.stage3Config.incorrectAnswerPenalty;
-
-    if (penalty > 0) {
-      session.credits = Math.max(0, session.credits - penalty);
-      const tx: ScoreTransaction = {
-        id: `tx_pen_${Date.now()}`,
-        teamId,
-        stageId,
-        type: 'penalty_deduction',
-        deltaCredits: -penalty,
-        balanceAfter: session.credits,
-        reason: `${reason} (-${penalty} CR)`,
-        timestamp: new Date().toISOString(),
-      };
-      session.scoreTransactions.push(tx);
-      this.persistToStorage();
-      if (this.onScoreSync) {
-        this.onScoreSync(
-          teamId,
-          session.credits,
-          stageId,
-          'in_progress',
-          `${reason} (-${penalty} CR)`
-        );
-      }
-    }
-
-    return { penalty };
+  recordPenalty(_teamId: string, _stageId: StageId, _reason: string): { penalty: number } {
+    return { penalty: 0 };
   }
 
   // Stage 2: Register discovered target item

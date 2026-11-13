@@ -211,8 +211,8 @@ export const AdminStageConfigPanel: React.FC = () => {
           </div>
 
           <div className="p-3 rounded bg-black/40 border border-white/10 text-xs font-mono">
-            <div className="text-[10px] text-cartel-silver/60 uppercase mb-1">Current Target Objects (12 Relics):</div>
-            <div className="text-white">Pumpkin, Skull, Ghost, Bat, Witch Hat, Spider, Spider Web, Coffin, Black Cat, Potion Bottle, Candle, Skeleton Key.</div>
+            <div className="text-[10px] text-cartel-silver/60 uppercase mb-1">Current Target Objects (11 Relics):</div>
+            <div className="text-white">Pumpkin, Skull, Bat, Witch Hat, Spider, Spider Web, Coffin, Black Cat, Potion Bottle, Lantern, Skeleton Key.</div>
           </div>
 
           <div className="flex justify-end pt-2">

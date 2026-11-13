@@ -103,10 +103,12 @@ export async function placeAuctionBid(pool: Pool, input: PlaceAuctionBidInput): 
       throw new AuctionError('This team is not eligible to bid in Round 2.', 'FORBIDDEN');
     }
 
-    const high = await currentHighBid(client, lot.id);
-    if (high.rowCount && high.rows[0].team_id === input.teamId) throw new AuctionError('This team already leads this lot.', 'CONFLICT');
-    const minimumBid = high.rowCount ? high.rows[0].amount + MINIMUM_INCREMENT : lot.starting_bid;
-    if (input.amount < minimumBid) throw new AuctionError(`Minimum bid is ${minimumBid}.`, 'INVALID');
+    const alreadyPlaced = await client.query<{ id: string }>(
+      'SELECT id FROM round2_bids WHERE lot_id=$1 AND team_id=$2', [lot.id, input.teamId]);
+    if (alreadyPlaced.rowCount) throw new AuctionError('You have already placed a bid for this card. Each team can only bid once.', 'CONFLICT');
+
+    const minimumBid = lot.starting_bid;
+    if (input.amount < minimumBid) throw new AuctionError(`Minimum bid is ${minimumBid} CR.`, 'INVALID');
     if (input.amount > team.rows[0].total_credits) throw new AuctionError('Not enough credits.', 'INSUFFICIENT_CREDITS');
 
     const bidId = `bid-${randomUUID()}`;
@@ -143,9 +145,6 @@ export async function startAuctionLot(pool: Pool, input: StartAuctionLotInput, a
        WHERE round_id=2 AND is_active=true AND metadata->>'auctionCardId'=$1`, [String(input.cardId)]);
     const card = cardResult.rows[0];
     if (!card) throw new AuctionError('Auction card is not configured.', 'NOT_FOUND');
-    if ((await client.query('SELECT 1 FROM round2_settlements WHERE power_card_id=$1 LIMIT 1', [card.id])).rowCount) {
-      throw new AuctionError('This card has already been sold.', 'CONFLICT');
-    }
     if ((await client.query("SELECT 1 FROM round2_auction_lots WHERE status='ACTIVE' LIMIT 1")).rowCount) {
       throw new AuctionError('A card is already live. End it first.', 'CONFLICT');
     }
@@ -295,9 +294,21 @@ export async function getAuctionView(pool: Pool, teamId?: string) {
     const bids = await pool.query<{ team_name: string; amount: number; placed_at: Date }>(
       `SELECT t.team_name,b.amount,b.placed_at FROM round2_bids b JOIN teams t ON t.id=b.team_id
        WHERE b.lot_id=$1 ORDER BY b.amount DESC,b.placed_at ASC,b.id ASC`, [liveRow.id]);
-    live = { cardId: liveRow.card_id, base: liveRow.starting_bid, highBid: liveRow.high_bid, highBidder: liveRow.high_bidder,
+    const walletRow = teamResult.rows[0] as { team_name: string } | undefined;
+    const myBid = walletRow ? bids.rows.find((b) => b.team_name === walletRow.team_name) : undefined;
+    const isTeamView = Boolean(teamId);
+    live = {
+      cardId: liveRow.card_id,
+      base: liveRow.starting_bid,
+      highBid: isTeamView ? 0 : liveRow.high_bid,
+      highBidder: isTeamView ? null : liveRow.high_bidder,
       endsAt: liveRow.ends_at?.getTime() ?? null,
-      bids: bids.rows.map((bid) => ({ team: bid.team_name, amount: bid.amount, t: bid.placed_at.getTime() })) };
+      myBid: myBid?.amount ?? null,
+      hasBid: Boolean(myBid),
+      bids: isTeamView
+        ? (myBid ? [{ team: myBid.team_name, amount: myBid.amount, t: myBid.placed_at.getTime() }] : [])
+        : bids.rows.map((bid) => ({ team: bid.team_name, amount: bid.amount, t: bid.placed_at.getTime() })),
+    };
   }
   const wallet = teamResult.rows[0] as { team_name: string; total_credits: number; spent: number; owned_cards: { id: number; name: string; price: number }[] } | undefined;
   const me = wallet ? { name: wallet.team_name, startCredits: wallet.total_credits + wallet.spent, spent: wallet.spent, credits: wallet.total_credits, cards: wallet.owned_cards } : null;

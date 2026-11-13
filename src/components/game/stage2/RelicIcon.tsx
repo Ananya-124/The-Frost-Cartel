@@ -159,27 +159,15 @@ const PotionBottleIcon: React.FC<IconRenderProps> = ({ className, fillColor, str
   </svg>
 );
 
-const CandleIcon: React.FC<IconRenderProps> = ({ className, fillColor, strokeColor, isFound }) => (
+const LanternIcon: React.FC<IconRenderProps> = ({ className, fillColor, strokeColor, isFound }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-    <rect
-      x="8"
-      y="8"
-      width="8"
-      height="14"
-      rx="1"
-      fill={fillColor}
-      fillOpacity={isFound ? 0.95 : 0.75}
-      stroke={strokeColor}
-      strokeWidth="1.2"
-    />
-    <path d="M12 8V5" stroke={strokeColor} strokeWidth="1.2" strokeLinecap="round" />
-    <path
-      d="M12 2C11 3 10 4 10 5C10 6.1 10.9 7 12 7C13.1 7 14 6.1 14 5C14 4 13 3 12 2Z"
-      fill="#ef4444"
-      stroke="#f59e0b"
-      strokeWidth="0.8"
-    />
-    <circle cx="12" cy="5" r="1" fill="#fef08a" />
+    <path d="M10 2C10 2 12 1 14 2C14 3 13 4 12 4C11 4 10 3 10 2Z" stroke={strokeColor} strokeWidth="1.2" />
+    <path d="M7 6L12 4L17 6L18 8H6L7 6Z" fill={fillColor} fillOpacity={isFound ? 0.95 : 0.75} stroke={strokeColor} strokeWidth="1.2" />
+    <rect x="7" y="8" width="10" height="9" rx="1" fill={fillColor} fillOpacity={isFound ? 0.95 : 0.65} stroke={strokeColor} strokeWidth="1.2" />
+    <path d="M10 8V17M14 8V17" stroke={strokeColor} strokeWidth="1" strokeOpacity="0.8" />
+    <path d="M12 10.5C11.3 11.3 11 12 11 12.8C11 13.8 11.5 14.5 12 14.5C12.5 14.5 13 13.8 13 12.8C13 12 12.7 11.3 12 10.5Z" fill="#ef4444" stroke="#f59e0b" strokeWidth="0.6" />
+    <circle cx="12" cy="13" r="0.8" fill="#fef08a" />
+    <path d="M6 17H18L17 20H7L6 17Z" fill={fillColor} fillOpacity={isFound ? 0.95 : 0.75} stroke={strokeColor} strokeWidth="1.2" />
   </svg>
 );
 
@@ -217,7 +205,8 @@ const RELIC_RENDERERS: Record<string, React.FC<IconRenderProps>> = {
   coffin: CoffinIcon,
   black_cat: BlackCatIcon,
   potion_bottle: PotionBottleIcon,
-  candle: CandleIcon,
+  candle: LanternIcon,
+  lantern: LanternIcon,
   skeleton_key: SkeletonKeyIcon,
 };
 

@@ -86,6 +86,37 @@ describe('temporary Round 3 Power Cards', () => {
     expect(activateCardEffect(ctx, 0)).toBe(false);
     expect(ctx.state.cards[0].uses).toBe(1);
   });
+
+  it('ravens-messenger highlights the next interactable object and consumes use once', () => {
+    const ctx = contextFor('ravens-messenger');
+    ctx.state.huntIndex = 1;
+    expect(activateCardEffect(ctx, 0)).toBe(true);
+    expect(ctx.state.cards[0].uses).toBe(0);
+    expect(ctx.state.highlightedObjectId).toBeTruthy();
+    expect(ctx.state.highlightTimer).toBe(15);
+    expect(activateCardEffect(ctx, 0)).toBe(false);
+  });
+
+  it('mechanics-curse validates an active sequence mechanism stage and consumes use once', () => {
+    const ctx = contextFor('mechanics-curse');
+    ctx.state.puzzles[0] = { kind: 'sequence', length: 3, input: [] };
+    expect(activateCardEffect(ctx, 0)).toBe(true);
+    expect(ctx.state.cards[0].uses).toBe(0);
+    expect(ctx.state.flags.pastNodeReady).toBe(true);
+    expect(ctx.state.puzzles[0]).toBeNull();
+    expect(activateCardEffect(ctx, 0)).toBe(false);
+  });
+
+  it('soul-surge completes a mechanism stage and consumes use once', () => {
+    const ctx = contextFor('soul-surge');
+    ctx.state.flags.tape = true;
+    ctx.state.flags.pastVerified = true;
+    ctx.state.flags.futureVerified = true;
+    expect(activateCardEffect(ctx, 0)).toBe(true);
+    expect(ctx.state.cards[0].uses).toBe(0);
+    expect(ctx.state.flags.pastNodeReady).toBe(true);
+    expect(activateCardEffect(ctx, 0)).toBe(false);
+  });
 });
 
 function requirePuzzleManager() {

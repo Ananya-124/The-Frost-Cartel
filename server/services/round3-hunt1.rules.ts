@@ -260,7 +260,7 @@ export function applyRound3Hunt1ActionToState(
         .every(([, done]) => done);
       const evidenceReady = TASKS.incidentConclusion.required.every((id) => state.subtasks[id]);
       const sequence = normalizeSequence(input.value.sequence);
-      if (!correctTask || !priorTasksReady || !evidenceReady) { actionSuccess = false; message = 'Complete the three earlier investigations and examine both final boards before submitting the conclusion.'; }
+      if (!correctTask || !priorTasksReady || !evidenceReady) { actionSuccess = false; message = 'Complete the three earlier investigations and examine both boards in the Research Laboratory before submitting the conclusion.'; }
       else if (input.type === 'incidentConclusionArchivist' && actor === 'archivist') {
         if (!sequence) { actionSuccess = false; message = 'Arrange the historical purpose and procedure before submitting.'; }
         else {
@@ -356,6 +356,6 @@ const EVIDENCE: Record<string, { title: string; location: string; content: strin
   cameraBuffer: { title: 'Camera buffer fragments', location: 'Observation room — Future', content: 'The buffer preserves four physical traces: soot beneath the lamp relay, a figure-shaped afterimage on the glass, a chair dragged toward the viewing pane, and an empty seat in the final frame.', inference: 'Compare the lamp, glass and chair traces to reconstruct the room’s physical sequence.' },
   signalChart: { title: 'Original signal routing blueprint', location: 'Communication room — Past', content: 'The blueprint contains a terminal legend, shield markings and a faded route key. Its sequence column is water-damaged and must be decoded from the routing symbols.', inference: 'Use the historical legend to distinguish the signal route from the shielding marks.' },
   cableJunction: { title: 'Damaged communication console', location: 'Communication room — Future', content: 'Four loose connectors lie beside the intake, ground, observer and transmit terminals. The console carries a scorched bypass bridge and a broken continuity seal.', inference: 'The physical console must be reconnected by hand; the bypass damaged its original continuity.' },
-  incidentBoardPast: { title: 'Past incident board', location: 'Investigation board — Past', content: 'The archive, generator, and observation records have been pinned together. The report’s grounding safeguard is missing from the signed copy.', inference: 'Use each verified task to construct the cause chain.' },
-  incidentBoardFuture: { title: 'Future incident board', location: 'Investigation board — Future', content: 'The relay jumper, open ground, and rerouted cable share the same copper braid. The tracks end beyond the observation glass.', inference: 'The physical evidence confirms the incident sequence and final manifestation.' },
+  incidentBoardPast: { title: 'Past incident board', location: 'Research Laboratory — Past', content: 'The archive, generator, and observation records have been pinned together in the Research Laboratory. The report’s grounding safeguard is missing from the signed copy.', inference: 'Use each verified task to construct the cause chain.' },
+  incidentBoardFuture: { title: 'Future incident board', location: 'Research Laboratory — Future', content: 'The relay jumper, open ground, and rerouted cable in the Research Laboratory share the same copper braid. The tracks end beyond the observation glass.', inference: 'The physical evidence confirms the incident sequence and final manifestation.' },
 };

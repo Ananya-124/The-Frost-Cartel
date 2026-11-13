@@ -47,8 +47,8 @@ export function clearStoredToken(type?: 'team' | 'admin'): void {
   } catch {}
 }
 
-export function getAuthHeaders(): Record<string, string> {
-  const token = getStoredToken();
+export function getAuthHeaders(type?: 'team' | 'admin'): Record<string, string> {
+  const token = getStoredToken(type);
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

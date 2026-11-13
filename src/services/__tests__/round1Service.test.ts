@@ -91,7 +91,7 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
       expect(service.beginStage1Attempt(id, 1).ok).toBe(true);
     });
 
-    it('completes the stage with partial credits when trial I is lost and trial II is won', () => {
+    it('completes the stage awarding only the 60 credits when trial I is lost and trial II is won', () => {
       const id = start();
       service.beginStage1Attempt(id, 0);
       service.beginStage1Attempt(id, 0);
@@ -100,6 +100,7 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
       service.resolveStage1Trial(id, 1, true);
       const session = service.getTeamSession(id, 'S1 Squad');
       expect(session.credits).toBe(60);
+      expect(session.stages['stage-1'].earnedCredits).toBe(60);
       expect(session.stages['stage-1'].status).toBe('completed');
     });
 
@@ -219,18 +220,16 @@ describe('Round1Service Master Rules & Idempotent Scoring', () => {
     expect(session.scoreTransactions.length).toBe(1);
   });
 
-  it('applies configurable hint deductions to team credit balance', () => {
+  it('does not deduct credits for hint usage in Round 1', () => {
     service.beginRound1('team_alpha', 'Alpha Squad');
     service.completeStage('team_alpha', 'stage-2'); // 150 CR
 
     const res = service.useHint('team_alpha', 'stage-2', 'Inspect Photo 1');
-    expect(res.deduction).toBe(15);
+    expect(res.deduction).toBe(0);
 
     const session = service.getTeamSession('team_alpha', 'Alpha Squad');
-    expect(session.credits).toBe(135);
-    expect(session.scoreTransactions.length).toBe(2);
-    expect(session.scoreTransactions[1].type).toBe('hint_deduction');
-    expect(session.scoreTransactions[1].deltaCredits).toBe(-15);
+    expect(session.credits).toBe(150);
+    expect(session.stage2State.usedHintsCount).toBe(1);
   });
 
   it('validates Stage 3 puzzles and awards 250 credits upon final gate escape', () => {

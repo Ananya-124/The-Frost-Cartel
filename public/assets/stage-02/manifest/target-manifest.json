@@ -107,12 +107,15 @@
   {
     "targetId": "candle",
     "aliases": [
+      "lantern",
       "candle",
+      "altar lantern",
+      "gothic lantern",
       "altar candle",
       "ritual candle"
     ],
-    "name": "Altar Candle",
-    "shortName": "Candle",
+    "name": "Gothic Lantern",
+    "shortName": "Lantern",
     "imageId": "img_04",
     "imageTitle": "The Witch's Belfry",
     "x": 382,
@@ -124,28 +127,6 @@
     "widthPercent": 2.73,
     "heightPercent": 8.17,
     "svgPath": "M 396 417 L 403 423 L 409 430 L 410 436 L 410 456 L 406 462 L 397 468 L 394 468 L 385 462 L 382 456 L 382 436 L 384 430 L 389 423 Z"
-  },
-  {
-    "targetId": "ghost",
-    "aliases": [
-      "ghost",
-      "spirit",
-      "apparition",
-      "spectral ghost"
-    ],
-    "name": "Spectral Ghost Apparition",
-    "shortName": "Ghost",
-    "imageId": "img_05",
-    "imageTitle": "The Haunted Mansion",
-    "x": 399,
-    "y": 388,
-    "width": 27,
-    "height": 58,
-    "xPercent": 38.96,
-    "yPercent": 61.69,
-    "widthPercent": 2.64,
-    "heightPercent": 9.22,
-    "svgPath": "M 413 388 C 418 388 421 391 421 396 C 421 401 418 405 418 408 C 422 410 426 414 426 419 C 426 426 425 434 423 440 C 421 444 416 446 412 446 C 407 446 403 444 401 440 C 399 434 399 426 399 419 C 399 414 403 410 407 408 C 407 405 404 401 404 396 C 404 391 408 388 413 388 Z"
   },
   {
     "targetId": "spider_web",

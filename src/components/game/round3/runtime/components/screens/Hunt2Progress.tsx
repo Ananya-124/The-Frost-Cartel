@@ -17,19 +17,57 @@ const OBJECTIVES: Record<Hunt2Challenge, Record<Hunt2Actor, string>> = {
   4: { archivist: 'Read the original circuit diagram and flow record. Configure the Past alignment, then initiate the synchronization pulse.', tracker: 'Map the four Future node conditions, configure the physical repairs, then complete the alternating stabilization cadence.' },
   5: { archivist: 'Restore and maintain the original event sequence, then prepare the memory control.', tracker: 'Use the verified sequence to activate all three containment mechanisms, then prepare the exposed anchor.' },
 };
-function fieldGuide(challenge: Hunt2Challenge, actor: Hunt2Actor): string {
-  if (challenge === 2) return actor === 'archivist'
-    ? 'PAST · Experiment room: press E at the Containment Experiment Archive. If it only shows the baseline memo, wait for the Tracker to finish 2 trials, then inspect the archive again to reveal the failed bright/warm reports. Submit “bright and warm” to reject those claims. After the Tracker submits the profile and arms the Future console, go to the Past Containment room and press E at the Historical Calibration Console within 10 seconds. No clock time is entered.'
-    : 'FUTURE · Experiment room: at the Frequency, Light and Temperature stations, test at least 4 distinct settings, including Frequency low, Light dark and Temperature cold. Submit that exact 3-part profile. Once both profiles are verified, press Enter at Future Containment Control to arm it; tell the Archivist to press E at the Past Historical Calibration Console within 10 seconds.';
-  if (challenge === 3) return actor === 'archivist'
-    ? 'Archive, Observation room and Communications room, Past: inspect the damaged photo, duplicated ledger and fragmented recording. Reconnect their relationships at the shared restoration board.'
-    : 'Experiment chamber, Main hall and Containment room, Future: inspect the unstable chamber, substituted symbols and displaced keepsake; place the six components at the restoration board.';
-  if (challenge === 4) return actor === 'archivist'
-    ? 'Containment room, Past: inspect the anchor diagram and flow record, submit the historical alignment, then operate the Past controls when the pulse starts.'
-    : 'Containment room, Future: inspect all four live nodes, submit repairs based on their readings, then follow the Future–Past–Future–Past pulse order.';
+function fieldGuide(challenge: Hunt2Challenge, actor: Hunt2Actor): string[] {
+  if (challenge === 2) {
+    return actor === 'archivist'
+      ? [
+          'Experiment Room (Past): Inspect the Containment Experiment Archive on the top-left wall. (If it only displays baseline memo, wait for the Tracker to finish 2 trials, then inspect the archive again to reveal the failed bright/warm reports).',
+          'Submit Conclusion: Click "Submit historical conclusion" below and select "Reject bright and warm conclusions as compromised".',
+          'Underground Containment (Past): After the Tracker arms containment, go to Past Containment and press E at the Historical Calibration Console within 10 seconds. No clock time is entered.',
+        ]
+      : [
+          'Experiment Room (Future): Run at least 4 trials across the Resonance, Light, and Temperature stations.',
+          'Submit Profile: Click "Submit experimental profile" below and select Frequency = Low, Light = Dark, Temperature = Cold.',
+          'Underground Containment (Future): Interact with "Containment Control" to arm the device (giving the Archivist 10 seconds to calibrate).',
+        ];
+  }
+  if (challenge === 3) {
+    return actor === 'archivist'
+      ? [
+          'Inspect 3 Past records: Damaged Photo (Archive), Duplicated Ledger (Observation Room), Fragmented Recording (Communications Room).',
+          'Shared Restoration Board (Observation Room): Submit historical relations (Photo: original source, Ledger: duplicate, Recording: fragmented voice, Keepsake: before test, Shadow: original identity, Name: Subject Zero).',
+          'Underground Containment (Past): Activate the Historical Memory Synchronizer (Tracker must restore within 10s).',
+        ]
+      : [
+          'Inspect 3 Future traces: Unstable Chamber (Research Lab), Substituted Symbols (Main Hall), Displaced Keepsake (Underground Containment).',
+          'Shared Restoration Board (Observation Room): Submit Future placements (Photo: entry, Ledger: archive, Recording: resonance, Keepsake: center, Shadow: mirror, Name: anchor).',
+          'Underground Containment (Future): Activate the Environmental Restoration Mechanism within 10s of the Archivist’s sync.',
+        ];
+  }
+  if (challenge === 4) {
+    return actor === 'archivist'
+      ? [
+          'Underground Containment (Past): Inspect Anchor Experiment Memory, Energy-Flow Record, and alignment nodes B & D.',
+          'Submit Alignment: Node A = East feed, Node B = West return, Node C = Central ground, Node D = Outer loop.',
+          'Cadence Pulse Sequence: When Tracker initiates, alternate pulses: pulse Node B (2nd pulse) and Node D (4th pulse).',
+        ]
+      : [
+          'Underground Containment (Future): Inspect and map all 4 live nodes: Node A, Node B, Node C, and Node D.',
+          'Submit Node Repairs: Node A = Stabilize surge, Node B = Reverse to forward, Node C = Reconnect ground, Node D = Hold stable.',
+          'Cadence Pulse Sequence: Engage Future Anchor Control, then pulse Node A (1st pulse) and Node C (3rd pulse) in alternating order.',
+        ];
+  }
   return actor === 'archivist'
-    ? 'Observation room and Containment room, Past: restore the original event order and stabilize the memory; prepare the Past control for synchronized activation.'
-    : 'Containment room, Future: activate the three mechanisms in the verified order and prepare the exposed anchor. Both players must activate their controls within the displayed window.';
+    ? [
+        'Observation Room (Past): Inspect Final Memory Projector and verify sequence: Arrival → Warning alarm → Containment fails.',
+        'Observation Room (Past): Interact with projector again to stabilize the memory.',
+        'Observation Room (Past): Prepare Memory Stabilization Console for synchronized activation.',
+      ]
+    : [
+        'Underground Containment (Future): Activate 3 mechanisms in order: Mechanism B (Arrival) → Mechanism A (Warning) → Mechanism C (Fail-safe).',
+        'Underground Containment (Future): Prepare Exposed Memory Anchor.',
+        'Final Activation: Both players activate their prepared controls together within the 10-second window.',
+      ];
 }
 const TASKS: Record<Hunt2Challenge, Record<Hunt2Actor, readonly [string, string][]>> = {
   2: { archivist: [['weaknessArchiveReviewed', 'Baseline and failed reports reviewed'], ['weaknessHistoricalSubmitted', 'Historical conclusion submitted'], ['hiddenWeaknessComplete', '10-second calibration completed']], tracker: [['weaknessTrialsComplete', 'At least four controlled trials completed'], ['weaknessExperimentalSubmitted', 'Experimental profile submitted'], ['hiddenWeaknessComplete', 'Containment calibrated']] },
@@ -46,28 +84,28 @@ function requiredCluesCollected(state: Hunt2State, actor: Hunt2Actor): boolean {
 }
 function nextAction(state: Hunt2State, challenge: Hunt2Challenge, actor: Hunt2Actor): string | null {
   if (challenge === 2) {
-    if (actor === 'archivist' && isDone(state, 'weaknessArchiveReviewed') && !state.subtasks.weaknessHistoricalSubmitted) return 'Your required archive clues are collected. Submit the historical conclusion from the task panel.';
-    if (actor === 'tracker' && isDone(state, 'weaknessTrialsComplete') && !state.subtasks.weaknessExperimentalSubmitted) return 'Your required trial readings are recorded. Submit the three-part experimental profile from the task panel.';
-    if (actor === 'archivist' && state.subtasks.weaknessHistoricalSubmitted && !state.subtasks.hiddenWeaknessComplete) return 'The historical conclusion is submitted. Wait for the Tracker to arm containment, then press E at the Past Historical Calibration Console within 10 seconds.';
-    if (actor === 'tracker' && state.subtasks.weaknessExperimentalSubmitted && !state.subtasks.hiddenWeaknessComplete) return 'The profile is submitted. Arm containment at the Future control, then have the Archivist calibrate the Past console within 10 seconds.';
+    if (actor === 'archivist' && isDone(state, 'weaknessArchiveReviewed') && !state.subtasks.weaknessHistoricalSubmitted) return 'Archive evidence reviewed. Click "Submit historical conclusion" below to reject flawed bright & warm reports.';
+    if (actor === 'tracker' && isDone(state, 'weaknessTrialsComplete') && !state.subtasks.weaknessExperimentalSubmitted) return '4 trials completed! Submit the three-part experimental profile (select Low, Dark, Cold) from the task panel.';
+    if (actor === 'archivist' && state.subtasks.weaknessHistoricalSubmitted && !state.subtasks.hiddenWeaknessComplete) return 'Historical conclusion submitted! Wait for Tracker to arm containment in Underground Containment, then interact with the Historical Calibration Console within 10s.';
+    if (actor === 'tracker' && state.subtasks.weaknessExperimentalSubmitted && !state.subtasks.hiddenWeaknessComplete) return 'Experimental profile verified! Go to Underground Containment and interact with Containment Control to arm it (Archivist has 10s to calibrate).';
   }
   if (challenge === 3) {
-    if (actor === 'archivist' && isDone(state, 'brokenArchiveEvidence') && !state.subtasks.brokenHistoricalSubmitted) return 'All three Past records are collected. Arrange their original relationships and submit the historical reconstruction.';
-    if (actor === 'tracker' && isDone(state, 'brokenFutureEvidence') && !state.subtasks.brokenStructureSubmitted) return 'All three Future traces are collected. Arrange the six chamber components and submit the physical restoration.';
-    if (actor === 'archivist' && state.subtasks.brokenHistoricalSubmitted && !state.subtasks.brokenMemoryComplete) return 'Your Past reconstruction is submitted. Coordinate with the Tracker to synchronize the restoration.';
-    if (actor === 'tracker' && state.subtasks.brokenStructureSubmitted && !state.subtasks.brokenMemoryComplete) return 'Your Future placements are submitted. Coordinate with the Archivist to synchronize the restoration.';
+    if (actor === 'archivist' && isDone(state, 'brokenArchiveEvidence') && !state.subtasks.brokenHistoricalSubmitted) return 'All 3 Past records collected. Open the Restoration Board below to submit historical relationships.';
+    if (actor === 'tracker' && isDone(state, 'brokenFutureEvidence') && !state.subtasks.brokenStructureSubmitted) return 'All 3 Future traces collected. Open the Restoration Board below to submit chamber placements.';
+    if (actor === 'archivist' && state.subtasks.brokenHistoricalSubmitted && !state.subtasks.brokenMemoryComplete) return 'Past reconstruction submitted! Go to Underground Containment and activate the Historical Memory Synchronizer.';
+    if (actor === 'tracker' && state.subtasks.brokenStructureSubmitted && !state.subtasks.brokenMemoryComplete) return 'Future placements submitted! In Underground Containment, activate the Environmental Restoration Mechanism within 10s of Archivist.';
   }
   if (challenge === 4) {
-    if (actor === 'archivist' && isDone(state, 'anchorPastRecords') && !state.subtasks.anchorArchivistConfigured) return 'The diagram and flow clues are collected. Arrange the four historical anchor paths and submit them.';
-    if (actor === 'tracker' && isDone(state, 'anchorNodesMapped') && !state.subtasks.anchorTrackerConfigured) return 'All four live node readings are collected. Configure the repairs in node order and submit them.';
-    if (actor === 'archivist' && state.subtasks.anchorArchivistConfigured && !state.subtasks.memoryAnchorComplete) return 'Your Past alignment is submitted. When synchronization begins, operate the Past control in the prompted cadence.';
-    if (actor === 'tracker' && state.subtasks.anchorTrackerConfigured && !state.subtasks.memoryAnchorComplete) return 'Your Future repairs are submitted. Begin the Future–Past–Future–Past cadence when prompted.';
+    if (actor === 'archivist' && isDone(state, 'anchorPastRecords') && !state.subtasks.anchorArchivistConfigured) return 'Past records collected. Click "Configure Historical Alignment" below to submit.';
+    if (actor === 'tracker' && isDone(state, 'anchorNodesMapped') && !state.subtasks.anchorTrackerConfigured) return 'All 4 nodes mapped! Click "Configure Physical Node Repairs" below to submit.';
+    if (actor === 'archivist' && state.subtasks.anchorArchivistConfigured && !state.subtasks.memoryAnchorComplete) return 'Historical alignment verified. When Tracker initiates the pulse, alternate on Node B (2nd) and Node D (4th).';
+    if (actor === 'tracker' && state.subtasks.anchorTrackerConfigured && !state.subtasks.memoryAnchorComplete) return 'Repairs verified. In Underground Containment, initiate synchronization at Future Anchor Control, then pulse Node A (1st) and Node C (3rd).';
   }
   if (challenge === 5) {
-    if (actor === 'archivist' && isDone(state, 'finalMemoryViewed') && !state.subtasks.finalSequenceValidated) return 'The final memory clue is collected. Arrange the original event sequence and verify it.';
-    if (actor === 'tracker' && isDone(state, 'containmentMechanismsReady') && !state.subtasks.trackerReady) return 'All three containment mechanisms are active. Prepare the Future control for synchronized activation.';
-    if (actor === 'archivist' && state.subtasks.finalSequenceValidated && !state.subtasks.archivistReady) return 'The sequence is verified. Stabilize the original memory and prepare the Past control.';
-    if (actor === 'tracker' && state.subtasks.archivistReady && !state.subtasks.trackerReady) return 'The Archivist has prepared the Past control. Prepare your Future control, then activate together within the window.';
+    if (actor === 'archivist' && isDone(state, 'finalMemoryViewed') && !state.subtasks.finalSequenceValidated) return 'Final memory viewed. Click "Submit Final Event Sequence" below to verify.';
+    if (actor === 'tracker' && isDone(state, 'containmentMechanismsReady') && !state.subtasks.trackerReady) return 'All 3 mechanisms active. Interact with the Exposed Memory Anchor in Containment to prepare.';
+    if (actor === 'archivist' && state.subtasks.finalSequenceValidated && !state.subtasks.archivistReady) return 'Sequence verified! Stabilize the memory at the projector, then prepare the Past console in Observation Room.';
+    if (actor === 'tracker' && state.subtasks.archivistReady && !state.subtasks.trackerReady) return 'Archivist has prepared! Prepare the Exposed Memory Anchor, then activate together within 10s.';
   }
   return null;
 }
@@ -125,7 +163,8 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
       type="button"
       aria-expanded={tasksOpen[actor] && panelOpen[actor]}
       aria-controls={`hunt2-objectives-${actor}`}
-      onClick={() => {
+      onClick={(e) => {
+        e.currentTarget.blur();
         const isVisible = tasksOpen[actor] && panelOpen[actor];
         setTasksOpen((open) => ({ ...open, [actor]: !isVisible }));
         setPanelOpen((open) => ({ ...open, [actor]: true }));
@@ -135,15 +174,57 @@ export default function Hunt2Progress({ state, pending, message, working, onHint
     </button>
     {tasksOpen[actor] && panelOpen[actor] && <div className={`${styles.panels} ${actor === 'tracker' ? styles.futurePanel : ''}`} id={`hunt2-objectives-${actor}`} aria-label={`Hunt II ${actor} objectives`}>
       <section className={`${styles.panel} ${actor === 'tracker' ? styles.future : ''}`}>
-      <button className={styles.panelHide} type="button" onClick={() => setPanelOpen((open) => ({ ...open, [actor]: false }))}>Hide</button>
+      <button className={styles.panelHide} type="button" onClick={(e) => {
+        e.currentTarget.blur();
+        setPanelOpen((open) => ({ ...open, [actor]: false }));
+      }}>Hide</button>
       <header><span>{actor === 'archivist' ? 'ARCHIVIST · PAST' : 'TRACKER · FUTURE'}</span><b>{status(state, actor)}</b></header>
-      <small>HUNT II · THE FALSE MEMORY · TASK {progressNumber}/4</small><h2>{title}</h2><p>{OBJECTIVES[challenge][actor]}</p>
-      <p className={styles.fieldGuide}><b>FIELD GUIDE · </b>{fieldGuide(challenge, actor)} Walk to each named object and press {actor === 'archivist' ? 'E' : 'Enter'}. Read the shared memory board to compare findings; submit in the prompted form or at the indicated control. Collecting evidence alone does not resolve a challenge.</p>
-      {nextAction(state, challenge, actor) && <aside className={styles.nextAction} role="status"><b>CLUES READY · NEXT ACTION</b><span>{nextAction(state, challenge, actor)}</span></aside>}
+      <small>HUNT II · THE FALSE MEMORY · TASK {progressNumber}/4</small>
+      <h2>{title}</h2>
+      <p><b>OBJECTIVE: </b>{OBJECTIVES[challenge][actor]}</p>
+      <div className={styles.fieldGuide}>
+        <b>TASK INSTRUCTIONS:</b>
+        <ol>
+          {fieldGuide(challenge, actor).map((step, idx) => (
+            <li key={idx}>{step}</li>
+          ))}
+        </ol>
+      </div>
+      {nextAction(state, challenge, actor) && <aside className={styles.nextAction} role="status"><b>NEXT ACTION:</b><span>{nextAction(state, challenge, actor)}</span></aside>}
       <ul>{TASKS[challenge][actor].map(([key, label]) => <li className={isDone(state, key) ? styles.done : ''} key={key}><span>{isDone(state, key) ? '✓' : '○'}</span>{label}</li>)}</ul>
+      {challenge === 2 && actor === 'archivist' && state.hiddenWeakness.archiveEvidence.includes('contradictions') && !state.hiddenWeakness.historicalValid && (
+        <button type="button" className={styles.hint} onClick={() => onOpenInput('archivist', 'weakness-history')}>
+          Submit historical conclusion
+        </button>
+      )}
       {challenge === 2 && actor === 'tracker' && state.hiddenWeakness.experiments.length >= 4 && !state.hiddenWeakness.experimentalValid && (
         <button type="button" className={styles.hint} onClick={() => onOpenInput('tracker', 'weakness-conclusion')}>
           Submit experimental profile
+        </button>
+      )}
+      {challenge === 3 && actor === 'archivist' && state.brokenMemory.archivistEvidence.length >= 3 && !state.brokenMemory.historicalValid && (
+        <button type="button" className={styles.hint} onClick={() => onOpenInput('archivist', 'broken-historical')}>
+          Open Restoration Board (Historical Relations)
+        </button>
+      )}
+      {challenge === 3 && actor === 'tracker' && state.brokenMemory.trackerEvidence.length >= 3 && !state.brokenMemory.structureValid && (
+        <button type="button" className={styles.hint} onClick={() => onOpenInput('tracker', 'broken-structure')}>
+          Open Restoration Board (Chamber Positions)
+        </button>
+      )}
+      {challenge === 4 && actor === 'archivist' && isDone(state, 'anchorPastRecords') && !state.memoryAnchor.historicalValid && (
+        <button type="button" className={styles.hint} onClick={() => onOpenInput('archivist', 'anchor-history-config')}>
+          Configure Historical Alignment
+        </button>
+      )}
+      {challenge === 4 && actor === 'tracker' && isDone(state, 'anchorNodesMapped') && !state.memoryAnchor.physicalValid && (
+        <button type="button" className={styles.hint} onClick={() => onOpenInput('tracker', 'anchor-physical-config')}>
+          Configure Physical Node Repairs
+        </button>
+      )}
+      {challenge === 5 && actor === 'archivist' && state.subtasks.finalMemoryViewed && !state.subtasks.finalSequenceValidated && (
+        <button type="button" className={styles.hint} onClick={() => onOpenInput('archivist', 'final-sequence')}>
+          Submit Final Event Sequence
         </button>
       )}
       {challenge === 4 && actor === 'tracker' && <small>LIVE NODES · {(['A','B','C','D'] as const).map((node) => `${node}: ${state.memoryAnchor.nodeStates[node]}`).join(' · ')}</small>}
