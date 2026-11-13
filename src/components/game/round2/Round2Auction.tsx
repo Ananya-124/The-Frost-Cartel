@@ -3,6 +3,7 @@ import type { TeamSession } from '../../../types/team.types';
 import { round2Service, subscribeToAuctionChanges, type R2Card, type R2View } from '../../../services/round2Service';
 import { HauntedGraveyardAtmosphere } from '../haunted/HauntedGraveyardAtmosphere';
 import { AuctionCard, CardArt } from './AuctionCard';
+import { AuctionOutcomeModal, getRandomPhrase } from './AuctionOutcomeModal';
 import '../../../styles/round2.css';
 
 interface Round2AuctionProps {
@@ -36,6 +37,22 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
   const [banner, setBanner] = useState('');
   const [nowMs, setNowMs] = useState(0);
   const [seenKey, setSeenKey] = useState('');
+  const [myPlacedBid, setMyPlacedBid] = useState<{ cardId: number; amount: number } | null>(null);
+
+  // Outcome pop-up modal state (winner / loser funny quotes)
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: 'winner' | 'loser';
+    phrase: string;
+    cardName?: string;
+    paidPrice?: number;
+    winnerTeam?: string;
+    isFinalSummary?: boolean;
+  }>({
+    isOpen: false,
+    type: 'loser',
+    phrase: '',
+  });
 
   const offset = useRef(0); // server clock minus this browser's clock
   const lastServerNow = useRef(0);
@@ -57,19 +74,39 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
     setNowMs(r.now);
     setView(r);
     setOffline(false);
-      setConnectionMessage('');
+    setConnectionMessage('');
 
-    // Announce auction results to every team as they receive the updated state.
+    const myCurrentName = r.me?.name ?? team;
+
+    // Announce auction results and trigger the outcome modal whenever a card settles.
     const prev = prevStatus.current;
     for (const c of r.cards) {
       const before = prev[c.id];
       if (before && before !== c.status) {
-        if (c.status === 'sold') showBanner(`${c.winner ?? 'A team'} won ${c.name} for ${c.price ?? c.defaultBase} CR`);
-        else if (c.status === 'unsold') showBanner(`💀 ${c.name} went unsold`);
+        if (c.status === 'sold') {
+          showBanner(`${c.winner ?? 'A team'} won ${c.name} for ${c.price ?? c.defaultBase} CR`);
+          const isWinner = !!c.winner && c.winner.trim().toLowerCase() === myCurrentName.trim().toLowerCase();
+          setModalState({
+            isOpen: true,
+            type: isWinner ? 'winner' : 'loser',
+            phrase: getRandomPhrase(isWinner ? 'winner' : 'loser'),
+            cardName: c.name,
+            paidPrice: c.price ?? c.defaultBase,
+            winnerTeam: c.winner ?? undefined,
+          });
+        } else if (c.status === 'unsold') {
+          showBanner(`💀 ${c.name} went unsold`);
+          setModalState({
+            isOpen: true,
+            type: 'loser',
+            phrase: getRandomPhrase('loser'),
+            cardName: c.name,
+          });
+        }
       }
       prev[c.id] = c.status;
     }
-  }, [showBanner]);
+  }, [showBanner, team]);
 
   // Join once, then keep asking the server what is on the block. If the server forgets this team
   // (admin reset / team removed) the team is joined again automatically.
@@ -130,32 +167,31 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
 
   const live = view?.live ?? null;
   const liveCard = live ? view?.cards.find((c) => c.id === live.cardId) : undefined;
-  const inc = view?.minIncrement ?? 10;
-  const min = live ? (live.highBidder ? live.highBid + inc : live.base) : 0;
-  const ref = live ? (live.highBidder ? live.highBid : live.base) : 0;
+  const min = live ? live.base : 0;
   const credits = view?.me?.credits ?? 0;
-  const myName = view?.me?.name ?? team; // the server may store the team name with different capitals
-  const leading = !!live && live.highBidder === myName;
+  const hasPlacedBid = Boolean(live?.hasBid || (myPlacedBid && live && myPlacedBid.cardId === live.cardId));
+  const myBidAmount = live?.myBid ?? (myPlacedBid && live && myPlacedBid.cardId === live.cardId ? myPlacedBid.amount : null);
+
   const secs = endsAt !== null && nowMs ? Math.max(0, Math.ceil((endsAt - nowMs) / 1000)) : null;
   const closing = secs === 0;
   const tooPoor = !!live && credits < min;
   const amountNum = Number.parseInt(amount, 10);
-  const canBid = !!live && !leading && !busy && !closing && !tooPoor && Number.isFinite(amountNum) && amountNum >= min && amountNum <= credits;
+  const canBid = !!live && !hasPlacedBid && !busy && !closing && !tooPoor && Number.isFinite(amountNum) && amountNum >= min && amountNum <= credits;
 
   let timerClass = 'text-cartel-amber';
   if (secs !== null && secs <= 5) timerClass = 'text-red-500 animate-pulse';
   else if (secs !== null && secs <= 15) timerClass = 'text-yellow-400 animate-pulse';
 
-  // Prefill the bid box whenever the card or the minimum bid changes (state adjusted during render).
-  const promptKey = live ? `${live.cardId}:${min}` : '';
+  // Prefill the bid box whenever the live card changes
+  const promptKey = live ? `${live.cardId}:${live.base}` : '';
   if (promptKey !== seenKey) {
     setSeenKey(promptKey);
     setError('');
-    if (promptKey) setAmount(String(min));
+    if (promptKey) setAmount(String(live?.base ?? ''));
   }
 
   const placeBid = async () => {
-    if (!canBid) return;
+    if (!canBid || !live) return;
     if (!pendingBid.current || pendingBid.current.amount !== amountNum) {
       pendingBid.current = { amount: amountNum, requestId: globalThis.crypto?.randomUUID?.() ?? `r2-${Date.now()}-${Math.random().toString(36).slice(2)}` };
     }
@@ -165,9 +201,10 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
     try {
       const r = await round2Service.bid(amountNum, requestId);
       if (r.success) {
+        setMyPlacedBid({ cardId: live.cardId, amount: amountNum });
         pendingBid.current = null;
         apply(r);
-        showBanner(r.bid?.duplicate ? 'Your earlier bid was received. Auction state is up to date.' : 'Bid accepted.');
+        showBanner(r.bid?.duplicate ? 'Your sealed bid was already recorded.' : 'Sealed bid locked in successfully.');
       } else setError(r.message ?? 'Bid failed. You can retry safely.');
     } finally {
       setBusy(false);
@@ -253,65 +290,90 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
                         </div>
                       )}
                     </div>
-                    <div className="mt-4 rounded-lg border border-orange-800/40 bg-black/45 p-4">
-                      <div className="font-cinzel text-[10px] tracking-widest text-cartel-silver/70">CURRENT HIGH BID</div>
-                      <div className="font-cinzel text-4xl text-amber-100/90">{live.highBidder ? live.highBid : '—'}</div>
-                      <div className="text-sm text-cartel-silver/70">{live.highBidder ? `by ${live.highBidder}` : `no bids yet · base ${live.base} CR`}</div>
+
+                    {/* Starting Base Price Card (No High Bid Shown - Blind Sealed Auction) */}
+                    <div className="mt-4 rounded-xl border border-orange-800/40 bg-black/55 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="font-cinzel text-[10px] tracking-widest text-cartel-silver/70 uppercase">STARTING BASE PRICE</div>
+                        <div className="font-cinzel text-3xl sm:text-4xl text-amber-100/95 font-bold">
+                          {live.base} <span className="text-lg text-amber-300 font-normal">CR</span>
+                        </div>
+                      </div>
+                      <div className="sm:text-right">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/50 bg-amber-500/10 font-cinzel text-xs tracking-wider text-amber-300 font-bold">
+                          <span>🔒</span> BLIND SEALED BIDDING
+                        </span>
+                        <p className="text-[11px] text-cartel-silver/70 mt-1 font-mono">1 sealed bid per squad · highest bid revealed at zero</p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {leading && (
-                  <div className="mt-3 text-center rounded-lg border border-emerald-600/50 bg-emerald-950/60 text-emerald-400 font-cinzel tracking-widest py-2">
-                    YOU ARE LEADING
+                {/* Single Sealed Bid State: Locked in after submitting */}
+                {hasPlacedBid ? (
+                  <div className="mt-5 p-5 rounded-xl border-2 border-amber-500/60 bg-gradient-to-b from-[#1c1206]/90 to-[#0e0701]/95 text-center shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                    <div className="inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-cinzel text-xs font-bold tracking-widest uppercase">
+                      <span>🔒</span> SEALED BID SUBMITTED
+                    </div>
+                    <div className="mt-3 font-cinzel text-4xl sm:text-5xl font-black text-amber-100 tracking-tight">
+                      {myBidAmount !== null ? `${myBidAmount} CR` : 'BID RECORDED'}
+                    </div>
+                    <p className="mt-2 font-mono text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+                      Your sealed bid is locked in the Cartel ledger. Each squad can only bid once.
+                      The winner will be revealed when the timer expires!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={min}
+                        max={credits}
+                        step={1}
+                        aria-label="Your sealed bid in credits"
+                        placeholder={`Enter bid (min ${min} CR)`}
+                        value={amount}
+                        disabled={closing || busy}
+                        onChange={(e) => setAmount(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') void placeBid(); }}
+                        className="flex-1 min-w-[140px] bg-black/60 border border-orange-700/50 rounded-lg px-3 py-3 text-xl font-cinzel text-amber-100 disabled:opacity-40"
+                      />
+                      {[live.base, live.base + 20, live.base + 50, live.base + 100].filter((val) => val <= credits).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          disabled={closing || busy}
+                          onClick={() => setAmount(String(n))}
+                          className="r2-btn px-3 py-2 rounded-lg font-cinzel text-xs sm:text-sm text-amber-200/90 disabled:opacity-40 cursor-pointer"
+                        >
+                          {n} CR
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-xs text-cartel-silver/70 font-cinzel tracking-wider">
+                      <span>MINIMUM BID: {min} CR</span>
+                      <span>WALLET: {credits} CR</span>
+                    </div>
+
+                    <div className="mt-2 text-[11px] font-mono text-amber-300/80 bg-amber-950/30 border border-amber-500/20 rounded p-2 text-center">
+                      ⚠️ <strong>WARNING:</strong> Each squad can bid <strong>ONLY ONCE</strong> for this card. Once submitted, your sealed bid cannot be modified.
+                    </div>
+
+                    {tooPoor && <p className="mt-1 text-sm text-red-400">You do not have enough credits to bid on this card.</p>}
+                    {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
+
+                    <button
+                      onClick={() => void placeBid()}
+                      disabled={!canBid}
+                      className="mt-3 w-full py-4 rounded-lg bg-gradient-to-r from-orange-800 via-orange-600 to-orange-800 text-black font-cinzel font-bold tracking-widest text-lg hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-lg"
+                    >
+                      {busy ? 'SEALING BID…' : 'SUBMIT SEALED BID'}
+                    </button>
                   </div>
                 )}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={min}
-                    step={1}
-                    aria-label="Your bid in credits"
-                    value={amount}
-                    disabled={leading || closing}
-                    onChange={(e) => setAmount(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') void placeBid(); }}
-                    className="flex-1 min-w-[140px] bg-black/60 border border-orange-700/50 rounded-lg px-3 py-3 text-xl font-cinzel text-amber-100 disabled:opacity-40"
-                  />
-                  {[10, 20, 50].map((n) => (
-                    <button
-                      key={n}
-                      disabled={leading || closing}
-                      onClick={() => setAmount(String(ref + n))}
-                      className="r2-btn px-4 rounded-lg font-cinzel text-amber-200/90 disabled:opacity-40 cursor-pointer"
-                    >
-                      +{n}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-cartel-silver/70 font-cinzel tracking-wider">MINIMUM BID: {min} CR · YOU HAVE {credits} CR</p>
-                {tooPoor && !leading && <p className="mt-1 text-sm text-red-400">You do not have enough credits to bid on this card.</p>}
-                {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
-                <button
-                  onClick={() => void placeBid()}
-                  disabled={!canBid}
-                  className="mt-3 w-full py-4 rounded-lg bg-gradient-to-r from-orange-800 via-orange-600 to-orange-800 text-black font-cinzel font-bold tracking-widest text-lg hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {busy ? 'PLACING…' : 'PLACE BID'}
-                </button>
-
-                <h3 className="mt-5 font-cinzel text-xs tracking-widest text-cartel-silver/70">RECENT BIDS</h3>
-                <ul className="mt-1 text-sm">
-                  {live.bids.slice(0, 5).map((b, i) => (
-                    <li key={`${b.t}-${i}`} className="flex justify-between border-b border-white/5 py-1">
-                      <span>{b.team}</span>
-                      <b className="text-amber-200/90">{b.amount}</b>
-                    </li>
-                  ))}
-                  {live.bids.length === 0 && <li className="text-cartel-silver/50 py-1">No bids yet</li>}
-                </ul>
               </div>
             ) : (
               <div className="r2-waiting-content relative z-10 flex flex-col items-center justify-end text-center">
@@ -331,7 +393,6 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
               </div>
             )}
           </section>
-
         </div>
 
         <section className="mt-9" aria-label="Cards earned in bidding">
@@ -359,6 +420,18 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
           <span className="h-px flex-1 max-w-xs bg-gradient-to-l from-transparent to-orange-600/70" />
         </div>
       </div>
+
+      {/* Outcome Pop-up with Sarcastic / Savage Phrases for Winners and Losers */}
+      <AuctionOutcomeModal
+        isOpen={modalState.isOpen}
+        type={modalState.type}
+        phrase={modalState.phrase}
+        cardName={modalState.cardName}
+        paidPrice={modalState.paidPrice}
+        winnerTeam={modalState.winnerTeam}
+        isFinalSummary={modalState.isFinalSummary}
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

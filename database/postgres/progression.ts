@@ -344,10 +344,27 @@ export async function adminProgressRound3Global(
     if (action === 'advance' || action === 'unlock') {
       await client.query('UPDATE rounds SET is_active=true, updated_at=now() WHERE round_id=3');
       const cardsSynced = await syncRound2CardsToRound3Inventory(client);
+
+      // Auto-complete prior rounds (R1 & R2) for all squads so they transition cleanly to Round 3
       await client.query(`
         UPDATE round_progress SET status='COMPLETED', completed_at=COALESCE(completed_at, now()), updated_at=now()
-        WHERE round_id=2 AND status IN ('AVAILABLE', 'IN_PROGRESS')
+        WHERE round_id IN (1, 2) AND status != 'COMPLETED'
       `);
+
+      // Ensure every team has rows initialized for Round 3 and Hunt 1
+      await client.query(`
+        INSERT INTO round_progress (id, team_id, round_id, status, max_score)
+        SELECT 'rp-' || t.id || '-3', t.id, 3, 'LOCKED', 1000
+        FROM teams t
+        WHERE NOT EXISTS (SELECT 1 FROM round_progress rp WHERE rp.team_id = t.id AND rp.round_id = 3)
+      `);
+      await client.query(`
+        INSERT INTO team_hunt_progress (id, team_id, hunt_id, status, max_score)
+        SELECT 'hp-' || t.id || '-1', t.id, 1, 'LOCKED', 300
+        FROM teams t
+        WHERE NOT EXISTS (SELECT 1 FROM team_hunt_progress hp WHERE hp.team_id = t.id AND hp.hunt_id = 1)
+      `);
+
       const teams = await client.query<{ team_id: string; status: ProgressStatus }>(
         'SELECT team_id, status FROM round_progress WHERE round_id=3 FOR UPDATE',
       );
@@ -371,9 +388,17 @@ export async function adminProgressRound3Global(
             entityId: 3,
             previous: t.status,
             next: 'AVAILABLE',
-            action: 'ADVANCE',
+            action: action === 'advance' ? 'ADVANCE' : 'UNLOCK',
             reason: reason || 'Tournament Round 3 unlocked for all squads with Round 2 cards synced',
           });
+          updatedCount++;
+        } else {
+          await client.query(
+            "UPDATE team_hunt_progress SET status='AVAILABLE', updated_at=now() WHERE team_id=$1 AND hunt_id=1 AND status='LOCKED'",
+            [t.team_id],
+          );
+          await client.query('INSERT INTO round3_sessions(team_id) VALUES($1) ON CONFLICT (team_id) DO NOTHING', [t.team_id]);
+          await client.query('INSERT INTO round3_runs(team_id) VALUES($1) ON CONFLICT (team_id) DO NOTHING', [t.team_id]);
           updatedCount++;
         }
       }

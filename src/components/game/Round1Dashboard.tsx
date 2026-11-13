@@ -328,7 +328,7 @@ export const Round1Dashboard: React.FC<Round1DashboardProps> = ({
             artworkUrl="/assets/halloween/portals/portal_stage2_gallery.jpg"
             progressText={
               teamSession.stage2State.foundTargetIds.length > 0
-                ? `${teamSession.stage2State.foundTargetIds.length} / 12 UNCOVERED`
+                ? `${teamSession.stage2State.foundTargetIds.length} / ${stage2Config.targets?.length || 11} UNCOVERED`
                 : undefined
             }
             isExpired={isExpired}

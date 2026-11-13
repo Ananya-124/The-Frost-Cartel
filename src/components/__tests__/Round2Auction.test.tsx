@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { R2View, R2Card } from '../../services/round2Service';
+import { WINNER_PHRASES, LOSER_PHRASES } from '../game/round2/AuctionOutcomeModal';
 
 const NAMES = [
   'Chrono Freeze',
@@ -51,7 +52,7 @@ describe('Round2Auction (player screen)', () => {
     auctionChanged = null;
   });
 
-  it('waits, then shows the card the admin puts up for bidding', async () => {
+  it('waits, then shows the card the admin puts up for sealed bidding (no high bid or leading team shown)', async () => {
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
     expect(await screen.findByText(/Waiting for the next card/i)).toBeInTheDocument();
     expect(document.querySelector('.r2-waiting-panel')).toBeInTheDocument();
@@ -70,9 +71,12 @@ describe('Round2Auction (player screen)', () => {
     current = view({ now: Date.now() + 5, cards, live: { cardId: 1, base: 100, highBid: 0, highBidder: null, endsAt: null, bids: [] } });
     act(() => auctionChanged?.());
 
-    expect(await screen.findByRole('button', { name: /PLACE BID/i }, { timeout: 4000 })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: /SUBMIT SEALED BID/i }, { timeout: 4000 })).toBeEnabled();
     expect(screen.getByText(/ROUND 2 • BIDDING OPEN/)).toBeInTheDocument();
     expect(screen.getAllByText('Chrono Freeze')).toHaveLength(1);
+    expect(screen.queryByText(/CURRENT HIGH BID/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/YOU ARE LEADING/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/BLIND SEALED BIDDING/i)).toBeInTheDocument();
     expect(document.querySelector('.r2-panel')).toBeInTheDocument();
     expect(document.querySelector('.r2-panel')).not.toHaveClass('r2-waiting-panel');
     const liveCardArt = document.querySelector('.r2-live-art');
@@ -81,21 +85,30 @@ describe('Round2Auction (player screen)', () => {
     expect(liveCardArt?.querySelector('img')).toHaveAttribute('src', '/assets/round2/cards/1.jpg');
   });
 
-  it('places a bid at the minimum and reflects the lead', async () => {
+  it('places a single sealed bid, locks it in, and prevents second bid', async () => {
     const cards = makeCards();
     cards[0].status = 'live';
     const live = { cardId: 1, base: 100, highBid: 0, highBidder: null, endsAt: null, bids: [] as never[] };
     current = view({ cards, live });
     bidMock.mockImplementation(async () => {
-      current = view({ now: Date.now() + 10, cards, live: { ...live, highBid: 100, highBidder: 'Alpha', bids: [{ team: 'Alpha', amount: 100, t: 1 }] } });
+      current = view({
+        now: Date.now() + 10,
+        cards,
+        live: { ...live, myBid: 120, hasBid: true, bids: [{ team: 'Alpha', amount: 120, t: 1 }] },
+      });
       return current;
     });
 
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
-    fireEvent.click(await screen.findByRole('button', { name: /PLACE BID/i }));
+    const submitBtn = await screen.findByRole('button', { name: /SUBMIT SEALED BID/i });
+    fireEvent.click(submitBtn);
+
     await waitFor(() => expect(bidMock).toHaveBeenCalledWith(100, expect.any(String)));
     expect(bidMock.mock.calls[0][1]).toMatch(/^r2-|^[0-9a-f-]{36}$/i);
-    expect(await screen.findByText('YOU ARE LEADING')).toBeInTheDocument();
+    expect(await screen.findByText(/SEALED BID SUBMITTED/i)).toBeInTheDocument();
+    expect(screen.queryByText(/CURRENT HIGH BID/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/YOU ARE LEADING/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /SUBMIT SEALED BID/i })).not.toBeInTheDocument();
   });
 
   it('reuses the same request ID when retrying a bid after a failed response', async () => {
@@ -105,12 +118,16 @@ describe('Round2Auction (player screen)', () => {
     current = view({ cards, live });
     bidMock.mockResolvedValueOnce({ success: false, message: 'Temporary network failure.' });
     bidMock.mockImplementationOnce(async (_amount: number, _requestId: string) => {
-      const updated = view({ now: Date.now() + 5, cards, live: { ...live, highBid: 100, highBidder: 'Alpha', bids: [{ team: 'Alpha', amount: 100, t: 1 }] } });
+      const updated = view({
+        now: Date.now() + 5,
+        cards,
+        live: { ...live, myBid: 100, hasBid: true, bids: [{ team: 'Alpha', amount: 100, t: 1 }] },
+      });
       current = updated;
       return updated;
     });
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
-    const bidButton = await screen.findByRole('button', { name: /PLACE BID/i });
+    const bidButton = await screen.findByRole('button', { name: /SUBMIT SEALED BID/i });
     fireEvent.click(bidButton);
     await screen.findByText('Temporary network failure.');
     fireEvent.click(bidButton);
@@ -127,10 +144,10 @@ describe('Round2Auction (player screen)', () => {
     });
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
     expect(await screen.findByText(/do not have enough credits/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /PLACE BID/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /SUBMIT SEALED BID/i })).toBeDisabled();
   });
 
-  it('notifies every team when a card is won', async () => {
+  it('shows outcome popup with funny sarcastic winner phrase when team wins', async () => {
     const cards = makeCards();
     current = view({ cards });
     render(<Round2Auction session={session} onReturnHome={() => {}} />);
@@ -138,14 +155,54 @@ describe('Round2Auction (player screen)', () => {
 
     const finishedCards = makeCards();
     finishedCards[0].status = 'sold';
-    finishedCards[0].winner = 'Bravo';
-    finishedCards[0].price = 170;
+    finishedCards[0].winner = 'Alpha'; // This team!
+    finishedCards[0].price = 150;
     current = view({ now: current.now + 5, cards: finishedCards });
     act(() => auctionChanged?.());
 
-    const notification = await screen.findByText('Bravo won Chrono Freeze for 170 CR');
-    expect(notification).toHaveAttribute('role', 'status');
-    expect(notification).toHaveClass('r2-toast');
+    const modal = await screen.findByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    expect(screen.getByText(/VICTORY! CARD WON/i)).toBeInTheDocument();
+    expect(screen.getByText('Chrono Freeze')).toBeInTheDocument();
+    expect(screen.getByText(/WINNING BID: 150 CR/i)).toBeInTheDocument();
+    
+    // Check that one of the exact WINNER_PHRASES is displayed
+    const bodyText = document.body.textContent ?? '';
+    const hasWinnerPhrase = WINNER_PHRASES.some((phrase) => bodyText.includes(phrase));
+    expect(hasWinnerPhrase).toBe(true);
+
+    // Dismiss modal
+    fireEvent.click(screen.getByRole('button', { name: /CLAIM GLORY & CONTINUE/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows outcome popup with savage loser phrase when team loses', async () => {
+    const cards = makeCards();
+    current = view({ cards });
+    render(<Round2Auction session={session} onReturnHome={() => {}} />);
+    expect(await screen.findByText(/Waiting for the next card/i)).toBeInTheDocument();
+
+    const finishedCards = makeCards();
+    finishedCards[0].status = 'sold';
+    finishedCards[0].winner = 'Bravo'; // Another team won
+    finishedCards[0].price = 180;
+    current = view({ now: current.now + 5, cards: finishedCards });
+    act(() => auctionChanged?.());
+
+    const modal = await screen.findByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    expect(screen.getByText(/AUCTION DEFEAT: OUTBID!/i)).toBeInTheDocument();
+    expect(screen.getByText('Chrono Freeze')).toBeInTheDocument();
+    expect(screen.getByText(/SOLD FOR: 180 CR \(to Bravo\)/i)).toBeInTheDocument();
+
+    // Check that one of the exact LOSER_PHRASES is displayed
+    const bodyText = document.body.textContent ?? '';
+    const hasLoserPhrase = LOSER_PHRASES.some((phrase) => bodyText.includes(phrase));
+    expect(hasLoserPhrase).toBe(true);
+
+    // Dismiss modal
+    fireEvent.click(screen.getByRole('button', { name: /ACCEPT YOUR FATE & CONTINUE/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('shows only cards the team has won in the earned-card gallery', async () => {

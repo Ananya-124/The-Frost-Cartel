@@ -1,7 +1,7 @@
 import { apiUrl, getAuthHeaders } from './apiBaseUrl';
 
 export interface R2Card { id: number; name: string; description: string; icon: string; defaultBase: number; status: 'pending' | 'live' | 'sold' | 'unsold'; winner: string | null; price: number | null }
-export interface R2Live { cardId: number; base: number; highBid: number; highBidder: string | null; endsAt: number | null; bids: { team: string; amount: number; t: number }[] }
+export interface R2Live { cardId: number; base: number; highBid: number; highBidder: string | null; endsAt: number | null; myBid?: number | null; hasBid?: boolean; bids: { team: string; amount: number; t: number }[] }
 export interface R2Me { name: string; startCredits: number; spent: number; credits: number; cards: { id: number; name: string; price: number }[] }
 export interface R2View { success: boolean; message?: string; code?: string; status?: number; now: number; cards: R2Card[]; live: R2Live | null; minIncrement: number; me: R2Me | null; bid?: { id: string; duplicate: boolean; minimumBid: number } }
 export interface R2AuditEntry { id: string; admin_id: string; admin_username: string; action: 'START' | 'END' | 'RESET' | 'REMOVE_TEAM'; outcome: 'APPLIED' | 'REJECTED'; lot_id: string | null; details: Record<string, unknown>; previous_state: Record<string, unknown>; new_state: Record<string, unknown>; created_at: string }
@@ -25,13 +25,14 @@ export function subscribeToAuctionChanges(onChange: () => void): () => void {
 }
 
 async function call<T extends { success: boolean; message?: string; code?: string; status?: number }>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  const isAdmin = path.includes('/admin');
   try {
     const res = await fetch(apiUrl(API + path), {
       method,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthHeaders(),
+        ...getAuthHeaders(isAdmin ? 'admin' : 'team'),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });

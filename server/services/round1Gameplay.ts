@@ -21,7 +21,13 @@ type Round1Config = {
 
 const defaults = (): Round1Config => {
   const service = new Round1Service();
-  return { durationMinutes: service.getDurationMinutes(), stage1: service.getStage1Config(), stage2: service.getStage2Config(), stage3: service.getStage3Config(), lifecycle: 'not_started' };
+  return {
+    durationMinutes: service.getDurationMinutes(),
+    stage1: service.getStage1Config(),
+    stage2: { ...service.getStage2Config(), hintDeduction: 0, incorrectClickPenalty: 0 },
+    stage3: { ...service.getStage3Config(), incorrectAnswerPenalty: 0 },
+    lifecycle: 'not_started'
+  };
 };
 
 export async function getRound1Config(pool: Pool): Promise<Round1Config> {
@@ -32,8 +38,8 @@ export async function getRound1Config(pool: Pool): Promise<Round1Config> {
   return {
     ...base, ...stored,
     stage1: { ...base.stage1, ...(stored.stage1 ?? {}), trials: stored.stage1?.trials ?? base.stage1.trials },
-    stage2: { ...base.stage2, ...(stored.stage2 ?? {}), images: base.stage2.images, targets: base.stage2.targets },
-    stage3: { ...base.stage3, ...(stored.stage3 ?? {}), grave1: { ...base.stage3.grave1, ...(stored.stage3?.grave1 ?? {}) }, grave2: { ...base.stage3.grave2, ...(stored.stage3?.grave2 ?? {}) }, grave3: { ...base.stage3.grave3, ...(stored.stage3?.grave3 ?? {}) }, finalGate: { ...base.stage3.finalGate, ...(stored.stage3?.finalGate ?? {}) } },
+    stage2: { ...base.stage2, ...(stored.stage2 ?? {}), hintDeduction: 0, incorrectClickPenalty: 0, images: base.stage2.images, targets: base.stage2.targets },
+    stage3: { ...base.stage3, ...(stored.stage3 ?? {}), incorrectAnswerPenalty: 0, grave1: { ...base.stage3.grave1, ...(stored.stage3?.grave1 ?? {}) }, grave2: { ...base.stage3.grave2, ...(stored.stage3?.grave2 ?? {}) }, grave3: { ...base.stage3.grave3, ...(stored.stage3?.grave3 ?? {}) }, finalGate: { ...base.stage3.finalGate, ...(stored.stage3?.finalGate ?? {}) } },
   };
 }
 
@@ -108,7 +114,7 @@ async function loadGame(client: PoolClient, teamId: string, metrics?: Round1Timi
 async function getRound1ConfigForClient(client: PoolClient): Promise<Round1Config> {
   const result = await client.query<{ configuration: Partial<Round1Config> }>('SELECT configuration FROM round1_configuration WHERE singleton_id=1');
   const base=defaults(), stored=result.rows[0]?.configuration??{};
-  return { ...base,...stored,stage1:{...base.stage1,...(stored.stage1??{})},stage2:{...base.stage2,...(stored.stage2??{}),images:base.stage2.images,targets:base.stage2.targets},stage3:{...base.stage3,...(stored.stage3??{}),grave1:{...base.stage3.grave1,...(stored.stage3?.grave1??{})},grave2:{...base.stage3.grave2,...(stored.stage3?.grave2??{})},grave3:{...base.stage3.grave3,...(stored.stage3?.grave3??{})},finalGate:{...base.stage3.finalGate,...(stored.stage3?.finalGate??{})}} };
+  return { ...base,...stored,stage1:{...base.stage1,...(stored.stage1??{})},stage2:{...base.stage2,...(stored.stage2??{}),hintDeduction:0,incorrectClickPenalty:0,images:base.stage2.images,targets:base.stage2.targets},stage3:{...base.stage3,...(stored.stage3??{}),incorrectAnswerPenalty:0,grave1:{...base.stage3.grave1,...(stored.stage3?.grave1??{})},grave2:{...base.stage3.grave2,...(stored.stage3?.grave2??{})},grave3:{...base.stage3.grave3,...(stored.stage3?.grave3??{})},finalGate:{...base.stage3.finalGate,...(stored.stage3?.finalGate??{})}} };
 }
 
 export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: Round1TimingMetrics) {
@@ -142,16 +148,35 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     const base=defaults(),stored=row.configuration??{};
     const config:Round1Config={...base,...stored,
       stage1:{...base.stage1,...(stored.stage1??{}),trials:stored.stage1?.trials??base.stage1.trials},
-      stage2:{...base.stage2,...(stored.stage2??{}),images:base.stage2.images,targets:base.stage2.targets},
-      stage3:{...base.stage3,...(stored.stage3??{}),grave1:{...base.stage3.grave1,...(stored.stage3?.grave1??{})},grave2:{...base.stage3.grave2,...(stored.stage3?.grave2??{})},grave3:{...base.stage3.grave3,...(stored.stage3?.grave3??{})},finalGate:{...base.stage3.finalGate,...(stored.stage3?.finalGate??{})}},
+      stage2:{...base.stage2,...(stored.stage2??{}),hintDeduction:0,incorrectClickPenalty:0,images:base.stage2.images,targets:base.stage2.targets},
+      stage3:{...base.stage3,...(stored.stage3??{}),incorrectAnswerPenalty:0,grave1:{...base.stage3.grave1,...(stored.stage3?.grave1??{})},grave2:{...base.stage3.grave2,...(stored.stage3?.grave2??{})},grave3:{...base.stage3.grave3,...(stored.stage3?.grave3??{})},finalGate:{...base.stage3.finalGate,...(stored.stage3?.finalGate??{})}},
     };
     const initializationStartedAt=performance.now();
     const game=new Round1Service();
     game.updateStage1Config(config.stage1);game.updateStage2Config(config.stage2);game.updateStage3Config(config.stage3);game.setDurationMinutes(config.durationMinutes);
     const persisted = (row.stage_rows.find((s) => s.state?.round1Session)?.state?.round1Session as Round1TeamSessionState | undefined);
     const session = persisted ?? game.snapshotTeamSession(teamId, row.team_name);
-    const stageCreditsSum = row.stage_rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
+
+    // Reconcile completed stages to ensure full fixed credits (Stage 1: 100, Stage 2: 150, Stage 3: 250)
+    let stageNeedsUpdate = false;
+    for (const r of row.stage_rows) {
+      if (r.status === 'COMPLETED' && r.score < r.max_score) {
+        await pool.query('UPDATE round1_stage_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND stage_id=$3', [r.max_score, teamId, r.stage_id]);
+        r.score = r.max_score;
+        stageNeedsUpdate = true;
+      }
+    }
+    const stageCreditsSum = row.stage_rows.reduce((sum, r) => sum + (r.status === 'COMPLETED' ? r.max_score : Number(r.score || 0)), 0);
     const authoritativeScore = Math.max(Number(row.score || 0), stageCreditsSum);
+    if (row.score < authoritativeScore || row.total_credits < stageCreditsSum || stageNeedsUpdate) {
+      const newScore = authoritativeScore;
+      const newTotalCredits = Math.max(row.total_credits, stageCreditsSum);
+      await pool.query('UPDATE teams SET score=$1, total_credits=$2, updated_at=now() WHERE id=$3', [newScore, newTotalCredits, teamId]);
+      await pool.query('UPDATE round_progress SET score=$1, updated_at=now() WHERE team_id=$2 AND round_id=1', [newScore, teamId]);
+      row.score = newScore;
+      row.total_credits = newTotalCredits;
+    }
+
     session.teamId = teamId;
     session.teamName = row.team_name;
     session.credits = authoritativeScore;
@@ -159,6 +184,9 @@ export async function getTeamRound1State(pool: Pool, teamId: string, metrics?: R
     for(const stageRow of row.stage_rows){
       const id=`stage-${stageRow.stage_id}` as StageId;const item=session.stages[id];
       item.status=(item.status==='skipped'?'skipped':stageRow.status.toLowerCase()) as typeof item.status;
+      if (item.status === 'completed') {
+        stageRow.score = stageRow.max_score;
+      }
       item.earnedCredits=stageRow.score;item.rewardCredits=stageRow.max_score;
     }
     session.scoreTransactions=session.scoreTransactions??[];
@@ -245,7 +273,7 @@ export async function performRound1Action(pool: Pool, teamId: string, action: Ro
         if(!valid)throw new Round1GameError('This object is not a configured discovery for that image.',409);
         result={success:true,...game.registerStage2Discovery(teamId,target,image),state:session.stage2State};break;
       }
-      case 'stage2.missed': result={success:true,...game.recordPenalty(teamId,'stage-2','Incorrect artifact click in search board')};break;
+      case 'stage2.missed': result={success:true,penalty:0};break;
       case 'stage2.hint': { const hints=Number(session.stage2State.usedHintsCount); const target=config.stage2.targets.find((item)=>!session.stage2State.foundTargetIds.some((found)=>norm(found)===norm(item.id)));if(!target)throw new Round1GameError('No undiscovered targets remain.',409);const image=config.stage2.images.find((item)=>item.hotspots.some((hotspot)=>norm(hotspot.targetId)===norm(target.id)));result={success:true,targetId:target.id,imageId:image?.id,...game.useHint(teamId,'stage-2',`Hint ${hints+1}`),state:session.stage2State};break; }
       case 'stage3.placeBone': {const slot=String(action.slotId),bone=String(action.boneId);if(!['slot_head','slot_chest','slot_legs'].includes(slot)||!['bone_skull','bone_rib','bone_femur'].includes(bone))throw new Round1GameError('Unknown bone or grave slot.',409);result={success:true,...game.placeBone(teamId,slot,bone),state:session.stage3State};break;}
       case 'stage3.readBook': game.markGrave1BookRead(teamId);result={success:true};break;
@@ -266,7 +294,8 @@ export async function performRound1Action(pool: Pool, teamId: string, action: Ro
       const tx=newTransactions[index]; const n=stageNumber(tx.stageId as StageId);
       const stageRow=rows.find((row)=>row.stage_id===n)!;
       const cap=Math.max(0,stageRow.max_score-stageRow.score);
-      const requested=tx.deltaCredits>0?Math.min(tx.deltaCredits,cap):tx.deltaCredits;
+      // Disallow negative score deltas in Round 1
+      const requested=tx.deltaCredits>0?Math.min(tx.deltaCredits,cap):0;
       if(requested!==0){
         const saved=await recordScoreEventInTransaction(client,{teamId,roundId:1,stageId:n,delta:requested,sourceEventId:`${action.actionId}:${index}`,reason:tx.reason,details:{actionType:action.type}});
         if(saved.delta!==0){
@@ -283,8 +312,21 @@ export async function performRound1Action(pool: Pool, teamId: string, action: Ro
     for(let i=0;i<stageIds.length;i++){
       const id=stageIds[i],row=rows[i],p=updated.stages[id];
       const dbStatus=p.status==='in_progress'?'IN_PROGRESS':p.status==='completed'?'COMPLETED':p.status==='skipped'?'AVAILABLE':p.status==='available'?'AVAILABLE':'LOCKED';
+      if (p.status === 'completed') {
+        row.score = row.max_score;
+        p.earnedCredits = row.max_score;
+      }
       await client.query(`UPDATE round1_stage_progress SET status=$3,score=$4,time_spent_seconds=$5,completed_at=CASE WHEN $3='COMPLETED' THEN COALESCE(completed_at,now()) ELSE completed_at END,state=$6::jsonb,updated_at=now() WHERE team_id=$1 AND stage_id=$2`,[teamId,row.stage_id,dbStatus,row.score,p.activeTimeSeconds,JSON.stringify(i===0?{round1Session:updated}:i===1?{round1Session:updated}: {round1Session:updated})]);
     }
+    const finalStageCreditsSum = rows.reduce((s, r) => s + (r.score || 0), 0);
+    if (finalStageCreditsSum > updated.credits) {
+      updated.credits = finalStageCreditsSum;
+    }
+    if (finalStageCreditsSum > totalCredits) {
+      totalCredits = finalStageCreditsSum;
+    }
+    await client.query('UPDATE teams SET score=GREATEST(score, $1), total_credits=GREATEST(total_credits, $2), updated_at=now() WHERE id=$3', [updated.credits, totalCredits, teamId]);
+    await client.query('UPDATE round_progress SET score=GREATEST(score, $1), updated_at=now() WHERE team_id=$2 AND round_id=1', [updated.credits, teamId]);
     await client.query(`UPDATE round_progress SET time_spent_seconds=$2,updated_at=now() WHERE team_id=$1 AND round_id=1`,[teamId,updated.roundStartTime?Math.max(0,Math.floor((Date.now()-new Date(updated.roundStartTime).getTime())/1000)):0]);
     const completed=stageIds.every((id)=>updated.stages[id].status==='completed');
     if(completed){
@@ -399,3 +441,88 @@ export async function setRound1TimerActive(pool:Pool,adminId:string,isActive:boo
     return {success:true,isActive,changed:true};
   });
 }
+
+/**
+ * Global reconciliation for Round 1 credits:
+ * - Guarantees all COMPLETED stages have full fixed credits (Stage 1: 100, Stage 2: 150, Stage 3: 250).
+ * - Ensures teams' scores and total_credits (wallet) match or exceed their earned stage credits.
+ * - Reconciles both PostgreSQL and SQLite.
+ */
+export async function reconcileAllRound1Credits(pool: Pool | null): Promise<void> {
+  if (pool) {
+    try {
+      // 1. Any COMPLETED stage in PostgreSQL must have score = max_score
+      await pool.query(`
+        UPDATE round1_stage_progress
+        SET score = max_score, updated_at = now()
+        WHERE status = 'COMPLETED' AND score < max_score
+      `);
+
+      // 2. Any team with completed stages must have their score and wallet (total_credits) topped up
+      await pool.query(`
+        WITH stage_sums AS (
+          SELECT team_id, SUM(score) AS calculated_score
+          FROM round1_stage_progress
+          GROUP BY team_id
+        )
+        UPDATE teams t
+        SET score = GREATEST(t.score, s.calculated_score),
+            total_credits = GREATEST(t.total_credits, s.calculated_score),
+            updated_at = now()
+        FROM stage_sums s
+        WHERE t.id = s.team_id AND (t.score < s.calculated_score OR t.total_credits < s.calculated_score)
+      `);
+
+      // 3. Update round_progress score for Round 1
+      await pool.query(`
+        WITH stage_sums AS (
+          SELECT team_id, SUM(score) AS calculated_score
+          FROM round1_stage_progress
+          GROUP BY team_id
+        )
+        UPDATE round_progress rp
+        SET score = GREATEST(rp.score, s.calculated_score),
+            updated_at = now()
+        FROM stage_sums s
+        WHERE rp.team_id = s.team_id AND rp.round_id = 1 AND rp.score < s.calculated_score
+      `);
+
+      // 4. If all 3 stages are COMPLETED, ensure round_progress is marked COMPLETED with 500 score
+      await pool.query(`
+        WITH finished_teams AS (
+          SELECT team_id
+          FROM round1_stage_progress
+          WHERE status = 'COMPLETED'
+          GROUP BY team_id
+          HAVING count(*) = 3
+        )
+        UPDATE round_progress rp
+        SET status = 'COMPLETED',
+            score = 500,
+            completed_at = COALESCE(rp.completed_at, now()),
+            updated_at = now()
+        FROM finished_teams f
+        WHERE rp.team_id = f.team_id AND rp.round_id = 1
+      `);
+      console.log('[Round 1 Reconciliation] PostgreSQL Round 1 stage progress, scores, and wallet credits successfully reconciled.');
+    } catch (err) {
+      console.warn('[Round 1 Reconciliation] Error during PostgreSQL credit reconciliation:', err);
+    }
+  }
+
+  // Also reconcile SQLite if it exists
+  try {
+    const { db } = await import('../../database/db.ts');
+    if (db) {
+      db.prepare(`UPDATE stages_progress SET score = max_score WHERE status = 'COMPLETED' AND score < max_score`).run();
+      const rows = db.prepare(`SELECT team_id, SUM(score) as sum_score FROM stages_progress GROUP BY team_id`).all() as { team_id: string; sum_score: number }[];
+      for (const r of rows) {
+        db.prepare(`UPDATE teams SET score = MAX(score, ?), total_credits = MAX(total_credits, ?) WHERE id = ?`).run(r.sum_score, r.sum_score, r.team_id);
+      }
+      console.log('[Round 1 Reconciliation] SQLite stage progress and wallet credits reconciled.');
+    }
+  } catch {
+    // SQLite might not be initialized or required in some environments; ignore
+  }
+}
+

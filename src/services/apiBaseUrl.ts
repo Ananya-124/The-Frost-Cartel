@@ -47,8 +47,8 @@ export function clearStoredToken(type?: 'team' | 'admin'): void {
   } catch {}
 }
 
-export function getAuthHeaders(): Record<string, string> {
-  const token = getStoredToken();
+export function getAuthHeaders(type?: 'team' | 'admin'): Record<string, string> {
+  const token = getStoredToken(type);
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -68,9 +68,16 @@ if (typeof window !== 'undefined' && !window.__fc_fetch_patched) {
     if (urlStr.includes('/api/')) {
       const headers = new Headers(init?.headers);
       const isAdminRoute = urlStr.includes('/admin');
-      const token = getStoredToken(isAdminRoute ? 'admin' : 'team');
-      if (token && !headers.has('Authorization')) {
-        headers.set('Authorization', `Bearer ${token}`);
+      if (isAdminRoute) {
+        const adminToken = getStoredToken('admin');
+        if (adminToken) {
+          headers.set('Authorization', `Bearer ${adminToken}`);
+        }
+      } else {
+        const teamToken = getStoredToken('team');
+        if (teamToken && !headers.has('Authorization')) {
+          headers.set('Authorization', `Bearer ${teamToken}`);
+        }
       }
       return originalFetch.call(this, input, {
         ...init,
