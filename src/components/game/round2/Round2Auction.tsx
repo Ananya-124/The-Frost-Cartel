@@ -227,9 +227,11 @@ export const Round2Auction: React.FC<Round2AuctionProps> = ({ session, onReturnH
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-5">
         {/* Header */}
         <header className="grid grid-cols-[auto_1fr_auto] items-start gap-3 mb-5">
-          <button onClick={onReturnHome} className="r2-btn rounded-xl px-4 py-2 font-cinzel text-xs tracking-widest text-amber-200/90 cursor-pointer">
-            ← RETURN
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={onReturnHome} className="r2-btn rounded-xl px-4 py-2 font-cinzel text-xs tracking-widest text-amber-200/90 cursor-pointer">
+              ← RETURN
+            </button>
+          </div>
           <div className="r2-title-plate text-center px-4 py-2">
             <h1 className="r2-title" aria-label="The Haunted Auction">
               <span className="r2-title-the">THE</span>

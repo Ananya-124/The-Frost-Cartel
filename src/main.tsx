@@ -2,6 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/index.css';
 import App from './app/App';
+import { initAutoFullscreen } from './utils/fullscreen';
+
+// Initialize auto-fullscreen as soon as the site is entered
+initAutoFullscreen();
 
 // Auto-reload on stale dynamic import chunks when a new deployment invalidates prior bundles
 const handleChunkError = (reason?: unknown) => {

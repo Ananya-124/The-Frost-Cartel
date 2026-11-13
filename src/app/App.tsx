@@ -3,6 +3,7 @@ import { FrostCartelHomePage } from '../components/home/FrostCartelHomePage';
 import { isAdminRoute } from './routes';
 import type { AppView } from './app.types';
 import { lazyWithRetry } from '../utils/lazyRetry';
+import { initAutoFullscreen } from '../utils/fullscreen';
 
 const AdminPortal = lazyWithRetry(() => import('../components/admin/AdminPortal').then((module) => ({ default: module.AdminPortal })));
 
@@ -10,6 +11,11 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(() => {
     return isAdminRoute(window.location.hash, window.location.pathname) ? 'admin' : 'public';
   });
+
+  useEffect(() => {
+    const cleanupFullscreen = initAutoFullscreen();
+    return () => cleanupFullscreen();
+  }, []);
 
   useEffect(() => {
     const checkRoute = () => {
